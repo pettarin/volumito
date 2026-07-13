@@ -186,9 +186,9 @@ volumito track albumart --host 192.168.1.100 -o /path/to/albumart.jpg
 TODO
 
 
-## Changelog
+## Releases And Changelog
 
-See the [CHANGELOG](CHANGELOG.md) file for the list of changes across releases.
+See the [CHANGELOG](CHANGELOG.md) file for the list of releases and their changes.
 
 
 ## Development
