@@ -181,14 +181,20 @@ volumito track albumart -o albumart.jpg
 volumito track albumart --host 192.168.1.100 -o /path/to/albumart.jpg
 ```
 
+## API Reference
+
+TODO
+
+
+## Changelog
+
+See the [CHANGELOG](CHANGELOG.md) file for the list of changes across releases.
+
+
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for how to set up a development environment,
 run the tests, the project structure, and contributing.
-
-## API Reference
-
-TODO
 
 
 ## License
