@@ -1,4 +1,8 @@
-"""MPD client for interacting with Volumio's MPD interface."""
+"""MPD client for interacting with Volumio's MPD interface.
+
+:copyright: Copyright (C) 2025-2026 Alberto Pettarin
+:license: GNU General Public License v3.0 (see the LICENSE file for details)
+"""
 
 from types import TracebackType
 from typing import Any

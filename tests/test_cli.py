@@ -1,4 +1,8 @@
-"""Tests for the CLI module."""
+"""Tests for the CLI module.
+
+:copyright: Copyright (C) 2025-2026 Alberto Pettarin
+:license: GNU General Public License v3.0 (see the LICENSE file for details)
+"""
 
 import json
 

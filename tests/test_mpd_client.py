@@ -1,4 +1,8 @@
-"""Tests for the MPD client module."""
+"""Tests for the MPD client module.
+
+:copyright: Copyright (C) 2025-2026 Alberto Pettarin
+:license: GNU General Public License v3.0 (see the LICENSE file for details)
+"""
 
 import pytest
 from pytest_mock import MockerFixture

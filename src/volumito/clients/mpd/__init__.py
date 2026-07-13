@@ -1,4 +1,8 @@
-"""MPD client for Volumio."""
+"""MPD client for Volumio.
+
+:copyright: Copyright (C) 2025-2026 Alberto Pettarin
+:license: GNU General Public License v3.0 (see the LICENSE file for details)
+"""
 
 from volumito.clients.mpd.client import VolumioMPDClient
 
