@@ -8,10 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.2] - Unreleased
 
+### Added
+
+- Add DEVELOPMENT.md with development and contributing docs
+
+### Changed
+
 - Change default MPD port from 6599 to 6600 (Volumio 4)
-- Move development and contributing documentation to DEVELOPMENT.md
 
 
 ## [0.0.1] - 2025-10-23
+
+### Added
 
 - Initial release
