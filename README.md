@@ -227,10 +227,10 @@ volumito/
 ├── tests/
 │   ├── test_api_client.py
 │   └── test_cli.py
-├── examples/
-│   └── README.md
-├── pyproject.toml
+├── CHANGELOG.md
+├── LICENSE
 ├── Makefile
+├── pyproject.toml
 └── README.md
 ```
 
