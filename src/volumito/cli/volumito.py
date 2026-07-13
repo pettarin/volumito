@@ -392,7 +392,7 @@ def execute_command(
 @click.option(
     "--mpd-port",
     type=int,
-    default=6599,
+    default=6600,
     show_default=True,
     help="MPD port of the Volumio instance",
 )

@@ -15,7 +15,7 @@ class TestVolumioMPDClient:
         client = VolumioMPDClient()
 
         assert client.host == "volumio.local"
-        assert client.port == 6599
+        assert client.port == 6600
         assert client.timeout == 5.0
         assert client._connected is False
 
@@ -39,7 +39,7 @@ class TestVolumioMPDClient:
         client = VolumioMPDClient()
         client.connect()
 
-        mock_mpd.connect.assert_called_once_with("volumio.local", 6599)
+        mock_mpd.connect.assert_called_once_with("volumio.local", 6600)
         assert client._connected is True
 
     def test_connect_connection_refused(self, mocker: MockerFixture):

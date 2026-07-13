@@ -22,7 +22,7 @@ class TestVolumioRESTAPIClient:
         assert client.scheme == "http"
         assert client.host == "volumio.local"
         assert client.rest_api_port == 3000
-        assert client.mpd_port == 6599
+        assert client.mpd_port == 6600
         assert client.timeout == 5.0
         assert client.base_url == "http://volumio.local:3000"
 

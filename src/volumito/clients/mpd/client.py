@@ -14,14 +14,14 @@ class VolumioMPDClient:
     def __init__(
         self,
         host: str = "volumio.local",
-        port: int = 6599,
+        port: int = 6600,
         timeout: float = 5.0,
     ) -> None:
         """Initialize the MPD client.
 
         Args:
             host: The hostname or IP address of the Volumio instance
-            port: The MPD port (default: 6599)
+            port: The MPD port (default: 6600)
             timeout: Connection timeout in seconds (default: 5.0)
         """
         self.host = host

@@ -15,7 +15,7 @@ class VolumioRESTAPIClient:
         scheme: Literal["http", "https"] = "http",
         host: str = "volumio.local",
         rest_api_port: int = 3000,
-        mpd_port: int = 6599,
+        mpd_port: int = 6600,
         timeout: float = 5.0,
     ) -> None:
         """Initialize the Volumio client.
@@ -24,7 +24,7 @@ class VolumioRESTAPIClient:
             scheme: The URL scheme (http or https)
             host: The hostname or IP address of the Volumio instance
             rest_api_port: The REST API port (default: 3000)
-            mpd_port: The MPD port (default: 6599)
+            mpd_port: The MPD port (default: 6600)
             timeout: Request timeout in seconds (default: 5.0)
         """
         self.scheme = scheme

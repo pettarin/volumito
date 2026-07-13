@@ -89,6 +89,10 @@ volumito info --rest-api-port 8080 --mpd-port 7000
 volumito info --timeout 10
 ```
 
+The default MPD port is `6600`, as used by Volumio 4.
+For Volumio 3 and earlier, which use MPD port `6599`,
+pass `--mpd-port 6599`.
+
 ### Output Formats
 
 Choose from multiple output formats:
