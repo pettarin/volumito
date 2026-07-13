@@ -417,7 +417,7 @@ def execute_command(
     default=False,
     help="Suppress all non-essential output",
 )
-@click.version_option(version="0.0.1", prog_name="volumito")
+@click.version_option(version="0.0.2", prog_name="volumito")
 @click.pass_context
 def main(
     ctx: click.Context,
