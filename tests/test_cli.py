@@ -193,7 +193,7 @@ class TestCLICommands:
         assert "volumito, version 0.0.6" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
-        """Test --machine-readable version prints only the bare version number."""
+        """Test --machine-readable version prints only the bare version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0

@@ -418,7 +418,10 @@ _VERSION = "0.0.6"
     "-m",
     is_flag=True,
     default=False,
-    help="Produce machine-readable output (suppress non-essential messages)",
+    help=(
+        "Produce machine-readable output only "
+        "(superseding the --verbose option if also specified)"
+    ),
 )
 @click.pass_context
 def main(
@@ -452,13 +455,14 @@ def main(
 def version(ctx: click.Context) -> None:
     """Show the volumito version.
 
-    In machine-readable mode only the bare version number is printed;
+    In machine-readable mode only the bare version string is printed;
     otherwise the program name is included.
     """
     if ctx.obj["machine_readable"]:
-        click.echo(_VERSION)
+        msg = f"{_VERSION}"
     else:
-        click.echo(f"volumito, version {_VERSION}")
+        msg = f"volumito, version {_VERSION}"
+    click.echo(msg)
 
 
 @main.command()

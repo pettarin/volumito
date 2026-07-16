@@ -77,7 +77,7 @@ Print the `volumito` version:
 ```bash
 volumito version
 
-# Only the bare version number (useful for scripting)
+# Only the bare version string (useful for scripting)
 volumito --machine-readable version
 ```
 
@@ -149,10 +149,10 @@ Short fields include:
 ### Verbosity Control
 
 ```bash
-# Verbose mode - show connection details
+# Verbose mode
 volumito info --verbose
 
-# Machine-readable mode - suppress non-essential output
+# Machine-readable mode (always supersedes the verbose option)
 volumito info --machine-readable
 ```
 
