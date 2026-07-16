@@ -78,7 +78,7 @@ Print the `volumito` version:
 volumito version
 
 # Only the bare version number (useful for scripting)
-volumito --quiet version
+volumito --machine-readable version
 ```
 
 ### Connection Options
@@ -152,8 +152,8 @@ Short fields include:
 # Verbose mode - show connection details
 volumito info --verbose
 
-# Quiet mode - suppress error messages
-volumito info --quiet
+# Machine-readable mode - suppress non-essential output
+volumito info --machine-readable
 ```
 
 ### Examples

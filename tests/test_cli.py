@@ -181,6 +181,7 @@ class TestCLICommands:
         assert "volumito" in result.output
         assert "info" in result.output
         assert "version" in result.output
+        assert "--machine-readable" in result.output
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
 
@@ -191,14 +192,21 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "volumito, version 0.0.6" in result.output
 
-    def test_version_command_quiet(self, runner: CliRunner):
-        """Test --quiet version prints only the bare version number."""
-        result = runner.invoke(main, ["--quiet", "version"])
+    def test_version_command_machine_readable(self, runner: CliRunner):
+        """Test --machine-readable version prints only the bare version number."""
+        result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
         assert result.output.strip() == "0.0.6"
         assert "volumito" not in result.output
         assert "version" not in result.output
+
+    def test_version_command_machine_readable_shorthand(self, runner: CliRunner):
+        """Test the -m shorthand for --machine-readable with the version subcommand."""
+        result = runner.invoke(main, ["-m", "version"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "0.0.6"
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""
@@ -385,10 +393,10 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "API error" in result.output
 
-    def test_info_quiet_suppresses_errors(
+    def test_info_machine_readable_suppresses_errors(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test info command with --quiet flag suppresses errors."""
+        """Test info command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
@@ -397,10 +405,10 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "info"])
+        result = runner.invoke(main, ["--machine-readable", "info"])
 
         assert result.exit_code == 1
-        # No error output with quiet flag
+        # No error output with machine-readable flag
         assert result.output == ""
 
     def test_player_help(self, runner: CliRunner):
@@ -582,8 +590,8 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "Connection error" in result.output
 
-    def test_pause_with_quiet(self, runner: CliRunner, mocker: MockerFixture):
-        """Test pause command with --quiet flag."""
+    def test_pause_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Test pause command with --machine-readable flag."""
         mock_client = mocker.Mock()
         mock_client.pause.return_value = {"response": "pause"}
 
@@ -592,7 +600,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "player", "pause"])
+        result = runner.invoke(main, ["--machine-readable", "player", "pause"])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -699,8 +707,10 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "Connection error" in result.output
 
-    def test_play_quiet_suppresses_errors(self, runner: CliRunner, mocker: MockerFixture):
-        """Test play command with --quiet flag suppresses errors."""
+    def test_play_machine_readable_suppresses_errors(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Test play command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         mock_client.play.side_effect = VolumioAPIError("API error")
 
@@ -709,7 +719,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "player", "play"])
+        result = runner.invoke(main, ["--machine-readable", "player", "play"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -759,8 +769,8 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "API error" in result.output
 
-    def test_toggle_with_quiet(self, runner: CliRunner, mocker: MockerFixture):
-        """Test toggle command with --quiet flag and connection error."""
+    def test_toggle_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Test toggle command with --machine-readable flag and connection error."""
         mock_client = mocker.Mock()
         mock_client.toggle.side_effect = VolumioConnectionError("Connection failed")
 
@@ -769,7 +779,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "player", "toggle"])
+        result = runner.invoke(main, ["--machine-readable", "player", "toggle"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -1060,8 +1070,8 @@ class TestCLICommands:
         assert "Successfully retrieved state" in result.output
         assert "Connecting to MPD" in result.output
 
-    def test_audio_with_quiet(self, runner: CliRunner, mocker: MockerFixture):
-        """Test audio command with --quiet flag."""
+    def test_audio_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio command with --machine-readable flag."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
 
@@ -1073,10 +1083,10 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace localhost with volumio.local (default host)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--quiet", "track", "audio"])
+        result = runner.invoke(main, ["--machine-readable", "track", "audio"])
 
         assert result.exit_code == 0
-        # In quiet mode, only the URI should be printed
+        # In machine-readable mode, only the URI should be printed
         assert "http://volumio.local:8000/music/test.flac" in result.output
         assert "Title" not in result.output
         assert "Artist" not in result.output
@@ -1179,10 +1189,10 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "No track currently playing" in result.output
 
-    def test_audio_quiet_suppresses_errors(
+    def test_audio_machine_readable_suppresses_errors(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test audio command with --quiet flag suppresses errors."""
+        """Test audio command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
@@ -1191,7 +1201,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "track", "audio"])
+        result = runner.invoke(main, ["--machine-readable", "track", "audio"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -1237,10 +1247,10 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "MPD error" in result.output
 
-    def test_audio_mpd_exception_with_quiet(
+    def test_audio_mpd_exception_with_machine_readable(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test audio command with generic MPD exception and --quiet flag."""
+        """Test audio command with generic MPD exception and --machine-readable flag."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
 
@@ -1254,10 +1264,10 @@ class TestCLICommands:
             side_effect=VolumioConnectionError("MPD error: Unexpected MPD response")
         )
 
-        result = runner.invoke(main, ["--quiet", "track", "audio"])
+        result = runner.invoke(main, ["--machine-readable", "track", "audio"])
 
         assert result.exit_code == 1
-        # Error should be suppressed in quiet mode
+        # Error should be suppressed in machine-readable mode
         assert result.output == ""
 
     def test_audio_with_output_file_auto_generated(
@@ -1554,8 +1564,8 @@ class TestCLICommands:
         assert "Successfully retrieved state" in result.output
         assert "Album art URL:" in result.output
 
-    def test_albumart_with_quiet(self, runner: CliRunner, mocker: MockerFixture):
-        """Test albumart command with --quiet flag."""
+    def test_albumart_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart command with --machine-readable flag."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "albumart": "http://example.com/albumart.jpg",
@@ -1566,10 +1576,10 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "track", "albumart"])
+        result = runner.invoke(main, ["--machine-readable", "track", "albumart"])
 
         assert result.exit_code == 0
-        # In quiet mode, only the URL should be printed
+        # In machine-readable mode, only the URL should be printed
         assert "http://example.com/albumart.jpg" in result.output
         assert "Connecting" not in result.output
 
@@ -1651,8 +1661,10 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "File write error" in result.output
 
-    def test_albumart_quiet_suppresses_errors(self, runner: CliRunner, mocker: MockerFixture):
-        """Test albumart command with --quiet flag suppresses errors."""
+    def test_albumart_machine_readable_suppresses_errors(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Test albumart command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
@@ -1661,10 +1673,10 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "track", "albumart"])
+        result = runner.invoke(main, ["--machine-readable", "track", "albumart"])
 
         assert result.exit_code == 1
-        # Error should be suppressed in quiet mode
+        # Error should be suppressed in machine-readable mode
         assert result.output == ""
 
     def test_albumart_with_output_file_auto_generated_from_query_param(
@@ -2071,10 +2083,10 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "API error" in result.output
 
-    def test_queue_list_quiet_suppresses_errors(
+    def test_queue_list_machine_readable_suppresses_errors(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test queue list command with --quiet flag suppresses errors."""
+        """Test queue list command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
 
@@ -2083,10 +2095,10 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--quiet", "queue", "list"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "list"])
 
         assert result.exit_code == 1
-        # No error output with quiet flag
+        # No error output with machine-readable flag
         assert result.output == ""
 
     def test_queue_list_empty_queue(self, runner: CliRunner, mocker: MockerFixture):

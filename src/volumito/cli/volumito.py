@@ -331,31 +331,31 @@ def execute_command(
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
-    quiet = ctx.obj["quiet"]
+    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not quiet:
+    if verbose and not machine_readable:
         click.echo(f"Connecting to {host_configuration.rest_base_url}{endpoint}...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
         response = command_func(client)
 
-        if verbose and not quiet:
+        if verbose and not machine_readable:
             click.echo(f"Response: {response}", err=True)
 
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Command '{command_name}' executed successfully")
 
     except VolumioConnectionError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
         sys.exit(1)
     except VolumioAPIError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"API error: {e}", err=True)
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
 
@@ -414,11 +414,11 @@ _VERSION = "0.0.6"
     help="Enable verbose output",
 )
 @click.option(
-    "--quiet",
-    "-q",
+    "--machine-readable",
+    "-m",
     is_flag=True,
     default=False,
-    help="Suppress all non-essential output",
+    help="Produce machine-readable output (suppress non-essential messages)",
 )
 @click.pass_context
 def main(
@@ -430,7 +430,7 @@ def main(
     rest_api_timeout: float,
     mpd_timeout: float,
     verbose: bool,
-    quiet: bool,
+    machine_readable: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""
     # Store common options in context for subcommands to access
@@ -444,7 +444,7 @@ def main(
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["mpd_timeout"] = mpd_timeout
     ctx.obj["verbose"] = verbose
-    ctx.obj["quiet"] = quiet
+    ctx.obj["machine_readable"] = machine_readable
 
 
 @main.command()
@@ -452,10 +452,10 @@ def main(
 def version(ctx: click.Context) -> None:
     """Show the volumito version.
 
-    In quiet mode only the bare version number is printed; otherwise the
-    program name is included.
+    In machine-readable mode only the bare version number is printed;
+    otherwise the program name is included.
     """
-    if ctx.obj["quiet"]:
+    if ctx.obj["machine_readable"]:
         click.echo(_VERSION)
     else:
         click.echo(f"volumito, version {_VERSION}")
@@ -498,16 +498,16 @@ def info(
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
-    quiet = ctx.obj["quiet"]
+    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not quiet:
+    if verbose and not machine_readable:
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
         state = client.get_state()
 
-        if verbose and not quiet:
+        if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
 
         # Determine output format
@@ -531,15 +531,15 @@ def info(
         click.echo(output)
 
     except VolumioConnectionError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
         sys.exit(1)
     except VolumioAPIError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"API error: {e}", err=True)
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
 
@@ -642,9 +642,9 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     mpd_timeout = ctx.obj["mpd_timeout"]
     verbose = ctx.obj["verbose"]
-    quiet = ctx.obj["quiet"]
+    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not quiet:
+    if verbose and not machine_readable:
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
@@ -652,7 +652,7 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
         client = create_client(host_configuration, rest_api_timeout)
         state = client.get_state()
 
-        if verbose and not quiet:
+        if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
             click.echo(
                 f"Connecting to MPD at "
@@ -662,16 +662,16 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
 
         # Connect to MPD to get current track URI
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
-            if verbose and not quiet:
+            if verbose and not machine_readable:
                 click.echo("Successfully connected to MPD", err=True)
 
             # Get track URI with localhost replaced
             uri = mpd_client.get_track_uri()
 
-            if verbose and not quiet:
+            if verbose and not machine_readable:
                 click.echo(f"Track URI: {uri}", err=True)
 
-            # Always print the URI (even in quiet mode)
+            # Always print the URI (even in machine-readable mode)
             click.echo(uri)
 
             # Download the file if -o/--output-file is specified
@@ -691,7 +691,7 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
                     # Create filename
                     output_file = f"{position_str}_{sanitized_title}.flac"
 
-                if verbose and not quiet:
+                if verbose and not machine_readable:
                     click.echo(f"\nDownloading track to {output_file}...", err=True)
 
                 try:
@@ -702,28 +702,28 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
                         for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
                             f.write(chunk)
 
-                    if not quiet:
+                    if not machine_readable:
                         click.echo(f"\nTrack successfully downloaded to {output_file}")
 
                 except requests.exceptions.RequestException as e:
-                    if not quiet:
+                    if not machine_readable:
                         click.echo(f"\nDownload error: {e}", err=True)
                     sys.exit(1)
                 except OSError as e:
-                    if not quiet:
+                    if not machine_readable:
                         click.echo(f"\nFile write error: {e}", err=True)
                     sys.exit(1)
 
     except VolumioConnectionError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
         sys.exit(1)
     except VolumioAPIError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"API error: {e}", err=True)
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
 
@@ -751,9 +751,9 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
-    quiet = ctx.obj["quiet"]
+    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not quiet:
+    if verbose and not machine_readable:
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
@@ -761,13 +761,13 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
         client = create_client(host_configuration, rest_api_timeout)
         state = client.get_state()
 
-        if verbose and not quiet:
+        if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
 
         # Extract albumart URL
         albumart = state.get("albumart")
         if not albumart:
-            if not quiet:
+            if not machine_readable:
                 click.echo("Error: No album art URL found in current state", err=True)
             sys.exit(1)
 
@@ -777,10 +777,10 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
         else:
             albumart_url = albumart
 
-        if verbose and not quiet:
+        if verbose and not machine_readable:
             click.echo(f"Album art URL: {albumart_url}", err=True)
 
-        # Always print the URL (even in quiet mode)
+        # Always print the URL (even in machine-readable mode)
         click.echo(albumart_url)
 
         # Download the file if -o/--output-file is specified
@@ -799,7 +799,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
                 # Create filename with "000" prefix
                 output_file = f"000_{sanitized_album}.{extension}"
 
-            if verbose and not quiet:
+            if verbose and not machine_readable:
                 click.echo(f"\nDownloading album art to {output_file}...", err=True)
 
             try:
@@ -810,28 +810,28 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
                     for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
                         f.write(chunk)
 
-                if not quiet:
+                if not machine_readable:
                     click.echo(f"\nAlbum art successfully downloaded to {output_file}")
 
             except requests.exceptions.RequestException as e:
-                if not quiet:
+                if not machine_readable:
                     click.echo(f"\nDownload error: {e}", err=True)
                 sys.exit(1)
             except OSError as e:
-                if not quiet:
+                if not machine_readable:
                     click.echo(f"\nFile write error: {e}", err=True)
                 sys.exit(1)
 
     except VolumioConnectionError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
         sys.exit(1)
     except VolumioAPIError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"API error: {e}", err=True)
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
 
@@ -880,16 +880,16 @@ def queue_list(
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
-    quiet = ctx.obj["quiet"]
+    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not quiet:
+    if verbose and not machine_readable:
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getQueue...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
         queue_data = client.get_queue()
 
-        if verbose and not quiet:
+        if verbose and not machine_readable:
             click.echo("Successfully retrieved queue", err=True)
 
         # Determine output format
@@ -920,15 +920,15 @@ def queue_list(
         click.echo(output)
 
     except VolumioConnectionError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
         sys.exit(1)
     except VolumioAPIError as e:
-        if not quiet:
+        if not machine_readable:
             click.echo(f"API error: {e}", err=True)
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not quiet:
+        if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
 

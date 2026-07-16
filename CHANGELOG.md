@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Split the single `--timeout` CLI option into `--rest-api-timeout` and `--mpd-timeout`
-- Show the version via a `version` subcommand instead of a `--version` option; `--quiet version`
-  prints only the bare number (e.g. `0.0.6`)
+- Rename the `--quiet` CLI option to `--machine-readable` (with `-m` shorthand)
+- Show the version via a `version` subcommand instead of a `--version` option; `--machine-readable
+  version` prints only the bare number (e.g. `0.0.6`)
 
 
 ## [0.0.5] - 2026-07-16
