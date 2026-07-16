@@ -180,19 +180,20 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "volumito" in result.output
         assert "info" in result.output
+        assert "version" in result.output
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
 
-    def test_main_version(self, runner: CliRunner):
-        """Test main command with --version."""
-        result = runner.invoke(main, ["--version"])
+    def test_version_command(self, runner: CliRunner):
+        """Test the version subcommand."""
+        result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
         assert "volumito, version 0.0.6" in result.output
 
-    def test_main_version_quiet(self, runner: CliRunner):
-        """Test --quiet --version prints only the bare version number."""
-        result = runner.invoke(main, ["--quiet", "--version"])
+    def test_version_command_quiet(self, runner: CliRunner):
+        """Test --quiet version prints only the bare version number."""
+        result = runner.invoke(main, ["--quiet", "version"])
 
         assert result.exit_code == 0
         assert result.output.strip() == "0.0.6"

@@ -363,26 +363,6 @@ def execute_command(
 _VERSION = "0.0.6"
 
 
-def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> None:
-    """Print the version and exit.
-
-    In quiet mode only the bare version number is printed; otherwise the
-    program name is included (matching click's default version output).
-
-    Args:
-        ctx: Click context object
-        param: The Click parameter that triggered this callback
-        value: Whether the --version flag was set
-    """
-    if not value or ctx.resilient_parsing:
-        return
-    if ctx.params.get("quiet"):
-        click.echo(_VERSION)
-    else:
-        click.echo(f"volumito, version {_VERSION}")
-    ctx.exit()
-
-
 @click.group()
 @click.option(
     "--scheme",
@@ -438,16 +418,7 @@ def print_version(ctx: click.Context, param: click.Parameter, value: bool) -> No
     "-q",
     is_flag=True,
     default=False,
-    is_eager=True,
     help="Suppress all non-essential output",
-)
-@click.option(
-    "--version",
-    is_flag=True,
-    is_eager=True,
-    expose_value=False,
-    callback=print_version,
-    help="Show the version and exit.",
 )
 @click.pass_context
 def main(
@@ -474,6 +445,20 @@ def main(
     ctx.obj["mpd_timeout"] = mpd_timeout
     ctx.obj["verbose"] = verbose
     ctx.obj["quiet"] = quiet
+
+
+@main.command()
+@click.pass_context
+def version(ctx: click.Context) -> None:
+    """Show the volumito version.
+
+    In quiet mode only the bare version number is printed; otherwise the
+    program name is included.
+    """
+    if ctx.obj["quiet"]:
+        click.echo(_VERSION)
+    else:
+        click.echo(f"volumito, version {_VERSION}")
 
 
 @main.command()

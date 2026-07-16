@@ -70,6 +70,17 @@ Query a Volumio instance at the default location (`volumio.local:3000`):
 volumito info
 ```
 
+### Version
+
+Print the `volumito` version:
+
+```bash
+volumito version
+
+# Only the bare version number (useful for scripting)
+volumito --quiet version
+```
+
 ### Connection Options
 
 Specify custom connection parameters:
