@@ -10,6 +10,7 @@ from typing import Any
 from mpd import MPDClient
 
 from volumito.clients.errors import VolumioConnectionError
+from volumito.clients.host_configuration import VolumioHostConfiguration
 
 
 class VolumioMPDClient:
@@ -17,19 +18,16 @@ class VolumioMPDClient:
 
     def __init__(
         self,
-        host: str = "volumio.local",
-        port: int = 6600,
+        host_configuration: VolumioHostConfiguration,
         timeout: float = 5.0,
     ) -> None:
         """Initialize the MPD client.
 
         Args:
-            host: The hostname or IP address of the Volumio instance
-            port: The MPD port (default: 6600)
+            host_configuration: The host configuration (scheme, host, and ports)
             timeout: Connection timeout in seconds (default: 5.0)
         """
-        self.host = host
-        self.port = port
+        self.host_configuration = host_configuration
         self.timeout = timeout
         self._client = MPDClient()
         self._client.timeout = timeout
@@ -41,20 +39,22 @@ class VolumioMPDClient:
         Raises:
             VolumioConnectionError: If connection to MPD fails
         """
+        host = self.host_configuration.host
+        mpd_port = self.host_configuration.mpd_port
         try:
-            self._client.connect(self.host, self.port)
+            self._client.connect(host, mpd_port)
             self._connected = True
         except ConnectionRefusedError as e:
             raise VolumioConnectionError(
-                f"Connection refused to MPD at {self.host}:{self.port}: {e}"
+                f"Connection refused to MPD at {host}:{mpd_port}: {e}"
             ) from e
         except OSError as e:
             raise VolumioConnectionError(
-                f"MPD connection error at {self.host}:{self.port}: {e}"
+                f"MPD connection error at {host}:{mpd_port}: {e}"
             ) from e
         except Exception as e:
             raise VolumioConnectionError(
-                f"Failed to connect to MPD at {self.host}:{self.port}: {e}"
+                f"Failed to connect to MPD at {host}:{mpd_port}: {e}"
             ) from e
 
     def disconnect(self) -> None:
@@ -107,8 +107,8 @@ class VolumioMPDClient:
         uri = str(current_song["file"])
 
         # Replace localhost or 127.0.0.1 with the actual host
-        uri = uri.replace("127.0.0.1", self.host)
-        uri = uri.replace("localhost", self.host)
+        uri = uri.replace("127.0.0.1", self.host_configuration.host)
+        uri = uri.replace("localhost", self.host_configuration.host)
 
         return uri
 

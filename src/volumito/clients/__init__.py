@@ -9,10 +9,12 @@ from volumito.clients.errors import (
     VolumioConnectionError,
     VolumioError,
 )
+from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.mpd import VolumioMPDClient
 from volumito.clients.rest import VolumioRESTAPIClient
 
 __all__ = [
+    "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",

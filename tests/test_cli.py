@@ -231,8 +231,8 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         mock_client_class.assert_called_once()
-        call_kwargs = mock_client_class.call_args[1]
-        assert call_kwargs["host"] == "192.168.1.100"
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.host == "192.168.1.100"
 
     def test_info_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with --format json."""
@@ -447,8 +447,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["--host", "192.168.1.50", "player", "toggle"])
 
         assert result.exit_code == 0
-        call_kwargs = mock_client_class.call_args[1]
-        assert call_kwargs["host"] == "192.168.1.50"
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.host == "192.168.1.50"
 
     def test_toggle_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test toggle command with --verbose flag."""
@@ -651,10 +651,11 @@ class TestCLICommands:
         )
 
         assert result.exit_code == 0
-        call_kwargs = mock_client_class.call_args[1]
-        assert call_kwargs["host"] == "192.168.1.100"
-        assert call_kwargs["rest_api_port"] == 8080
-        assert call_kwargs["timeout"] == 10.0
+        host_configuration = mock_client_class.call_args[0][0]
+        timeout = mock_client_class.call_args[0][1]
+        assert host_configuration.host == "192.168.1.100"
+        assert host_configuration.rest_api_port == 8080
+        assert timeout == 10.0
 
     def test_previous_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test successful previous command with default options."""
@@ -937,8 +938,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["--host", "192.168.1.100", "track", "audio"])
 
         assert result.exit_code == 0
-        call_kwargs = mock_client_class.call_args[1]
-        assert call_kwargs["host"] == "192.168.1.100"
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.host == "192.168.1.100"
         # Check that localhost was replaced with the custom host
         assert "192.168.1.100" in result.output
         assert "127.0.0.1" not in result.output
@@ -1409,8 +1410,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["--host", "192.168.1.100", "track", "albumart"])
 
         assert result.exit_code == 0
-        call_kwargs = mock_client_class.call_args[1]
-        assert call_kwargs["host"] == "192.168.1.100"
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.host == "192.168.1.100"
         assert "192.168.1.100" in result.output
 
     def test_albumart_with_absolute_url(self, runner: CliRunner, mocker: MockerFixture):
@@ -1861,8 +1862,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "list"])
 
         assert result.exit_code == 0
-        call_kwargs = mock_client_class.call_args[1]
-        assert call_kwargs["host"] == "192.168.1.100"
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.host == "192.168.1.100"
 
     def test_queue_list_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue list command with --format json."""

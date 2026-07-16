@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.5] - 2026-07-16
 
+### Added
+
+- Class VolumioHostConfiguration bundling host connection parameters (scheme, host, ports)
+
+### Changed
+
+- Client constructors now take a VolumioHostConfiguration object plus timeout, instead of individual connection parameters
+
 
 ## [0.0.4] - 2026-07-13
 

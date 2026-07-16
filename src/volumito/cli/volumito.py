@@ -12,10 +12,11 @@ from typing import Any, Literal
 import click
 import requests
 
-from volumito.clients.mpd import VolumioMPDClient
-from volumito.clients.rest import (
+from volumito.clients import (
     VolumioAPIError,
     VolumioConnectionError,
+    VolumioHostConfiguration,
+    VolumioMPDClient,
     VolumioRESTAPIClient,
 )
 
@@ -299,27 +300,18 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
 
 
 def create_client(
-    scheme: Literal["http", "https"], host: str, rest_api_port: int, mpd_port: int, timeout: float
+    host_configuration: VolumioHostConfiguration, timeout: float
 ) -> VolumioRESTAPIClient:
-    """Create a VolumioRESTAPIClient with the given connection parameters.
+    """Create a VolumioRESTAPIClient with the given host configuration.
 
     Args:
-        scheme: The URL scheme (http or https)
-        host: The hostname or IP address
-        rest_api_port: The REST API port
-        mpd_port: The MPD port
+        host_configuration: The host configuration (scheme, host, and ports)
         timeout: Request timeout in seconds
 
     Returns:
         A configured VolumioRESTAPIClient instance
     """
-    return VolumioRESTAPIClient(
-        scheme=scheme,
-        host=host,
-        rest_api_port=rest_api_port,
-        mpd_port=mpd_port,
-        timeout=timeout,
-    )
+    return VolumioRESTAPIClient(host_configuration, timeout)
 
 
 def execute_command(
@@ -336,19 +328,16 @@ def execute_command(
         command_func: Function to call on the VolumioRESTAPIClient
         endpoint: API endpoint being called (for verbose output)
     """
-    scheme = ctx.obj["scheme"]
-    host = ctx.obj["host"]
-    rest_api_port = ctx.obj["rest_api_port"]
-    mpd_port = ctx.obj["mpd_port"]
+    host_configuration = ctx.obj["host_configuration"]
     timeout = ctx.obj["timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
     if verbose and not quiet:
-        click.echo(f"Connecting to {scheme}://{host}:{rest_api_port}{endpoint}...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}{endpoint}...", err=True)
 
     try:
-        client = create_client(scheme, host, rest_api_port, mpd_port, timeout)
+        client = create_client(host_configuration, timeout)
         response = command_func(client)
 
         if verbose and not quiet:
@@ -425,7 +414,7 @@ def execute_command(
 @click.pass_context
 def main(
     ctx: click.Context,
-    scheme: str,
+    scheme: Literal["http", "https"],
     host: str,
     rest_api_port: int,
     mpd_port: int,
@@ -436,10 +425,12 @@ def main(
     """volumito - CLI tool for Volumio."""
     # Store common options in context for subcommands to access
     ctx.ensure_object(dict)
-    ctx.obj["scheme"] = scheme
-    ctx.obj["host"] = host
-    ctx.obj["rest_api_port"] = rest_api_port
-    ctx.obj["mpd_port"] = mpd_port
+    ctx.obj["host_configuration"] = VolumioHostConfiguration(
+        scheme=scheme,
+        host=host,
+        rest_api_port=rest_api_port,
+        mpd_port=mpd_port,
+    )
     ctx.obj["timeout"] = timeout
     ctx.obj["verbose"] = verbose
     ctx.obj["quiet"] = quiet
@@ -479,19 +470,16 @@ def info(
     This command retrieves and displays the current state of a Volumio music player
     instance, including playback status, volume, track information, and more.
     """
-    scheme = ctx.obj["scheme"]
-    host = ctx.obj["host"]
-    rest_api_port = ctx.obj["rest_api_port"]
-    mpd_port = ctx.obj["mpd_port"]
+    host_configuration = ctx.obj["host_configuration"]
     timeout = ctx.obj["timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
     if verbose and not quiet:
-        click.echo(f"Connecting to {scheme}://{host}:{rest_api_port}/api/v1/getState...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
-        client = create_client(scheme, host, rest_api_port, mpd_port, timeout)
+        client = create_client(host_configuration, timeout)
         state = client.get_state()
 
         if verbose and not quiet:
@@ -625,28 +613,29 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
     with the actual host. The URI is printed to stdout. Optionally download the
     track to a file (auto-generates filename if path not provided).
     """
-    scheme = ctx.obj["scheme"]
-    host = ctx.obj["host"]
-    rest_api_port = ctx.obj["rest_api_port"]
-    mpd_port = ctx.obj["mpd_port"]
+    host_configuration = ctx.obj["host_configuration"]
     timeout = ctx.obj["timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
     if verbose and not quiet:
-        click.echo(f"Connecting to {scheme}://{host}:{rest_api_port}/api/v1/getState...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
         # Get current track metadata
-        client = create_client(scheme, host, rest_api_port, mpd_port, timeout)
+        client = create_client(host_configuration, timeout)
         state = client.get_state()
 
         if verbose and not quiet:
             click.echo("Successfully retrieved state", err=True)
-            click.echo(f"Connecting to MPD at {host}:{mpd_port}...", err=True)
+            click.echo(
+                f"Connecting to MPD at "
+                f"{host_configuration.host}:{host_configuration.mpd_port}...",
+                err=True,
+            )
 
         # Connect to MPD to get current track URI
-        with VolumioMPDClient(host, mpd_port, timeout) as mpd_client:
+        with VolumioMPDClient(host_configuration, timeout) as mpd_client:
             if verbose and not quiet:
                 click.echo("Successfully connected to MPD", err=True)
 
@@ -733,20 +722,17 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
     The URL is always printed to stdout. Optionally download the image to a
     file using the -o/--output-file option (auto-generates filename if path not provided).
     """
-    scheme = ctx.obj["scheme"]
-    host = ctx.obj["host"]
-    rest_api_port = ctx.obj["rest_api_port"]
-    mpd_port = ctx.obj["mpd_port"]
+    host_configuration = ctx.obj["host_configuration"]
     timeout = ctx.obj["timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
     if verbose and not quiet:
-        click.echo(f"Connecting to {scheme}://{host}:{rest_api_port}/api/v1/getState...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
         # Get current state metadata
-        client = create_client(scheme, host, rest_api_port, mpd_port, timeout)
+        client = create_client(host_configuration, timeout)
         state = client.get_state()
 
         if verbose and not quiet:
@@ -761,7 +747,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
 
         # Handle relative URLs by prepending the base URL
         if albumart.startswith("/"):
-            albumart_url = f"{scheme}://{host}:{rest_api_port}{albumart}"
+            albumart_url = f"{host_configuration.rest_base_url}{albumart}"
         else:
             albumart_url = albumart
 
@@ -865,19 +851,16 @@ def queue_list(
     This command retrieves and displays the current playback queue,
     showing all queued tracks with their metadata.
     """
-    scheme = ctx.obj["scheme"]
-    host = ctx.obj["host"]
-    rest_api_port = ctx.obj["rest_api_port"]
-    mpd_port = ctx.obj["mpd_port"]
+    host_configuration = ctx.obj["host_configuration"]
     timeout = ctx.obj["timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
     if verbose and not quiet:
-        click.echo(f"Connecting to {scheme}://{host}:{rest_api_port}/api/v1/getQueue...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getQueue...", err=True)
 
     try:
-        client = create_client(scheme, host, rest_api_port, mpd_port, timeout)
+        client = create_client(host_configuration, timeout)
         queue_data = client.get_queue()
 
         if verbose and not quiet:

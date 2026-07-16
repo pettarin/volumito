@@ -4,11 +4,12 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
-from typing import Any, Literal
+from typing import Any
 
 import requests
 
 from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
+from volumito.clients.host_configuration import VolumioHostConfiguration
 
 
 class VolumioRESTAPIClient:
@@ -16,27 +17,17 @@ class VolumioRESTAPIClient:
 
     def __init__(
         self,
-        scheme: Literal["http", "https"] = "http",
-        host: str = "volumio.local",
-        rest_api_port: int = 3000,
-        mpd_port: int = 6600,
+        host_configuration: VolumioHostConfiguration,
         timeout: float = 5.0,
     ) -> None:
         """Initialize the Volumio client.
 
         Args:
-            scheme: The URL scheme (http or https)
-            host: The hostname or IP address of the Volumio instance
-            rest_api_port: The REST API port (default: 3000)
-            mpd_port: The MPD port (default: 6600)
+            host_configuration: The host configuration (scheme, host, and ports)
             timeout: Request timeout in seconds (default: 5.0)
         """
-        self.scheme = scheme
-        self.host = host
-        self.rest_api_port = rest_api_port
-        self.mpd_port = mpd_port
+        self.host_configuration = host_configuration
         self.timeout = timeout
-        self.base_url = f"{self.scheme}://{self.host}:{self.rest_api_port}"
 
     def get_state(self) -> dict[str, Any]:
         """Query the /api/v1/getState endpoint.
@@ -48,19 +39,21 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        url = f"{self.base_url}/api/v1/getState"
+        url = f"{self.host_configuration.rest_base_url}/api/v1/getState"
 
         try:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
         except requests.exceptions.ConnectionError as e:
             raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at {self.base_url}: {e}"
+                f"Failed to connect to Volumio instance at "
+                f"{self.host_configuration.rest_base_url}: {e}"
             ) from e
         except requests.exceptions.Timeout as e:
             raise VolumioConnectionError(
-                f"Connection to Volumio instance at {self.base_url} timed out after "
-                f"{self.timeout} seconds: {e}"
+                f"Connection to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} "
+                f"timed out after {self.timeout} seconds: {e}"
             ) from e
         except requests.exceptions.HTTPError as e:
             raise VolumioAPIError(
@@ -68,7 +61,8 @@ class VolumioRESTAPIClient:
             ) from e
         except requests.exceptions.RequestException as e:
             raise VolumioConnectionError(
-                f"Request to Volumio instance at {self.base_url} failed: {e}"
+                f"Request to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} failed: {e}"
             ) from e
 
         try:
@@ -95,19 +89,21 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        url = f"{self.base_url}/api/v1/getQueue"
+        url = f"{self.host_configuration.rest_base_url}/api/v1/getQueue"
 
         try:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
         except requests.exceptions.ConnectionError as e:
             raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at {self.base_url}: {e}"
+                f"Failed to connect to Volumio instance at "
+                f"{self.host_configuration.rest_base_url}: {e}"
             ) from e
         except requests.exceptions.Timeout as e:
             raise VolumioConnectionError(
-                f"Connection to Volumio instance at {self.base_url} timed out after "
-                f"{self.timeout} seconds: {e}"
+                f"Connection to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} "
+                f"timed out after {self.timeout} seconds: {e}"
             ) from e
         except requests.exceptions.HTTPError as e:
             raise VolumioAPIError(
@@ -115,7 +111,8 @@ class VolumioRESTAPIClient:
             ) from e
         except requests.exceptions.RequestException as e:
             raise VolumioConnectionError(
-                f"Request to Volumio instance at {self.base_url} failed: {e}"
+                f"Request to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} failed: {e}"
             ) from e
 
         try:
@@ -145,19 +142,21 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        url = f"{self.base_url}/api/v1/commands/?cmd={cmd}"
+        url = f"{self.host_configuration.rest_base_url}/api/v1/commands/?cmd={cmd}"
 
         try:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
         except requests.exceptions.ConnectionError as e:
             raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at {self.base_url}: {e}"
+                f"Failed to connect to Volumio instance at "
+                f"{self.host_configuration.rest_base_url}: {e}"
             ) from e
         except requests.exceptions.Timeout as e:
             raise VolumioConnectionError(
-                f"Connection to Volumio instance at {self.base_url} timed out after "
-                f"{self.timeout} seconds: {e}"
+                f"Connection to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} "
+                f"timed out after {self.timeout} seconds: {e}"
             ) from e
         except requests.exceptions.HTTPError as e:
             raise VolumioAPIError(
@@ -165,7 +164,8 @@ class VolumioRESTAPIClient:
             ) from e
         except requests.exceptions.RequestException as e:
             raise VolumioConnectionError(
-                f"Request to Volumio instance at {self.base_url} failed: {e}"
+                f"Request to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} failed: {e}"
             ) from e
 
         try:

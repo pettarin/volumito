@@ -7,6 +7,7 @@
 import pytest
 from pytest_mock import MockerFixture
 
+from volumito.clients import VolumioHostConfiguration
 from volumito.clients.errors import VolumioConnectionError
 from volumito.clients.mpd import VolumioMPDClient
 
@@ -16,23 +17,21 @@ class TestVolumioMPDClient:
 
     def test_init_default_values(self):
         """Test VolumioMPDClient initialization with default values."""
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
 
-        assert client.host == "volumio.local"
-        assert client.port == 6600
         assert client.timeout == 5.0
         assert client._connected is False
 
     def test_init_custom_values(self):
         """Test VolumioMPDClient initialization with custom values."""
         client = VolumioMPDClient(
-            host="192.168.1.100",
-            port=7000,
+            VolumioHostConfiguration(
+                host="192.168.1.100",
+                mpd_port=7000,
+            ),
             timeout=10.0,
         )
 
-        assert client.host == "192.168.1.100"
-        assert client.port == 7000
         assert client.timeout == 10.0
 
     def test_connect_success(self, mocker: MockerFixture):
@@ -40,7 +39,7 @@ class TestVolumioMPDClient:
         mock_mpd = mocker.Mock()
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
 
         mock_mpd.connect.assert_called_once_with("volumio.local", 6600)
@@ -52,7 +51,7 @@ class TestVolumioMPDClient:
         mock_mpd.connect.side_effect = ConnectionRefusedError("Connection refused")
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.connect()
@@ -66,7 +65,7 @@ class TestVolumioMPDClient:
         mock_mpd.connect.side_effect = OSError("Network unreachable")
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.connect()
@@ -79,7 +78,7 @@ class TestVolumioMPDClient:
         mock_mpd.connect.side_effect = Exception("Unexpected error")
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.connect()
@@ -91,7 +90,7 @@ class TestVolumioMPDClient:
         mock_mpd = mocker.Mock()
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
         client.disconnect()
 
@@ -104,7 +103,7 @@ class TestVolumioMPDClient:
         mock_mpd = mocker.Mock()
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.disconnect()
 
         mock_mpd.close.assert_not_called()
@@ -120,7 +119,7 @@ class TestVolumioMPDClient:
         }
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
         song = client.get_current_song()
 
@@ -130,7 +129,7 @@ class TestVolumioMPDClient:
 
     def test_get_current_song_not_connected(self):
         """Test get_current_song() when not connected."""
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_current_song()
@@ -143,7 +142,7 @@ class TestVolumioMPDClient:
         mock_mpd.currentsong.return_value = {}
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
 
         with pytest.raises(VolumioConnectionError) as exc_info:
@@ -157,7 +156,7 @@ class TestVolumioMPDClient:
         mock_mpd.currentsong.return_value = {"title": "Test"}
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
 
         with pytest.raises(VolumioConnectionError) as exc_info:
@@ -171,7 +170,7 @@ class TestVolumioMPDClient:
         mock_mpd.currentsong.side_effect = Exception("MPD protocol error")
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
 
         with pytest.raises(VolumioConnectionError) as exc_info:
@@ -187,7 +186,7 @@ class TestVolumioMPDClient:
         }
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient(host="volumio.local")
+        client = VolumioMPDClient(VolumioHostConfiguration(host="volumio.local"))
         client.connect()
         uri = client.get_track_uri()
 
@@ -202,7 +201,7 @@ class TestVolumioMPDClient:
         }
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient(host="192.168.1.100")
+        client = VolumioMPDClient(VolumioHostConfiguration(host="192.168.1.100"))
         client.connect()
         uri = client.get_track_uri()
 
@@ -217,7 +216,7 @@ class TestVolumioMPDClient:
         }
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient(host="myhost.local")
+        client = VolumioMPDClient(VolumioHostConfiguration(host="myhost.local"))
         client.connect()
         uri = client.get_track_uri()
 
@@ -231,7 +230,7 @@ class TestVolumioMPDClient:
         mock_mpd.currentsong.return_value = {"file": "http://localhost:8000/test.flac"}
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        with VolumioMPDClient() as client:
+        with VolumioMPDClient(VolumioHostConfiguration()) as client:
             assert client._connected is True
             uri = client.get_track_uri()
             assert "volumio.local" in uri
@@ -248,7 +247,7 @@ class TestVolumioMPDClient:
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
         with pytest.raises(VolumioConnectionError):
-            with VolumioMPDClient() as client:
+            with VolumioMPDClient(VolumioHostConfiguration()) as client:
                 assert client._connected is True
                 client.get_current_song()
 
@@ -263,7 +262,7 @@ class TestVolumioMPDClient:
         mock_mpd.connect.side_effect = ConnectionRefusedError("Connection refused")
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
-        client = VolumioMPDClient()
+        client = VolumioMPDClient(VolumioHostConfiguration())
         with pytest.raises(VolumioConnectionError):
             with client:
                 pass  # Should not reach here

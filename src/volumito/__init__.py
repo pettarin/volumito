@@ -8,6 +8,7 @@ from volumito.clients import (
     VolumioAPIError,
     VolumioConnectionError,
     VolumioError,
+    VolumioHostConfiguration,
     VolumioMPDClient,
     VolumioRESTAPIClient,
 )
@@ -17,6 +18,7 @@ __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
 __all__ = [
+    "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",

@@ -1,4 +1,4 @@
-"""Tests for the API client module.
+"""Tests for the REST client module.
 
 :copyright: Copyright (C) 2025-2026 Alberto Pettarin
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
@@ -8,6 +8,7 @@ import pytest
 import requests
 from pytest_mock import MockerFixture
 
+from volumito.clients import VolumioHostConfiguration
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -21,31 +22,23 @@ class TestVolumioRESTAPIClient:
 
     def test_init_default_values(self):
         """Test VolumioRESTAPIClient initialization with default values."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
-        assert client.scheme == "http"
-        assert client.host == "volumio.local"
-        assert client.rest_api_port == 3000
-        assert client.mpd_port == 6600
         assert client.timeout == 5.0
-        assert client.base_url == "http://volumio.local:3000"
 
     def test_init_custom_values(self):
         """Test VolumioRESTAPIClient initialization with custom values."""
         client = VolumioRESTAPIClient(
-            scheme="https",
-            host="192.168.1.100",
-            rest_api_port=8080,
-            mpd_port=7000,
+            VolumioHostConfiguration(
+                scheme="https",
+                host="192.168.1.100",
+                rest_api_port=8080,
+                mpd_port=7000,
+            ),
             timeout=10.0,
         )
 
-        assert client.scheme == "https"
-        assert client.host == "192.168.1.100"
-        assert client.rest_api_port == 8080
-        assert client.mpd_port == 7000
         assert client.timeout == 10.0
-        assert client.base_url == "https://192.168.1.100:8080"
 
     def test_get_state_success(self, mocker: MockerFixture):
         """Test successful get_state() call."""
@@ -66,7 +59,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mock_get = mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         state = client.get_state()
 
         # Verify the request was made correctly
@@ -87,7 +80,7 @@ class TestVolumioRESTAPIClient:
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_state()
@@ -101,7 +94,7 @@ class TestVolumioRESTAPIClient:
             "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_state()
@@ -120,7 +113,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.get_state()
@@ -137,7 +130,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.get_state()
@@ -154,7 +147,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.get_state()
@@ -170,7 +163,7 @@ class TestVolumioRESTAPIClient:
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_state()
@@ -204,7 +197,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mock_get = mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         queue_data = client.get_queue()
 
         # Verify the request was made correctly
@@ -226,7 +219,7 @@ class TestVolumioRESTAPIClient:
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_queue()
@@ -240,7 +233,7 @@ class TestVolumioRESTAPIClient:
             "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_queue()
@@ -259,7 +252,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.get_queue()
@@ -276,7 +269,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.get_queue()
@@ -293,7 +286,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.get_queue()
@@ -309,7 +302,7 @@ class TestVolumioRESTAPIClient:
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.get_queue()
@@ -329,7 +322,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mock_get = mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         response = client.send_command("play")
 
         # Verify the request was made correctly
@@ -348,7 +341,7 @@ class TestVolumioRESTAPIClient:
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.send_command("play")
@@ -362,7 +355,7 @@ class TestVolumioRESTAPIClient:
             "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.send_command("pause")
@@ -381,7 +374,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.send_command("stop")
@@ -398,7 +391,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.send_command("toggle")
@@ -415,7 +408,7 @@ class TestVolumioRESTAPIClient:
         # Mock requests.get
         mocker.patch("requests.get", return_value=mock_response)
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
             client.send_command("next")
@@ -431,7 +424,7 @@ class TestVolumioRESTAPIClient:
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.send_command("toggle")
@@ -440,7 +433,7 @@ class TestVolumioRESTAPIClient:
 
     def test_toggle(self, mocker: MockerFixture):
         """Test toggle() method."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "toggle"}
 
@@ -451,7 +444,7 @@ class TestVolumioRESTAPIClient:
 
     def test_play(self, mocker: MockerFixture):
         """Test play() method."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "play"}
 
@@ -462,7 +455,7 @@ class TestVolumioRESTAPIClient:
 
     def test_play_with_position(self, mocker: MockerFixture):
         """Test play() method with position parameter."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "play"}
 
@@ -473,7 +466,7 @@ class TestVolumioRESTAPIClient:
 
     def test_pause(self, mocker: MockerFixture):
         """Test pause() method."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "pause"}
 
@@ -484,7 +477,7 @@ class TestVolumioRESTAPIClient:
 
     def test_stop(self, mocker: MockerFixture):
         """Test stop() method."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "stop"}
 
@@ -495,7 +488,7 @@ class TestVolumioRESTAPIClient:
 
     def test_next(self, mocker: MockerFixture):
         """Test next() method."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "next"}
 
@@ -506,7 +499,7 @@ class TestVolumioRESTAPIClient:
 
     def test_previous(self, mocker: MockerFixture):
         """Test previous() method."""
-        client = VolumioRESTAPIClient()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "prev"}
 
