@@ -329,7 +329,7 @@ def execute_command(
         endpoint: API endpoint being called (for verbose output)
     """
     host_configuration = ctx.obj["host_configuration"]
-    timeout = ctx.obj["timeout"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
@@ -337,7 +337,7 @@ def execute_command(
         click.echo(f"Connecting to {host_configuration.rest_base_url}{endpoint}...", err=True)
 
     try:
-        client = create_client(host_configuration, timeout)
+        client = create_client(host_configuration, rest_api_timeout)
         response = command_func(client)
 
         if verbose and not quiet:
@@ -390,11 +390,18 @@ def execute_command(
     help="MPD port of the Volumio instance",
 )
 @click.option(
-    "--timeout",
+    "--rest-api-timeout",
     type=float,
     default=5.0,
     show_default=True,
-    help="Request timeout in seconds",
+    help="REST API request timeout in seconds",
+)
+@click.option(
+    "--mpd-timeout",
+    type=float,
+    default=5.0,
+    show_default=True,
+    help="MPD connection timeout in seconds",
 )
 @click.option(
     "--verbose",
@@ -410,7 +417,7 @@ def execute_command(
     default=False,
     help="Suppress all non-essential output",
 )
-@click.version_option(version="0.0.5", prog_name="volumito")
+@click.version_option(version="0.0.6", prog_name="volumito")
 @click.pass_context
 def main(
     ctx: click.Context,
@@ -418,7 +425,8 @@ def main(
     host: str,
     rest_api_port: int,
     mpd_port: int,
-    timeout: float,
+    rest_api_timeout: float,
+    mpd_timeout: float,
     verbose: bool,
     quiet: bool,
 ) -> None:
@@ -431,7 +439,8 @@ def main(
         rest_api_port=rest_api_port,
         mpd_port=mpd_port,
     )
-    ctx.obj["timeout"] = timeout
+    ctx.obj["rest_api_timeout"] = rest_api_timeout
+    ctx.obj["mpd_timeout"] = mpd_timeout
     ctx.obj["verbose"] = verbose
     ctx.obj["quiet"] = quiet
 
@@ -471,7 +480,7 @@ def info(
     instance, including playback status, volume, track information, and more.
     """
     host_configuration = ctx.obj["host_configuration"]
-    timeout = ctx.obj["timeout"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
@@ -479,7 +488,7 @@ def info(
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
-        client = create_client(host_configuration, timeout)
+        client = create_client(host_configuration, rest_api_timeout)
         state = client.get_state()
 
         if verbose and not quiet:
@@ -614,7 +623,8 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
     track to a file (auto-generates filename if path not provided).
     """
     host_configuration = ctx.obj["host_configuration"]
-    timeout = ctx.obj["timeout"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
+    mpd_timeout = ctx.obj["mpd_timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
@@ -623,7 +633,7 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
 
     try:
         # Get current track metadata
-        client = create_client(host_configuration, timeout)
+        client = create_client(host_configuration, rest_api_timeout)
         state = client.get_state()
 
         if verbose and not quiet:
@@ -635,7 +645,7 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
             )
 
         # Connect to MPD to get current track URI
-        with VolumioMPDClient(host_configuration, timeout) as mpd_client:
+        with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
             if verbose and not quiet:
                 click.echo("Successfully connected to MPD", err=True)
 
@@ -669,7 +679,7 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
                     click.echo(f"\nDownloading track to {output_file}...", err=True)
 
                 try:
-                    response = requests.get(uri, timeout=timeout, stream=True)
+                    response = requests.get(uri, timeout=rest_api_timeout, stream=True)
                     response.raise_for_status()
 
                     with open(output_file, "wb") as f:
@@ -723,7 +733,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
     file using the -o/--output-file option (auto-generates filename if path not provided).
     """
     host_configuration = ctx.obj["host_configuration"]
-    timeout = ctx.obj["timeout"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
@@ -732,7 +742,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
 
     try:
         # Get current state metadata
-        client = create_client(host_configuration, timeout)
+        client = create_client(host_configuration, rest_api_timeout)
         state = client.get_state()
 
         if verbose and not quiet:
@@ -777,7 +787,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
                 click.echo(f"\nDownloading album art to {output_file}...", err=True)
 
             try:
-                response = requests.get(albumart_url, timeout=timeout, stream=True)
+                response = requests.get(albumart_url, timeout=rest_api_timeout, stream=True)
                 response.raise_for_status()
 
                 with open(output_file, "wb") as f:
@@ -852,7 +862,7 @@ def queue_list(
     showing all queued tracks with their metadata.
     """
     host_configuration = ctx.obj["host_configuration"]
-    timeout = ctx.obj["timeout"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
     quiet = ctx.obj["quiet"]
 
@@ -860,7 +870,7 @@ def queue_list(
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getQueue...", err=True)
 
     try:
-        client = create_client(host_configuration, timeout)
+        client = create_client(host_configuration, rest_api_timeout)
         queue_data = client.get_queue()
 
         if verbose and not quiet:

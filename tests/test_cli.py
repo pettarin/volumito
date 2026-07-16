@@ -180,13 +180,15 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "volumito" in result.output
         assert "info" in result.output
+        assert "--rest-api-timeout" in result.output
+        assert "--mpd-timeout" in result.output
 
     def test_main_version(self, runner: CliRunner):
         """Test main command with --version."""
         result = runner.invoke(main, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.0.5" in result.output
+        assert "0.0.6" in result.output
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""
@@ -631,7 +633,7 @@ class TestCLICommands:
         assert "Command 'next' executed successfully" in result.output
 
     def test_next_with_custom_options(self, runner: CliRunner, mocker: MockerFixture):
-        """Test next command with custom host, port, and timeout."""
+        """Test next command with custom host, port, and REST API timeout."""
         mock_client = mocker.Mock()
         mock_client.next.return_value = {"response": "next"}
 
@@ -645,7 +647,7 @@ class TestCLICommands:
             [
                 "--host", "192.168.1.100",
                 "--rest-api-port", "8080",
-                "--timeout", "10",
+                "--rest-api-timeout", "10",
                 "player", "next"
             ],
         )
@@ -960,6 +962,35 @@ class TestCLICommands:
         result = runner.invoke(main, ["--mpd-port", "6600", "track", "audio"])
 
         assert result.exit_code == 0
+
+    def test_audio_with_custom_timeouts(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio command routes --rest-api-timeout and --mpd-timeout to the right clients."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test"}
+
+        mock_rest_class = mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        # Build an MPD class mock so we can inspect the constructor arguments
+        mock_mpd_instance = mocker.Mock()
+        mock_mpd_instance.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
+        mock_mpd_class = mocker.Mock(return_value=mock_mpd_instance)
+        mock_mpd_class.return_value.__enter__ = mocker.Mock(return_value=mock_mpd_instance)
+        mock_mpd_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mock_mpd_class)
+
+        result = runner.invoke(
+            main,
+            ["--rest-api-timeout", "10", "--mpd-timeout", "3", "track", "audio"],
+        )
+
+        assert result.exit_code == 0
+        # REST client receives the REST API timeout
+        assert mock_rest_class.call_args[0][1] == 10.0
+        # MPD client receives the MPD timeout
+        assert mock_mpd_class.call_args[0][1] == 3.0
 
     def test_audio_replaces_localhost(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command replaces localhost with host value."""

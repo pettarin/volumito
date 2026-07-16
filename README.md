@@ -85,8 +85,9 @@ volumito info --scheme https
 # Custom ports
 volumito info --rest-api-port 8080 --mpd-port 7000
 
-# Custom timeout (in seconds)
-volumito info --timeout 10
+# Custom timeouts (in seconds)
+volumito info --rest-api-timeout 10
+volumito track audio --mpd-timeout 3
 ```
 
 The default MPD port is `6600`, as used by Volumio 4.
