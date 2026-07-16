@@ -12,7 +12,7 @@ from volumito.clients import (
     VolumioRESTAPIClient,
 )
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 

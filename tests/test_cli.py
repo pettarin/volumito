@@ -186,7 +186,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.0.4" in result.output
+        assert "0.0.5" in result.output
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""
