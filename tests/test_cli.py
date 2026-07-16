@@ -188,7 +188,16 @@ class TestCLICommands:
         result = runner.invoke(main, ["--version"])
 
         assert result.exit_code == 0
-        assert "0.0.6" in result.output
+        assert "volumito, version 0.0.6" in result.output
+
+    def test_main_version_quiet(self, runner: CliRunner):
+        """Test --quiet --version prints only the bare version number."""
+        result = runner.invoke(main, ["--quiet", "--version"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "0.0.6"
+        assert "volumito" not in result.output
+        assert "version" not in result.output
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""

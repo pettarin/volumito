@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.6] - 2026-07-16
 
+### Added
+
+- `--quiet --version` prints only the bare version number (e.g. `0.0.6`)
+
 ### Changed
 
 - Split the single `--timeout` CLI option into `--rest-api-timeout` and `--mpd-timeout`
