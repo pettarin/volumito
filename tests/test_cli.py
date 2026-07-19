@@ -74,6 +74,12 @@ class TestFilterFields:
         assert "volume" in result
         assert "mute" in result
 
+        # Audio-quality fields are no longer part of the short field set
+        assert "samplerate" not in result
+        assert "bitdepth" not in result
+        assert "channels" not in result
+        assert "service" not in result
+
         # Should not include non-short fields
         assert "extra" not in result
 
@@ -2189,6 +2195,12 @@ class TestQueueHelperFunctions:
         for field in QUEUE_SHORT_FIELDS:
             if field in queue_data["queue"][0]:
                 assert field in result[0]
+        # Audio-quality fields are no longer part of the queue short field set
+        assert "samplerate" not in result[0]
+        assert "bitdepth" not in result[0]
+        assert "channels" not in result[0]
+        assert "service" not in result[0]
+
         # Should not include non-short fields
         assert "extra_field" not in result[0]
         assert "another_field" not in result[0]

@@ -30,10 +30,6 @@ SHORT_FIELDS = [
     "title",
     "artist",
     "album",
-    "samplerate",
-    "bitdepth",
-    "channels",
-    "service",
     "duration",
     "seek",
     "volume",
@@ -46,10 +42,6 @@ QUEUE_SHORT_FIELDS = [
     "artist",
     "album",
     "duration",
-    "samplerate",
-    "bitdepth",
-    "channels",
-    "service",
 ]
 
 
@@ -220,10 +212,6 @@ def format_as_table(state: dict[str, Any]) -> str:
             ("Title", "title"),
             ("Artist", "artist"),
             ("Album", "album"),
-            ("Sample Rate", "samplerate"),
-            ("Bit Depth", "bitdepth"),
-            ("Channels", "channels"),
-            ("Service", "service"),
             ("Duration", "duration"),
             ("Seek", "seek"),
             ("Volume", "volume"),

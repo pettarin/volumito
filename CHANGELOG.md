@@ -8,10 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.7] - 2026-07-19
 
-### Changed
+### Added
 
-- Add `status`, `seek`, `volume`, and `mute` to the default short field set
+- Fields `status`, `seek`, `volume`, and `mute` to the default short field set
   (`info --fields short`)
+
+### Removed
+
+- Fields `samplerate`, `bitdepth`, `channels`, and `service` from the short field sets
+  (`info --fields short` and `queue list --fields short`)
 
 
 ## [0.0.6] - 2026-07-16
