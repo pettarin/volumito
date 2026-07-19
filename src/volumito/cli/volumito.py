@@ -25,6 +25,7 @@ FILE_WRITE_CHUNK_SIZE = 8192
 
 # Short fields list (same as table format)
 SHORT_FIELDS = [
+    "status",
     "position",
     "title",
     "artist",
@@ -34,6 +35,9 @@ SHORT_FIELDS = [
     "channels",
     "service",
     "duration",
+    "seek",
+    "volume",
+    "mute",
 ]
 
 # Short fields list for queue items
@@ -99,6 +103,8 @@ def format_as_pretty(state: dict[str, Any]) -> str:
             cleaned_state[key] = str(value + 1)
         elif key == "duration" and isinstance(value, int):
             cleaned_state[key] = format_duration(value)
+        elif key == "seek" and isinstance(value, int):
+            cleaned_state[key] = format_seek(value)
         else:
             cleaned_state[key] = value
 
@@ -118,6 +124,22 @@ def format_duration(seconds: int) -> str:
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def format_seek(milliseconds: int) -> str:
+    """Convert a seek position in milliseconds to HH:MM:SS.mmm format.
+
+    Args:
+        milliseconds: Seek position in milliseconds
+
+    Returns:
+        A formatted string in HH:MM:SS.mmm format
+    """
+    seconds, millis = divmod(milliseconds, 1000)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
 def sanitize_filename(text: str) -> str:
@@ -193,6 +215,7 @@ def format_as_table(state: dict[str, Any]) -> str:
     if state_keys.issubset(short_keys):
         # Use predefined labels for short fields
         field_list = [
+            ("Status", "status"),
             ("Position", "position"),
             ("Title", "title"),
             ("Artist", "artist"),
@@ -202,6 +225,9 @@ def format_as_table(state: dict[str, Any]) -> str:
             ("Channels", "channels"),
             ("Service", "service"),
             ("Duration", "duration"),
+            ("Seek", "seek"),
+            ("Volume", "volume"),
+            ("Mute", "mute"),
         ]
     else:
         # Display all fields from the state
@@ -216,6 +242,9 @@ def format_as_table(state: dict[str, Any]) -> str:
             # Format duration as HH:MM:SS
             if key == "duration" and isinstance(value, int):
                 value = format_duration(value)
+            # Format seek (milliseconds) as HH:MM:SS.mmm
+            if key == "seek" and isinstance(value, int):
+                value = format_seek(value)
             lines.append(f"{label:20}: {value}")
 
     return "\n".join(lines)
@@ -360,7 +389,7 @@ def execute_command(
         sys.exit(1)
 
 
-_VERSION = "0.0.6"
+_VERSION = "0.0.7"
 
 
 @click.group()

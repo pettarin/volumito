@@ -136,6 +136,7 @@ volumito info --fields all
 ```
 
 Short fields include:
+- status
 - position
 - title
 - artist
@@ -145,6 +146,9 @@ Short fields include:
 - channels
 - service
 - duration
+- seek
+- volume
+- mute
 
 ### Verbosity Control
 

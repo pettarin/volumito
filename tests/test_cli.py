@@ -70,9 +70,11 @@ class TestFilterFields:
             if field in state:
                 assert field in result
 
+        # volume and mute are now part of the short field set
+        assert "volume" in result
+        assert "mute" in result
+
         # Should not include non-short fields
-        assert "volume" not in result
-        assert "mute" not in result
         assert "extra" not in result
 
     def test_filter_fields_short_with_missing_fields(self):
@@ -114,13 +116,24 @@ class TestFormatFunctions:
         # Check for 4-space indentation
         assert "    " in result
 
+    def test_format_as_pretty_seek(self):
+        """Test format_as_pretty renders seek (milliseconds) as HH:MM:SS.mmm."""
+        state = {"title": "Test", "seek": 42123}
+
+        result = format_as_pretty(state)
+
+        parsed = json.loads(result)
+        assert parsed["seek"] == "00:00:42.123"
+
     def test_format_as_table_short(self):
         """Test format_as_table with short fields."""
         state = {
+            "status": "play",
             "position": 0,
             "title": "Test Song",
             "artist": "Test Artist",
             "album": "Test Album",
+            "seek": 42123,
         }
 
         result = format_as_table(state)
@@ -129,6 +142,9 @@ class TestFormatFunctions:
         assert "=" * 50 in result
         assert "Test Song" in result
         assert "Test Artist" in result
+        assert "play" in result
+        # seek (milliseconds) is rendered as HH:MM:SS.mmm
+        assert "00:00:42.123" in result
 
     def test_format_as_table_all(self):
         """Test format_as_table with all fields."""
@@ -190,14 +206,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.6" in result.output
+        assert "volumito, version 0.0.7" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints only the bare version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == "0.0.6"
+        assert result.output.strip() == "0.0.7"
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -206,7 +222,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == "0.0.6"
+        assert result.output.strip() == "0.0.7"
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""
@@ -326,7 +342,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         output_data = json.loads(result.output)
         assert "title" in output_data
-        assert "volume" not in output_data
+        assert "volume" in output_data
         assert "extra" not in output_data
 
     def test_info_with_raw_flag(self, runner: CliRunner, mocker: MockerFixture):
