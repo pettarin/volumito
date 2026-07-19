@@ -253,6 +253,7 @@ class TestCLICommands:
         assert "--machine-readable" in result.output
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
+        assert "--rest-api-sleep-before-next-call" in result.output
 
     def test_version_command(self, runner: CliRunner):
         """Test the version subcommand."""
@@ -2401,7 +2402,7 @@ class TestPrintResultingState:
         assert "Command 'pause' executed successfully" in result.output
         # The resulting state is printed after the command
         assert "Test Song" in result.output
-        mock_sleep.assert_called_once_with(1)
+        mock_sleep.assert_called_once_with(1.0)
         mock_client.get_state.assert_called_once()
 
     def test_no_print_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
@@ -2424,7 +2425,7 @@ class TestPrintResultingState:
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
-        mock_sleep.assert_called_once_with(1)
+        mock_sleep.assert_called_once_with(1.0)
 
     def test_command_with_argument_prints_resulting_state(
         self, runner: CliRunner, mocker: MockerFixture
@@ -2437,7 +2438,19 @@ class TestPrintResultingState:
         assert result.exit_code == 0
         assert "Test Song" in result.output
         mock_client.volume.assert_called_once_with(50)
-        mock_sleep.assert_called_once_with(1)
+        mock_sleep.assert_called_once_with(1.0)
+
+    def test_custom_sleep_before_next_call(self, runner: CliRunner, mocker: MockerFixture):
+        """--rest-api-sleep-before-next-call sets the pause before the resulting-state fetch."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["--rest-api-sleep-before-next-call", "0.5", "player", "pause"]
+        )
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+        mock_sleep.assert_called_once_with(0.5)
 
 
 class TestQueueHelperFunctions:

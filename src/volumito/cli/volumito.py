@@ -426,15 +426,24 @@ def print_resulting_state_option(func: Callable[..., None]) -> Callable[..., Non
     )(func)
 
 
+def rest_api_sleep(ctx: click.Context) -> None:
+    """Sleep for the configured delay before making the next REST API call.
+
+    Args:
+        ctx: Click context object holding the shared options
+    """
+    time.sleep(ctx.obj["rest_api_sleep_before_next_call"])
+
+
 def maybe_print_resulting_state(ctx: click.Context, enabled: bool) -> None:
-    """When enabled, wait 1 second and invoke the "player state" command.
+    """When enabled, wait the configured number of seconds and invoke "player state".
 
     Args:
         ctx: Click context object (its ``obj`` is inherited by the invoked command)
         enabled: Whether to print the resulting state
     """
     if enabled:
-        time.sleep(1)
+        rest_api_sleep(ctx)
         ctx.invoke(player_state)
 
 
@@ -528,6 +537,13 @@ class VolumeParamType(click.ParamType):
     help="MPD connection timeout in seconds",
 )
 @click.option(
+    "--rest-api-sleep-before-next-call",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds to sleep before making the next REST API call",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -553,6 +569,7 @@ def main(
     mpd_port: int,
     rest_api_timeout: float,
     mpd_timeout: float,
+    rest_api_sleep_before_next_call: float,
     verbose: bool,
     machine_readable: bool,
 ) -> None:
@@ -567,6 +584,7 @@ def main(
     )
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["mpd_timeout"] = mpd_timeout
+    ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
 

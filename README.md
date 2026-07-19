@@ -101,6 +101,9 @@ volumito player state --rest-api-port 8080 --mpd-port 7000
 # Custom timeouts (in seconds)
 volumito player state --rest-api-timeout 10
 volumito track audio --mpd-timeout 3
+
+# Pause before the resulting-state fetch (default 1.0 s; see Resulting State)
+volumito --rest-api-sleep-before-next-call 0.5 player pause
 ```
 
 The default MPD port is `6600`, as used by Volumio 4.
@@ -185,12 +188,16 @@ volumito player unmute
 ### Resulting State
 
 By default, every `player` action subcommand (`toggle`, `play`, `pause`, `stop`, `next`, `previous`,
-`volume`, `mute`, `unmute`) waits 1 second after running and then prints the resulting `player state`.
-Disable this with `--no-print-resulting-state`:
+`volume`, `mute`, `unmute`) waits before fetching and printing the resulting `player state`. The pause
+is 1 second by default; change it with the global `--rest-api-sleep-before-next-call` option. Disable
+the whole behavior with `--no-print-resulting-state`:
 
 ```bash
 # Pause, then show the resulting state (default)
 volumito player pause
+
+# Use a shorter pause before the resulting state
+volumito --rest-api-sleep-before-next-call 0.5 player pause
 
 # Pause without printing the resulting state
 volumito player pause --no-print-resulting-state

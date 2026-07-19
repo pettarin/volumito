@@ -16,7 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `unmute`, `plus` (also `increase`/`up`), `minus` (also `decrease`/`down`), or an integer 0-100;
   includes `player mute` and `player unmute` synonyms, backed by the volume REST API
 - Option `-r`/`--print-resulting-state` (default on) for `player` action subcommands: after the
-  action, wait 1 second and print the resulting `player state`
+  action, wait and print the resulting `player state`
+- Global option `--rest-api-sleep-before-next-call` (float, default 1.0) controlling the pause before
+  the resulting-state fetch
 
 ### Changed
 
