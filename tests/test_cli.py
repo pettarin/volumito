@@ -6,6 +6,7 @@
 
 import json
 
+import click
 import pytest
 import requests
 from click.testing import CliRunner
@@ -175,13 +176,32 @@ class TestVolumeParamType:
         """An already-converted int value passes through unchanged."""
         assert VolumeParamType().convert(50, None, None) == 50
 
-    def test_convert_keyword_is_lowercased(self):
-        """A keyword value is normalized to lowercase."""
-        assert VolumeParamType().convert("MUTE", None, None) == "mute"
+    def test_convert_keyword(self):
+        """A lowercase keyword value is accepted as-is."""
+        assert VolumeParamType().convert("mute", None, None) == "mute"
 
     def test_convert_numeric_string(self):
         """A numeric string is converted to an int."""
         assert VolumeParamType().convert("50", None, None) == 50
+
+    @pytest.mark.parametrize(
+        ("spelling", "canonical"),
+        [
+            ("up", "plus"),
+            ("increase", "plus"),
+            ("down", "minus"),
+            ("decrease", "minus"),
+        ],
+    )
+    def test_convert_alias(self, spelling: str, canonical: str):
+        """Step aliases are normalized to their canonical keyword."""
+        assert VolumeParamType().convert(spelling, None, None) == canonical
+
+    @pytest.mark.parametrize("value", ["UP", "MUTE", "Plus"])
+    def test_convert_uppercase_rejected(self, value: str):
+        """Only lowercase spellings are accepted; others are a usage error."""
+        with pytest.raises(click.exceptions.BadParameter):
+            VolumeParamType().convert(value, None, None)
 
 
 class TestCLICommands:
@@ -996,6 +1016,49 @@ class TestCLICommands:
         # The value reaches the client as an int
         mock_client.volume.assert_called_once_with(50)
 
+    def test_volume_no_value_prints_current(self, runner: CliRunner, mocker: MockerFixture):
+        """Test player volume without a value prints the current volume."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"volume": 42, "title": "Test"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "volume"])
+
+        assert result.exit_code == 0
+        assert "42" in result.output
+        # No volume command is sent when only querying the current level
+        mock_client.volume.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("spelling", "canonical"),
+        [
+            ("up", "plus"),
+            ("increase", "plus"),
+            ("down", "minus"),
+            ("decrease", "minus"),
+        ],
+    )
+    def test_volume_alias_success(
+        self, runner: CliRunner, mocker: MockerFixture, spelling: str, canonical: str
+    ):
+        """Test player volume normalizes step aliases to the canonical keyword."""
+        mock_client = mocker.Mock()
+        mock_client.volume.return_value = {"response": "volume"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "volume", spelling])
+
+        assert result.exit_code == 0
+        mock_client.volume.assert_called_once_with(canonical)
+
     @pytest.mark.parametrize("keyword", ["mute", "unmute", "plus", "minus"])
     def test_volume_keyword_success(
         self, runner: CliRunner, mocker: MockerFixture, keyword: str
@@ -1009,10 +1072,9 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume", keyword.upper()])
+        result = runner.invoke(main, ["player", "volume", keyword])
 
         assert result.exit_code == 0
-        # Keywords are normalized to lowercase
         mock_client.volume.assert_called_once_with(keyword)
 
     @pytest.mark.parametrize("level", ["0", "100"])
@@ -1031,9 +1093,9 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_client.volume.assert_called_once_with(int(level))
 
-    @pytest.mark.parametrize("bad_value", ["101", "-1", "foo"])
+    @pytest.mark.parametrize("bad_value", ["101", "-1", "foo", "UP", "+"])
     def test_volume_invalid(self, runner: CliRunner, mocker: MockerFixture, bad_value: str):
-        """Test player volume rejects out-of-range and non-numeric values."""
+        """Test player volume rejects out-of-range, non-numeric, and non-lowercase values."""
         mock_client = mocker.Mock()
 
         mocker.patch(

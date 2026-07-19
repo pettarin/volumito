@@ -45,6 +45,9 @@ QUEUE_SHORT_FIELDS = [
     "duration",
 ]
 
+# Version of the CLI (and of the underlying library)
+VERSION = "0.0.7"
+
 
 def filter_fields(state: dict[str, Any], fields: Literal["short", "all"]) -> dict[str, Any]:
     """Filter the state dictionary based on the fields option.
@@ -378,6 +381,40 @@ def execute_command(
         sys.exit(1)
 
 
+def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
+    """Fetch the current state, printing errors and exiting (1) on failure.
+
+    Args:
+        ctx: Click context object containing shared options
+
+    Returns:
+        The state dictionary from the /api/v1/getState endpoint
+    """
+    host_configuration = ctx.obj["host_configuration"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
+    verbose = ctx.obj["verbose"]
+    machine_readable = ctx.obj["machine_readable"]
+
+    if verbose and not machine_readable:
+        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
+
+    try:
+        client = create_client(host_configuration, rest_api_timeout)
+        return client.get_state()
+    except VolumioConnectionError as e:
+        if not machine_readable:
+            click.echo(f"Connection error: {e}", err=True)
+        sys.exit(1)
+    except VolumioAPIError as e:
+        if not machine_readable:
+            click.echo(f"API error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover
+        if not machine_readable:
+            click.echo(f"Unexpected error: {e}", err=True)
+        sys.exit(1)
+
+
 def print_resulting_state_option(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--print-resulting-state`` option to a player subcommand."""
     return click.option(
@@ -401,20 +438,23 @@ def maybe_print_resulting_state(ctx: click.Context, enabled: bool) -> None:
         ctx.invoke(player_state)
 
 
-_VERSION = "0.0.7"
-
-# Non-numeric values accepted by the "player volume" command
-VOLUME_KEYWORDS = ("mute", "unmute", "plus", "minus")
-
-
 class VolumeParamType(click.ParamType):
     """Click parameter type for the volume value.
 
-    Accepts one of the ``VOLUME_KEYWORDS`` (case-insensitive) or an integer
-    between 0 and 100 (inclusive); anything else is a usage error.
+    Accepts any (lowercase) spelling in ``ALIASES``, normalized to its canonical
+    keyword, or an integer between 0 and 100 (inclusive); anything else is a
+    usage error.
     """
 
     name = "volume"
+
+    # Canonical volume keyword -> accepted spellings (lowercase only)
+    ALIASES = {
+        "mute": ["mute"],
+        "unmute": ["unmute"],
+        "plus": ["plus", "increase", "up"],
+        "minus": ["minus", "decrease", "down"],
+    }
 
     def convert(
         self,
@@ -425,15 +465,17 @@ class VolumeParamType(click.ParamType):
         if isinstance(value, int):
             return value
         text = str(value)
-        lowered = text.lower()
-        if lowered in VOLUME_KEYWORDS:
-            return lowered
+        for canonical, spellings in self.ALIASES.items():
+            if text in spellings:
+                return canonical
         try:
             level = int(text)
         except ValueError:
+            accepted = ", ".join(
+                sorted(s for spellings in self.ALIASES.values() for s in spellings)
+            )
             self.fail(
-                f"{text!r} must be an integer between 0 and 100 or one of "
-                f"{', '.join(VOLUME_KEYWORDS)}",
+                f"{text!r} must be an integer between 0 and 100 or one of {accepted}",
                 param,
                 ctx,
             )
@@ -538,9 +580,9 @@ def version(ctx: click.Context) -> None:
     otherwise the program name is included.
     """
     if ctx.obj["machine_readable"]:
-        msg = f"{_VERSION}"
+        msg = f"{VERSION}"
     else:
-        msg = f"volumito, version {_VERSION}"
+        msg = f"volumito, version {VERSION}"
     click.echo(msg)
 
 
@@ -586,53 +628,33 @@ def player_state(
     including playback status, volume, track information, and more. Also available
     as the top-level ``info`` command.
     """
-    host_configuration = ctx.obj["host_configuration"]
-    rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
 
+    state = fetch_state_or_exit(ctx)
+
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
+        click.echo("Successfully retrieved state", err=True)
 
-    try:
-        client = create_client(host_configuration, rest_api_timeout)
-        state = client.get_state()
+    # Determine output format
+    if raw:
+        # Raw JSON without formatting (ignores fields filter)
+        output = json.dumps(state)
+    else:
+        # Apply fields filter for all formatted outputs
+        filtered_state = filter_fields(state, fields)  # type: ignore[arg-type]
 
-        if verbose and not machine_readable:
-            click.echo("Successfully retrieved state", err=True)
+        # Map output format to formatting function
+        format_functions = {
+            "json": format_as_json,
+            "pretty": format_as_pretty,
+            "table": format_as_table,
+        }
 
-        # Determine output format
-        if raw:
-            # Raw JSON without formatting (ignores fields filter)
-            output = json.dumps(state)
-        else:
-            # Apply fields filter for all formatted outputs
-            filtered_state = filter_fields(state, fields)  # type: ignore[arg-type]
+        formatter = format_functions[output_format]
+        output = formatter(filtered_state)
 
-            # Map output format to formatting function
-            format_functions = {
-                "json": format_as_json,
-                "pretty": format_as_pretty,
-                "table": format_as_table,
-            }
-
-            formatter = format_functions[output_format]
-            output = formatter(filtered_state)
-
-        click.echo(output)
-
-    except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
-        sys.exit(1)
-    except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
-        sys.exit(1)
-    except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
-        sys.exit(1)
+    click.echo(output)
 
 
 # "info" is a top-level synonym for "player state"
@@ -713,14 +735,19 @@ def previous(ctx: click.Context, print_resulting_state: bool) -> None:
 
 @player.command()
 @click.pass_context
-@click.argument("value", type=VolumeParamType())
+@click.argument("value", required=False, default=None, type=VolumeParamType())
 @print_resulting_state_option
-def volume(ctx: click.Context, value: int | str, print_resulting_state: bool) -> None:
-    """Set or adjust the volume on a Volumio instance.
+def volume(ctx: click.Context, value: int | str | None, print_resulting_state: bool) -> None:
+    """Set, adjust, or show the volume on a Volumio instance.
 
-    VALUE is an integer between 0 and 100 (inclusive) to set an absolute level,
-    or one of "mute", "unmute", "plus", "minus".
+    Without VALUE, print the current volume. Otherwise VALUE is an integer
+    between 0 and 100 (inclusive) to set an absolute level, or one of "mute",
+    "unmute", "plus" (also "increase"/"up"), "minus" (also "decrease"/"down").
     """
+    if value is None:
+        state = fetch_state_or_exit(ctx)
+        click.echo(state.get("volume"))
+        return
     endpoint = f"/api/v1/commands/?cmd=volume&volume={value}"
     execute_command(ctx, f"volume {value}", lambda c: c.volume(value), endpoint)
     maybe_print_resulting_state(ctx, print_resulting_state)

@@ -160,15 +160,18 @@ volumito player state --machine-readable
 
 ### Volume Control
 
-Set or adjust the playback volume:
+Set, adjust, or show the playback volume:
 
 ```bash
+# Print the current volume (no value)
+volumito player volume
+
 # Set an absolute level (integer between 0 and 100)
 volumito player volume 75
 
 # Step the volume one click up or down
-volumito player volume plus
-volumito player volume minus
+volumito player volume plus     # also: increase, up
+volumito player volume minus    # also: decrease, down
 
 # Mute and unmute
 volumito player volume mute
