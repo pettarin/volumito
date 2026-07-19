@@ -67,8 +67,10 @@ $ micromamba activate volumito_dev
 Query a Volumio instance at the default location (`volumio.local:3000`):
 
 ```bash
-volumito info
+volumito player state
 ```
+
+`volumito info` is a synonym for `volumito player state`.
 
 ### Version
 
@@ -87,17 +89,17 @@ Specify custom connection parameters:
 
 ```bash
 # Custom host
-volumito info --host my-volumio.local
-volumito info --host 192.168.1.100
+volumito player state --host my-volumio.local
+volumito player state --host 192.168.1.100
 
 # HTTPS connection
-volumito info --scheme https
+volumito player state --scheme https
 
 # Custom ports
-volumito info --rest-api-port 8080 --mpd-port 7000
+volumito player state --rest-api-port 8080 --mpd-port 7000
 
 # Custom timeouts (in seconds)
-volumito info --rest-api-timeout 10
+volumito player state --rest-api-timeout 10
 volumito track audio --mpd-timeout 3
 ```
 
@@ -111,16 +113,16 @@ Choose from multiple output formats:
 
 ```bash
 # Pretty JSON with 4-space indentation (default)
-volumito info --format pretty
+volumito player state --format pretty
 
 # Compact JSON with 2-space indentation
-volumito info --format json
+volumito player state --format json
 
 # Human-readable table
-volumito info --format table
+volumito player state --format table
 
 # Raw unformatted JSON
-volumito info --raw
+volumito player state --raw
 ```
 
 ### Field Filtering
@@ -129,10 +131,10 @@ Control which fields are displayed:
 
 ```bash
 # Show only key playback information (default)
-volumito info --fields short
+volumito player state --fields short
 
 # Show all available fields
-volumito info --fields all
+volumito player state --fields all
 ```
 
 Short fields include:
@@ -150,10 +152,31 @@ Short fields include:
 
 ```bash
 # Verbose mode
-volumito info --verbose
+volumito player state --verbose
 
 # Machine-readable mode (always supersedes the verbose option)
-volumito info --machine-readable
+volumito player state --machine-readable
+```
+
+### Volume Control
+
+Set or adjust the playback volume:
+
+```bash
+# Set an absolute level (integer between 0 and 100)
+volumito player volume 75
+
+# Step the volume one click up or down
+volumito player volume plus
+volumito player volume minus
+
+# Mute and unmute
+volumito player volume mute
+volumito player volume unmute
+
+# `player mute` and `player unmute` are synonyms for the two commands above
+volumito player mute
+volumito player unmute
 ```
 
 ### Examples
@@ -162,18 +185,18 @@ Combine options for specific use cases:
 
 ```bash
 # Table format with all fields
-volumito info --format table --fields all
+volumito player state --format table --fields all
 
 # Pipe to jq for advanced JSON processing
-volumito info --raw | jq '.title, .artist'
+volumito player state --raw | jq '.title, .artist'
 
 # Save state to file
-volumito info --format json > volumio_state.json
+volumito player state --format json > volumio_state.json
 
 # Monitor playback every 5 seconds
 while true; do
     clear
-    volumito info --format table
+    volumito player state --format table
     sleep 5
 done
 ```

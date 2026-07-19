@@ -14,6 +14,7 @@ from pytest_mock import MockerFixture
 from volumito.cli.volumito import (
     QUEUE_SHORT_FIELDS,
     SHORT_FIELDS,
+    VolumeParamType,
     filter_fields,
     filter_queue_fields,
     format_as_json,
@@ -167,6 +168,22 @@ class TestFormatFunctions:
         assert "Test" in result
 
 
+class TestVolumeParamType:
+    """Test cases for the VolumeParamType Click parameter type."""
+
+    def test_convert_already_int(self):
+        """An already-converted int value passes through unchanged."""
+        assert VolumeParamType().convert(50, None, None) == 50
+
+    def test_convert_keyword_is_lowercased(self):
+        """A keyword value is normalized to lowercase."""
+        assert VolumeParamType().convert("MUTE", None, None) == "mute"
+
+    def test_convert_numeric_string(self):
+        """A numeric string is converted to an int."""
+        assert VolumeParamType().convert("50", None, None) == 50
+
+
 class TestCLICommands:
     """Test cases for CLI commands using CliRunner."""
 
@@ -255,6 +272,33 @@ class TestCLICommands:
         )
 
         result = runner.invoke(main, ["info"])
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+
+    def test_player_state_help(self, runner: CliRunner):
+        """Test player state command with --help."""
+        result = runner.invoke(main, ["player", "state", "--help"])
+
+        assert result.exit_code == 0
+        assert "--format" in result.output
+        assert "--fields" in result.output
+
+    def test_player_state_success_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Test player state (the canonical form of info) with default options."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "position": 0,
+            "title": "Test Song",
+            "artist": "Test Artist",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "state"])
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
@@ -439,9 +483,13 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "player" in result.output.lower()
+        assert "state" in result.output.lower()
         assert "toggle" in result.output.lower()
         assert "play" in result.output.lower()
         assert "pause" in result.output.lower()
+        assert "volume" in result.output.lower()
+        assert "mute" in result.output.lower()
+        assert "unmute" in result.output.lower()
 
     def test_player_no_subcommand(self, runner: CliRunner):
         """Test player group without subcommand."""
@@ -913,6 +961,113 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Connecting to" in result.output
         assert "Response:" in result.output
+
+    def test_volume_help(self, runner: CliRunner):
+        """Test player volume command with --help."""
+        result = runner.invoke(main, ["player", "volume", "--help"])
+
+        assert result.exit_code == 0
+        assert "volume" in result.output.lower()
+
+    def test_volume_absolute_success(self, runner: CliRunner, mocker: MockerFixture):
+        """Test player volume with an absolute integer level."""
+        mock_client = mocker.Mock()
+        mock_client.volume.return_value = {"response": "volume"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "volume", "50"])
+
+        assert result.exit_code == 0
+        assert "Command 'volume 50' executed successfully" in result.output
+        # The value reaches the client as an int
+        mock_client.volume.assert_called_once_with(50)
+
+    @pytest.mark.parametrize("keyword", ["mute", "unmute", "plus", "minus"])
+    def test_volume_keyword_success(
+        self, runner: CliRunner, mocker: MockerFixture, keyword: str
+    ):
+        """Test player volume with each accepted keyword value."""
+        mock_client = mocker.Mock()
+        mock_client.volume.return_value = {"response": "volume"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "volume", keyword.upper()])
+
+        assert result.exit_code == 0
+        # Keywords are normalized to lowercase
+        mock_client.volume.assert_called_once_with(keyword)
+
+    @pytest.mark.parametrize("level", ["0", "100"])
+    def test_volume_boundaries(self, runner: CliRunner, mocker: MockerFixture, level: str):
+        """Test player volume accepts the 0 and 100 boundary levels."""
+        mock_client = mocker.Mock()
+        mock_client.volume.return_value = {"response": "volume"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "volume", level])
+
+        assert result.exit_code == 0
+        mock_client.volume.assert_called_once_with(int(level))
+
+    @pytest.mark.parametrize("bad_value", ["101", "-1", "foo"])
+    def test_volume_invalid(self, runner: CliRunner, mocker: MockerFixture, bad_value: str):
+        """Test player volume rejects out-of-range and non-numeric values."""
+        mock_client = mocker.Mock()
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "volume", bad_value])
+
+        # Click reports a usage error (exit code 2) and never calls the client
+        assert result.exit_code == 2
+        mock_client.volume.assert_not_called()
+
+    def test_mute_synonym(self, runner: CliRunner, mocker: MockerFixture):
+        """Test player mute is a synonym for player volume mute."""
+        mock_client = mocker.Mock()
+        mock_client.volume.return_value = {"response": "volume"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "mute"])
+
+        assert result.exit_code == 0
+        assert "Command 'volume mute' executed successfully" in result.output
+        mock_client.volume.assert_called_once_with("mute")
+
+    def test_unmute_synonym(self, runner: CliRunner, mocker: MockerFixture):
+        """Test player unmute is a synonym for player volume unmute."""
+        mock_client = mocker.Mock()
+        mock_client.volume.return_value = {"response": "volume"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "unmute"])
+
+        assert result.exit_code == 0
+        assert "Command 'volume unmute' executed successfully" in result.output
+        mock_client.volume.assert_called_once_with("unmute")
 
     def test_track_help(self, runner: CliRunner):
         """Test track group with --help."""

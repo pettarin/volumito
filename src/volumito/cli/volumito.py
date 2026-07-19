@@ -379,6 +379,44 @@ def execute_command(
 
 _VERSION = "0.0.7"
 
+# Non-numeric values accepted by the "player volume" command
+VOLUME_KEYWORDS = ("mute", "unmute", "plus", "minus")
+
+
+class VolumeParamType(click.ParamType):
+    """Click parameter type for the volume value.
+
+    Accepts one of the ``VOLUME_KEYWORDS`` (case-insensitive) or an integer
+    between 0 and 100 (inclusive); anything else is a usage error.
+    """
+
+    name = "volume"
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> int | str:
+        if isinstance(value, int):
+            return value
+        text = str(value)
+        lowered = text.lower()
+        if lowered in VOLUME_KEYWORDS:
+            return lowered
+        try:
+            level = int(text)
+        except ValueError:
+            self.fail(
+                f"{text!r} must be an integer between 0 and 100 or one of "
+                f"{', '.join(VOLUME_KEYWORDS)}",
+                param,
+                ctx,
+            )
+        if not 0 <= level <= 100:
+            self.fail(f"volume level must be between 0 and 100, got {level}", param, ctx)
+        return level
+
 
 @click.group()
 @click.option(
@@ -482,7 +520,14 @@ def version(ctx: click.Context) -> None:
     click.echo(msg)
 
 
-@main.command()
+@main.group()
+@click.pass_context
+def player(ctx: click.Context) -> None:
+    """Commands for controlling playback on a Volumio instance."""
+    pass
+
+
+@player.command("state")
 @click.pass_context
 @click.option(
     "--format",
@@ -505,16 +550,17 @@ def version(ctx: click.Context) -> None:
     default=False,
     help="Output raw JSON without formatting (overrides --format)",
 )
-def info(
+def player_state(
     ctx: click.Context,
     output_format: str,
     fields: str,
     raw: bool,
 ) -> None:
-    """Get information from the /api/v1/getState endpoint of a Volumio instance.
+    """Get the current player state from the /api/v1/getState endpoint of a Volumio instance.
 
-    This command retrieves and displays the current state of a Volumio music player
-    instance, including playback status, volume, track information, and more.
+    Retrieves and displays the current state of a Volumio music player instance,
+    including playback status, volume, track information, and more. Also available
+    as the top-level ``info`` command.
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -565,11 +611,8 @@ def info(
         sys.exit(1)
 
 
-@main.group()
-@click.pass_context
-def player(ctx: click.Context) -> None:
-    """Commands for controlling playback on a Volumio instance."""
-    pass
+# "info" is a top-level synonym for "player state"
+main.add_command(player_state, name="info")
 
 
 @player.command()
@@ -629,6 +672,43 @@ def previous(ctx: click.Context) -> None:
     """Skip to the previous track on a Volumio instance."""
     execute_command(
         ctx, "previous", lambda c: c.previous(), "/api/v1/commands/?cmd=prev"
+    )
+
+
+@player.command()
+@click.pass_context
+@click.argument("value", type=VolumeParamType())
+def volume(ctx: click.Context, value: int | str) -> None:
+    """Set or adjust the volume on a Volumio instance.
+
+    VALUE is an integer between 0 and 100 (inclusive) to set an absolute level,
+    or one of "mute", "unmute", "plus", "minus".
+    """
+    endpoint = f"/api/v1/commands/?cmd=volume&volume={value}"
+    execute_command(ctx, f"volume {value}", lambda c: c.volume(value), endpoint)
+
+
+@player.command()
+@click.pass_context
+def mute(ctx: click.Context) -> None:
+    """Mute the volume on a Volumio instance (synonym for `player volume mute`)."""
+    execute_command(
+        ctx,
+        "volume mute",
+        lambda c: c.volume("mute"),
+        "/api/v1/commands/?cmd=volume&volume=mute",
+    )
+
+
+@player.command()
+@click.pass_context
+def unmute(ctx: click.Context) -> None:
+    """Unmute the volume on a Volumio instance (synonym for `player volume unmute`)."""
+    execute_command(
+        ctx,
+        "volume unmute",
+        lambda c: c.volume("unmute"),
+        "/api/v1/commands/?cmd=volume&volume=unmute",
     )
 
 

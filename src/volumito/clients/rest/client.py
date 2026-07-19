@@ -258,3 +258,20 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self.send_command("prev")
+
+    def volume(self, value: int | str) -> dict[str, Any]:
+        """Set or adjust the playback volume.
+
+        Args:
+            value: An integer between 0 and 100 (inclusive) to set an absolute
+                volume level, or one of the strings "mute", "unmute", "plus",
+                "minus"
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self.send_command(f"volume&volume={value}")

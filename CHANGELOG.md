@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fields `status`, `seek`, `volume`, and `mute` to the default short field set
   (`info --fields short`)
+- Command `player volume` (accepting `mute`, `unmute`, `plus`, `minus`, or an integer 0-100),
+  with `player mute` and `player unmute` synonyms, backed by the volume REST API
+
+### Changed
+
+- The `info` command is now available as `player state`; `info` is kept as a synonym
 
 ### Removed
 

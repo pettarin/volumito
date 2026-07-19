@@ -508,6 +508,28 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("prev")
         assert result["response"] == "prev"
 
+    def test_volume_absolute(self, mocker: MockerFixture):
+        """Test volume() method with an absolute integer level."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "volume"}
+
+        result = client.volume(50)
+
+        mock_send_command.assert_called_once_with("volume&volume=50")
+        assert result["response"] == "volume"
+
+    def test_volume_keyword(self, mocker: MockerFixture):
+        """Test volume() method with a keyword value."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "volume"}
+
+        result = client.volume("mute")
+
+        mock_send_command.assert_called_once_with("volume&volume=mute")
+        assert result["response"] == "volume"
+
 
 class TestVolumioExceptions:
     """Test cases for Volumio exception classes."""
