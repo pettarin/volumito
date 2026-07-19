@@ -179,6 +179,20 @@ volumito player mute
 volumito player unmute
 ```
 
+### Resulting State
+
+By default, every `player` action subcommand (`toggle`, `play`, `pause`, `stop`, `next`, `previous`,
+`volume`, `mute`, `unmute`) waits 1 second after running and then prints the resulting `player state`.
+Disable this with `--no-print-resulting-state`:
+
+```bash
+# Pause, then show the resulting state (default)
+volumito player pause
+
+# Pause without printing the resulting state
+volumito player pause --no-print-resulting-state
+```
+
 ### Examples
 
 Combine options for specific use cases:

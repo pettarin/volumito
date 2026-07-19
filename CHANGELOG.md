@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`info --fields short`)
 - Command `player volume` (accepting `mute`, `unmute`, `plus`, `minus`, or an integer 0-100),
   with `player mute` and `player unmute` synonyms, backed by the volume REST API
+- Option `-r`/`--print-resulting-state` (default on) for `player` action subcommands: after the
+  action, wait 1 second and print the resulting `player state`
 
 ### Changed
 

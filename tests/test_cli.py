@@ -192,6 +192,16 @@ class TestCLICommands:
         """Create a CliRunner instance."""
         return CliRunner()
 
+    @pytest.fixture(autouse=True)
+    def _no_resulting_state(self, mocker: MockerFixture):
+        """Isolate per-command tests from the print-resulting-state feature.
+
+        Player action subcommands print the resulting "player state" by default;
+        no-op the helper here so these tests stay focused (and fast). The feature
+        itself is covered by TestPrintResultingState.
+        """
+        mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
+
     def _mock_mpd_client(
         self,
         mocker: MockerFixture,
@@ -2293,6 +2303,79 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Volumio Queue" in result.output
         assert "(empty)" in result.output
+
+
+class TestPrintResultingState:
+    """Test cases for the -r/--print-resulting-state option on player commands."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with a usable get_state, patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.pause.return_value = {"response": "pause"}
+        mock_client.volume.return_value = {"response": "volume"}
+        mock_client.get_state.return_value = {
+            "title": "Test Song",
+            "artist": "Test Artist",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_default_prints_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
+        """By default, a player action waits 1 second and prints the resulting state."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["player", "pause"])
+
+        assert result.exit_code == 0
+        assert "Command 'pause' executed successfully" in result.output
+        # The resulting state is printed after the command
+        assert "Test Song" in result.output
+        mock_sleep.assert_called_once_with(1)
+        mock_client.get_state.assert_called_once()
+
+    def test_no_print_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-state skips the sleep and the state print."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["player", "pause", "--no-print-resulting-state"])
+
+        assert result.exit_code == 0
+        assert "Command 'pause' executed successfully" in result.output
+        assert "Test Song" not in result.output
+        mock_sleep.assert_not_called()
+        mock_client.get_state.assert_not_called()
+
+    def test_short_flag_prints_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
+        """The -r short flag behaves like the enabled default."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["player", "pause", "-r"])
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+        mock_sleep.assert_called_once_with(1)
+
+    def test_command_with_argument_prints_resulting_state(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A command taking an argument (volume) also prints the resulting state."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["player", "volume", "50"])
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+        mock_client.volume.assert_called_once_with(50)
+        mock_sleep.assert_called_once_with(1)
 
 
 class TestQueueHelperFunctions:
