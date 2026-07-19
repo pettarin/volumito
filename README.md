@@ -79,7 +79,7 @@ Print the `volumito` version:
 ```bash
 volumito version
 
-# Only the bare version string (useful for scripting)
+# Quoted version string, consumable by jq/yq (e.g. "0.0.8")
 volumito --machine-readable version
 ```
 

@@ -46,7 +46,7 @@ QUEUE_SHORT_FIELDS = [
 ]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.7"
+VERSION = "0.0.8"
 
 
 def filter_fields(state: dict[str, Any], fields: Literal["short", "all"]) -> dict[str, Any]:
@@ -495,60 +495,11 @@ class VolumeParamType(click.ParamType):
 
 @click.group()
 @click.option(
-    "--scheme",
-    type=click.Choice(["http", "https"], case_sensitive=False),
-    default="http",
-    show_default=True,
-    help="URL scheme to use for connecting to Volumio instance",
-)
-@click.option(
     "--host",
     type=str,
     default="volumio.local",
     show_default=True,
     help="Hostname or IP address of the Volumio instance",
-)
-@click.option(
-    "--rest-api-port",
-    type=int,
-    default=3000,
-    show_default=True,
-    help="REST API port of the Volumio instance",
-)
-@click.option(
-    "--mpd-port",
-    type=int,
-    default=6600,
-    show_default=True,
-    help="MPD port of the Volumio instance",
-)
-@click.option(
-    "--rest-api-timeout",
-    type=float,
-    default=5.0,
-    show_default=True,
-    help="REST API request timeout in seconds",
-)
-@click.option(
-    "--mpd-timeout",
-    type=float,
-    default=5.0,
-    show_default=True,
-    help="MPD connection timeout in seconds",
-)
-@click.option(
-    "--rest-api-sleep-before-next-call",
-    type=float,
-    default=1.0,
-    show_default=True,
-    help="Seconds to sleep before making the next REST API call",
-)
-@click.option(
-    "--verbose",
-    "-v",
-    is_flag=True,
-    default=False,
-    help="Enable verbose output",
 )
 @click.option(
     "--machine-readable",
@@ -560,18 +511,67 @@ class VolumeParamType(click.ParamType):
         "(superseding the --verbose option if also specified)"
     ),
 )
+@click.option(
+    "--mpd-port",
+    type=int,
+    default=6600,
+    show_default=True,
+    help="MPD port of the Volumio instance",
+)
+@click.option(
+    "--mpd-timeout",
+    type=float,
+    default=5.0,
+    show_default=True,
+    help="MPD connection timeout in seconds",
+)
+@click.option(
+    "--rest-api-port",
+    type=int,
+    default=3000,
+    show_default=True,
+    help="REST API port of the Volumio instance",
+)
+@click.option(
+    "--rest-api-sleep-before-next-call",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Seconds to sleep before making the next REST API call",
+)
+@click.option(
+    "--rest-api-timeout",
+    type=float,
+    default=5.0,
+    show_default=True,
+    help="REST API request timeout in seconds",
+)
+@click.option(
+    "--scheme",
+    type=click.Choice(["http", "https"], case_sensitive=False),
+    default="http",
+    show_default=True,
+    help="URL scheme to use for connecting to Volumio instance",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    default=False,
+    help="Enable verbose output",
+)
 @click.pass_context
 def main(
     ctx: click.Context,
-    scheme: Literal["http", "https"],
     host: str,
-    rest_api_port: int,
-    mpd_port: int,
-    rest_api_timeout: float,
-    mpd_timeout: float,
-    rest_api_sleep_before_next_call: float,
-    verbose: bool,
     machine_readable: bool,
+    mpd_port: int,
+    mpd_timeout: float,
+    rest_api_port: int,
+    rest_api_sleep_before_next_call: float,
+    rest_api_timeout: float,
+    scheme: Literal["http", "https"],
+    verbose: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""
     # Store common options in context for subcommands to access
@@ -594,11 +594,11 @@ def main(
 def version(ctx: click.Context) -> None:
     """Show the volumito version.
 
-    In machine-readable mode only the bare version string is printed;
-    otherwise the program name is included.
+    In machine-readable mode the version string is printed quoted (e.g. ``"0.0.8"``)
+    so it can be consumed by jq/yq; otherwise the program name is included.
     """
     if ctx.obj["machine_readable"]:
-        msg = f"{VERSION}"
+        msg = f'"{VERSION}"'
     else:
         msg = f"volumito, version {VERSION}"
     click.echo(msg)
@@ -614,19 +614,19 @@ def player(ctx: click.Context) -> None:
 @player.command("state")
 @click.pass_context
 @click.option(
+    "--fields",
+    type=click.Choice(["short", "all"], case_sensitive=False),
+    default="short",
+    show_default=True,
+    help="Fields to display (applies to json and pretty formats)",
+)
+@click.option(
     "--format",
     "output_format",
     type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
     default="pretty",
     show_default=True,
     help="Output format for the state information",
-)
-@click.option(
-    "--fields",
-    type=click.Choice(["short", "all"], case_sensitive=False),
-    default="short",
-    show_default=True,
-    help="Fields to display (applies to json and pretty formats)",
 )
 @click.option(
     "--raw",
@@ -636,8 +636,8 @@ def player(ctx: click.Context) -> None:
 )
 def player_state(
     ctx: click.Context,
-    output_format: str,
     fields: str,
+    output_format: str,
     raw: bool,
 ) -> None:
     """Get the current player state from the /api/v1/getState endpoint of a Volumio instance.
@@ -1034,19 +1034,19 @@ def queue(ctx: click.Context) -> None:
 @queue.command("list")
 @click.pass_context
 @click.option(
+    "--fields",
+    type=click.Choice(["short", "all"], case_sensitive=False),
+    default="short",
+    show_default=True,
+    help="Fields to display (applies to json and pretty formats)",
+)
+@click.option(
     "--format",
     "output_format",
     type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
     default="pretty",
     show_default=True,
     help="Output format for the queue information",
-)
-@click.option(
-    "--fields",
-    type=click.Choice(["short", "all"], case_sensitive=False),
-    default="short",
-    show_default=True,
-    help="Fields to display (applies to json and pretty formats)",
 )
 @click.option(
     "--raw",
@@ -1056,8 +1056,8 @@ def queue(ctx: click.Context) -> None:
 )
 def queue_list(
     ctx: click.Context,
-    output_format: str,
     fields: str,
+    output_format: str,
     raw: bool,
 ) -> None:
     """Get the playback queue from a Volumio instance.

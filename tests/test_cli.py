@@ -260,14 +260,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.7" in result.output
+        assert "volumito, version 0.0.8" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
-        """Test --machine-readable version prints only the bare version string."""
+        """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == "0.0.7"
+        assert result.output.strip() == '"0.0.8"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -276,7 +276,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == "0.0.7"
+        assert result.output.strip() == '"0.0.8"'
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""

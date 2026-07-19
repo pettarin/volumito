@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.8] - 2026-07-19
+
+### Changed
+
+- Sort the CLI options alphabetically in `--help` (global options and every subcommand)
+- In machine-readable mode, `version` now prints the version as a quoted string (e.g. `"0.0.8"`)
+  so it can be consumed by tools like `jq` and `yq`
+
+
 ## [0.0.7] - 2026-07-19
 
 ### Added
