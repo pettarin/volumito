@@ -18,10 +18,12 @@
 	micromamba-install-e-this-dev \
 	micromamba-reinstall-e-this \
 	micromamba-reinstall-e-this-dev \
+	micromamba-reinstall-e-this-dev-test \
 	micromamba-remove \
 	micromamba-remove-dev \
 	reinstall-e-this \
 	reinstall-e-this-dev \
+	reinstall-e-this-dev-test \
 	test \
 	test-all \
 	test-unit \
@@ -29,24 +31,25 @@
 
 help:
 	@echo "Available targets:"
-	@echo "  build                 - Synonym of build-all"
-	@echo "  build-all             - Build all distribution packages"
-	@echo "  build-sdist           - Build source distribution (sdist) tarball"
-	@echo "  build-wheel           - Build wheel distribution"
-	@echo "  check-type-hints      - Run mypy type checker"
-	@echo "  clean                 - Remove build artifacts and cache files"
-	@echo "  coverage              - Run tests with coverage report (all formats)"
-	@echo "  coverage-html         - Run tests with coverage report in HTML format"
-	@echo "  dist                  - Create distribution packages (same as build)"
-	@echo "  install-e-this        - Install package in editable mode"
-	@echo "  install-e-this-dev    - Install package in editable mode with dev dependencies"
-	@echo "  lint                  - Run ruff linter"
-	@echo "  reinstall-e-this      - Install package in editable mode"
-	@echo "  reinstall-e-this-dev  - Install package in editable mode with dev dependencies"
-	@echo "  test                  - Synonym of test-all"
-	@echo "  test-all              - Run all checks (tests, linter, and type checker)"
-	@echo "  test-unit             - Run tests"
-	@echo "  uninstall-this        - Uninstall the package"
+	@echo "  build                      - Synonym of build-all"
+	@echo "  build-all                  - Build all distribution packages"
+	@echo "  build-sdist                - Build source distribution (sdist) tarball"
+	@echo "  build-wheel                - Build wheel distribution"
+	@echo "  check-type-hints           - Run mypy type checker"
+	@echo "  clean                      - Remove build artifacts and cache files"
+	@echo "  coverage                   - Run tests with coverage report (all formats)"
+	@echo "  coverage-html              - Run tests with coverage report in HTML format"
+	@echo "  dist                       - Create distribution packages (same as build)"
+	@echo "  install-e-this             - Install package in editable mode"
+	@echo "  install-e-this-dev         - Install package in editable mode with dev dependencies"
+	@echo "  lint                       - Run ruff linter"
+	@echo "  reinstall-e-this           - Install package in editable mode"
+	@echo "  reinstall-e-this-dev       - Install package in editable mode with dev dependencies"
+	@echo "  reinstall-e-this-dev-test  - Install package in editable mode with dev dependencies and run all tests"
+	@echo "  test                       - Synonym of test-all"
+	@echo "  test-all                   - Run all checks (tests, linter, and type checker)"
+	@echo "  test-unit                  - Run tests"
+	@echo "  uninstall-this             - Uninstall the package"
 
 install-e-this:
 	pip install -e .
@@ -64,6 +67,10 @@ reinstall-e-this: \
 reinstall-e-this-dev: \
 	uninstall-this \
 	install-e-this-dev
+
+reinstall-e-this-dev-test: \
+	reinstall-e-this-dev \
+	test
 
 test: \
 	test-all
@@ -148,4 +155,8 @@ micromamba-reinstall-e-this-dev: \
 	micromamba-remove-dev \
 	micromamba-create-dev \
 	micromamba-install-e-this-dev
+
+micromamba-reinstall-e-this-dev-test: \
+	micromamba-reinstall-e-this-dev \
+	test
 
