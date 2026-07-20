@@ -15,7 +15,7 @@ player, programmatically or on a shell.
 
 - Clean Python API to connect to and control a Volumio player
 - Built-in comprehensive command-line tool with a lot of options
-- Optional YAML configuration file for connection and verbosity defaults
+- Optional YAML configuration file for connection and output defaults
 - Type-safe implementation with full type hints
 - Comprehensive test coverage (100%)
 
@@ -114,7 +114,7 @@ pass `--mpd-port 6599`.
 
 ### Configuration File
 
-Rather than passing connection and verbosity options on every invocation, you can store them in a
+Rather than passing connection and output options on every invocation, you can store them in a
 YAML configuration file. Its values are used as **defaults**: an explicit command-line option always
 overrides the file, and if neither is given the built-in defaults apply. The precedence is:
 
@@ -152,10 +152,17 @@ timeouts:
   rest-api-timeout: 5.0
   mpd-timeout: 5.0
   rest-api-sleep-before-next-call: 1.0
-verbosity:
+output:
   verbose: true
   machine-readable: false
+  fields: short
+  format: pretty
+  raw: false
 ```
+
+The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
+`--fields`/`--format`/`--raw` options of the commands that support them (`player state`, `info`,
+`track info`, and `queue list`).
 
 The `configuration` command group helps manage these files:
 

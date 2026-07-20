@@ -16,6 +16,8 @@ import requests
 
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
+    build_click_default_map,
+    canonical_configuration_directories,
     configuration_values_by_section,
     found_and_used_configuration_paths,
     load_default_map,
@@ -658,8 +660,8 @@ def configuration_file_callback(
     """
     path = resolve_configuration_path(value)
     if path is not None:
-        mapping = load_default_map(path)
-        ctx.default_map = {**(ctx.default_map or {}), **mapping}
+        flat = load_default_map(path)
+        ctx.default_map = {**(ctx.default_map or {}), **build_click_default_map(flat)}
     ctx.ensure_object(dict)
     ctx.obj["configuration_file"] = path
     return value
@@ -811,6 +813,22 @@ def root_option_defaults(ctx: click.Context) -> dict[str, Any]:
     }
 
 
+def output_format_defaults() -> dict[str, Any]:
+    """Return the default fields/format/raw of the output-formatting subcommands.
+
+    These options live on subcommands (e.g. ``player state``), not the top-level
+    group; read them from the ``info`` command (the same object as ``player state``)
+    so the generated configuration mirrors the real defaults without duplication.
+    """
+    info_command = main.commands["info"]
+    return {
+        param.name: param.default
+        for param in info_command.params
+        if isinstance(param, click.Option)
+        and param.name in {"fields", "output_format", "raw"}
+    }
+
+
 @main.group()
 @click.pass_context
 def configuration(ctx: click.Context) -> None:
@@ -868,7 +886,8 @@ def configuration_create(
             )
         sys.exit(1)
 
-    content = render_default_configuration(root_option_defaults(ctx), VERSION)
+    defaults = {**root_option_defaults(ctx), **output_format_defaults()}
+    content = render_default_configuration(defaults, VERSION)
     try:
         parent = os.path.dirname(destination)
         if parent:
@@ -931,7 +950,10 @@ def configuration_search(ctx: click.Context) -> None:
         return
 
     if not found:
-        click.echo("No configuration file found.")
+        filenames = " or ".join(CONFIGURATION_FILENAMES)
+        click.echo(f"No configuration file {filenames} found in the following directories:")
+        for directory in canonical_configuration_directories():
+            click.echo(f"  {directory}")
         return
 
     click.echo("Found configuration files:")

@@ -15,7 +15,7 @@ import yaml
 SECTION_KEYS: dict[str, list[str]] = {
     "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
     "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
-    "verbosity": ["verbose", "machine-readable"],
+    "output": ["verbose", "machine-readable", "fields", "format", "raw"],
 }
 
 # One-line description of each key, used as a comment in the generated file.
@@ -29,7 +29,23 @@ KEY_COMMENTS: dict[str, str] = {
     "rest-api-sleep-before-next-call": "Seconds to sleep before the next REST API call",
     "verbose": "Enable verbose output",
     "machine-readable": "Produce machine-readable output only",
+    "fields": "Fields to display: short or all",
+    "format": "Output format: json, pretty, or table",
+    "raw": "Output raw JSON, overriding the format",
 }
+
+# Config keys whose CLI parameter name differs from key.replace("-", "_").
+_KEY_PARAM_OVERRIDES = {"format": "output_format"}
+
+# CLI parameter names that are per-command output-formatting options (not global),
+# and the default_map paths of the commands that accept them.
+COMMAND_SCOPED_PARAMS = ["fields", "output_format", "raw"]
+OUTPUT_COMMAND_PATHS = [["info"], ["player", "state"], ["track", "info"], ["queue", "list"]]
+
+
+def _param_name(key: str) -> str:
+    """Return the CLI parameter name for a configuration key."""
+    return _KEY_PARAM_OVERRIDES.get(key, key.replace("-", "_"))
 
 # Configuration file names tried within each directory, in this order.
 CONFIGURATION_FILENAMES = ["volumito.yaml", ".volumito.yaml"]
@@ -137,8 +153,29 @@ def load_default_map(path: str) -> dict[str, Any]:
                 raise click.BadParameter(
                     f"unknown key {key!r} in section {section!r} of configuration file {path}"
                 )
-            default_map[key.replace("-", "_")] = value
+            default_map[_param_name(key)] = value
     return default_map
+
+
+def build_click_default_map(flat_defaults: dict[str, Any]) -> dict[str, Any]:
+    """Turn a flat param->value map into a Click ``default_map``.
+
+    Global option values stay at the top level; the per-command output-formatting
+    options (``fields``, ``output_format``, ``raw``) are replicated into the nested
+    slot of every command that accepts them, since Click reads ``default_map``
+    hierarchically by group/subcommand name.
+    """
+    formatting = {k: v for k, v in flat_defaults.items() if k in COMMAND_SCOPED_PARAMS}
+    result: dict[str, Any] = {
+        k: v for k, v in flat_defaults.items() if k not in COMMAND_SCOPED_PARAMS
+    }
+    if formatting:
+        for path in OUTPUT_COMMAND_PATHS:
+            node = result
+            for part in path[:-1]:
+                node = node.setdefault(part, {})
+            node.setdefault(path[-1], {}).update(formatting)
+    return result
 
 
 def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
@@ -166,7 +203,7 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
             lines.append("")
         lines.append(f"{section}:")
         for key in keys:
-            value = defaults[key.replace("-", "_")]
+            value = defaults[_param_name(key)]
             scalar = yaml.safe_dump(
                 {key: value}, sort_keys=False, default_flow_style=False
             ).strip()
@@ -185,9 +222,9 @@ def configuration_values_by_section(default_map: dict[str, Any]) -> dict[str, di
     grouped: dict[str, dict[str, Any]] = {}
     for section, keys in SECTION_KEYS.items():
         section_values = {
-            key: default_map[key.replace("-", "_")]
+            key: default_map[_param_name(key)]
             for key in keys
-            if key.replace("-", "_") in default_map
+            if _param_name(key) in default_map
         }
         if section_values:
             grouped[section] = section_values

@@ -14,6 +14,7 @@ from pytest_mock import MockerFixture
 from volumito.cli.configuration import (
     KEY_COMMENTS,
     SECTION_KEYS,
+    build_click_default_map,
     canonical_configuration_paths,
     configuration_values_by_section,
     load_default_map,
@@ -21,7 +22,7 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 
-# Flat param-name -> default value map, as produced from the main group options.
+# Flat param-name -> default value map, as produced from the CLI option defaults.
 _DEFAULTS = {
     "host": "volumio.local",
     "scheme": "http",
@@ -32,6 +33,9 @@ _DEFAULTS = {
     "rest_api_sleep_before_next_call": 1.0,
     "verbose": False,
     "machine_readable": False,
+    "fields": "short",
+    "output_format": "pretty",
+    "raw": False,
 }
 
 
@@ -116,9 +120,12 @@ class TestLoadDefaultMap:
             "  rest-api-timeout: 7.5\n"
             "  mpd-timeout: 8.5\n"
             "  rest-api-sleep-before-next-call: 2.0\n"
-            "verbosity:\n"
+            "output:\n"
             "  verbose: true\n"
             "  machine-readable: false\n"
+            "  fields: all\n"
+            "  format: table\n"
+            "  raw: true\n"
         )
 
         result = load_default_map(str(config))
@@ -133,6 +140,9 @@ class TestLoadDefaultMap:
             "rest_api_sleep_before_next_call": 2.0,
             "verbose": True,
             "machine_readable": False,
+            "fields": "all",
+            "output_format": "table",
+            "raw": True,
         }
 
     def test_empty_file(self, tmp_path):
@@ -220,6 +230,8 @@ class TestRenderDefaultConfiguration:
         assert "# Hostname or IP address of the Volumio instance" in result
         assert "# REST API request timeout, in seconds" in result
         assert "in seconds" in result
+        assert "# Fields to display: short or all" in result
+        assert "# Output format: json, pretty, or table" in result
 
     def test_comments_cover_all_keys(self):
         """KEY_COMMENTS covers exactly the keys declared in SECTION_KEYS, all non-empty."""
@@ -240,7 +252,7 @@ class TestRenderDefaultConfiguration:
         result = render_default_configuration(_DEFAULTS, "1.2.3")
 
         assert "\n\n\ntimeouts:\n" in result
-        assert "\n\n\nverbosity:\n" in result
+        assert "\n\n\noutput:\n" in result
 
     def test_round_trips_through_load(self, tmp_path):
         """A rendered file loaded back yields exactly the input defaults."""
@@ -265,7 +277,13 @@ class TestRenderDefaultConfiguration:
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 1.0,
             },
-            "verbosity": {"verbose": False, "machine-readable": False},
+            "output": {
+                "verbose": False,
+                "machine-readable": False,
+                "fields": "short",
+                "format": "pretty",
+                "raw": False,
+            },
         }
 
 
@@ -275,14 +293,52 @@ class TestConfigurationValuesBySection:
     def test_groups_present_keys(self):
         """A flat default map is regrouped into sections with hyphenated keys."""
         result = configuration_values_by_section(
-            {"host": "myhost.local", "rest_api_port": 9999, "verbose": True}
+            {
+                "host": "myhost.local",
+                "rest_api_port": 9999,
+                "verbose": True,
+                "output_format": "table",
+            }
         )
 
         assert result == {
             "volumio": {"host": "myhost.local", "rest-api-port": 9999},
-            "verbosity": {"verbose": True},
+            "output": {"verbose": True, "format": "table"},
         }
 
     def test_empty_map_yields_empty(self):
         """An empty default map groups to an empty dict."""
         assert configuration_values_by_section({}) == {}
+
+
+class TestBuildClickDefaultMap:
+    """Test cases for build_click_default_map."""
+
+    def test_global_keys_stay_top_level(self):
+        """Non-formatting keys remain at the top level unchanged."""
+        result = build_click_default_map(
+            {"host": "myhost.local", "verbose": True}
+        )
+
+        assert result == {"host": "myhost.local", "verbose": True}
+
+    def test_formatting_keys_replicated_under_each_command(self):
+        """fields/output_format/raw are nested under every output command path."""
+        result = build_click_default_map(
+            {"host": "myhost.local", "fields": "all", "output_format": "table", "raw": True}
+        )
+
+        formatting = {"fields": "all", "output_format": "table", "raw": True}
+        assert result == {
+            "host": "myhost.local",
+            "info": formatting,
+            "player": {"state": formatting},
+            "track": {"info": formatting},
+            "queue": {"list": formatting},
+        }
+
+    def test_no_formatting_keys_no_nesting(self):
+        """Without any formatting key, no command sub-dicts are added."""
+        result = build_click_default_map({"host": "myhost.local"})
+
+        assert result == {"host": "myhost.local"}

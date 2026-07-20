@@ -3135,18 +3135,56 @@ class TestConfigurationFile:
         assert "http://canonical.local:3000/api/v1/getState" in result.output
         assert f"Using configuration file: {config}" in result.output
 
-    def test_verbosity_section_enables_verbose(
+    def test_output_section_enables_verbose(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The verbosity section can turn on verbose without a CLI flag."""
+        """The output section can turn on verbose without a CLI flag."""
         self._mock_rest_client(mocker)
-        config = self._write_config(tmp_path, "verbosity:\n  verbose: true\n")
+        config = self._write_config(tmp_path, "output:\n  verbose: true\n")
 
         result = runner.invoke(main, ["-c", config, "info"])
 
         assert result.exit_code == 0
         # Verbose output only appears because the config enabled it.
         assert "Connecting to" in result.output
+
+    def test_output_section_sets_format_for_info(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The output section's format applies to the top-level info command."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "output:\n  format: table\n")
+
+        result = runner.invoke(main, ["-c", config, "info"])
+
+        assert result.exit_code == 0
+        # 'table' format renders the heading banner instead of JSON.
+        assert "Volumio State" in result.output
+
+    def test_output_section_sets_format_for_player_state(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The output section's format applies to the group-nested player state command."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "output:\n  format: table\n")
+
+        result = runner.invoke(main, ["-c", config, "player", "state"])
+
+        assert result.exit_code == 0
+        assert "Volumio State" in result.output
+
+    def test_cli_format_overrides_config_format(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An explicit -F on the subcommand overrides the config format."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "output:\n  format: table\n")
+
+        result = runner.invoke(main, ["-c", config, "info", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert "Volumio State" not in result.output
+        assert '"title"' in result.output
 
     def test_no_config_uses_hardcoded_defaults(
         self, runner: CliRunner, mocker: MockerFixture
@@ -3237,7 +3275,13 @@ class TestConfigurationCommands:
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 1.0,
                 },
-                "verbosity": {"verbose": False, "machine-readable": False},
+                "output": {
+                    "verbose": False,
+                    "machine-readable": False,
+                    "fields": "short",
+                    "format": "pretty",
+                    "raw": False,
+                },
             }
 
     def test_create_output_dir(self, runner: CliRunner, tmp_path):
@@ -3311,14 +3355,17 @@ class TestConfigurationCommands:
     def test_check_valid_path(self, runner: CliRunner, tmp_path):
         """`configuration check PATH` validates and prints the values read."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("volumio:\n  host: myhost.local\nverbosity:\n  verbose: true\n")
+        config.write_text(
+            "volumio:\n  host: myhost.local\noutput:\n  verbose: true\n  format: table\n"
+        )
 
         result = runner.invoke(main, ["configuration", "check", str(config)])
 
         assert result.exit_code == 0
         assert "is valid" in result.output
         assert "volumio.host = myhost.local" in result.output
-        assert "verbosity.verbose = True" in result.output
+        assert "output.verbose = True" in result.output
+        assert "output.format = table" in result.output
 
     def test_check_invalid_content(self, runner: CliRunner, tmp_path):
         """An unrecognized key makes check exit 2."""
@@ -3378,12 +3425,22 @@ class TestConfigurationCommands:
         assert f"{first} (used)" in result.output
         assert str(second) in result.output
 
-    def test_search_none_found(self, runner: CliRunner):
-        """Search reports when no config file exists."""
+    def test_search_none_found(self, runner: CliRunner, mocker: MockerFixture):
+        """Search reports the searched directories when no config file exists."""
+        mocker.patch(
+            "volumito.cli.volumito.canonical_configuration_directories",
+            return_value=["/dir/one", "/dir/two"],
+        )
+
         result = runner.invoke(main, ["configuration", "search"])
 
         assert result.exit_code == 0
-        assert "No configuration file found" in result.output
+        assert (
+            "No configuration file volumito.yaml or .volumito.yaml "
+            "found in the following directories:"
+        ) in result.output
+        assert "/dir/one" in result.output
+        assert "/dir/two" in result.output
 
     def test_search_machine_readable(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
         """In machine-readable mode search prints found/used as JSON."""
