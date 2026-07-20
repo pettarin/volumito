@@ -17,7 +17,7 @@ import requests
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     build_click_default_map,
-    canonical_configuration_directories,
+    configuration_directories,
     flatten_configuration,
     found_and_used_configuration_paths,
     load_configuration,
@@ -678,7 +678,7 @@ def configuration_file_callback(
     callback=configuration_file_callback,
     help=(
         "Path to a YAML configuration file whose values are used as option defaults "
-        "(explicit options still override them); if omitted, canonical locations in the "
+        "(explicit options still override them); if omitted, standard locations in the "
         "current directory and the home directory are tried (see the documentation)"
     ),
 )
@@ -922,7 +922,7 @@ def configuration_create(
 def configuration_check(ctx: click.Context, path: str | None) -> None:
     """Verify that a configuration file is correct and print the values read from it.
 
-    If PATH is omitted, the canonical locations are probed and the file that would
+    If PATH is omitted, the standard locations are probed and the file that would
     be used is checked.
     """
     machine_readable = ctx.obj["machine_readable"]
@@ -949,7 +949,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
 @configuration.command("search")
 @click.pass_context
 def configuration_search(ctx: click.Context) -> None:
-    """Probe the canonical locations and print the configuration files found."""
+    """Probe the standard locations and print the configuration files found."""
     machine_readable = ctx.obj["machine_readable"]
 
     found, used = found_and_used_configuration_paths()
@@ -961,7 +961,7 @@ def configuration_search(ctx: click.Context) -> None:
     if not found:
         filenames = " or ".join(CONFIGURATION_FILENAMES)
         click.echo(f"No configuration file {filenames} found in the following directories:")
-        for directory in canonical_configuration_directories():
+        for directory in configuration_directories():
             click.echo(f"  {directory}")
         return
 
@@ -969,6 +969,22 @@ def configuration_search(ctx: click.Context) -> None:
     for path in found:
         marker = " (used)" if path == used else ""
         click.echo(f"  {path}{marker}")
+
+
+@configuration.command("locations")
+@click.pass_context
+def configuration_locations(ctx: click.Context) -> None:
+    """Print the directories probed for a configuration file, in probing order."""
+    machine_readable = ctx.obj["machine_readable"]
+    directories = configuration_directories()
+
+    if machine_readable:
+        click.echo(json.dumps(directories))
+        return
+
+    click.echo("Configuration directories, in probing order:")
+    for directory in directories:
+        click.echo(f"  {directory}")
 
 
 def render_state(

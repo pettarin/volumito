@@ -12,14 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for a YAML configuration file, whose values are used as option defaults (explicit
   command-line options still override them)
-- Option `-c`/`--configuration-file` to select a configuration file, with probing of canonical
+- Option `-c`/`--configuration-file` to select a configuration file, with probing of standard
   locations in the current and home directories when omitted
 - Configuration file sections `volumio`, `timeouts`, and `output` for connection, timeout, and
   output-formatting defaults (the `output` display options can be set per command)
 - Configuration file section `downloads` for the `track audio`/`track albumart` download-option
   defaults, shared or set per command
-- Command group `configuration` with `create`, `check`, and `search` subcommands to manage
-  configuration files
+- Command group `configuration` with `create`, `check`, `search`, and `locations` subcommands to
+  manage configuration files
 
 ### Changed
 

@@ -204,6 +204,9 @@ volumito configuration check            # no path: check the file that would be 
 
 # Show which configuration files exist and which one would be used
 volumito configuration search
+
+# Print the directories searched for a configuration file, in probing order
+volumito configuration locations
 ```
 
 ### Output Formats

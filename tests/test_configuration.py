@@ -17,7 +17,7 @@ from volumito.cli.configuration import (
     OUTPUT_SCALAR_KEYS,
     SECTION_KEYS,
     build_click_default_map,
-    canonical_configuration_paths,
+    configuration_paths,
     flatten_configuration,
     load_configuration,
     render_default_configuration,
@@ -57,15 +57,15 @@ _DEFAULTS = {
 }
 
 
-class TestCanonicalConfigurationPaths:
-    """Test cases for canonical_configuration_paths."""
+class TestConfigurationPaths:
+    """Test cases for configuration_paths."""
 
     def test_order_and_locations(self, mocker: MockerFixture):
         """Each directory is probed for volumito.yaml then .volumito.yaml, in order."""
         mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/work")
         mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
 
-        paths = canonical_configuration_paths()
+        paths = configuration_paths()
 
         assert paths == [
             os.path.join("/work", "volumito.yaml"),
@@ -98,10 +98,10 @@ class TestResolveConfigurationPath:
         with pytest.raises(click.BadParameter, match="configuration file not found"):
             resolve_configuration_path(missing)
 
-    def test_canonical_first_existing_wins(self, mocker: MockerFixture):
-        """Without an explicit path, the first existing canonical path is returned."""
+    def test_first_existing_wins(self, mocker: MockerFixture):
+        """Without an explicit path, the first existing search path is returned."""
         mocker.patch(
-            "volumito.cli.configuration.canonical_configuration_paths",
+            "volumito.cli.configuration.configuration_paths",
             return_value=["/a.yaml", "/b.yaml", "/c.yaml"],
         )
         mocker.patch(
@@ -111,10 +111,10 @@ class TestResolveConfigurationPath:
 
         assert resolve_configuration_path(None) == "/b.yaml"
 
-    def test_canonical_none_found(self, mocker: MockerFixture):
-        """Without an explicit path and no canonical file, None is returned."""
+    def test_none_found(self, mocker: MockerFixture):
+        """Without an explicit path and no existing file, None is returned."""
         mocker.patch(
-            "volumito.cli.configuration.canonical_configuration_paths",
+            "volumito.cli.configuration.configuration_paths",
             return_value=["/a.yaml", "/b.yaml"],
         )
         mocker.patch("volumito.cli.configuration.os.path.isfile", return_value=False)

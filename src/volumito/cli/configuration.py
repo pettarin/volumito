@@ -105,7 +105,7 @@ def _param_name(key: str) -> str:
 CONFIGURATION_FILENAMES = ["volumito.yaml", ".volumito.yaml"]
 
 
-def canonical_configuration_directories() -> list[str]:
+def configuration_directories() -> list[str]:
     """Return the directories probed for a configuration file, highest priority first.
 
     The order is: the current working directory, the current user's home directory,
@@ -121,27 +121,27 @@ def canonical_configuration_directories() -> list[str]:
     ]
 
 
-def canonical_configuration_paths() -> list[str]:
-    """Return the canonical configuration file paths, in search order.
+def configuration_paths() -> list[str]:
+    """Return the configuration file paths, in search order.
 
-    Each directory from :func:`canonical_configuration_directories` is probed for
+    Each directory from :func:`configuration_directories` is probed for
     ``volumito.yaml`` and then ``.volumito.yaml`` before moving on to the next.
     """
     return [
         os.path.join(directory, filename)
-        for directory in canonical_configuration_directories()
+        for directory in configuration_directories()
         for filename in CONFIGURATION_FILENAMES
     ]
 
 
 def found_and_used_configuration_paths() -> tuple[list[str], str | None]:
-    """Probe the canonical paths and report which files exist and which is used.
+    """Probe the search paths and report which files exist and which is used.
 
     Returns a tuple ``(found, used)`` where ``found`` lists every existing
-    canonical configuration file (in search order) and ``used`` is the first of
-    them (the one that would be loaded), or ``None`` if none exists.
+    configuration file (in search order) and ``used`` is the first of them
+    (the one that would be loaded), or ``None`` if none exists.
     """
-    found = [path for path in canonical_configuration_paths() if os.path.isfile(path)]
+    found = [path for path in configuration_paths() if os.path.isfile(path)]
     used = found[0] if found else None
     return found, used
 
@@ -150,15 +150,15 @@ def resolve_configuration_path(explicit: str | None) -> str | None:
     """Resolve which configuration file to read, if any.
 
     If ``explicit`` is given, it must point to an existing file (otherwise a
-    :class:`click.BadParameter` is raised). Otherwise the canonical paths are
-    searched in order and the first existing one is returned, or ``None`` if
+    :class:`click.BadParameter` is raised). Otherwise the search paths are
+    tried in order and the first existing one is returned, or ``None`` if
     none exists.
     """
     if explicit is not None:
         if not os.path.isfile(explicit):
             raise click.BadParameter(f"configuration file not found: {explicit}")
         return explicit
-    for path in canonical_configuration_paths():
+    for path in configuration_paths():
         if os.path.isfile(path):
             return path
     return None
