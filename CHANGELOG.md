@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-P` (`--rest-api-port`), `-p` (`--position`), `-F` (`--format`), `-L` (`--fields`),
   and `-R` (`--raw`)
 
+### Changed
+
+- In machine-readable mode, `track audio` and `track albumart` now print their URI as a
+  quoted string (consistent with `version`) so it can be consumed by tools like `jq` and `yq`
+
 
 ## [0.0.8] - 2026-07-19
 

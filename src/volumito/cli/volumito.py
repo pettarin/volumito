@@ -180,14 +180,14 @@ def sanitize_filename(text: str) -> str:
     return sanitized.strip("_")
 
 
-def extract_extension_from_url(url: str) -> str:
-    """Extract file extension from a URL (without leading dot).
+def extract_extension_from_uri(uri: str) -> str:
+    """Extract file extension from a URI (without leading dot).
 
-    Handles URLs with query parameters (e.g., /albumart?path=image.jpg).
+    Handles URIs with query parameters (e.g., /albumart?path=image.jpg).
     Defaults to 'jpg' if no extension found.
 
     Args:
-        url: The URL to extract extension from
+        uri: The URI to extract extension from
 
     Returns:
         File extension without the dot (e.g., 'jpg', 'png')
@@ -195,7 +195,7 @@ def extract_extension_from_url(url: str) -> str:
     import os
     from urllib.parse import parse_qs, urlparse
 
-    parsed = urlparse(url)
+    parsed = urlparse(uri)
 
     # Try to get extension from query parameter 'path' first
     if parsed.query:
@@ -206,7 +206,7 @@ def extract_extension_from_url(url: str) -> str:
             if ext:
                 return ext.lstrip(".")  # Remove leading dot
 
-    # If no extension from query, try from the URL path
+    # If no extension from query, try from the URI path
     _, ext = os.path.splitext(parsed.path)
 
     # Return extension without dot, default to 'jpg' if none found
@@ -956,8 +956,9 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
             if verbose and not machine_readable:
                 click.echo(f"Track URI: {uri}", err=True)
 
-            # Always print the URI (even in machine-readable mode)
-            click.echo(uri)
+            # Always print the URI (even in machine-readable mode);
+            # in machine-readable mode print it quoted so it can be consumed by jq/yq
+            click.echo(json.dumps(uri) if machine_readable else uri)
 
             # Download the file if -o/--output-file is specified
             if output_file is not None:
@@ -1027,10 +1028,10 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
     ),
 )
 def albumart(ctx: click.Context, output_file: str | None) -> None:
-    """Get the album art URL from a Volumio instance.
+    """Get the album art URI from a Volumio instance.
 
-    This command retrieves the current album art URL from the Volumio API.
-    The URL is always printed to stdout. Optionally download the image to a
+    This command retrieves the current album art URI from the Volumio API.
+    The URI is always printed to stdout. Optionally download the image to a
     file using the -o/--output-file option (auto-generates filename if path not provided).
     """
     host_configuration = ctx.obj["host_configuration"]
@@ -1049,24 +1050,25 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
 
-        # Extract albumart URL
+        # Extract albumart URI
         albumart = state.get("albumart")
         if not albumart:
             if not machine_readable:
-                click.echo("Error: No album art URL found in current state", err=True)
+                click.echo("Error: No album art URI found in current state", err=True)
             sys.exit(1)
 
-        # Handle relative URLs by prepending the base URL
+        # Handle relative URIs by prepending the base URL
         if albumart.startswith("/"):
-            albumart_url = f"{host_configuration.rest_base_url}{albumart}"
+            albumart_uri = f"{host_configuration.rest_base_url}{albumart}"
         else:
-            albumart_url = albumart
+            albumart_uri = albumart
 
         if verbose and not machine_readable:
-            click.echo(f"Album art URL: {albumart_url}", err=True)
+            click.echo(f"Album art URI: {albumart_uri}", err=True)
 
-        # Always print the URL (even in machine-readable mode)
-        click.echo(albumart_url)
+        # Always print the URI (even in machine-readable mode);
+        # in machine-readable mode print it quoted so it can be consumed by jq/yq
+        click.echo(json.dumps(albumart_uri) if machine_readable else albumart_uri)
 
         # Download the file if -o/--output-file is specified
         if output_file is not None:
@@ -1078,8 +1080,8 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
                 # Sanitize album name
                 sanitized_album = sanitize_filename(album)
 
-                # Extract extension from album art URL (without leading dot)
-                extension = extract_extension_from_url(albumart_url)
+                # Extract extension from album art URI (without leading dot)
+                extension = extract_extension_from_uri(albumart_uri)
 
                 # Create filename with "000" prefix
                 output_file = f"000_{sanitized_album}.{extension}"
@@ -1088,7 +1090,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
                 click.echo(f"\nDownloading album art to {output_file}...", err=True)
 
             try:
-                response = requests.get(albumart_url, timeout=rest_api_timeout, stream=True)
+                response = requests.get(albumart_uri, timeout=rest_api_timeout, stream=True)
                 response.raise_for_status()
 
                 with open(output_file, "wb") as f:

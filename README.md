@@ -273,10 +273,10 @@ Its short fields are:
 
 ### Album Art
 
-Get the current album art URL:
+Get the current album art URI:
 
 ```bash
-# Get URL only
+# Get URI only
 volumito track albumart
 
 # Download album art to file
@@ -284,6 +284,10 @@ volumito track albumart -o albumart.jpg
 
 # With custom host and save path
 volumito track albumart --host 192.168.1.100 -o /path/to/albumart.jpg
+
+# Machine-readable mode prints the URI as a quoted string, consumable by jq/yq
+volumito -m track albumart          # => "http://volumio.local:3000/albumart?..."
+volumito -m track audio             # => "http://volumio.local:8000/music/..."
 ```
 
 ## API Reference

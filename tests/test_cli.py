@@ -1468,6 +1468,8 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "http://volumio.local:8000/music/test.flac" in result.output
+        # Without --machine-readable, the URI is printed bare (not quoted)
+        assert '"http://volumio.local:8000/music/test.flac"' not in result.output
 
     def test_audio_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with custom host."""
@@ -1614,8 +1616,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["--machine-readable", "track", "audio"])
 
         assert result.exit_code == 0
-        # In machine-readable mode, only the URI should be printed
-        assert "http://volumio.local:8000/music/test.flac" in result.output
+        # In machine-readable mode, only the quoted URI should be printed
+        assert result.output.strip() == '"http://volumio.local:8000/music/test.flac"'
         assert "Title" not in result.output
         assert "Artist" not in result.output
 
@@ -1973,6 +1975,8 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "http://volumio.local:3000/albumart?path=image.jpg" in result.output
+        # Without --machine-readable, the URI is printed bare (not quoted)
+        assert '"http://volumio.local:3000/albumart?path=image.jpg"' not in result.output
 
     def test_albumart_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with custom host."""
@@ -1993,8 +1997,8 @@ class TestCLICommands:
         assert host_configuration.host == "192.168.1.100"
         assert "192.168.1.100" in result.output
 
-    def test_albumart_with_absolute_url(self, runner: CliRunner, mocker: MockerFixture):
-        """Test albumart command with absolute URL."""
+    def test_albumart_with_absolute_uri(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart command with absolute URI."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "albumart": "http://example.com/albumart.jpg",
@@ -2010,8 +2014,8 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "http://example.com/albumart.jpg" in result.output
 
-    def test_albumart_with_relative_url(self, runner: CliRunner, mocker: MockerFixture):
-        """Test albumart command with relative URL path."""
+    def test_albumart_with_relative_uri(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart command with relative URI path."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "albumart": "/albumart",
@@ -2071,7 +2075,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "albumart"])
 
         assert result.exit_code == 1
-        assert "No album art URL found" in result.output
+        assert "No album art URI found" in result.output
 
     def test_albumart_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with --verbose flag."""
@@ -2090,7 +2094,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Connecting to" in result.output
         assert "Successfully retrieved state" in result.output
-        assert "Album art URL:" in result.output
+        assert "Album art URI:" in result.output
 
     def test_albumart_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with --machine-readable flag."""
@@ -2107,8 +2111,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["--machine-readable", "track", "albumart"])
 
         assert result.exit_code == 0
-        # In machine-readable mode, only the URL should be printed
-        assert "http://example.com/albumart.jpg" in result.output
+        # In machine-readable mode, only the quoted URI should be printed
+        assert result.output.strip() == '"http://example.com/albumart.jpg"'
         assert "Connecting" not in result.output
 
     def test_albumart_connection_error(self, runner: CliRunner, mocker: MockerFixture):
@@ -2210,7 +2214,7 @@ class TestCLICommands:
     def test_albumart_with_output_file_auto_generated_from_query_param(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test albumart command with -o flag auto-generates filename from query param URL."""
+        """Test albumart command with -o flag auto-generates filename from query param URI."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "album": "Due, la nostra storia",
@@ -2242,7 +2246,7 @@ class TestCLICommands:
     def test_albumart_with_output_file_auto_generated_from_path(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test albumart command with -o flag auto-generates filename from direct path URL."""
+        """Test albumart command with -o flag auto-generates filename from direct path URI."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "album": "Test Album",
