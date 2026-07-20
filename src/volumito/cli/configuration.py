@@ -80,6 +80,10 @@ def load_default_map(path: str) -> dict[str, Any]:
     try:
         with open(path, encoding="utf-8") as config_file:
             data = yaml.safe_load(config_file)
+    except UnicodeDecodeError as error:
+        raise click.BadParameter(
+            f"configuration file {path} is not a valid YAML file"
+        ) from error
     except (OSError, yaml.YAMLError) as error:
         raise click.BadParameter(f"cannot read configuration file {path}: {error}") from error
 

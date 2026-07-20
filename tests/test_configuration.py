@@ -170,3 +170,11 @@ class TestLoadDefaultMap:
 
         with pytest.raises(click.BadParameter, match="cannot read configuration file"):
             load_default_map(str(config))
+
+    def test_non_utf8_file_raises(self, tmp_path):
+        """A non-UTF-8 (e.g. binary) file raises BadParameter, not UnicodeDecodeError."""
+        config = tmp_path / "volumito.yaml"
+        config.write_bytes(b"\xff\xfe\x00\x01")
+
+        with pytest.raises(click.BadParameter, match="is not a valid YAML file"):
+            load_default_map(str(config))

@@ -3177,6 +3177,19 @@ class TestConfigurationFile:
         assert result.exit_code == 2
         assert "cannot read configuration file" in result.output
 
+    def test_non_utf8_config_errors(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A non-UTF-8 (binary) config file exits 2 with a readable message."""
+        self._mock_rest_client(mocker)
+        config = tmp_path / "volumito.yaml"
+        config.write_bytes(b"\xff\xfe\x00\x01")
+
+        result = runner.invoke(main, ["-c", str(config), "info"])
+
+        assert result.exit_code == 2
+        assert "is not a valid YAML file" in result.output
+
     def test_unknown_key_errors(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
