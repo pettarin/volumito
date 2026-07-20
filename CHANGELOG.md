@@ -11,26 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Support for a YAML configuration file, whose values are used as option defaults (explicit
-  command-line options still override them; if neither is given, the hardcoded defaults apply)
-- Option `-c`/`--configuration-file` to point at an explicit configuration file; if omitted, the
-  current directory, the home directory, `~/.volumito`, `~/.config/volumito`, and `/etc` are probed in
-  order (highest priority first), trying `volumito.yaml` then `.volumito.yaml` within each
-- Configuration file sections `volumio` (`host`, `scheme`, `rest-api-port`, `mpd-port`), `timeouts`
-  (`rest-api-timeout`, `mpd-timeout`, `rest-api-sleep-before-next-call`), and `output` (`verbose`,
-  `machine-readable`, `fields`, `format`, `raw`, `print-resulting-state` — `fields`/`format`/`raw` set the
-  `--fields`/`--format`/`--raw` defaults for `player state`, `info`, `track info`, and `queue list` (shared,
-  or overridden per command via optional `player-state`/`track-info`/`queue-list` subsections, with
-  `player-state` also governing `info`), and `print-resulting-state` sets the `-r` default for the `player`
-  action commands); an unreadable `-c` file, invalid YAML, or an unknown section/key is an error
-- Configuration file section `downloads` setting the `--file-name-template`, `--output-directory`,
-  `--output-file`, and `--overwrite-existing-files` defaults for `track audio` and `track albumart`: keys
-  placed directly under `downloads` are shared by both commands, and optional
-  `track-audio`/`track-albumart` subsections override them per command (so each command can have its own
-  `file-name-template`)
-- Command group `configuration` with subcommands `create` (write a `volumito.yaml` with all keys set to
-  their defaults; `-d`/`-f` choose the location, `--overwrite-existing-files` allows replacing an existing
-  file), `check` (validate a configuration file, given or probed, and print the values read), and `search`
-  (probe the canonical locations and print which files exist and which one would be used)
+  command-line options still override them)
+- Option `-c`/`--configuration-file` to select a configuration file, with probing of canonical
+  locations in the current and home directories when omitted
+- Configuration file sections `volumio`, `timeouts`, and `output` for connection, timeout, and
+  output-formatting defaults (the `output` display options can be set per command)
+- Configuration file section `downloads` for the `track audio`/`track albumart` download-option
+  defaults, shared or set per command
+- Command group `configuration` with `create`, `check`, and `search` subcommands to manage
+  configuration files
 
 ### Changed
 
@@ -42,32 +31,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Fields `trackType`, `samplerate`, `bitdepth`, and `channels` to the `player state`
-  default short field set (`player state --fields short`)
-- Command `track info`: show the current track's metadata with the same
-  `--fields`/`--format`/`--raw` (`-L`/`-F`/`-R`) options as `player state`, but a
-  track-oriented default `short` field set (position, title, artist, album, duration,
-  trackType, samplerate, bitdepth, channels)
-- Short options for frequently used options: `-H` (`--host`), `-M` (`--mpd-port`),
-  `-P` (`--rest-api-port`), `-p` (`--position`), `-F` (`--format`), `-L` (`--fields`),
-  and `-R` (`--raw`)
-- Option `-d`/`--output-dir` for `track audio` and `track albumart`: download into the
-  given directory, using the file name taken from the URI (mutually exclusive with `-o`)
-- Option `--overwrite-existing-files`/`--no-overwrite-existing-files` (default off) for
-  `track audio` and `track albumart`: downloads now refuse to overwrite an existing
-  destination file unless this flag is given
-- Option `-f`/`--file-name-template` for `track audio` and `track albumart`: with `-d`,
-  build the output file name from a Python `str.format` template (default
-  `{file_name_from_uri}`); keys include `position`, `title`, `album`, `artist`,
-  `trackType`, `duration`, `bitdepth`, `samplerate`, `channels`, and `extension`, and
-  spaces in the result become underscores
+- Fields `trackType`, `samplerate`, `bitdepth`, and `channels` to the `player state` default
+  short field set
+- Command `track info` to show the current track's metadata (with `--fields`/`--format`/`--raw`)
+- Short options for frequently used options (`-H`, `-M`, `-P`, `-p`, `-F`, `-L`, `-R`)
+- Option `-d`/`--output-dir` for `track audio` and `track albumart` to download into a directory
+- Option `--overwrite-existing-files`/`--no-overwrite-existing-files` for `track audio` and
+  `track albumart`
+- Option `-f`/`--file-name-template` for `track audio` and `track albumart` to build the output
+  file name from a template
 
 ### Changed
 
-- In machine-readable mode, `track audio` and `track albumart` now print their URI as a
-  quoted string (consistent with `version`) so it can be consumed by tools like `jq` and `yq`
-- The `-o`/`--output-file` option of `track audio` and `track albumart` now downloads to the
-  exact path given; the previous metadata-based filename auto-generation was removed
+- In machine-readable mode, `track audio` and `track albumart` now print their URI as a quoted string
+- The `-o`/`--output-file` option of `track audio` and `track albumart` now downloads to the exact
+  path given
 
 
 ## [0.0.8] - 2026-07-19
