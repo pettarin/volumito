@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `-R` (`--raw`)
 - Option `-d`/`--output-dir` for `track audio` and `track albumart`: download into the
   given directory, using the file name taken from the URI (mutually exclusive with `-o`)
+- Option `--overwrite-existing-files`/`--no-overwrite-existing-files` (default off) for
+  `track audio` and `track albumart`: downloads now refuse to overwrite an existing
+  destination file unless this flag is given
 
 ### Changed
 

@@ -301,6 +301,14 @@ volumito track audio -o /path/to/song.flac
 volumito track audio -d /path/to/music/
 ```
 
+By default, a download will not overwrite an existing destination file (it errors
+out instead). Pass `--overwrite-existing-files` to allow overwriting:
+
+```bash
+volumito track albumart -o /path/to/cover.jpg --overwrite-existing-files
+volumito track audio -d /path/to/music/ --overwrite-existing-files
+```
+
 ## API Reference
 
 TODO

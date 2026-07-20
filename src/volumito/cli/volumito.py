@@ -197,6 +197,7 @@ def download_uri_to(
     uri: str,
     output_file: str | None,
     output_dir: str | None,
+    overwrite: bool,
     label: str,
     timeout: float,
     verbose: bool,
@@ -206,12 +207,14 @@ def download_uri_to(
 
     Exactly one of ``output_file`` / ``output_dir`` is expected to be set. With
     ``output_file`` the URI is saved to that exact path; with ``output_dir`` it is
-    saved into that directory under the file name taken from the URI.
+    saved into that directory under the file name taken from the URI. Unless
+    ``overwrite`` is true, an existing destination file is left untouched.
 
     Args:
         uri: The URI to download
         output_file: Exact destination file path, or None
         output_dir: Destination directory (file name derived from the URI), or None
+        overwrite: Whether to overwrite the destination file if it already exists
         label: Human-readable noun for messages ("track" or "album art")
         timeout: Request timeout in seconds
         verbose: Whether to print progress messages
@@ -226,6 +229,15 @@ def download_uri_to(
                 click.echo(f"\nError: cannot determine a file name from the URI: {uri}", err=True)
             sys.exit(1)
         destination = os.path.join(output_dir, filename)  # type: ignore[arg-type]
+
+    if not overwrite and os.path.exists(destination):
+        if not machine_readable:
+            click.echo(
+                f"\nError: file already exists: {destination} "
+                "(use --overwrite-existing-files to overwrite)",
+                err=True,
+            )
+        sys.exit(1)
 
     if verbose and not machine_readable:
         click.echo(f"\nDownloading {label} to {destination}...", err=True)
@@ -953,7 +965,18 @@ def track_info(
     default=None,
     help="Download the track to this exact file path (mutually exclusive with -d)",
 )
-def audio(ctx: click.Context, output_dir: str | None, output_file: str | None) -> None:
+@click.option(
+    "--overwrite-existing-files/--no-overwrite-existing-files",
+    default=False,
+    show_default=True,
+    help="Overwrite the destination file if it already exists",
+)
+def audio(
+    ctx: click.Context,
+    output_dir: str | None,
+    output_file: str | None,
+    overwrite_existing_files: bool,
+) -> None:
     """Print the URI of the audio of the current track.
 
     Optionally download the track to a file with -o/--output-file (an exact file
@@ -1006,6 +1029,7 @@ def audio(ctx: click.Context, output_dir: str | None, output_file: str | None) -
                     uri,
                     output_file,
                     output_dir,
+                    overwrite_existing_files,
                     "track",
                     rest_api_timeout,
                     verbose,
@@ -1043,7 +1067,18 @@ def audio(ctx: click.Context, output_dir: str | None, output_file: str | None) -
     default=None,
     help="Download the album art to this exact file path (mutually exclusive with -d)",
 )
-def albumart(ctx: click.Context, output_dir: str | None, output_file: str | None) -> None:
+@click.option(
+    "--overwrite-existing-files/--no-overwrite-existing-files",
+    default=False,
+    show_default=True,
+    help="Overwrite the destination file if it already exists",
+)
+def albumart(
+    ctx: click.Context,
+    output_dir: str | None,
+    output_file: str | None,
+    overwrite_existing_files: bool,
+) -> None:
     """Print the URI of the album art of the current track.
 
     Optionally download the image to a file with -o/--output-file (an exact file
@@ -1095,6 +1130,7 @@ def albumart(ctx: click.Context, output_dir: str | None, output_file: str | None
                 albumart_uri,
                 output_file,
                 output_dir,
+                overwrite_existing_files,
                 "album art",
                 rest_api_timeout,
                 verbose,

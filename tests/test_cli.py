@@ -1857,6 +1857,61 @@ class TestCLICommands:
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
 
+    def test_audio_no_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio command refuses to overwrite an existing file by default."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+        # Only the destination path "exists" (a blanket True would corrupt gettext lookups)
+        mocker.patch(
+            "volumito.cli.volumito.os.path.exists",
+            side_effect=lambda p: p == "/tmp/track.flac",
+        )
+
+        mock_get = mocker.patch("volumito.cli.volumito.requests.get")
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+        # Nothing is downloaded or written
+        mock_get.assert_not_called()
+        mock_open.assert_not_called()
+
+    def test_audio_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio command overwrites an existing file with --overwrite-existing-files."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+        mocker.patch(
+            "volumito.cli.volumito.os.path.exists",
+            side_effect=lambda p: p == "/tmp/track.flac",
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"fake", b"audio", b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main, ["track", "audio", "-o", "/tmp/track.flac", "--overwrite-existing-files"]
+        )
+
+        assert result.exit_code == 0
+        assert "successfully downloaded" in result.output
+        mock_open.assert_called_once_with("/tmp/track.flac", "wb")
+
     def test_audio_with_output_file_explicit_path(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -2310,6 +2365,59 @@ class TestCLICommands:
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
+
+    def test_albumart_no_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart command refuses to overwrite an existing file by default."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        # Only the destination path "exists" (a blanket True would corrupt gettext lookups)
+        mocker.patch(
+            "volumito.cli.volumito.os.path.exists",
+            side_effect=lambda p: p == "/tmp/cover.jpg",
+        )
+
+        mock_get = mocker.patch("volumito.cli.volumito.requests.get")
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/cover.jpg"])
+
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+        # Nothing is downloaded or written
+        mock_get.assert_not_called()
+        mock_open.assert_not_called()
+
+    def test_albumart_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart command overwrites an existing file with --overwrite-existing-files."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mocker.patch(
+            "volumito.cli.volumito.os.path.exists",
+            side_effect=lambda p: p == "/tmp/cover.jpg",
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main, ["track", "albumart", "-o", "/tmp/cover.jpg", "--overwrite-existing-files"]
+        )
+
+        assert result.exit_code == 0
+        assert "successfully downloaded" in result.output
+        mock_open.assert_called_once_with("/tmp/cover.jpg", "wb")
 
     def test_queue_help(self, runner: CliRunner):
         """Test queue group with --help."""
