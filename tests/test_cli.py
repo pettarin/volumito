@@ -37,7 +37,7 @@ from volumito.clients.rest import (
 # The four download keys with their default values, as generated per subsection.
 _DOWNLOAD_DEFAULTS = {
     "file-name-template": "{file_name_from_uri}",
-    "output-dir": None,
+    "output-directory": None,
     "output-file": None,
     "overwrite-existing-files": False,
 }
@@ -1903,7 +1903,7 @@ class TestCLICommands:
         # Error should be suppressed in machine-readable mode
         assert result.output == ""
 
-    def test_audio_with_output_dir(self, runner: CliRunner, mocker: MockerFixture):
+    def test_audio_with_output_directory(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with -d flag (filename taken from the URI)."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
@@ -1928,7 +1928,7 @@ class TestCLICommands:
         # Filename derived from the URI basename
         mock_open.assert_called_once_with(os.path.join("/tmp/music", "test.flac"), "wb")
 
-    def test_audio_output_dir_with_template(self, runner: CliRunner, mocker: MockerFixture):
+    def test_audio_output_directory_with_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio -d with a -f/--file-name-template."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"position": 0, "title": "La rondine"}
@@ -1952,7 +1952,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
 
-    def test_audio_output_dir_bad_template(self, runner: CliRunner, mocker: MockerFixture):
+    def test_audio_output_directory_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio -d with an invalid -f template errors out."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
@@ -2408,7 +2408,7 @@ class TestCLICommands:
         # Error should be suppressed in machine-readable mode
         assert result.output == ""
 
-    def test_albumart_with_output_dir_query_param(
+    def test_albumart_with_output_directory_query_param(
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """Test albumart -d flag: filename from the URI 'path' query parameter."""
@@ -2434,7 +2434,7 @@ class TestCLICommands:
         mock_get.assert_called_once()
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.png"), "wb")
 
-    def test_albumart_with_output_dir_direct_path(
+    def test_albumart_with_output_directory_direct_path(
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """Test albumart -d flag: filename from a direct URI path."""
@@ -2458,7 +2458,9 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.jpg"), "wb")
 
-    def test_albumart_output_dir_with_template(self, runner: CliRunner, mocker: MockerFixture):
+    def test_albumart_output_directory_with_template(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
         """Test albumart -d with a -f/--file-name-template."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
@@ -2486,7 +2488,7 @@ class TestCLICommands:
         # Extension derived from the album art URI (cover.jpg -> jpg)
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "001_La_rondine.jpg"), "wb")
 
-    def test_albumart_output_dir_template_default_extension(
+    def test_albumart_output_directory_template_default_extension(
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """Test albumart {extension} defaults to jpg when the URI has no extension."""
@@ -2513,7 +2515,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "La_rondine.jpg"), "wb")
 
-    def test_albumart_output_dir_bad_template(self, runner: CliRunner, mocker: MockerFixture):
+    def test_albumart_output_directory_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart -d with an invalid -f template errors out."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
@@ -2528,7 +2530,7 @@ class TestCLICommands:
         assert result.exit_code == 2
         assert "Invalid --file-name-template" in result.output
 
-    def test_albumart_output_dir_no_filename(
+    def test_albumart_output_directory_no_filename(
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """Test albumart -d flag errors when no file name can be derived from the URI."""
@@ -3221,10 +3223,10 @@ class TestConfigurationFile:
         mock_maybe.assert_called_once()
         assert mock_maybe.call_args.args[1] is True
 
-    def test_downloads_per_command_output_dir_for_audio(
+    def test_downloads_per_command_output_directory_for_audio(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """A per-command downloads.audio.output-dir sets the track audio download dir."""
+        """A per-command downloads.audio.output-directory sets the track audio download dir."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
@@ -3244,7 +3246,7 @@ class TestConfigurationFile:
         mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
 
         config = self._write_config(
-            tmp_path, "downloads:\n  audio:\n    output-dir: /music\n"
+            tmp_path, "downloads:\n  audio:\n    output-directory: /music\n"
         )
 
         result = runner.invoke(main, ["-c", config, "track", "audio"])
@@ -3252,10 +3254,10 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/music", "test.flac"), "wb")
 
-    def test_downloads_shared_output_dir_for_albumart(
+    def test_downloads_shared_output_directory_for_albumart(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """A shared downloads.output-dir applies to the track albumart download dir."""
+        """A shared downloads.output-directory applies to the track albumart download dir."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
@@ -3265,7 +3267,7 @@ class TestConfigurationFile:
         mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
         mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
 
-        config = self._write_config(tmp_path, "downloads:\n  output-dir: /covers\n")
+        config = self._write_config(tmp_path, "downloads:\n  output-directory: /covers\n")
 
         result = runner.invoke(main, ["-c", config, "track", "albumart"])
 
@@ -3375,7 +3377,7 @@ class TestConfigurationCommands:
                 },
             }
 
-    def test_create_output_dir(self, runner: CliRunner, tmp_path):
+    def test_create_output_directory(self, runner: CliRunner, tmp_path):
         """`-d DIR` writes DIR/volumito.yaml, creating the directory if needed."""
         target_dir = tmp_path / "nested" / "conf"
 
@@ -3449,7 +3451,7 @@ class TestConfigurationCommands:
         config.write_text(
             "volumio:\n  host: myhost.local\n"
             "output:\n  verbose: true\n  format: table\n"
-            "downloads:\n  output-dir: /shared\n  audio:\n    file-name-template: 'a.flac'\n"
+            "downloads:\n  output-directory: /shared\n  audio:\n    file-name-template: 'a.flac'\n"
         )
 
         result = runner.invoke(main, ["configuration", "check", str(config)])
@@ -3459,7 +3461,7 @@ class TestConfigurationCommands:
         assert "volumio.host = myhost.local" in result.output
         assert "output.verbose = True" in result.output
         assert "output.format = table" in result.output
-        assert "downloads.output-dir = /shared" in result.output
+        assert "downloads.output-directory = /shared" in result.output
         assert "downloads.audio.file-name-template = a.flac" in result.output
 
     def test_check_invalid_content(self, runner: CliRunner, tmp_path):

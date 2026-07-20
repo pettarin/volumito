@@ -37,12 +37,12 @@ FILE_WRITE_CHUNK_SIZE = 8192
 
 # Error message when the download destination options are combined
 MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
-    "Options -o/--output-file and -d/--output-dir are mutually exclusive."
+    "Options -o/--output-file and -d/--output-directory are mutually exclusive."
 )
 
 # Error message when the "configuration create" destination options are combined
 MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
-    "Options -d/--output-dir and -f/--output-file are mutually exclusive."
+    "Options -d/--output-directory and -f/--output-file are mutually exclusive."
 )
 
 # Short fields list for the "player state" command
@@ -267,7 +267,7 @@ def render_output_filename(
 def download_uri_to(
     uri: str,
     output_file: str | None,
-    output_dir: str | None,
+    output_directory: str | None,
     file_name_template: str,
     default_extension: str,
     state: dict[str, Any],
@@ -279,8 +279,8 @@ def download_uri_to(
 ) -> None:
     """Download ``uri`` to a file, printing errors and exiting (1) on failure.
 
-    Exactly one of ``output_file`` / ``output_dir`` is expected to be set. With
-    ``output_file`` the URI is saved to that exact path; with ``output_dir`` it is
+    Exactly one of ``output_file`` / ``output_directory`` is expected to be set. With
+    ``output_file`` the URI is saved to that exact path; with ``output_directory`` it is
     saved into that directory under the file name produced by rendering
     ``file_name_template`` against ``state`` (see ``render_output_filename``).
     Unless ``overwrite`` is true, an existing destination file is left untouched.
@@ -288,8 +288,8 @@ def download_uri_to(
     Args:
         uri: The URI to download
         output_file: Exact destination file path, or None
-        output_dir: Destination directory (file name from the template), or None
-        file_name_template: Template for the ``output_dir`` file name
+        output_directory: Destination directory (file name from the template), or None
+        file_name_template: Template for the ``output_directory`` file name
         default_extension: Extension for the ``{extension}`` key when the URI has none
         state: The current player state dictionary (source of template values)
         overwrite: Whether to overwrite the destination file if it already exists
@@ -300,13 +300,13 @@ def download_uri_to(
     """
     if output_file is not None:
         destination = output_file
-    else:  # output_dir is not None
+    else:  # output_directory is not None
         filename = render_output_filename(file_name_template, uri, state, default_extension)
         if not filename:
             if not machine_readable:
                 click.echo("\nError: cannot determine a file name for the download", err=True)
             sys.exit(1)
-        destination = os.path.join(output_dir, filename)  # type: ignore[arg-type]
+        destination = os.path.join(output_directory, filename)  # type: ignore[arg-type]
 
     if not overwrite and os.path.exists(destination):
         if not machine_readable:
@@ -828,7 +828,7 @@ def command_scoped_option_defaults() -> dict[str, Any]:
         "raw",
         "print_resulting_state",
         "file_name_template",
-        "output_dir",
+        "output_directory",
         "output_file",
         "overwrite_existing_files",
     }
@@ -850,7 +850,7 @@ def configuration(ctx: click.Context) -> None:
 @configuration.command("create")
 @click.pass_context
 @click.option(
-    "--output-dir",
+    "--output-directory",
     "-d",
     type=str,
     default=None,
@@ -871,20 +871,20 @@ def configuration(ctx: click.Context) -> None:
 )
 def configuration_create(
     ctx: click.Context,
-    output_dir: str | None,
+    output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
 ) -> None:
     """Create a configuration file with all known keys set to their default values."""
     machine_readable = ctx.obj["machine_readable"]
 
-    if output_dir is not None and output_file is not None:
+    if output_directory is not None and output_file is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_CREATE_ERROR)
 
     if output_file is not None:
         destination = output_file
-    elif output_dir is not None:
-        destination = os.path.join(output_dir, CONFIGURATION_FILENAMES[0])
+    elif output_directory is not None:
+        destination = os.path.join(output_directory, CONFIGURATION_FILENAMES[0])
     else:
         destination = os.path.join(os.getcwd(), CONFIGURATION_FILENAMES[0])
 
@@ -1247,7 +1247,7 @@ def track_info(
 )
 @click.option(
     "-d",
-    "--output-dir",
+    "--output-directory",
     type=str,
     default=None,
     help="Download the track into this directory, using the file name from the template "
@@ -1269,17 +1269,17 @@ def track_info(
 def audio(
     ctx: click.Context,
     file_name_template: str,
-    output_dir: str | None,
+    output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
 ) -> None:
     """Print the URI of the audio of the current track.
 
     Optionally download the track to a file with -o/--output-file (an exact file
-    path) or into a directory with -d/--output-dir (the file name is rendered from
+    path) or into a directory with -d/--output-directory (the file name is rendered from
     -f/--file-name-template); the -o and -d options are mutually exclusive.
     """
-    if output_file is not None and output_dir is not None:
+    if output_file is not None and output_directory is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
 
     host_configuration = ctx.obj["host_configuration"]
@@ -1319,12 +1319,12 @@ def audio(
             # in machine-readable mode print it quoted so it can be consumed by jq/yq
             click.echo(json.dumps(uri) if machine_readable else uri)
 
-            # Download the file if -o/--output-file or -d/--output-dir is specified
-            if output_file is not None or output_dir is not None:
+            # Download the file if -o/--output-file or -d/--output-directory is specified
+            if output_file is not None or output_directory is not None:
                 download_uri_to(
                     uri,
                     output_file,
-                    output_dir,
+                    output_directory,
                     file_name_template,
                     "flac",
                     state,
@@ -1367,7 +1367,7 @@ def audio(
 )
 @click.option(
     "-d",
-    "--output-dir",
+    "--output-directory",
     type=str,
     default=None,
     help="Download the album art into this directory, using the file name from the template "
@@ -1389,17 +1389,17 @@ def audio(
 def albumart(
     ctx: click.Context,
     file_name_template: str,
-    output_dir: str | None,
+    output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
 ) -> None:
     """Print the URI of the album art of the current track.
 
     Optionally download the image to a file with -o/--output-file (an exact file
-    path) or into a directory with -d/--output-dir (the file name is rendered from
+    path) or into a directory with -d/--output-directory (the file name is rendered from
     -f/--file-name-template); the -o and -d options are mutually exclusive.
     """
-    if output_file is not None and output_dir is not None:
+    if output_file is not None and output_directory is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
 
     host_configuration = ctx.obj["host_configuration"]
@@ -1438,12 +1438,12 @@ def albumart(
         # in machine-readable mode print it quoted so it can be consumed by jq/yq
         click.echo(json.dumps(albumart_uri) if machine_readable else albumart_uri)
 
-        # Download the file if -o/--output-file or -d/--output-dir is specified
-        if output_file is not None or output_dir is not None:
+        # Download the file if -o/--output-file or -d/--output-directory is specified
+        if output_file is not None or output_directory is not None:
             download_uri_to(
                 albumart_uri,
                 output_file,
-                output_dir,
+                output_directory,
                 file_name_template,
                 "jpg",
                 state,

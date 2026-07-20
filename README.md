@@ -165,10 +165,10 @@ downloads:
   audio:
     # ...and can be overridden per command.
     file-name-template: "{position:03d}_{title}.{extension}"
-    output-dir: ~/Music
+    output-directory: ~/Music
   albumart:
     file-name-template: "{album}.{extension}"
-    output-dir: ~/Covers
+    output-directory: ~/Covers
 ```
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
@@ -177,7 +177,7 @@ The `output` section's `fields`, `format`, and `raw` keys set the defaults for t
 the `player` action commands (`toggle`, `play`, `pause`, `stop`, `next`, `previous`, `volume`, `mute`,
 `unmute`).
 
-The `downloads` section sets the defaults for the `--file-name-template`, `--output-dir`,
+The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
 placed directly under `downloads` applies to both commands; the optional `audio` and `albumart`
 subsections hold the same keys and override the shared value for that command (so each can have its own
@@ -379,7 +379,7 @@ volumito -m track albumart          # => "http://volumio.local:3000/albumart?...
 volumito -m track audio             # => "http://volumio.local:8000/music/..."
 ```
 
-The `-o`/`--output-file` and `-d`/`--output-dir` options are mutually exclusive.
+The `-o`/`--output-file` and `-d`/`--output-directory` options are mutually exclusive.
 `track audio` accepts the same two download options:
 
 ```bash

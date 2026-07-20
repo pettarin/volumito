@@ -26,7 +26,7 @@ from volumito.cli.configuration import (
 # The four download keys with their default values, as generated per subsection.
 _DOWNLOAD_DEFAULTS = {
     "file-name-template": "{file_name_from_uri}",
-    "output-dir": None,
+    "output-directory": None,
     "output-file": None,
     "overwrite-existing-files": False,
 }
@@ -47,7 +47,7 @@ _DEFAULTS = {
     "raw": False,
     "print_resulting_state": True,
     "file_name_template": "{file_name_from_uri}",
-    "output_dir": None,
+    "output_directory": None,
     "output_file": None,
     "overwrite_existing_files": False,
 }
@@ -134,9 +134,9 @@ class TestLoadDefaultMap:
             "  verbose: true\n"
             "  format: table\n"
             "downloads:\n"
-            "  output-dir: /shared\n"
+            "  output-directory: /shared\n"
             "  audio:\n"
-            "    output-dir: /music\n"
+            "    output-directory: /music\n"
             "  albumart:\n"
             "    file-name-template: '{title}.{extension}'\n"
         )
@@ -148,8 +148,8 @@ class TestLoadDefaultMap:
             "timeouts": {"rest-api-timeout": 7.5},
             "output": {"verbose": True, "format": "table"},
             "downloads": {
-                "output-dir": "/shared",
-                "audio": {"output-dir": "/music"},
+                "output-directory": "/shared",
+                "audio": {"output-directory": "/music"},
                 "albumart": {"file-name-template": "{title}.{extension}"},
             },
         }
@@ -379,8 +379,8 @@ class TestFlattenConfiguration:
             "volumio": {"host": "myhost.local", "rest-api-port": 9999},
             "output": {"verbose": True, "format": "table"},
             "downloads": {
-                "output-dir": "/shared",
-                "audio": {"output-dir": "/music"},
+                "output-directory": "/shared",
+                "audio": {"output-directory": "/music"},
                 "albumart": {"file-name-template": "{title}.{extension}"},
             },
         }
@@ -390,8 +390,8 @@ class TestFlattenConfiguration:
             ("volumio.rest-api-port", 9999),
             ("output.verbose", True),
             ("output.format", "table"),
-            ("downloads.output-dir", "/shared"),
-            ("downloads.audio.output-dir", "/music"),
+            ("downloads.output-directory", "/shared"),
+            ("downloads.audio.output-directory", "/music"),
             ("downloads.albumart.file-name-template", "{title}.{extension}"),
         ]
 
@@ -459,9 +459,9 @@ class TestBuildClickDefaultMap:
         result = build_click_default_map(
             {
                 "downloads": {
-                    "output-dir": "/shared",
+                    "output-directory": "/shared",
                     "audio": {
-                        "output-dir": "/music",
+                        "output-directory": "/music",
                         "file-name-template": "{position}.{extension}",
                     },
                     "albumart": {"file-name-template": "{title}.{extension}"},
@@ -470,11 +470,11 @@ class TestBuildClickDefaultMap:
         )
 
         assert result["track"]["audio"] == {
-            "output_dir": "/music",
+            "output_directory": "/music",
             "file_name_template": "{position}.{extension}",
         }
         assert result["track"]["albumart"] == {
-            "output_dir": "/shared",
+            "output_directory": "/shared",
             "file_name_template": "{title}.{extension}",
         }
 

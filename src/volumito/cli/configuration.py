@@ -21,7 +21,12 @@ SECTION_KEYS: dict[str, list[str]] = {
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
 # "track audio"/"track albumart" commands) override the shared values per command.
-DOWNLOAD_KEYS = ["file-name-template", "output-dir", "output-file", "overwrite-existing-files"]
+DOWNLOAD_KEYS = [
+    "file-name-template",
+    "output-directory",
+    "output-file",
+    "overwrite-existing-files",
+]
 DOWNLOAD_SUBSECTIONS = ["audio", "albumart"]
 
 # Every recognized top-level section.
@@ -45,8 +50,8 @@ KEY_COMMENTS: dict[str, str] = {
         "After a player command like pause or volume, print the resulting player state"
     ),
     "file-name-template": "Template (Python str.format) for the -d output file name",
-    "output-dir": "Directory to download into (mutually exclusive with output-file)",
-    "output-file": "Exact file path to download to (mutually exclusive with output-dir)",
+    "output-directory": "Directory to download into (mutually exclusive with output-file)",
+    "output-file": "Exact file path to download to (mutually exclusive with output-directory)",
     "overwrite-existing-files": "Overwrite the destination file if it already exists",
 }
 
@@ -152,7 +157,7 @@ def load_configuration(path: str) -> dict[str, Any]:
 
     The returned dict mirrors the recognized file structure, keyed by config keys
     (hyphenated), holding only present keys, e.g.
-    ``{"volumio": {"host": ...}, "downloads": {"output-dir": ..., "audio": {...}}}``.
+    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``.
     Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
     :class:`click.BadParameter`. An empty file yields an empty mapping.
     """
