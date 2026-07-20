@@ -685,7 +685,7 @@ def render_state(
 @main.group()
 @click.pass_context
 def player(ctx: click.Context) -> None:
-    """Commands for controlling playback on a Volumio instance."""
+    """Commands for controlling the playback of the Volumio instance."""
     pass
 
 
@@ -738,7 +738,7 @@ main.add_command(player_state, name="info")
 @click.pass_context
 @print_resulting_state_option
 def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Toggle between play and pause states on a Volumio instance."""
+    """Toggle between play and pause states of the Volumio instance."""
     execute_command(
         ctx, "toggle", lambda c: c.toggle(), "/api/v1/commands/?cmd=toggle"
     )
@@ -756,7 +756,7 @@ def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
 )
 @print_resulting_state_option
 def play(ctx: click.Context, position: int | None, print_resulting_state: bool) -> None:
-    """Start playback on a Volumio instance.
+    """Start playback of the Volumio instance.
 
     Optionally specify a position to play a specific track in the queue.
     """
@@ -773,7 +773,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_state: bool) 
 @click.pass_context
 @print_resulting_state_option
 def pause(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Pause playback on a Volumio instance."""
+    """Pause playback of the Volumio instance."""
     execute_command(ctx, "pause", lambda c: c.pause(), "/api/v1/commands/?cmd=pause")
     maybe_print_resulting_state(ctx, print_resulting_state)
 
@@ -782,7 +782,7 @@ def pause(ctx: click.Context, print_resulting_state: bool) -> None:
 @click.pass_context
 @print_resulting_state_option
 def stop(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Stop playback on a Volumio instance."""
+    """Stop playback of the Volumio instance."""
     execute_command(ctx, "stop", lambda c: c.stop(), "/api/v1/commands/?cmd=stop")
     maybe_print_resulting_state(ctx, print_resulting_state)
 
@@ -791,7 +791,7 @@ def stop(ctx: click.Context, print_resulting_state: bool) -> None:
 @click.pass_context
 @print_resulting_state_option
 def next(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Skip to the next track on a Volumio instance."""
+    """Skip to the next track of the Volumio instance."""
     execute_command(ctx, "next", lambda c: c.next(), "/api/v1/commands/?cmd=next")
     maybe_print_resulting_state(ctx, print_resulting_state)
 
@@ -800,7 +800,7 @@ def next(ctx: click.Context, print_resulting_state: bool) -> None:
 @click.pass_context
 @print_resulting_state_option
 def previous(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Skip to the previous track on a Volumio instance."""
+    """Skip to the previous track of the Volumio instance."""
     execute_command(
         ctx, "previous", lambda c: c.previous(), "/api/v1/commands/?cmd=prev"
     )
@@ -812,7 +812,7 @@ def previous(ctx: click.Context, print_resulting_state: bool) -> None:
 @click.argument("value", required=False, default=None, type=VolumeParamType())
 @print_resulting_state_option
 def volume(ctx: click.Context, value: int | str | None, print_resulting_state: bool) -> None:
-    """Set, adjust, or show the volume on a Volumio instance.
+    """Set, adjust, or show the volume of the Volumio instance.
 
     Without VALUE, print the current volume. Otherwise VALUE is an integer
     between 0 and 100 (inclusive) to set an absolute level, or one of "mute",
@@ -831,7 +831,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_state: b
 @click.pass_context
 @print_resulting_state_option
 def mute(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Mute the volume on a Volumio instance (synonym for `player volume mute`)."""
+    """Mute the volume of the Volumio instance (synonym for `player volume mute`)."""
     execute_command(
         ctx,
         "volume mute",
@@ -845,7 +845,7 @@ def mute(ctx: click.Context, print_resulting_state: bool) -> None:
 @click.pass_context
 @print_resulting_state_option
 def unmute(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Unmute the volume on a Volumio instance (synonym for `player volume unmute`)."""
+    """Unmute the volume of the Volumio instance (synonym for `player volume unmute`)."""
     execute_command(
         ctx,
         "volume unmute",
@@ -858,7 +858,7 @@ def unmute(ctx: click.Context, print_resulting_state: bool) -> None:
 @main.group()
 @click.pass_context
 def track(ctx: click.Context) -> None:
-    """Commands for retrieving track information, audio, and album art."""
+    """Retrieve information, audio, and album art of the current track of the Volumio instance."""
     pass
 
 
@@ -894,12 +894,7 @@ def track_info(
     output_format: str,
     raw: bool,
 ) -> None:
-    """Get the current track information from a Volumio instance.
-
-    Displays metadata for the currently playing track. The default ``short``
-    field set is track-oriented (position, title, artist, album, duration,
-    trackType, samplerate, bitdepth, channels).
-    """
+    """Print the information of the current track."""
     render_state(ctx, fields, output_format, raw, TRACK_INFO_SHORT_FIELDS, heading="Track Info")
 
 
@@ -917,10 +912,9 @@ def track_info(
     ),
 )
 def audio(ctx: click.Context, output_file: str | None) -> None:
-    """Get the current track audio URI from a Volumio instance.
+    """Print the URI of the audio of the current track.
 
-    This command uses MPD to get the track URI, replacing localhost/127.0.0.1
-    with the actual host. The URI is printed to stdout. Optionally download the
+    Optionally download the
     track to a file (auto-generates filename if path not provided).
     """
     host_configuration = ctx.obj["host_configuration"]
@@ -1028,10 +1022,9 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
     ),
 )
 def albumart(ctx: click.Context, output_file: str | None) -> None:
-    """Get the album art URI from a Volumio instance.
+    """Print the URI of the album art of the current track.
 
-    This command retrieves the current album art URI from the Volumio API.
-    The URI is always printed to stdout. Optionally download the image to a
+    Optionally download the image to a
     file using the -o/--output-file option (auto-generates filename if path not provided).
     """
     host_configuration = ctx.obj["host_configuration"]
@@ -1126,7 +1119,7 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
 @main.group()
 @click.pass_context
 def queue(ctx: click.Context) -> None:
-    """Commands for managing the playback queue on a Volumio instance."""
+    """Commands for managing the playback queue of the Volumio instance."""
     pass
 
 
@@ -1162,9 +1155,9 @@ def queue_list(
     output_format: str,
     raw: bool,
 ) -> None:
-    """Get the playback queue from a Volumio instance.
+    """List the playback queue.
 
-    This command retrieves and displays the current playback queue,
+    This command retrieves and prints the current playback queue,
     showing all queued tracks with their metadata.
     """
     host_configuration = ctx.obj["host_configuration"]
