@@ -154,6 +154,10 @@ Short fields include:
 - seek
 - volume
 - mute
+- trackType
+- samplerate
+- bitdepth
+- channels
 
 ### Verbosity Control
 
@@ -238,6 +242,34 @@ while true; do
     sleep 5
 done
 ```
+
+### Track Information
+
+Show metadata for the currently playing track. This works like `player state`
+(same `--fields`/`--format`/`--raw` options, and their `-L`/`-F`/`-R` shorthands),
+but its default `short` field set is track-oriented:
+
+```bash
+# Track-oriented short fields (default)
+volumito track info
+
+# All available fields, as compact JSON
+volumito track info -L all -F json
+
+# Raw unfiltered JSON
+volumito track info -R
+```
+
+Its short fields are:
+- position
+- title
+- artist
+- album
+- duration
+- trackType
+- samplerate
+- bitdepth
+- channels
 
 ### Album Art
 

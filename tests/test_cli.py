@@ -13,8 +13,9 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from volumito.cli.volumito import (
-    QUEUE_SHORT_FIELDS,
-    SHORT_FIELDS,
+    PLAYER_STATE_SHORT_FIELDS,
+    QUEUE_LIST_SHORT_FIELDS,
+    TRACK_INFO_SHORT_FIELDS,
     VolumeParamType,
     filter_fields,
     filter_queue_fields,
@@ -67,19 +68,21 @@ class TestFilterFields:
 
         result = filter_fields(state, "short")
 
-        # Should only include SHORT_FIELDS
-        for field in SHORT_FIELDS:
+        # Should only include PLAYER_STATE_SHORT_FIELDS
+        for field in PLAYER_STATE_SHORT_FIELDS:
             if field in state:
                 assert field in result
 
-        # volume and mute are now part of the short field set
+        # volume and mute are part of the short field set
         assert "volume" in result
         assert "mute" in result
 
-        # Audio-quality fields are no longer part of the short field set
-        assert "samplerate" not in result
-        assert "bitdepth" not in result
-        assert "channels" not in result
+        # Audio-quality fields are now part of the short field set
+        assert "samplerate" in result
+        assert "bitdepth" in result
+        assert "channels" in result
+
+        # service is not part of the short field set
         assert "service" not in result
 
         # Should not include non-short fields
@@ -94,6 +97,34 @@ class TestFilterFields:
         assert "title" in result
         assert "artist" in result
         assert len(result) == 2
+
+    def test_filter_fields_short_track(self):
+        """Test filter_fields with a custom short-field list (TRACK_INFO_SHORT_FIELDS)."""
+        state = {
+            "position": 0,
+            "title": "Test Song",
+            "artist": "Test Artist",
+            "album": "Test Album",
+            "duration": 180,
+            "trackType": "flac",
+            "samplerate": "44.1 kHz",
+            "bitdepth": "16 bit",
+            "channels": 2,
+            "status": "play",
+            "volume": 100,
+            "extra": "data",
+        }
+
+        result = filter_fields(state, "short", TRACK_INFO_SHORT_FIELDS)
+
+        # Track-oriented fields are kept
+        for field in TRACK_INFO_SHORT_FIELDS:
+            assert field in result
+
+        # Player-only and unknown fields are dropped
+        assert "status" not in result
+        assert "volume" not in result
+        assert "extra" not in result
 
 
 class TestFormatFunctions:
@@ -1252,12 +1283,149 @@ class TestCLICommands:
         assert "Command 'volume unmute' executed successfully" in result.output
         mock_client.volume.assert_called_once_with("unmute")
 
+    def test_track_info_help(self, runner: CliRunner):
+        """Test track info command with --help."""
+        result = runner.invoke(main, ["track", "info", "--help"])
+
+        assert result.exit_code == 0
+        assert "--fields" in result.output
+        assert "--format" in result.output
+        # Short options
+        assert "-L" in result.output
+        assert "-F" in result.output
+        assert "-R" in result.output
+
+    def test_track_info_success_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Test successful track info command with default options."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "position": 0,
+            "title": "Test Song",
+            "artist": "Test Artist",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["track", "info"])
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+
+    def test_track_info_fields_short(self, runner: CliRunner, mocker: MockerFixture):
+        """Test track info with the track-oriented short field set."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "Test",
+            "artist": "Test Artist",
+            "samplerate": "44.1 kHz",
+            "bitdepth": "16 bit",
+            "trackType": "flac",
+            "status": "play",
+            "volume": 100,
+            "extra": "data",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["track", "info", "--format", "json"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        # Track-oriented fields are present
+        assert "samplerate" in output_data
+        assert "bitdepth" in output_data
+        assert "trackType" in output_data
+        # Player-only and unknown fields are dropped
+        assert "status" not in output_data
+        assert "volume" not in output_data
+        assert "extra" not in output_data
+
+    def test_track_info_fields_all(self, runner: CliRunner, mocker: MockerFixture):
+        """Test track info with --fields all."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "Test",
+            "status": "play",
+            "extra": "data",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["track", "info", "-L", "all"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        assert "extra" in output_data
+        assert "status" in output_data
+
+    def test_track_info_format_table(self, runner: CliRunner, mocker: MockerFixture):
+        """Test track info --format table: 'Track Info' heading and track short-field order."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "position": 0,
+            "title": "Test Song",
+            "artist": "Test Artist",
+            "trackType": "flac",
+            "samplerate": "44.1 kHz",
+            "bitdepth": "16 bit",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["track", "info", "-F", "table"])
+
+        assert result.exit_code == 0
+        # Heading is "Track Info", not the player's "Volumio State"
+        assert "Track Info" in result.output
+        assert "Volumio State" not in result.output
+        assert "Test Song" in result.output
+        assert "Samplerate" in result.output
+        # Fields appear in TRACK_INFO_SHORT_FIELDS order, not sorted alphabetically
+        assert (
+            result.output.index("Title")
+            < result.output.index("Artist")
+            < result.output.index("Tracktype")
+            < result.output.index("Samplerate")
+            < result.output.index("Bitdepth")
+        )
+
+    def test_track_info_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """Test track info with the -R (raw) flag."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test", "extra": "data"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["track", "info", "-R"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        # Raw output is the unfiltered state
+        assert "title" in output_data
+        assert "extra" in output_data
+
     def test_track_help(self, runner: CliRunner):
         """Test track group with --help."""
         result = runner.invoke(main, ["track", "--help"])
 
         assert result.exit_code == 0
         assert "track" in result.output.lower()
+        assert "info" in result.output.lower()
         assert "audio" in result.output.lower()
         assert "albumart" in result.output.lower()
 
@@ -2614,8 +2782,8 @@ class TestQueueHelperFunctions:
 
         assert len(result) == 1
         assert result[0]["position"] == 1
-        # Should include only SHORT_FIELDS
-        for field in QUEUE_SHORT_FIELDS:
+        # Should include only QUEUE_LIST_SHORT_FIELDS
+        for field in QUEUE_LIST_SHORT_FIELDS:
             if field in queue_data["queue"][0]:
                 assert field in result[0]
         # Audio-quality fields are no longer part of the queue short field set

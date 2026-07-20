@@ -24,8 +24,8 @@ from volumito.clients import (
 # Default chunk size when writing files
 FILE_WRITE_CHUNK_SIZE = 8192
 
-# Short fields list (same as table format)
-SHORT_FIELDS = [
+# Short fields list for the "player state" command
+PLAYER_STATE_SHORT_FIELDS = [
     "status",
     "position",
     "title",
@@ -35,26 +35,48 @@ SHORT_FIELDS = [
     "seek",
     "volume",
     "mute",
+    "trackType",
+    "samplerate",
+    "bitdepth",
+    "channels",
 ]
 
-# Short fields list for queue items
-QUEUE_SHORT_FIELDS = [
+# Short fields list for the "queue list" command
+QUEUE_LIST_SHORT_FIELDS = [
     "title",
     "artist",
     "album",
     "duration",
 ]
 
+# Short fields list for the "track info" command
+TRACK_INFO_SHORT_FIELDS = [
+    "position",
+    "title",
+    "artist",
+    "album",
+    "duration",
+    "trackType",
+    "samplerate",
+    "bitdepth",
+    "channels",
+]
+
 # Version of the CLI (and of the underlying library)
 VERSION = "0.0.9"
 
 
-def filter_fields(state: dict[str, Any], fields: Literal["short", "all"]) -> dict[str, Any]:
+def filter_fields(
+    state: dict[str, Any],
+    fields: Literal["short", "all"],
+    short_fields: list[str] = PLAYER_STATE_SHORT_FIELDS,
+) -> dict[str, Any]:
     """Filter the state dictionary based on the fields option.
 
     Args:
         state: The state dictionary from the Volumio API
         fields: The fields option ("short" or "all")
+        short_fields: The list of keys to keep when ``fields`` is "short"
 
     Returns:
         A filtered dictionary containing only the requested fields
@@ -62,7 +84,7 @@ def filter_fields(state: dict[str, Any], fields: Literal["short", "all"]) -> dic
     if fields == "all":
         return state
     else:  # short
-        return {key: state[key] for key in SHORT_FIELDS if key in state}
+        return {key: state[key] for key in short_fields if key in state}
 
 
 def format_as_json(state: dict[str, Any]) -> str:
@@ -191,25 +213,32 @@ def extract_extension_from_url(url: str) -> str:
     return ext.lstrip(".") if ext else "jpg"
 
 
-def format_as_table(state: dict[str, Any]) -> str:
+def format_as_table(
+    state: dict[str, Any],
+    heading: str = "Volumio State",
+    field_order: list[str] | None = None,
+) -> str:
     """Format the state dictionary as a readable table.
 
     Args:
         state: The (potentially filtered) state dictionary from the Volumio API
+        heading: The heading line printed above the table
+        field_order: When given, the keys to display in this exact order (with
+            title-cased labels); otherwise labels and order are derived from the
+            state (predefined labels for the short set, sorted keys otherwise)
 
     Returns:
         A formatted string representation of the state
     """
     lines = []
-    lines.append("Volumio State")
+    lines.append(heading)
     lines.append("=" * 50)
 
-    # Check if this is the short field set
-    state_keys = set(state.keys())
-    short_keys = set(SHORT_FIELDS)
-
-    if state_keys.issubset(short_keys):
-        # Use predefined labels for short fields
+    if field_order is not None:
+        # Display the requested fields in the given order, with title-cased labels
+        field_list = [(key.replace("_", " ").title(), key) for key in field_order]
+    elif set(state.keys()).issubset(set(PLAYER_STATE_SHORT_FIELDS)):
+        # Use predefined labels for the player short field set
         field_list = [
             ("Status", "status"),
             ("Position", "position"),
@@ -261,7 +290,7 @@ def filter_queue_fields(
         if fields == "all":
             filtered_item = item.copy()
         else:  # short
-            filtered_item = {key: item[key] for key in QUEUE_SHORT_FIELDS if key in item}
+            filtered_item = {key: item[key] for key in QUEUE_LIST_SHORT_FIELDS if key in item}
 
         # Add synthetic 1-indexed position
         filtered_item["position"] = index + 1
@@ -607,6 +636,52 @@ def version(ctx: click.Context) -> None:
     click.echo(msg)
 
 
+def render_state(
+    ctx: click.Context,
+    fields: str,
+    output_format: str,
+    raw: bool,
+    short_fields: list[str],
+    heading: str = "Volumio State",
+) -> None:
+    """Fetch the current state and print it per the fields/format/raw options.
+
+    Args:
+        ctx: Click context object containing shared options
+        fields: The fields option ("short" or "all")
+        output_format: The output format ("json", "pretty", or "table")
+        raw: When True, print the raw unfiltered JSON (ignores fields/format)
+        short_fields: The list of keys to keep when ``fields`` is "short"
+        heading: The heading line for the table output format
+    """
+    verbose = ctx.obj["verbose"]
+    machine_readable = ctx.obj["machine_readable"]
+
+    state = fetch_state_or_exit(ctx)
+
+    if verbose and not machine_readable:
+        click.echo("Successfully retrieved state", err=True)
+
+    # Determine output format
+    if raw:
+        # Raw JSON without formatting (ignores fields filter)
+        output = json.dumps(state)
+    else:
+        # Apply fields filter for all formatted outputs
+        filtered_state = filter_fields(state, fields, short_fields)  # type: ignore[arg-type]
+
+        if output_format == "table":
+            # Preserve the short_fields order (and their labels) in the table
+            field_order = short_fields if fields == "short" else None
+            output = format_as_table(filtered_state, heading=heading, field_order=field_order)
+        elif output_format == "json":
+            output = format_as_json(filtered_state)
+        else:  # pretty
+            output = format_as_pretty(filtered_state)
+
+    click.echo(output)
+
+
 @main.group()
 @click.pass_context
 def player(ctx: click.Context) -> None:
@@ -652,33 +727,7 @@ def player_state(
     including playback status, volume, track information, and more. Also available
     as the top-level ``info`` command.
     """
-    verbose = ctx.obj["verbose"]
-    machine_readable = ctx.obj["machine_readable"]
-
-    state = fetch_state_or_exit(ctx)
-
-    if verbose and not machine_readable:
-        click.echo("Successfully retrieved state", err=True)
-
-    # Determine output format
-    if raw:
-        # Raw JSON without formatting (ignores fields filter)
-        output = json.dumps(state)
-    else:
-        # Apply fields filter for all formatted outputs
-        filtered_state = filter_fields(state, fields)  # type: ignore[arg-type]
-
-        # Map output format to formatting function
-        format_functions = {
-            "json": format_as_json,
-            "pretty": format_as_pretty,
-            "table": format_as_table,
-        }
-
-        formatter = format_functions[output_format]
-        output = formatter(filtered_state)
-
-    click.echo(output)
+    render_state(ctx, fields, output_format, raw, PLAYER_STATE_SHORT_FIELDS)
 
 
 # "info" is a top-level synonym for "player state"
@@ -809,8 +858,49 @@ def unmute(ctx: click.Context, print_resulting_state: bool) -> None:
 @main.group()
 @click.pass_context
 def track(ctx: click.Context) -> None:
-    """Commands for retrieving track audio and album art information."""
+    """Commands for retrieving track information, audio, and album art."""
     pass
+
+
+@track.command("info")
+@click.pass_context
+@click.option(
+    "--fields",
+    "-L",
+    type=click.Choice(["short", "all"], case_sensitive=False),
+    default="short",
+    show_default=True,
+    help="Fields to display (applies to json and pretty formats)",
+)
+@click.option(
+    "--format",
+    "-F",
+    "output_format",
+    type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
+    default="pretty",
+    show_default=True,
+    help="Output format for the track information",
+)
+@click.option(
+    "--raw",
+    "-R",
+    is_flag=True,
+    default=False,
+    help="Output raw JSON without formatting (overrides --format)",
+)
+def track_info(
+    ctx: click.Context,
+    fields: str,
+    output_format: str,
+    raw: bool,
+) -> None:
+    """Get the current track information from a Volumio instance.
+
+    Displays metadata for the currently playing track. The default ``short``
+    field set is track-oriented (position, title, artist, album, duration,
+    trackType, samplerate, bitdepth, channels).
+    """
+    render_state(ctx, fields, output_format, raw, TRACK_INFO_SHORT_FIELDS, heading="Track Info")
 
 
 @track.command()

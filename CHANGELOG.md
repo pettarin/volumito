@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Fields `trackType`, `samplerate`, `bitdepth`, and `channels` to the `player state`
+  default short field set (`player state --fields short`)
+- Command `track info`: show the current track's metadata with the same
+  `--fields`/`--format`/`--raw` (`-L`/`-F`/`-R`) options as `player state`, but a
+  track-oriented default `short` field set (position, title, artist, album, duration,
+  trackType, samplerate, bitdepth, channels)
 - Short options for frequently used options: `-H` (`--host`), `-M` (`--mpd-port`),
   `-P` (`--rest-api-port`), `-p` (`--position`), `-F` (`--format`), `-L` (`--fields`),
   and `-R` (`--raw`)
