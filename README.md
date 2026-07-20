@@ -15,6 +15,7 @@ player, programmatically or on a shell.
 
 - Clean Python API to connect to and control a Volumio player
 - Built-in comprehensive command-line tool with a lot of options
+- Optional YAML configuration file for connection and verbosity defaults
 - Type-safe implementation with full type hints
 - Comprehensive test coverage (100%)
 
@@ -110,6 +111,51 @@ volumito --rest-api-sleep-before-next-call 0.5 player pause
 The default MPD port is `6600`, as used by Volumio 4.
 For Volumio 3 and earlier, which use MPD port `6599`,
 pass `--mpd-port 6599`.
+
+### Configuration File
+
+Rather than passing connection and verbosity options on every invocation, you can store them in a
+YAML configuration file. Its values are used as **defaults**: an explicit command-line option always
+overrides the file, and if neither is given the built-in defaults apply. The precedence is:
+
+```
+command-line option  >  configuration file  >  built-in default
+```
+
+Point at an explicit file with `-c`/`--configuration-file`:
+
+```bash
+volumito -c /path/to/volumito.yaml player state
+```
+
+If `-c` is omitted, the following directories are probed in order (highest priority first), and within
+each directory `volumito.yaml` is tried before `.volumito.yaml`. The first file that exists is used:
+
+1. the current working directory
+2. the home directory (`~`)
+3. `~/.volumito`
+4. `~/.config/volumito`
+5. `/etc` (lowest priority)
+
+If none exists, the built-in defaults are used. A file named with `-c` that does not exist, invalid
+YAML, or an unrecognized section/key is an error.
+
+All sections and keys are optional. Keys mirror the CLI long options (without the leading `--`):
+
+```yaml
+volumio:
+  host: volumio.local
+  scheme: https
+  rest-api-port: 3000
+  mpd-port: 6600
+timeouts:
+  rest-api-timeout: 5.0
+  mpd-timeout: 5.0
+  rest-api-sleep-before-next-call: 1.0
+verbosity:
+  verbose: true
+  machine-readable: false
+```
 
 ### Output Formats
 

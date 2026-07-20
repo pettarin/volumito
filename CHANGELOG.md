@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.10] - 2026-07-20
 
+### Added
+
+- Support for a YAML configuration file, whose values are used as option defaults (explicit
+  command-line options still override them; if neither is given, the hardcoded defaults apply)
+- Option `-c`/`--configuration-file` to point at an explicit configuration file; if omitted, the
+  current directory, the home directory, `~/.volumito`, `~/.config/volumito`, and `/etc` are probed in
+  order (highest priority first), trying `volumito.yaml` then `.volumito.yaml` within each
+- Configuration file sections `volumio` (`host`, `scheme`, `rest-api-port`, `mpd-port`), `timeouts`
+  (`rest-api-timeout`, `mpd-timeout`, `rest-api-sleep-before-next-call`), and `verbosity` (`verbose`,
+  `machine-readable`); an unreadable `-c` file, invalid YAML, or an unknown section/key is an error
+
 
 ## [0.0.9] - 2026-07-20
 

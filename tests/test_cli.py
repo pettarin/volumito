@@ -3040,3 +3040,151 @@ class TestQueueHelperFunctions:
         assert "Test Song" in result
         assert "Test Artist" in result
         assert "Another Song" in result
+
+
+class TestConfigurationFile:
+    """Test cases for the -c/--configuration-file option and config loading."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    @pytest.fixture(autouse=True)
+    def _no_canonical_config(self, mocker: MockerFixture):
+        """Ensure a real ~/.volumito.yaml cannot perturb tests by default.
+
+        Individual tests override this with their own canonical paths as needed.
+        """
+        mocker.patch(
+            "volumito.cli.configuration.canonical_configuration_paths",
+            return_value=[],
+        )
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Patch VolumioRESTAPIClient so `info` succeeds with a minimal state."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        return mock_client
+
+    def _write_config(self, tmp_path, text: str) -> str:
+        """Write a config file and return its path."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(text)
+        return str(config)
+
+    def test_help_lists_configuration_file_option(self, runner: CliRunner):
+        """The -c/--configuration-file option appears in the main help."""
+        result = runner.invoke(main, ["--help"])
+
+        assert result.exit_code == 0
+        assert "--configuration-file" in result.output
+        assert "-c" in result.output
+
+    def test_explicit_config_used_as_defaults(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Values from an explicit -c file become the option defaults."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path,
+            "volumio:\n  host: myconfig.local\n  scheme: https\n  rest-api-port: 9999\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "-v", "info"])
+
+        assert result.exit_code == 0
+        assert "https://myconfig.local:9999/api/v1/getState" in result.output
+        assert f"Using configuration file: {config}" in result.output
+
+    def test_cli_flag_overrides_config(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An explicit CLI flag wins over the config-file value."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path,
+            "volumio:\n  host: myconfig.local\n  scheme: https\n  rest-api-port: 9999\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "-H", "override.local", "-v", "info"])
+
+        assert result.exit_code == 0
+        assert "https://override.local:9999/api/v1/getState" in result.output
+        assert "myconfig.local" not in result.output
+
+    def test_canonical_config_discovered(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A config found in a canonical path is loaded without -c."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  host: canonical.local\n")
+        mocker.patch(
+            "volumito.cli.configuration.canonical_configuration_paths",
+            return_value=[config],
+        )
+
+        result = runner.invoke(main, ["-v", "info"])
+
+        assert result.exit_code == 0
+        assert "http://canonical.local:3000/api/v1/getState" in result.output
+        assert f"Using configuration file: {config}" in result.output
+
+    def test_verbosity_section_enables_verbose(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The verbosity section can turn on verbose without a CLI flag."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "verbosity:\n  verbose: true\n")
+
+        result = runner.invoke(main, ["-c", config, "info"])
+
+        assert result.exit_code == 0
+        # Verbose output only appears because the config enabled it.
+        assert "Connecting to" in result.output
+
+    def test_no_config_uses_hardcoded_defaults(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With no config file anywhere, the hardcoded defaults are used."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["-v", "info"])
+
+        assert result.exit_code == 0
+        assert "http://volumio.local:3000/api/v1/getState" in result.output
+        assert "Using configuration file" not in result.output
+
+    def test_explicit_missing_file_errors(self, runner: CliRunner, tmp_path):
+        """An explicit -c path that does not exist exits 2."""
+        missing = str(tmp_path / "nope.yaml")
+
+        result = runner.invoke(main, ["-c", missing, "info"])
+
+        assert result.exit_code == 2
+        assert "configuration file not found" in result.output
+
+    def test_malformed_config_errors(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Malformed YAML in the config file exits 2."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio: [unterminated\n")
+
+        result = runner.invoke(main, ["-c", config, "info"])
+
+        assert result.exit_code == 2
+        assert "cannot read configuration file" in result.output
+
+    def test_unknown_key_errors(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An unrecognized key in the config file exits 2."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
+
+        result = runner.invoke(main, ["-c", config, "info"])
+
+        assert result.exit_code == 2
+        assert "unknown key 'bogus'" in result.output

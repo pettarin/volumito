@@ -14,6 +14,7 @@ from typing import Any, Literal
 import click
 import requests
 
+from volumito.cli.configuration import load_default_map, resolve_configuration_path
 from volumito.clients import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -635,7 +636,38 @@ class VolumeParamType(click.ParamType):
         return level
 
 
+def configuration_file_callback(
+    ctx: click.Context, param: click.Parameter, value: str | None
+) -> str | None:
+    """Load the configuration file (if any) and use its values as option defaults.
+
+    Runs eagerly, before the other options resolve, so the loaded values populate
+    ``ctx.default_map`` and are only used where the user did not pass an explicit flag.
+    """
+    path = resolve_configuration_path(value)
+    if path is not None:
+        mapping = load_default_map(path)
+        ctx.default_map = {**(ctx.default_map or {}), **mapping}
+    ctx.ensure_object(dict)
+    ctx.obj["configuration_file"] = path
+    return value
+
+
 @click.group()
+@click.option(
+    "--configuration-file",
+    "-c",
+    type=str,
+    default=None,
+    is_eager=True,
+    expose_value=False,
+    callback=configuration_file_callback,
+    help=(
+        "Path to a YAML configuration file whose values are used as option defaults "
+        "(explicit options still override them); if omitted, canonical locations in the "
+        "current directory and the home directory are tried (see the documentation)"
+    ),
+)
 @click.option(
     "--host",
     "-H",
@@ -732,6 +764,10 @@ def main(
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
+
+    configuration_file = ctx.obj.get("configuration_file")
+    if verbose and not machine_readable and configuration_file is not None:
+        click.echo(f"Using configuration file: {configuration_file}", err=True)
 
 
 @main.command()
