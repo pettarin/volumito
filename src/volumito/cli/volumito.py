@@ -813,20 +813,25 @@ def root_option_defaults(ctx: click.Context) -> dict[str, Any]:
     }
 
 
-def output_format_defaults() -> dict[str, Any]:
-    """Return the default fields/format/raw of the output-formatting subcommands.
+def command_scoped_option_defaults() -> dict[str, Any]:
+    """Return the defaults of the per-command options used in the configuration file.
 
-    These options live on subcommands (e.g. ``player state``), not the top-level
-    group; read them from the ``info`` command (the same object as ``player state``)
-    so the generated configuration mirrors the real defaults without duplication.
+    These options live on subcommands, not the top-level group: fields/format/raw on
+    ``player state`` and print-resulting-state on the player action commands. Read them
+    from the ``player_state`` and ``toggle`` command objects so the generated
+    configuration mirrors the real defaults without duplication.
     """
-    info_command = main.commands["info"]
-    return {
-        param.name: param.default
-        for param in info_command.params
-        if isinstance(param, click.Option)
-        and param.name in {"fields", "output_format", "raw"}
-    }
+    defaults: dict[str, Any] = {}
+    for command in (player_state, toggle):
+        for param in command.params:
+            if isinstance(param, click.Option) and param.name in {
+                "fields",
+                "output_format",
+                "raw",
+                "print_resulting_state",
+            }:
+                defaults[param.name] = param.default
+    return defaults
 
 
 @main.group()
@@ -886,7 +891,7 @@ def configuration_create(
             )
         sys.exit(1)
 
-    defaults = {**root_option_defaults(ctx), **output_format_defaults()}
+    defaults = {**root_option_defaults(ctx), **command_scoped_option_defaults()}
     content = render_default_configuration(defaults, VERSION)
     try:
         parent = os.path.dirname(destination)

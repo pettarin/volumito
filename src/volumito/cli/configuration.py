@@ -15,7 +15,7 @@ import yaml
 SECTION_KEYS: dict[str, list[str]] = {
     "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
     "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
-    "output": ["verbose", "machine-readable", "fields", "format", "raw"],
+    "output": ["verbose", "machine-readable", "fields", "format", "raw", "print-resulting-state"],
 }
 
 # One-line description of each key, used as a comment in the generated file.
@@ -32,15 +32,28 @@ KEY_COMMENTS: dict[str, str] = {
     "fields": "Fields to display: short or all",
     "format": "Output format: json, pretty, or table",
     "raw": "Output raw JSON, overriding the format",
+    "print-resulting-state": (
+        "After a player command like pause or volume, print the resulting player state"
+    ),
 }
 
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
 _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 
-# CLI parameter names that are per-command output-formatting options (not global),
-# and the default_map paths of the commands that accept them.
-COMMAND_SCOPED_PARAMS = ["fields", "output_format", "raw"]
+# CLI parameter names that are per-command options (not global), mapped to the
+# default_map paths of the commands that accept them. Display options live on the
+# state/info/list commands; --print-resulting-state lives on the player actions.
 OUTPUT_COMMAND_PATHS = [["info"], ["player", "state"], ["track", "info"], ["queue", "list"]]
+ACTION_COMMAND_PATHS = [
+    ["player", name]
+    for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
+]
+COMMAND_SCOPED_PARAMS: dict[str, list[list[str]]] = {
+    "fields": OUTPUT_COMMAND_PATHS,
+    "output_format": OUTPUT_COMMAND_PATHS,
+    "raw": OUTPUT_COMMAND_PATHS,
+    "print_resulting_state": ACTION_COMMAND_PATHS,
+}
 
 
 def _param_name(key: str) -> str:
@@ -160,21 +173,21 @@ def load_default_map(path: str) -> dict[str, Any]:
 def build_click_default_map(flat_defaults: dict[str, Any]) -> dict[str, Any]:
     """Turn a flat param->value map into a Click ``default_map``.
 
-    Global option values stay at the top level; the per-command output-formatting
-    options (``fields``, ``output_format``, ``raw``) are replicated into the nested
-    slot of every command that accepts them, since Click reads ``default_map``
-    hierarchically by group/subcommand name.
+    Global option values stay at the top level; each per-command option is replicated
+    into the nested slot of every command that accepts it, since Click reads
+    ``default_map`` hierarchically by group/subcommand name.
     """
-    formatting = {k: v for k, v in flat_defaults.items() if k in COMMAND_SCOPED_PARAMS}
     result: dict[str, Any] = {
         k: v for k, v in flat_defaults.items() if k not in COMMAND_SCOPED_PARAMS
     }
-    if formatting:
-        for path in OUTPUT_COMMAND_PATHS:
+    for param, paths in COMMAND_SCOPED_PARAMS.items():
+        if param not in flat_defaults:
+            continue
+        for path in paths:
             node = result
             for part in path[:-1]:
                 node = node.setdefault(part, {})
-            node.setdefault(path[-1], {}).update(formatting)
+            node.setdefault(path[-1], {})[param] = flat_defaults[param]
     return result
 
 

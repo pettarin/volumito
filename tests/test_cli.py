@@ -3186,6 +3186,33 @@ class TestConfigurationFile:
         assert "Volumio State" not in result.output
         assert '"title"' in result.output
 
+    def test_print_resulting_state_from_config(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The output section can disable the resulting-state print for player actions."""
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
+        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
+        config = self._write_config(tmp_path, "output:\n  print-resulting-state: false\n")
+
+        result = runner.invoke(main, ["-c", config, "player", "toggle"])
+
+        assert result.exit_code == 0
+        mock_maybe.assert_called_once()
+        assert mock_maybe.call_args.args[1] is False
+
+    def test_print_resulting_state_default_true(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With no config, the resulting-state print keeps its True default."""
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
+        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
+
+        result = runner.invoke(main, ["player", "toggle"])
+
+        assert result.exit_code == 0
+        mock_maybe.assert_called_once()
+        assert mock_maybe.call_args.args[1] is True
+
     def test_no_config_uses_hardcoded_defaults(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -3281,6 +3308,7 @@ class TestConfigurationCommands:
                     "fields": "short",
                     "format": "pretty",
                     "raw": False,
+                    "print-resulting-state": True,
                 },
             }
 

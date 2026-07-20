@@ -158,11 +158,14 @@ output:
   fields: short
   format: pretty
   raw: false
+  print-resulting-state: true
 ```
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
 `--fields`/`--format`/`--raw` options of the commands that support them (`player state`, `info`,
-`track info`, and `queue list`).
+`track info`, and `queue list`). The `print-resulting-state` key sets the default for the `-r` option of
+the `player` action commands (`toggle`, `play`, `pause`, `stop`, `next`, `previous`, `volume`, `mute`,
+`unmute`).
 
 The `configuration` command group helps manage these files:
 

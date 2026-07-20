@@ -36,6 +36,7 @@ _DEFAULTS = {
     "fields": "short",
     "output_format": "pretty",
     "raw": False,
+    "print_resulting_state": True,
 }
 
 
@@ -126,6 +127,7 @@ class TestLoadDefaultMap:
             "  fields: all\n"
             "  format: table\n"
             "  raw: true\n"
+            "  print-resulting-state: false\n"
         )
 
         result = load_default_map(str(config))
@@ -143,6 +145,7 @@ class TestLoadDefaultMap:
             "fields": "all",
             "output_format": "table",
             "raw": True,
+            "print_resulting_state": False,
         }
 
     def test_empty_file(self, tmp_path):
@@ -283,6 +286,7 @@ class TestRenderDefaultConfiguration:
                 "fields": "short",
                 "format": "pretty",
                 "raw": False,
+                "print-resulting-state": True,
             },
         }
 
@@ -337,8 +341,29 @@ class TestBuildClickDefaultMap:
             "queue": {"list": formatting},
         }
 
+    def test_print_resulting_state_replicated_under_player_actions(self):
+        """print_resulting_state is nested under every player action, not the display paths."""
+        result = build_click_default_map({"print_resulting_state": False})
+
+        assert result == {
+            "player": {
+                "toggle": {"print_resulting_state": False},
+                "play": {"print_resulting_state": False},
+                "pause": {"print_resulting_state": False},
+                "stop": {"print_resulting_state": False},
+                "next": {"print_resulting_state": False},
+                "previous": {"print_resulting_state": False},
+                "volume": {"print_resulting_state": False},
+                "mute": {"print_resulting_state": False},
+                "unmute": {"print_resulting_state": False},
+            }
+        }
+        # Not applied to the display commands.
+        assert "info" not in result
+        assert "state" not in result["player"]
+
     def test_no_formatting_keys_no_nesting(self):
-        """Without any formatting key, no command sub-dicts are added."""
+        """Without any command-scoped key, no command sub-dicts are added."""
         result = build_click_default_map({"host": "myhost.local"})
 
         assert result == {"host": "myhost.local"}
