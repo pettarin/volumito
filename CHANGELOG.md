@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Option `--overwrite-existing-files`/`--no-overwrite-existing-files` (default off) for
   `track audio` and `track albumart`: downloads now refuse to overwrite an existing
   destination file unless this flag is given
+- Option `-f`/`--file-name-template` for `track audio` and `track albumart`: with `-d`,
+  build the output file name from a Python `str.format` template (default
+  `{file_name_from_uri}`); keys include `position`, `title`, `album`, `artist`,
+  `trackType`, `duration`, `bitdepth`, `samplerate`, `channels`, and `extension`, and
+  spaces in the result become underscores
 
 ### Changed
 

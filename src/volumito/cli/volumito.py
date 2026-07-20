@@ -193,10 +193,61 @@ def extract_filename_from_uri(uri: str) -> str:
     return os.path.basename(parsed.path)
 
 
+def render_output_filename(template: str, uri: str, state: dict[str, Any]) -> str:
+    """Render an output file name from a template, track metadata, and the URI.
+
+    The template uses Python ``str.format`` syntax. Supported keys are:
+    ``file_name_from_uri``, ``position`` (1-indexed int), ``title``, ``album``,
+    ``artist``, ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``,
+    ``samplerate``, ``channels`` (int), and ``extension`` (currently always
+    "flac"). Spaces in the rendered name are replaced with underscores.
+
+    Args:
+        template: The file-name template (``str.format`` syntax)
+        uri: The URI being downloaded (source of ``file_name_from_uri``)
+        state: The current player state dictionary
+
+    Returns:
+        The rendered file name, with spaces replaced by underscores
+
+    Raises:
+        click.UsageError: If the template references an unknown key or uses an
+            invalid format specification
+    """
+
+    def as_text(key: str) -> str:
+        value = state.get(key)
+        return str(value).strip() if value is not None else ""
+
+    duration = state.get("duration")
+    keys: dict[str, object] = {
+        "file_name_from_uri": extract_filename_from_uri(uri),
+        "position": int(state.get("position") or 0) + 1,
+        "title": as_text("title"),
+        "album": as_text("album"),
+        "artist": as_text("artist"),
+        "trackType": as_text("trackType"),
+        "duration": format_duration(int(duration)) if isinstance(duration, int) else "",
+        "bitdepth": as_text("bitdepth"),
+        "samplerate": as_text("samplerate"),
+        "channels": int(state["channels"]) if isinstance(state.get("channels"), int) else 0,
+        "extension": "flac",
+    }
+
+    try:
+        rendered = template.format(**keys)
+    except (KeyError, ValueError, IndexError) as e:
+        raise click.UsageError(f"Invalid --file-name-template {template!r}: {e}") from e
+
+    return rendered.replace(" ", "_")
+
+
 def download_uri_to(
     uri: str,
     output_file: str | None,
     output_dir: str | None,
+    file_name_template: str,
+    state: dict[str, Any],
     overwrite: bool,
     label: str,
     timeout: float,
@@ -207,13 +258,16 @@ def download_uri_to(
 
     Exactly one of ``output_file`` / ``output_dir`` is expected to be set. With
     ``output_file`` the URI is saved to that exact path; with ``output_dir`` it is
-    saved into that directory under the file name taken from the URI. Unless
-    ``overwrite`` is true, an existing destination file is left untouched.
+    saved into that directory under the file name produced by rendering
+    ``file_name_template`` against ``state`` (see ``render_output_filename``).
+    Unless ``overwrite`` is true, an existing destination file is left untouched.
 
     Args:
         uri: The URI to download
         output_file: Exact destination file path, or None
-        output_dir: Destination directory (file name derived from the URI), or None
+        output_dir: Destination directory (file name from the template), or None
+        file_name_template: Template for the ``output_dir`` file name
+        state: The current player state dictionary (source of template values)
         overwrite: Whether to overwrite the destination file if it already exists
         label: Human-readable noun for messages ("track" or "album art")
         timeout: Request timeout in seconds
@@ -223,10 +277,10 @@ def download_uri_to(
     if output_file is not None:
         destination = output_file
     else:  # output_dir is not None
-        filename = extract_filename_from_uri(uri)
+        filename = render_output_filename(file_name_template, uri, state)
         if not filename:
             if not machine_readable:
-                click.echo(f"\nError: cannot determine a file name from the URI: {uri}", err=True)
+                click.echo("\nError: cannot determine a file name for the download", err=True)
             sys.exit(1)
         destination = os.path.join(output_dir, filename)  # type: ignore[arg-type]
 
@@ -951,11 +1005,21 @@ def track_info(
 @track.command()
 @click.pass_context
 @click.option(
+    "-f",
+    "--file-name-template",
+    type=str,
+    default="{file_name_from_uri}",
+    show_default=True,
+    help="Template (Python str.format syntax) for the -d output file name. Keys: "
+    "file_name_from_uri, position, title, album, artist, trackType, duration, "
+    "bitdepth, samplerate, channels, extension. Spaces become underscores.",
+)
+@click.option(
     "-d",
     "--output-dir",
     type=str,
     default=None,
-    help="Download the track into this directory, using the file name from the URI "
+    help="Download the track into this directory, using the file name from the template "
     "(mutually exclusive with -o)",
 )
 @click.option(
@@ -973,6 +1037,7 @@ def track_info(
 )
 def audio(
     ctx: click.Context,
+    file_name_template: str,
     output_dir: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
@@ -980,8 +1045,8 @@ def audio(
     """Print the URI of the audio of the current track.
 
     Optionally download the track to a file with -o/--output-file (an exact file
-    path) or into a directory with -d/--output-dir (the file name is taken from
-    the URI); the two options are mutually exclusive.
+    path) or into a directory with -d/--output-dir (the file name is rendered from
+    -f/--file-name-template); the -o and -d options are mutually exclusive.
     """
     if output_file is not None and output_dir is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
@@ -996,9 +1061,9 @@ def audio(
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
-        # Connect to the REST API first (validates connectivity)
+        # Get current track metadata (also validates REST connectivity)
         client = create_client(host_configuration, rest_api_timeout)
-        client.get_state()
+        state = client.get_state()
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -1029,6 +1094,8 @@ def audio(
                     uri,
                     output_file,
                     output_dir,
+                    file_name_template,
+                    state,
                     overwrite_existing_files,
                     "track",
                     rest_api_timeout,
@@ -1036,6 +1103,10 @@ def audio(
                     machine_readable,
                 )
 
+    except click.UsageError:
+        # A bad --file-name-template should surface as a usage error, not be
+        # swallowed by the generic handler below.
+        raise
     except VolumioConnectionError as e:
         if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
@@ -1053,11 +1124,21 @@ def audio(
 @track.command()
 @click.pass_context
 @click.option(
+    "-f",
+    "--file-name-template",
+    type=str,
+    default="{file_name_from_uri}",
+    show_default=True,
+    help="Template (Python str.format syntax) for the -d output file name. Keys: "
+    "file_name_from_uri, position, title, album, artist, trackType, duration, "
+    "bitdepth, samplerate, channels, extension. Spaces become underscores.",
+)
+@click.option(
     "-d",
     "--output-dir",
     type=str,
     default=None,
-    help="Download the album art into this directory, using the file name from the URI "
+    help="Download the album art into this directory, using the file name from the template "
     "(mutually exclusive with -o)",
 )
 @click.option(
@@ -1075,6 +1156,7 @@ def audio(
 )
 def albumart(
     ctx: click.Context,
+    file_name_template: str,
     output_dir: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
@@ -1082,8 +1164,8 @@ def albumart(
     """Print the URI of the album art of the current track.
 
     Optionally download the image to a file with -o/--output-file (an exact file
-    path) or into a directory with -d/--output-dir (the file name is taken from
-    the URI); the two options are mutually exclusive.
+    path) or into a directory with -d/--output-dir (the file name is rendered from
+    -f/--file-name-template); the -o and -d options are mutually exclusive.
     """
     if output_file is not None and output_dir is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
@@ -1130,6 +1212,8 @@ def albumart(
                 albumart_uri,
                 output_file,
                 output_dir,
+                file_name_template,
+                state,
                 overwrite_existing_files,
                 "album art",
                 rest_api_timeout,
@@ -1137,6 +1221,10 @@ def albumart(
                 machine_readable,
             )
 
+    except click.UsageError:
+        # A bad --file-name-template should surface as a usage error, not be
+        # swallowed by the generic handler below.
+        raise
     except VolumioConnectionError as e:
         if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)

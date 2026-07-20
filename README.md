@@ -309,6 +309,23 @@ volumito track albumart -o /path/to/cover.jpg --overwrite-existing-files
 volumito track audio -d /path/to/music/ --overwrite-existing-files
 ```
 
+When downloading into a directory with `-d`, the file name is built from
+`-f`/`--file-name-template` (Python `str.format` syntax, default
+`{file_name_from_uri}`). Any space in the resulting name becomes an underscore:
+
+```bash
+# e.g. writes /path/to/music/001_La_rondine.flac
+volumito track audio -d /path/to/music/ -f "{position:03d}_{title}.{extension}"
+```
+
+Supported template keys:
+- `file_name_from_uri` — the file name taken from the URI (the default)
+- `position` — 1-indexed track position (e.g. `{position:03d}` → `001`)
+- `title`, `album`, `artist`, `trackType`, `bitdepth`, `samplerate` — strings
+- `duration` — track length as `HH:MM:SS`
+- `channels` — integer
+- `extension` — currently always `flac`
+
 ## API Reference
 
 TODO

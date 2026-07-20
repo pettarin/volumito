@@ -26,6 +26,7 @@ from volumito.cli.volumito import (
     format_as_table,
     format_queue_as_table,
     main,
+    render_output_filename,
 )
 from volumito.clients.rest import (
     VolumioAPIError,
@@ -221,6 +222,50 @@ class TestExtractFilenameFromUri:
     def test_no_filename(self):
         """Returns an empty string when no file name can be determined."""
         assert extract_filename_from_uri("http://example.com/") == ""
+
+
+class TestRenderOutputFilename:
+    """Test cases for the render_output_filename function."""
+
+    def _state(self):
+        return {
+            "position": 0,
+            "title": "La rondine",
+            "album": "Puccini",
+            "artist": "Anna",
+            "trackType": "flac",
+            "duration": 200,
+            "bitdepth": "16 bit",
+            "samplerate": "44.1 kHz",
+            "channels": 2,
+        }
+
+    def test_default_template(self):
+        """The default template reproduces the URI basename."""
+        uri = "http://volumio.local:8000/music/song.flac"
+        assert render_output_filename("{file_name_from_uri}", uri, {}) == "song.flac"
+
+    def test_custom_template(self):
+        """Custom template renders metadata; position is 1-indexed; spaces -> underscores."""
+        result = render_output_filename(
+            "{position:03d}_{title}.{extension}", "http://x/y.flac", self._state()
+        )
+        assert result == "001_La_rondine.flac"
+
+    def test_duration_key(self):
+        """The duration key is formatted as HH:MM:SS."""
+        result = render_output_filename("{duration}.{extension}", "http://x/y", self._state())
+        assert result == "00:03:20.flac"
+
+    def test_bad_template_unknown_key(self):
+        """An unknown template key raises a UsageError."""
+        with pytest.raises(click.UsageError):
+            render_output_filename("{unknown}", "http://x/y.flac", self._state())
+
+    def test_bad_template_bad_spec(self):
+        """An invalid format specification raises a UsageError."""
+        with pytest.raises(click.UsageError):
+            render_output_filename("{title:03d}", "http://x/y.flac", self._state())
 
 
 class TestVolumeParamType:
@@ -1848,6 +1893,46 @@ class TestCLICommands:
         # Filename derived from the URI basename
         mock_open.assert_called_once_with(os.path.join("/tmp/music", "test.flac"), "wb")
 
+    def test_audio_output_dir_with_template(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio -d with a -f/--file-name-template."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"position": 0, "title": "La rondine"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main,
+            ["track", "audio", "-d", "/tmp/music", "-f", "{position:03d}_{title}.{extension}"],
+        )
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
+
+    def test_audio_output_dir_bad_template(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio -d with an invalid -f template errors out."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+
+        result = runner.invoke(main, ["track", "audio", "-d", "/tmp/music", "-f", "{unknown}"])
+
+        assert result.exit_code == 2
+        assert "Invalid --file-name-template" in result.output
+
     def test_audio_output_file_and_dir_mutually_exclusive(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -2337,6 +2422,48 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.jpg"), "wb")
+
+    def test_albumart_output_dir_with_template(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart -d with a -f/--file-name-template."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "position": 0,
+            "title": "La rondine",
+            "albumart": "http://example.com/images/cover.jpg",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main,
+            ["track", "albumart", "-d", "/tmp/covers", "-f", "{position:03d}_{title}.{extension}"],
+        )
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "001_La_rondine.flac"), "wb")
+
+    def test_albumart_output_dir_bad_template(self, runner: CliRunner, mocker: MockerFixture):
+        """Test albumart -d with an invalid -f template errors out."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers", "-f", "{unknown}"])
+
+        assert result.exit_code == 2
+        assert "Invalid --file-name-template" in result.output
 
     def test_albumart_output_dir_no_filename(
         self, runner: CliRunner, mocker: MockerFixture
