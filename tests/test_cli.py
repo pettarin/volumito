@@ -254,20 +254,24 @@ class TestCLICommands:
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
+        # Short options
+        assert "-H" in result.output
+        assert "-M" in result.output
+        assert "-P" in result.output
 
     def test_version_command(self, runner: CliRunner):
         """Test the version subcommand."""
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.8" in result.output
+        assert "volumito, version 0.0.9" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.8"'
+        assert result.output.strip() == '"0.0.9"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -276,7 +280,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.8"'
+        assert result.output.strip() == '"0.0.9"'
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""
@@ -314,6 +318,10 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "--format" in result.output
         assert "--fields" in result.output
+        # Short options
+        assert "-F" in result.output
+        assert "-L" in result.output
+        assert "-R" in result.output
 
     def test_player_state_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test player state (the canonical form of info) with default options."""
@@ -443,6 +451,108 @@ class TestCLICommands:
         # Raw should include all fields
         assert "title" in output_data
         assert "volume" in output_data
+
+    def test_short_option_host(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -H shorthand for --host."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test"}
+
+        mock_client_class = mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["-H", "192.168.1.100", "info"])
+
+        assert result.exit_code == 0
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.host == "192.168.1.100"
+
+    def test_short_option_ports(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -M/-P shorthands for --mpd-port/--rest-api-port."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test"}
+
+        mock_client_class = mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["-M", "6599", "-P", "8080", "info"])
+
+        assert result.exit_code == 0
+        host_configuration = mock_client_class.call_args[0][0]
+        assert host_configuration.mpd_port == 6599
+        assert host_configuration.rest_api_port == 8080
+
+    def test_short_option_format(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -F shorthand for --format."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["info", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio State" in result.output
+        assert "Test Song" in result.output
+
+    def test_short_option_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -L shorthand for --fields."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "Test",
+            "volume": 100,
+            "extra": "data",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["info", "-L", "all"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        assert "extra" in output_data
+
+    def test_short_option_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -R shorthand for --raw."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test", "volume": 100}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["info", "-R"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        assert "title" in output_data
+        assert "volume" in output_data
+
+    def test_short_option_position(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -p shorthand for --position on player play."""
+        mock_client = mocker.Mock()
+        mock_client.play.return_value = {"response": "play"}
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["player", "play", "-p", "3"])
+
+        assert result.exit_code == 0
+        # Position is 1-indexed on the CLI, 0-indexed to the client
+        mock_client.play.assert_called_once_with(2)
 
     def test_info_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with --verbose flag."""

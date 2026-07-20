@@ -79,7 +79,7 @@ Print the `volumito` version:
 ```bash
 volumito version
 
-# Quoted version string, consumable by jq/yq (e.g. "0.0.8")
+# Quoted version string, consumable by jq/yq (e.g. "0.0.9")
 volumito --machine-readable version
 ```
 
@@ -88,15 +88,16 @@ volumito --machine-readable version
 Specify custom connection parameters:
 
 ```bash
-# Custom host
+# Custom host (-H is a shorthand for --host)
 volumito player state --host my-volumio.local
-volumito player state --host 192.168.1.100
+volumito player state -H 192.168.1.100
 
 # HTTPS connection
 volumito player state --scheme https
 
-# Custom ports
+# Custom ports (-P for --rest-api-port, -M for --mpd-port)
 volumito player state --rest-api-port 8080 --mpd-port 7000
+volumito player state -P 8080 -M 7000
 
 # Custom timeouts (in seconds)
 volumito player state --rest-api-timeout 10
@@ -121,11 +122,13 @@ volumito player state --format pretty
 # Compact JSON with 2-space indentation
 volumito player state --format json
 
-# Human-readable table
+# Human-readable table (-F is a shorthand for --format)
 volumito player state --format table
+volumito player state -F table
 
-# Raw unformatted JSON
+# Raw unformatted JSON (-R is a shorthand for --raw)
 volumito player state --raw
+volumito player state -R
 ```
 
 ### Field Filtering
@@ -136,8 +139,9 @@ Control which fields are displayed:
 # Show only key playback information (default)
 volumito player state --fields short
 
-# Show all available fields
+# Show all available fields (-L is a shorthand for --fields)
 volumito player state --fields all
+volumito player state -L all
 ```
 
 Short fields include:
@@ -183,6 +187,16 @@ volumito player volume unmute
 # `player mute` and `player unmute` are synonyms for the two commands above
 volumito player mute
 volumito player unmute
+```
+
+### Playing A Queue Position
+
+Start playback of a specific track in the queue (1-indexed):
+
+```bash
+# -p is a shorthand for --position
+volumito player play --position 3
+volumito player play -p 3
 ```
 
 ### Resulting State

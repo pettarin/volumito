@@ -46,7 +46,7 @@ QUEUE_SHORT_FIELDS = [
 ]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.8"
+VERSION = "0.0.9"
 
 
 def filter_fields(state: dict[str, Any], fields: Literal["short", "all"]) -> dict[str, Any]:
@@ -496,6 +496,7 @@ class VolumeParamType(click.ParamType):
 @click.group()
 @click.option(
     "--host",
+    "-H",
     type=str,
     default="volumio.local",
     show_default=True,
@@ -513,6 +514,7 @@ class VolumeParamType(click.ParamType):
 )
 @click.option(
     "--mpd-port",
+    "-M",
     type=int,
     default=6600,
     show_default=True,
@@ -527,6 +529,7 @@ class VolumeParamType(click.ParamType):
 )
 @click.option(
     "--rest-api-port",
+    "-P",
     type=int,
     default=3000,
     show_default=True,
@@ -594,7 +597,7 @@ def main(
 def version(ctx: click.Context) -> None:
     """Show the volumito version.
 
-    In machine-readable mode the version string is printed quoted (e.g. ``"0.0.8"``)
+    In machine-readable mode the version string is printed quoted (e.g. ``"0.0.9"``)
     so it can be consumed by jq/yq; otherwise the program name is included.
     """
     if ctx.obj["machine_readable"]:
@@ -615,6 +618,7 @@ def player(ctx: click.Context) -> None:
 @click.pass_context
 @click.option(
     "--fields",
+    "-L",
     type=click.Choice(["short", "all"], case_sensitive=False),
     default="short",
     show_default=True,
@@ -622,6 +626,7 @@ def player(ctx: click.Context) -> None:
 )
 @click.option(
     "--format",
+    "-F",
     "output_format",
     type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
     default="pretty",
@@ -630,6 +635,7 @@ def player(ctx: click.Context) -> None:
 )
 @click.option(
     "--raw",
+    "-R",
     is_flag=True,
     default=False,
     help="Output raw JSON without formatting (overrides --format)",
@@ -694,6 +700,7 @@ def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
 @click.pass_context
 @click.option(
     "--position",
+    "-p",
     type=int,
     default=None,
     help="Position in the queue to play (1-indexed)",
@@ -1035,6 +1042,7 @@ def queue(ctx: click.Context) -> None:
 @click.pass_context
 @click.option(
     "--fields",
+    "-L",
     type=click.Choice(["short", "all"], case_sensitive=False),
     default="short",
     show_default=True,
@@ -1042,6 +1050,7 @@ def queue(ctx: click.Context) -> None:
 )
 @click.option(
     "--format",
+    "-F",
     "output_format",
     type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
     default="pretty",
@@ -1050,6 +1059,7 @@ def queue(ctx: click.Context) -> None:
 )
 @click.option(
     "--raw",
+    "-R",
     is_flag=True,
     default=False,
     help="Output raw JSON without formatting (overrides --format)",
