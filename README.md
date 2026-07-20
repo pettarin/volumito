@@ -157,6 +157,23 @@ verbosity:
   machine-readable: false
 ```
 
+The `configuration` command group helps manage these files:
+
+```bash
+# Create a volumito.yaml with all keys set to their default values
+volumito configuration create                       # in the current directory
+volumito configuration create -d ~/.config/volumito # in a directory (created if needed)
+volumito configuration create -f ./my-config.yaml   # at an exact path
+# By default an existing file is not overwritten; pass --overwrite-existing-files to force it.
+
+# Validate a configuration file and print the values read from it
+volumito configuration check ./volumito.yaml
+volumito configuration check            # no path: check the file that would be used
+
+# Show which configuration files exist and which one would be used
+volumito configuration search
+```
+
 ### Output Formats
 
 Choose from multiple output formats:

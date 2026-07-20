@@ -10,6 +10,7 @@ import os
 import click
 import pytest
 import requests
+import yaml
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
@@ -32,6 +33,20 @@ from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_config_probing(mocker: MockerFixture):
+    """Isolate every CLI test from a real configuration file on the host.
+
+    The eager -c callback probes canonical locations on every invocation; without
+    this, a developer's real ~/volumito.yaml would perturb unrelated tests. Tests
+    that need probing patch canonical_configuration_paths with their own values.
+    """
+    mocker.patch(
+        "volumito.cli.configuration.canonical_configuration_paths",
+        return_value=[],
+    )
 
 
 class TestFilterFields:
@@ -3050,17 +3065,6 @@ class TestConfigurationFile:
         """Create a CliRunner instance."""
         return CliRunner()
 
-    @pytest.fixture(autouse=True)
-    def _no_canonical_config(self, mocker: MockerFixture):
-        """Ensure a real ~/.volumito.yaml cannot perturb tests by default.
-
-        Individual tests override this with their own canonical paths as needed.
-        """
-        mocker.patch(
-            "volumito.cli.configuration.canonical_configuration_paths",
-            return_value=[],
-        )
-
     def _mock_rest_client(self, mocker: MockerFixture):
         """Patch VolumioRESTAPIClient so `info` succeeds with a minimal state."""
         mock_client = mocker.Mock()
@@ -3201,3 +3205,196 @@ class TestConfigurationFile:
 
         assert result.exit_code == 2
         assert "unknown key 'bogus'" in result.output
+
+
+class TestConfigurationCommands:
+    """Test cases for the `configuration` command group (create/check/search)."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def test_create_default_location(self, runner: CliRunner):
+        """`configuration create` writes volumito.yaml in the current directory."""
+        with runner.isolated_filesystem():
+            result = runner.invoke(main, ["configuration", "create"])
+
+            assert result.exit_code == 0
+            assert os.path.exists("volumito.yaml")
+            assert "Created configuration file" in result.output
+            with open("volumito.yaml", encoding="utf-8") as config_file:
+                document = yaml.safe_load(config_file)
+            assert document == {
+                "volumio": {
+                    "host": "volumio.local",
+                    "scheme": "http",
+                    "rest-api-port": 3000,
+                    "mpd-port": 6600,
+                },
+                "timeouts": {
+                    "rest-api-timeout": 5.0,
+                    "mpd-timeout": 5.0,
+                    "rest-api-sleep-before-next-call": 1.0,
+                },
+                "verbosity": {"verbose": False, "machine-readable": False},
+            }
+
+    def test_create_output_dir(self, runner: CliRunner, tmp_path):
+        """`-d DIR` writes DIR/volumito.yaml, creating the directory if needed."""
+        target_dir = tmp_path / "nested" / "conf"
+
+        result = runner.invoke(main, ["configuration", "create", "-d", str(target_dir)])
+
+        assert result.exit_code == 0
+        assert (target_dir / "volumito.yaml").exists()
+
+    def test_create_output_file(self, runner: CliRunner, tmp_path):
+        """`-f FILE` writes exactly FILE."""
+        target = tmp_path / "my-config.yaml"
+
+        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+
+        assert result.exit_code == 0
+        assert target.exists()
+
+    def test_create_machine_readable_prints_path(self, runner: CliRunner, tmp_path):
+        """In machine-readable mode create prints the quoted destination path."""
+        target = tmp_path / "volumito.yaml"
+
+        result = runner.invoke(main, ["-m", "configuration", "create", "-f", str(target)])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == json.dumps(str(target))
+
+    def test_create_mutually_exclusive(self, runner: CliRunner):
+        """`-d` and `-f` together is a usage error."""
+        result = runner.invoke(main, ["configuration", "create", "-d", "x", "-f", "y"])
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
+
+    def test_create_refuses_overwrite(self, runner: CliRunner, tmp_path):
+        """Without --overwrite-existing-files, create refuses to clobber."""
+        target = tmp_path / "volumito.yaml"
+        target.write_text("old\n")
+
+        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+        assert target.read_text() == "old\n"
+
+    def test_create_overwrite(self, runner: CliRunner, tmp_path):
+        """With --overwrite-existing-files, create replaces an existing file."""
+        target = tmp_path / "volumito.yaml"
+        target.write_text("old\n")
+
+        result = runner.invoke(
+            main,
+            ["configuration", "create", "-f", str(target), "--overwrite-existing-files"],
+        )
+
+        assert result.exit_code == 0
+        assert "old" not in target.read_text()
+
+    def test_create_write_error(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
+        """An OSError while writing is reported and exits 1."""
+        target = tmp_path / "volumito.yaml"
+        mocker.patch("volumito.cli.volumito.open", side_effect=OSError("disk full"))
+
+        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+
+        assert result.exit_code == 1
+        assert "cannot write configuration file" in result.output
+
+    def test_check_valid_path(self, runner: CliRunner, tmp_path):
+        """`configuration check PATH` validates and prints the values read."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: myhost.local\nverbosity:\n  verbose: true\n")
+
+        result = runner.invoke(main, ["configuration", "check", str(config)])
+
+        assert result.exit_code == 0
+        assert "is valid" in result.output
+        assert "volumio.host = myhost.local" in result.output
+        assert "verbosity.verbose = True" in result.output
+
+    def test_check_invalid_content(self, runner: CliRunner, tmp_path):
+        """An unrecognized key makes check exit 2."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  bogus: 1\n")
+
+        result = runner.invoke(main, ["configuration", "check", str(config)])
+
+        assert result.exit_code == 2
+        assert "unknown key 'bogus'" in result.output
+
+    def test_check_probe(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
+        """Without a path, check probes and validates the file that would be used."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: probed.local\n")
+        mocker.patch(
+            "volumito.cli.configuration.canonical_configuration_paths",
+            return_value=[str(config)],
+        )
+
+        result = runner.invoke(main, ["configuration", "check"])
+
+        assert result.exit_code == 0
+        assert "volumio.host = probed.local" in result.output
+
+    def test_check_probe_none_found(self, runner: CliRunner):
+        """Without a path and no config anywhere, check exits 1."""
+        result = runner.invoke(main, ["configuration", "check"])
+
+        assert result.exit_code == 1
+        assert "no configuration file found" in result.output
+
+    def test_check_machine_readable(self, runner: CliRunner, tmp_path):
+        """In machine-readable mode check prints the grouped values as JSON."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: myhost.local\n")
+
+        result = runner.invoke(main, ["-m", "configuration", "check", str(config)])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"volumio": {"host": "myhost.local"}}
+
+    def test_search_found(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
+        """Search lists existing config files and marks the one being used."""
+        first = tmp_path / "volumito.yaml"
+        first.write_text("")
+        second = tmp_path / "other.yaml"
+        second.write_text("")
+        mocker.patch(
+            "volumito.cli.configuration.canonical_configuration_paths",
+            return_value=[str(first), str(second)],
+        )
+
+        result = runner.invoke(main, ["configuration", "search"])
+
+        assert result.exit_code == 0
+        assert f"{first} (used)" in result.output
+        assert str(second) in result.output
+
+    def test_search_none_found(self, runner: CliRunner):
+        """Search reports when no config file exists."""
+        result = runner.invoke(main, ["configuration", "search"])
+
+        assert result.exit_code == 0
+        assert "No configuration file found" in result.output
+
+    def test_search_machine_readable(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
+        """In machine-readable mode search prints found/used as JSON."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("")
+        mocker.patch(
+            "volumito.cli.configuration.canonical_configuration_paths",
+            return_value=[str(config)],
+        )
+
+        result = runner.invoke(main, ["-m", "configuration", "search"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"found": [str(config)], "used": str(config)}

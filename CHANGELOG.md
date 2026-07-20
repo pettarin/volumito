@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration file sections `volumio` (`host`, `scheme`, `rest-api-port`, `mpd-port`), `timeouts`
   (`rest-api-timeout`, `mpd-timeout`, `rest-api-sleep-before-next-call`), and `verbosity` (`verbose`,
   `machine-readable`); an unreadable `-c` file, invalid YAML, or an unknown section/key is an error
+- Command group `configuration` with subcommands `create` (write a `volumito.yaml` with all keys set to
+  their defaults; `-d`/`-f` choose the location, `--overwrite-existing-files` allows replacing an existing
+  file), `check` (validate a configuration file, given or probed, and print the values read), and `search`
+  (probe the canonical locations and print which files exist and which one would be used)
 
 
 ## [0.0.9] - 2026-07-20

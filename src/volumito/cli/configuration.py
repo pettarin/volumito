@@ -10,12 +10,25 @@ from typing import Any
 import click
 import yaml
 
-# Recognized section names and their allowed (hyphenated) keys.
+# Recognized section names and their allowed (hyphenated) keys, in display order.
 # Keys mirror the CLI long options minus the leading "--".
-SECTION_KEYS: dict[str, set[str]] = {
-    "volumio": {"host", "scheme", "rest-api-port", "mpd-port"},
-    "timeouts": {"rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"},
-    "verbosity": {"verbose", "machine-readable"},
+SECTION_KEYS: dict[str, list[str]] = {
+    "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
+    "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
+    "verbosity": ["verbose", "machine-readable"],
+}
+
+# One-line description of each key, used as a comment in the generated file.
+KEY_COMMENTS: dict[str, str] = {
+    "host": "Hostname or IP address of the Volumio instance",
+    "scheme": "URL scheme used to connect: http or https",
+    "rest-api-port": "REST API port of the Volumio instance",
+    "mpd-port": "MPD port of the Volumio instance",
+    "rest-api-timeout": "REST API request timeout, in seconds",
+    "mpd-timeout": "MPD connection timeout, in seconds",
+    "rest-api-sleep-before-next-call": "Seconds to sleep before the next REST API call",
+    "verbose": "Enable verbose output",
+    "machine-readable": "Produce machine-readable output only",
 }
 
 # Configuration file names tried within each directory, in this order.
@@ -49,6 +62,18 @@ def canonical_configuration_paths() -> list[str]:
         for directory in canonical_configuration_directories()
         for filename in CONFIGURATION_FILENAMES
     ]
+
+
+def found_and_used_configuration_paths() -> tuple[list[str], str | None]:
+    """Probe the canonical paths and report which files exist and which is used.
+
+    Returns a tuple ``(found, used)`` where ``found`` lists every existing
+    canonical configuration file (in search order) and ``used`` is the first of
+    them (the one that would be loaded), or ``None`` if none exists.
+    """
+    found = [path for path in canonical_configuration_paths() if os.path.isfile(path)]
+    used = found[0] if found else None
+    return found, used
 
 
 def resolve_configuration_path(explicit: str | None) -> str | None:
@@ -114,3 +139,56 @@ def load_default_map(path: str) -> dict[str, Any]:
                 )
             default_map[key.replace("-", "_")] = value
     return default_map
+
+
+def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
+    """Render a configuration file holding every known key and its default value.
+
+    ``defaults`` is a flat mapping keyed by CLI parameter names (with underscores),
+    as produced from the ``main`` group option defaults; ``version`` is recorded in
+    the header. The result is a YAML document with the recognized sections and
+    hyphenated keys, in canonical order, annotated with a header (followed by a blank
+    line) and an explanatory comment above each key, a blank line after each key, and
+    two blank lines between sections.
+    """
+    header_third = (
+        f"# Generated with default values for version {version}: "
+        "edit as needed (and remove this comment)"
+    )
+    lines = [
+        "# volumito CLI configuration file",
+        "#",
+        header_third,
+        "",
+    ]
+    for index, (section, keys) in enumerate(SECTION_KEYS.items()):
+        if index > 0:
+            lines.append("")
+        lines.append(f"{section}:")
+        for key in keys:
+            value = defaults[key.replace("-", "_")]
+            scalar = yaml.safe_dump(
+                {key: value}, sort_keys=False, default_flow_style=False
+            ).strip()
+            lines.append(f"  # {KEY_COMMENTS[key]}")
+            lines.append(f"  {scalar}")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def configuration_values_by_section(default_map: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Regroup a flat ``default_map`` into ``{section: {hyphenated-key: value}}``.
+
+    Only keys actually present in ``default_map`` are included, preserving the
+    canonical section and key order.
+    """
+    grouped: dict[str, dict[str, Any]] = {}
+    for section, keys in SECTION_KEYS.items():
+        section_values = {
+            key: default_map[key.replace("-", "_")]
+            for key in keys
+            if key.replace("-", "_") in default_map
+        }
+        if section_values:
+            grouped[section] = section_values
+    return grouped

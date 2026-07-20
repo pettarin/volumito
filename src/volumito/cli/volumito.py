@@ -14,7 +14,14 @@ from typing import Any, Literal
 import click
 import requests
 
-from volumito.cli.configuration import load_default_map, resolve_configuration_path
+from volumito.cli.configuration import (
+    CONFIGURATION_FILENAMES,
+    configuration_values_by_section,
+    found_and_used_configuration_paths,
+    load_default_map,
+    render_default_configuration,
+    resolve_configuration_path,
+)
 from volumito.clients import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -29,6 +36,11 @@ FILE_WRITE_CHUNK_SIZE = 8192
 # Error message when the download destination options are combined
 MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
     "Options -o/--output-file and -d/--output-dir are mutually exclusive."
+)
+
+# Error message when the "configuration create" destination options are combined
+MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
+    "Options -d/--output-dir and -f/--output-file are mutually exclusive."
 )
 
 # Short fields list for the "player state" command
@@ -783,6 +795,149 @@ def version(ctx: click.Context) -> None:
     else:
         msg = f"volumito, version {VERSION}"
     click.echo(msg)
+
+
+def root_option_defaults(ctx: click.Context) -> dict[str, Any]:
+    """Return the hardcoded default of each option declared on the top-level group.
+
+    Keyed by CLI parameter name (with underscores). Used to render a configuration
+    file that mirrors the built-in defaults, avoiding any duplication of values.
+    """
+    root_command = ctx.find_root().command
+    return {
+        param.name: param.default
+        for param in root_command.params
+        if isinstance(param, click.Option) and param.name is not None
+    }
+
+
+@main.group()
+@click.pass_context
+def configuration(ctx: click.Context) -> None:
+    """Create, check, and search for volumito configuration files."""
+    pass
+
+
+@configuration.command("create")
+@click.pass_context
+@click.option(
+    "--output-dir",
+    "-d",
+    type=str,
+    default=None,
+    help="Directory in which to create a volumito.yaml file",
+)
+@click.option(
+    "--output-file",
+    "-f",
+    type=str,
+    default=None,
+    help="Exact path of the configuration file to create",
+)
+@click.option(
+    "--overwrite-existing-files/--no-overwrite-existing-files",
+    default=False,
+    show_default=True,
+    help="Overwrite the destination file if it already exists",
+)
+def configuration_create(
+    ctx: click.Context,
+    output_dir: str | None,
+    output_file: str | None,
+    overwrite_existing_files: bool,
+) -> None:
+    """Create a configuration file with all known keys set to their default values."""
+    machine_readable = ctx.obj["machine_readable"]
+
+    if output_dir is not None and output_file is not None:
+        raise click.UsageError(MUTUALLY_EXCLUSIVE_CREATE_ERROR)
+
+    if output_file is not None:
+        destination = output_file
+    elif output_dir is not None:
+        destination = os.path.join(output_dir, CONFIGURATION_FILENAMES[0])
+    else:
+        destination = os.path.join(os.getcwd(), CONFIGURATION_FILENAMES[0])
+
+    if not overwrite_existing_files and os.path.exists(destination):
+        if not machine_readable:
+            click.echo(
+                f"Error: file already exists: {destination} "
+                "(use --overwrite-existing-files to overwrite)",
+                err=True,
+            )
+        sys.exit(1)
+
+    content = render_default_configuration(root_option_defaults(ctx), VERSION)
+    try:
+        parent = os.path.dirname(destination)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(destination, "w", encoding="utf-8") as config_file:
+            config_file.write(content)
+    except OSError as e:
+        if not machine_readable:
+            click.echo(f"Error: cannot write configuration file {destination}: {e}", err=True)
+        sys.exit(1)
+
+    if machine_readable:
+        click.echo(json.dumps(destination))
+    else:
+        click.echo(f"Created configuration file {destination}")
+
+
+@configuration.command("check")
+@click.pass_context
+@click.argument("path", required=False, type=str)
+def configuration_check(ctx: click.Context, path: str | None) -> None:
+    """Verify that a configuration file is correct and print the values read from it.
+
+    If PATH is omitted, the canonical locations are probed and the file that would
+    be used is checked.
+    """
+    machine_readable = ctx.obj["machine_readable"]
+
+    if path is not None:
+        resolved = resolve_configuration_path(path)
+    else:
+        resolved = resolve_configuration_path(None)
+        if resolved is None:
+            if not machine_readable:
+                click.echo("Error: no configuration file found", err=True)
+            sys.exit(1)
+
+    values = load_default_map(resolved)  # type: ignore[arg-type]
+    grouped = configuration_values_by_section(values)
+
+    if machine_readable:
+        click.echo(json.dumps(grouped))
+    else:
+        click.echo(f"Configuration file {resolved} is valid.")
+        for section, section_values in grouped.items():
+            for key, value in section_values.items():
+                click.echo(f"{section}.{key} = {value}")
+
+
+@configuration.command("search")
+@click.pass_context
+def configuration_search(ctx: click.Context) -> None:
+    """Probe the canonical locations and print the configuration files found."""
+    machine_readable = ctx.obj["machine_readable"]
+
+    found, used = found_and_used_configuration_paths()
+
+    if machine_readable:
+        click.echo(json.dumps({"found": found, "used": used}))
+        return
+
+    if not found:
+        click.echo("No configuration file found.")
+        return
+
+    click.echo("Found configuration files:")
+    for path in found:
+        marker = " (used)" if path == used else ""
+        click.echo(f"  {path}{marker}")
 
 
 def render_state(

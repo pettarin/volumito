@@ -8,13 +8,31 @@ import os
 
 import click
 import pytest
+import yaml
 from pytest_mock import MockerFixture
 
 from volumito.cli.configuration import (
+    KEY_COMMENTS,
+    SECTION_KEYS,
     canonical_configuration_paths,
+    configuration_values_by_section,
     load_default_map,
+    render_default_configuration,
     resolve_configuration_path,
 )
+
+# Flat param-name -> default value map, as produced from the main group options.
+_DEFAULTS = {
+    "host": "volumio.local",
+    "scheme": "http",
+    "rest_api_port": 3000,
+    "mpd_port": 6600,
+    "rest_api_timeout": 5.0,
+    "mpd_timeout": 5.0,
+    "rest_api_sleep_before_next_call": 1.0,
+    "verbose": False,
+    "machine_readable": False,
+}
 
 
 class TestCanonicalConfigurationPaths:
@@ -178,3 +196,93 @@ class TestLoadDefaultMap:
 
         with pytest.raises(click.BadParameter, match="is not a valid YAML file"):
             load_default_map(str(config))
+
+
+class TestRenderDefaultConfiguration:
+    """Test cases for render_default_configuration."""
+
+    def test_header_present(self):
+        """The header has the title, an empty comment line, then the versioned comment."""
+        result = render_default_configuration(_DEFAULTS, "1.2.3")
+
+        assert result.startswith("# volumito CLI configuration file\n#\n")
+        assert (
+            "# Generated with default values for version 1.2.3: "
+            "edit as needed (and remove this comment)"
+        ) in result
+        # A blank line separates the header from the first section.
+        assert "(and remove this comment)\n\nvolumio:\n" in result
+
+    def test_key_comments_present(self):
+        """Each key is preceded by its explanatory comment, with units where relevant."""
+        result = render_default_configuration(_DEFAULTS, "1.2.3")
+
+        assert "# Hostname or IP address of the Volumio instance" in result
+        assert "# REST API request timeout, in seconds" in result
+        assert "in seconds" in result
+
+    def test_comments_cover_all_keys(self):
+        """KEY_COMMENTS covers exactly the keys declared in SECTION_KEYS, all non-empty."""
+        all_keys = {key for keys in SECTION_KEYS.values() for key in keys}
+
+        assert set(KEY_COMMENTS) == all_keys
+        assert all(comment.strip() for comment in KEY_COMMENTS.values())
+
+    def test_blank_line_after_each_key(self):
+        """A single blank line follows every key within a section."""
+        result = render_default_configuration(_DEFAULTS, "1.2.3")
+
+        assert "  host: volumio.local\n\n  # URL scheme" in result
+        assert "  verbose: false\n\n  # Produce machine-readable" in result
+
+    def test_two_blank_lines_between_sections(self):
+        """Two blank lines separate each section from the next."""
+        result = render_default_configuration(_DEFAULTS, "1.2.3")
+
+        assert "\n\n\ntimeouts:\n" in result
+        assert "\n\n\nverbosity:\n" in result
+
+    def test_round_trips_through_load(self, tmp_path):
+        """A rendered file loaded back yields exactly the input defaults."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(render_default_configuration(_DEFAULTS, "1.2.3"))
+
+        assert load_default_map(str(config)) == _DEFAULTS
+
+    def test_all_sections_and_keys_present(self):
+        """Every recognized section and key appears in the rendered document."""
+        document = yaml.safe_load(render_default_configuration(_DEFAULTS, "1.2.3"))
+
+        assert document == {
+            "volumio": {
+                "host": "volumio.local",
+                "scheme": "http",
+                "rest-api-port": 3000,
+                "mpd-port": 6600,
+            },
+            "timeouts": {
+                "rest-api-timeout": 5.0,
+                "mpd-timeout": 5.0,
+                "rest-api-sleep-before-next-call": 1.0,
+            },
+            "verbosity": {"verbose": False, "machine-readable": False},
+        }
+
+
+class TestConfigurationValuesBySection:
+    """Test cases for configuration_values_by_section."""
+
+    def test_groups_present_keys(self):
+        """A flat default map is regrouped into sections with hyphenated keys."""
+        result = configuration_values_by_section(
+            {"host": "myhost.local", "rest_api_port": 9999, "verbose": True}
+        )
+
+        assert result == {
+            "volumio": {"host": "myhost.local", "rest-api-port": 9999},
+            "verbosity": {"verbose": True},
+        }
+
+    def test_empty_map_yields_empty(self):
+        """An empty default map groups to an empty dict."""
+        assert configuration_values_by_section({}) == {}
