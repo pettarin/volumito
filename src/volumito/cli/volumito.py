@@ -646,7 +646,7 @@ def player_state(
     output_format: str,
     raw: bool,
 ) -> None:
-    """Get the current player state from the /api/v1/getState endpoint of a Volumio instance.
+    """Get the current player state from a Volumio instance.
 
     Retrieves and displays the current state of a Volumio music player instance,
     including playback status, volume, track information, and more. Also available
