@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 import sys
 import time
 from collections.abc import Callable
@@ -23,6 +24,11 @@ from volumito.clients import (
 
 # Default chunk size when writing files
 FILE_WRITE_CHUNK_SIZE = 8192
+
+# Error message when the download destination options are combined
+MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
+    "Options -o/--output-file and -d/--output-dir are mutually exclusive."
+)
 
 # Short fields list for the "player state" command
 PLAYER_STATE_SHORT_FIELDS = [
@@ -160,57 +166,89 @@ def format_seek(milliseconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
-def sanitize_filename(text: str) -> str:
-    """Sanitize a string to be used as a filename.
+def extract_filename_from_uri(uri: str) -> str:
+    """Extract the file-name component of a URI.
 
-    Replaces spaces and punctuation with underscores.
-
-    Args:
-        text: The text to sanitize
-
-    Returns:
-        A sanitized string suitable for use in filenames
-    """
-    import re
-    # Replace any character that is not alphanumeric or underscore with underscore
-    sanitized = re.sub(r"[^\w]", "_", text)
-    # Collapse multiple underscores into one
-    sanitized = re.sub(r"_+", "_", sanitized)
-    # Remove leading/trailing underscores
-    return sanitized.strip("_")
-
-
-def extract_extension_from_uri(uri: str) -> str:
-    """Extract file extension from a URI (without leading dot).
-
-    Handles URIs with query parameters (e.g., /albumart?path=image.jpg).
-    Defaults to 'jpg' if no extension found.
+    Returns the basename of the URI's ``path`` query parameter if present
+    (e.g. ``/albumart?path=/mnt/x/cover.jpg`` -> ``cover.jpg``), otherwise the
+    basename of the URI path (e.g. ``.../music/song.flac`` -> ``song.flac``).
 
     Args:
-        uri: The URI to extract extension from
+        uri: The URI to extract the file name from
 
     Returns:
-        File extension without the dot (e.g., 'jpg', 'png')
+        The file name, or an empty string if none can be determined
     """
-    import os
     from urllib.parse import parse_qs, urlparse
 
     parsed = urlparse(uri)
 
-    # Try to get extension from query parameter 'path' first
+    # Prefer the basename of the 'path' query parameter when present
     if parsed.query:
         qs = parse_qs(parsed.query)
         if "path" in qs:
-            path = qs["path"][0]
-            _, ext = os.path.splitext(path)
-            if ext:
-                return ext.lstrip(".")  # Remove leading dot
+            return os.path.basename(qs["path"][0])
 
-    # If no extension from query, try from the URI path
-    _, ext = os.path.splitext(parsed.path)
+    # Otherwise use the basename of the URI path
+    return os.path.basename(parsed.path)
 
-    # Return extension without dot, default to 'jpg' if none found
-    return ext.lstrip(".") if ext else "jpg"
+
+def download_uri_to(
+    uri: str,
+    output_file: str | None,
+    output_dir: str | None,
+    label: str,
+    timeout: float,
+    verbose: bool,
+    machine_readable: bool,
+) -> None:
+    """Download ``uri`` to a file, printing errors and exiting (1) on failure.
+
+    Exactly one of ``output_file`` / ``output_dir`` is expected to be set. With
+    ``output_file`` the URI is saved to that exact path; with ``output_dir`` it is
+    saved into that directory under the file name taken from the URI.
+
+    Args:
+        uri: The URI to download
+        output_file: Exact destination file path, or None
+        output_dir: Destination directory (file name derived from the URI), or None
+        label: Human-readable noun for messages ("track" or "album art")
+        timeout: Request timeout in seconds
+        verbose: Whether to print progress messages
+        machine_readable: Whether machine-readable mode is active (suppresses messages)
+    """
+    if output_file is not None:
+        destination = output_file
+    else:  # output_dir is not None
+        filename = extract_filename_from_uri(uri)
+        if not filename:
+            if not machine_readable:
+                click.echo(f"\nError: cannot determine a file name from the URI: {uri}", err=True)
+            sys.exit(1)
+        destination = os.path.join(output_dir, filename)  # type: ignore[arg-type]
+
+    if verbose and not machine_readable:
+        click.echo(f"\nDownloading {label} to {destination}...", err=True)
+
+    try:
+        response = requests.get(uri, timeout=timeout, stream=True)
+        response.raise_for_status()
+
+        with open(destination, "wb") as f:
+            for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
+                f.write(chunk)
+
+        if not machine_readable:
+            click.echo(f"\n{label.capitalize()} successfully downloaded to {destination}")
+
+    except requests.exceptions.RequestException as e:
+        if not machine_readable:
+            click.echo(f"\nDownload error: {e}", err=True)
+        sys.exit(1)
+    except OSError as e:
+        if not machine_readable:
+            click.echo(f"\nFile write error: {e}", err=True)
+        sys.exit(1)
 
 
 def format_as_table(
@@ -901,22 +939,30 @@ def track_info(
 @track.command()
 @click.pass_context
 @click.option(
+    "-d",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Download the track into this directory, using the file name from the URI "
+    "(mutually exclusive with -o)",
+)
+@click.option(
     "-o",
     "--output-file",
     type=str,
     default=None,
-    help=(
-        "Download the track to a file. "
-        "Optionally specify a path, "
-        "or let it auto-generate from metadata."
-    ),
+    help="Download the track to this exact file path (mutually exclusive with -d)",
 )
-def audio(ctx: click.Context, output_file: str | None) -> None:
+def audio(ctx: click.Context, output_dir: str | None, output_file: str | None) -> None:
     """Print the URI of the audio of the current track.
 
-    Optionally download the
-    track to a file (auto-generates filename if path not provided).
+    Optionally download the track to a file with -o/--output-file (an exact file
+    path) or into a directory with -d/--output-dir (the file name is taken from
+    the URI); the two options are mutually exclusive.
     """
+    if output_file is not None and output_dir is not None:
+        raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     mpd_timeout = ctx.obj["mpd_timeout"]
@@ -927,9 +973,9 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
 
     try:
-        # Get current track metadata
+        # Connect to the REST API first (validates connectivity)
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.get_state()
+        client.get_state()
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -954,45 +1000,17 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
             # in machine-readable mode print it quoted so it can be consumed by jq/yq
             click.echo(json.dumps(uri) if machine_readable else uri)
 
-            # Download the file if -o/--output-file is specified
-            if output_file is not None:
-                # Generate filename if not provided by user or empty string
-                if not output_file or output_file == "":
-                    # Auto-generate filename from metadata
-                    position = int(state.get("position", 0)) + 1
-                    title = state.get("title", "unknown")
-
-                    # Format position with leading zero if needed
-                    position_str = f"{position:03d}"
-
-                    # Sanitize title
-                    sanitized_title = sanitize_filename(title)
-
-                    # Create filename
-                    output_file = f"{position_str}_{sanitized_title}.flac"
-
-                if verbose and not machine_readable:
-                    click.echo(f"\nDownloading track to {output_file}...", err=True)
-
-                try:
-                    response = requests.get(uri, timeout=rest_api_timeout, stream=True)
-                    response.raise_for_status()
-
-                    with open(output_file, "wb") as f:
-                        for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
-                            f.write(chunk)
-
-                    if not machine_readable:
-                        click.echo(f"\nTrack successfully downloaded to {output_file}")
-
-                except requests.exceptions.RequestException as e:
-                    if not machine_readable:
-                        click.echo(f"\nDownload error: {e}", err=True)
-                    sys.exit(1)
-                except OSError as e:
-                    if not machine_readable:
-                        click.echo(f"\nFile write error: {e}", err=True)
-                    sys.exit(1)
+            # Download the file if -o/--output-file or -d/--output-dir is specified
+            if output_file is not None or output_dir is not None:
+                download_uri_to(
+                    uri,
+                    output_file,
+                    output_dir,
+                    "track",
+                    rest_api_timeout,
+                    verbose,
+                    machine_readable,
+                )
 
     except VolumioConnectionError as e:
         if not machine_readable:
@@ -1011,22 +1029,30 @@ def audio(ctx: click.Context, output_file: str | None) -> None:
 @track.command()
 @click.pass_context
 @click.option(
+    "-d",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Download the album art into this directory, using the file name from the URI "
+    "(mutually exclusive with -o)",
+)
+@click.option(
     "-o",
     "--output-file",
     type=str,
     default=None,
-    help=(
-        "Download the album art to a file. "
-        "Optionally specify a path, "
-        "or let it auto-generate from metadata."
-    ),
+    help="Download the album art to this exact file path (mutually exclusive with -d)",
 )
-def albumart(ctx: click.Context, output_file: str | None) -> None:
+def albumart(ctx: click.Context, output_dir: str | None, output_file: str | None) -> None:
     """Print the URI of the album art of the current track.
 
-    Optionally download the image to a
-    file using the -o/--output-file option (auto-generates filename if path not provided).
+    Optionally download the image to a file with -o/--output-file (an exact file
+    path) or into a directory with -d/--output-dir (the file name is taken from
+    the URI); the two options are mutually exclusive.
     """
+    if output_file is not None and output_dir is not None:
+        raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
@@ -1063,44 +1089,17 @@ def albumart(ctx: click.Context, output_file: str | None) -> None:
         # in machine-readable mode print it quoted so it can be consumed by jq/yq
         click.echo(json.dumps(albumart_uri) if machine_readable else albumart_uri)
 
-        # Download the file if -o/--output-file is specified
-        if output_file is not None:
-            # Generate filename if not provided by user or empty string
-            if not output_file or output_file == "":
-                # Auto-generate filename from metadata
-                album = state.get("album", "unknown")
-
-                # Sanitize album name
-                sanitized_album = sanitize_filename(album)
-
-                # Extract extension from album art URI (without leading dot)
-                extension = extract_extension_from_uri(albumart_uri)
-
-                # Create filename with "000" prefix
-                output_file = f"000_{sanitized_album}.{extension}"
-
-            if verbose and not machine_readable:
-                click.echo(f"\nDownloading album art to {output_file}...", err=True)
-
-            try:
-                response = requests.get(albumart_uri, timeout=rest_api_timeout, stream=True)
-                response.raise_for_status()
-
-                with open(output_file, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
-                        f.write(chunk)
-
-                if not machine_readable:
-                    click.echo(f"\nAlbum art successfully downloaded to {output_file}")
-
-            except requests.exceptions.RequestException as e:
-                if not machine_readable:
-                    click.echo(f"\nDownload error: {e}", err=True)
-                sys.exit(1)
-            except OSError as e:
-                if not machine_readable:
-                    click.echo(f"\nFile write error: {e}", err=True)
-                sys.exit(1)
+        # Download the file if -o/--output-file or -d/--output-dir is specified
+        if output_file is not None or output_dir is not None:
+            download_uri_to(
+                albumart_uri,
+                output_file,
+                output_dir,
+                "album art",
+                rest_api_timeout,
+                verbose,
+                machine_readable,
+            )
 
     except VolumioConnectionError as e:
         if not machine_readable:

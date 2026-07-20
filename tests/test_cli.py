@@ -5,6 +5,7 @@
 """
 
 import json
+import os
 
 import click
 import pytest
@@ -17,6 +18,7 @@ from volumito.cli.volumito import (
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
     VolumeParamType,
+    extract_filename_from_uri,
     filter_fields,
     filter_queue_fields,
     format_as_json,
@@ -198,6 +200,27 @@ class TestFormatFunctions:
 
         assert "Volumio State" in result
         assert "Test" in result
+
+
+class TestExtractFilenameFromUri:
+    """Test cases for the extract_filename_from_uri function."""
+
+    def test_from_query_param_path(self):
+        """The 'path' query parameter's basename wins when present."""
+        uri = "http://volumio.local:3000/albumart?cacheid=x&path=/mnt/USB/Album/cover.png"
+        assert extract_filename_from_uri(uri) == "cover.png"
+
+    def test_from_uri_path(self):
+        """Falls back to the basename of the URI path."""
+        assert extract_filename_from_uri("http://example.com/images/cover.jpg") == "cover.jpg"
+
+    def test_audio_uri(self):
+        """Works for plain audio URIs."""
+        assert extract_filename_from_uri("http://volumio.local:8000/music/song.flac") == "song.flac"
+
+    def test_no_filename(self):
+        """Returns an empty string when no file name can be determined."""
+        assert extract_filename_from_uri("http://example.com/") == ""
 
 
 class TestVolumeParamType:
@@ -1800,16 +1823,10 @@ class TestCLICommands:
         # Error should be suppressed in machine-readable mode
         assert result.output == ""
 
-    def test_audio_with_output_file_auto_generated(
-        self, runner: CliRunner, mocker: MockerFixture
-    ):
-        """Test audio command with -o flag (auto-generates filename)."""
+    def test_audio_with_output_dir(self, runner: CliRunner, mocker: MockerFixture):
+        """Test audio command with -d flag (filename taken from the URI)."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
-            "position": 2,
-            "title": "My Song!",
-            "artist": "Test Artist",
-        }
+        mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -1818,22 +1835,27 @@ class TestCLICommands:
 
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"audio", b"data"]
         mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-
-        # Mock file operations
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "audio", "-o", ""])
+        result = runner.invoke(main, ["track", "audio", "-d", "/tmp/music"])
 
         assert result.exit_code == 0
-        assert "http://volumio.local:8000/music/test.flac" in result.output
         assert "successfully downloaded" in result.output
         mock_get.assert_called_once()
-        # Verify filename was auto-generated (position 2 = track 3, sanitized title)
-        mock_open.assert_called_once_with("003_My_Song.flac", "wb")
+        # Filename derived from the URI basename
+        mock_open.assert_called_once_with(os.path.join("/tmp/music", "test.flac"), "wb")
+
+    def test_audio_output_file_and_dir_mutually_exclusive(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Test audio command rejects combining -o and -d."""
+        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/a.flac", "-d", "/tmp"])
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
 
     def test_audio_with_output_file_explicit_path(
         self, runner: CliRunner, mocker: MockerFixture
@@ -2211,14 +2233,13 @@ class TestCLICommands:
         # Error should be suppressed in machine-readable mode
         assert result.output == ""
 
-    def test_albumart_with_output_file_auto_generated_from_query_param(
+    def test_albumart_with_output_dir_query_param(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test albumart command with -o flag auto-generates filename from query param URI."""
+        """Test albumart -d flag: filename from the URI 'path' query parameter."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
-            "album": "Due, la nostra storia",
-            "albumart": "/albumart?path=albumart.jpg",
+            "albumart": "/albumart?path=/mnt/USB/Album/cover.png",
         }
 
         mocker.patch(
@@ -2226,31 +2247,25 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
         mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-
-        # Mock file operations
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "albumart", "-o", ""])
+        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
 
         assert result.exit_code == 0
-        assert "http://volumio.local:3000/albumart?path=albumart.jpg" in result.output
         assert "successfully downloaded" in result.output
         mock_get.assert_called_once()
-        # Verify filename was auto-generated from album with extension from query param
-        mock_open.assert_called_once_with("000_Due_la_nostra_storia.jpg", "wb")
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.png"), "wb")
 
-    def test_albumart_with_output_file_auto_generated_from_path(
+    def test_albumart_with_output_dir_direct_path(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test albumart command with -o flag auto-generates filename from direct path URI."""
+        """Test albumart -d flag: filename from a direct URI path."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
-            "album": "Test Album",
-            "albumart": "http://example.com/images/cover.png",
+            "albumart": "http://example.com/images/cover.jpg",
         }
 
         mocker.patch(
@@ -2258,31 +2273,23 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-
-        # Mock file operations
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "albumart", "-o", ""])
+        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
 
         assert result.exit_code == 0
-        assert "http://example.com/images/cover.png" in result.output
-        assert "successfully downloaded" in result.output
-        mock_get.assert_called_once()
-        # Verify filename was auto-generated from album with extension from path
-        mock_open.assert_called_once_with("000_Test_Album.png", "wb")
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.jpg"), "wb")
 
-    def test_albumart_with_output_file_auto_generated_no_extension(
+    def test_albumart_output_dir_no_filename(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test albumart command auto-generates filename with no extension (defaults to jpg)."""
+        """Test albumart -d flag errors when no file name can be derived from the URI."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
-            "album": "Unknown Album",
-            "albumart": "/albumart",
+            "albumart": "http://example.com/",
         }
 
         mocker.patch(
@@ -2290,85 +2297,19 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        # Mock requests.get
-        mock_response = mocker.Mock()
-        mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
 
-        # Mock file operations
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        assert result.exit_code == 1
+        assert "cannot determine a file name" in result.output
 
-        result = runner.invoke(main, ["track", "albumart", "-o", ""])
-
-        assert result.exit_code == 0
-        assert "http://volumio.local:3000/albumart" in result.output
-        assert "successfully downloaded" in result.output
-        mock_get.assert_called_once()
-        # Verify filename was auto-generated with default 'jpg' extension
-        mock_open.assert_called_once_with("000_Unknown_Album.jpg", "wb")
-
-    def test_albumart_with_output_file_auto_generated_missing_album(
+    def test_albumart_output_file_and_dir_mutually_exclusive(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test albumart command with -o flag auto-generates filename when album is missing."""
-        mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
-            "albumart": "/albumart?path=image.jpg",
-        }
+        """Test albumart command rejects combining -o and -d."""
+        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/a.jpg", "-d", "/tmp"])
 
-        mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
-            return_value=mock_client,
-        )
-
-        # Mock requests.get
-        mock_response = mocker.Mock()
-        mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-
-        # Mock file operations
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
-
-        result = runner.invoke(main, ["track", "albumart", "-o", ""])
-
-        assert result.exit_code == 0
-        assert "http://volumio.local:3000/albumart?path=image.jpg" in result.output
-        assert "successfully downloaded" in result.output
-        mock_get.assert_called_once()
-        # Verify filename was auto-generated with 'unknown' as album name
-        mock_open.assert_called_once_with("000_unknown.jpg", "wb")
-
-    def test_albumart_with_output_file_auto_generated_special_chars(
-        self, runner: CliRunner, mocker: MockerFixture
-    ):
-        """Test albumart command with -o flag sanitizes special characters in album name."""
-        mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
-            "album": "My Album: Special/Edition (2023)!",
-            "albumart": "/albumart?path=albumart.jpg",
-        }
-
-        mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
-            return_value=mock_client,
-        )
-
-        # Mock requests.get
-        mock_response = mocker.Mock()
-        mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-
-        # Mock file operations
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
-
-        result = runner.invoke(main, ["track", "albumart", "-o", ""])
-
-        assert result.exit_code == 0
-        assert "http://volumio.local:3000/albumart?path=albumart.jpg" in result.output
-        assert "successfully downloaded" in result.output
-        mock_get.assert_called_once()
-        # Verify filename was auto-generated with sanitized album name
-        mock_open.assert_called_once_with("000_My_Album_Special_Edition_2023.jpg", "wb")
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
 
     def test_queue_help(self, runner: CliRunner):
         """Test queue group with --help."""

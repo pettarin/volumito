@@ -19,11 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Short options for frequently used options: `-H` (`--host`), `-M` (`--mpd-port`),
   `-P` (`--rest-api-port`), `-p` (`--position`), `-F` (`--format`), `-L` (`--fields`),
   and `-R` (`--raw`)
+- Option `-d`/`--output-dir` for `track audio` and `track albumart`: download into the
+  given directory, using the file name taken from the URI (mutually exclusive with `-o`)
 
 ### Changed
 
 - In machine-readable mode, `track audio` and `track albumart` now print their URI as a
   quoted string (consistent with `version`) so it can be consumed by tools like `jq` and `yq`
+- The `-o`/`--output-file` option of `track audio` and `track albumart` now downloads to the
+  exact path given; the previous metadata-based filename auto-generation was removed
 
 
 ## [0.0.8] - 2026-07-19

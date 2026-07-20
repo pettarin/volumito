@@ -279,15 +279,26 @@ Get the current album art URI:
 # Get URI only
 volumito track albumart
 
-# Download album art to file
-volumito track albumart -o albumart.jpg
+# Download to an exact file path (-o)
+volumito track albumart -o /path/to/cover.jpg
 
-# With custom host and save path
-volumito track albumart --host 192.168.1.100 -o /path/to/albumart.jpg
+# Download into a directory, using the file name from the URI (-d)
+volumito track albumart -d /path/to/covers/
 
 # Machine-readable mode prints the URI as a quoted string, consumable by jq/yq
 volumito -m track albumart          # => "http://volumio.local:3000/albumart?..."
 volumito -m track audio             # => "http://volumio.local:8000/music/..."
+```
+
+The `-o`/`--output-file` and `-d`/`--output-dir` options are mutually exclusive.
+`track audio` accepts the same two download options:
+
+```bash
+# Download the current track to an exact file path
+volumito track audio -o /path/to/song.flac
+
+# Download the current track into a directory (file name taken from the URI)
+volumito track audio -d /path/to/music/
 ```
 
 ## API Reference
