@@ -12,15 +12,24 @@ import yaml
 from pytest_mock import MockerFixture
 
 from volumito.cli.configuration import (
+    DOWNLOAD_KEYS,
     KEY_COMMENTS,
     SECTION_KEYS,
     build_click_default_map,
     canonical_configuration_paths,
-    configuration_values_by_section,
-    load_default_map,
+    flatten_configuration,
+    load_configuration,
     render_default_configuration,
     resolve_configuration_path,
 )
+
+# The four download keys with their default values, as generated per subsection.
+_DOWNLOAD_DEFAULTS = {
+    "file-name-template": "{file_name_from_uri}",
+    "output-dir": None,
+    "output-file": None,
+    "overwrite-existing-files": False,
+}
 
 # Flat param-name -> default value map, as produced from the CLI option defaults.
 _DEFAULTS = {
@@ -37,6 +46,10 @@ _DEFAULTS = {
     "output_format": "pretty",
     "raw": False,
     "print_resulting_state": True,
+    "file_name_template": "{file_name_from_uri}",
+    "output_dir": None,
+    "output_file": None,
+    "overwrite_existing_files": False,
 }
 
 
@@ -106,61 +119,87 @@ class TestResolveConfigurationPath:
 
 
 class TestLoadDefaultMap:
-    """Test cases for load_default_map."""
+    """Test cases for load_configuration."""
 
     def test_full_file(self, tmp_path):
-        """A full config maps every hyphenated key to its underscore param name."""
+        """A full config is returned as a validated nested, by-section mapping."""
         config = tmp_path / "volumito.yaml"
         config.write_text(
             "volumio:\n"
             "  host: myconfig.local\n"
             "  scheme: https\n"
-            "  rest-api-port: 9999\n"
-            "  mpd-port: 6601\n"
             "timeouts:\n"
             "  rest-api-timeout: 7.5\n"
-            "  mpd-timeout: 8.5\n"
-            "  rest-api-sleep-before-next-call: 2.0\n"
             "output:\n"
             "  verbose: true\n"
-            "  machine-readable: false\n"
-            "  fields: all\n"
             "  format: table\n"
-            "  raw: true\n"
-            "  print-resulting-state: false\n"
+            "downloads:\n"
+            "  output-dir: /shared\n"
+            "  audio:\n"
+            "    output-dir: /music\n"
+            "  albumart:\n"
+            "    file-name-template: '{title}.{extension}'\n"
         )
 
-        result = load_default_map(str(config))
+        result = load_configuration(str(config))
 
         assert result == {
-            "host": "myconfig.local",
-            "scheme": "https",
-            "rest_api_port": 9999,
-            "mpd_port": 6601,
-            "rest_api_timeout": 7.5,
-            "mpd_timeout": 8.5,
-            "rest_api_sleep_before_next_call": 2.0,
-            "verbose": True,
-            "machine_readable": False,
-            "fields": "all",
-            "output_format": "table",
-            "raw": True,
-            "print_resulting_state": False,
+            "volumio": {"host": "myconfig.local", "scheme": "https"},
+            "timeouts": {"rest-api-timeout": 7.5},
+            "output": {"verbose": True, "format": "table"},
+            "downloads": {
+                "output-dir": "/shared",
+                "audio": {"output-dir": "/music"},
+                "albumart": {"file-name-template": "{title}.{extension}"},
+            },
         }
+
+    def test_downloads_unknown_key_raises(self, tmp_path):
+        """An unrecognized key directly under downloads raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  bogus: 1\n")
+
+        with pytest.raises(click.BadParameter, match="unknown key 'bogus' in section 'downloads'"):
+            load_configuration(str(config))
+
+    def test_downloads_subsection_unknown_key_raises(self, tmp_path):
+        """An unrecognized key in a downloads subsection raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  audio:\n    bogus: 1\n")
+
+        with pytest.raises(
+            click.BadParameter, match="unknown key 'bogus' in section 'downloads.audio'"
+        ):
+            load_configuration(str(config))
+
+    def test_downloads_null_subsection_skipped(self, tmp_path):
+        """A downloads subsection present but empty (null) contributes nothing."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  audio:\n")
+
+        assert load_configuration(str(config)) == {"downloads": {}}
+
+    def test_downloads_subsection_non_mapping_raises(self, tmp_path):
+        """A downloads subsection that is not a mapping raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  audio: 5\n")
+
+        with pytest.raises(click.BadParameter, match="'downloads.audio'.*must be a mapping"):
+            load_configuration(str(config))
 
     def test_empty_file(self, tmp_path):
         """An empty file yields an empty mapping."""
         config = tmp_path / "volumito.yaml"
         config.write_text("")
 
-        assert load_default_map(str(config)) == {}
+        assert load_configuration(str(config)) == {}
 
     def test_null_section_skipped(self, tmp_path):
         """A section present but empty (null) contributes nothing."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n")
 
-        assert load_default_map(str(config)) == {}
+        assert load_configuration(str(config)) == {}
 
     def test_non_mapping_top_level_raises(self, tmp_path):
         """A top-level document that is not a mapping raises BadParameter."""
@@ -168,7 +207,7 @@ class TestLoadDefaultMap:
         config.write_text("- a\n- b\n")
 
         with pytest.raises(click.BadParameter, match="must contain a mapping"):
-            load_default_map(str(config))
+            load_configuration(str(config))
 
     def test_unknown_section_raises(self, tmp_path):
         """An unrecognized section raises BadParameter."""
@@ -176,7 +215,7 @@ class TestLoadDefaultMap:
         config.write_text("bogus:\n  host: x\n")
 
         with pytest.raises(click.BadParameter, match="unknown section 'bogus'"):
-            load_default_map(str(config))
+            load_configuration(str(config))
 
     def test_non_mapping_section_raises(self, tmp_path):
         """A section whose value is not a mapping raises BadParameter."""
@@ -184,7 +223,7 @@ class TestLoadDefaultMap:
         config.write_text("volumio: 5\n")
 
         with pytest.raises(click.BadParameter, match="must be a mapping"):
-            load_default_map(str(config))
+            load_configuration(str(config))
 
     def test_unknown_key_raises(self, tmp_path):
         """An unrecognized key within a known section raises BadParameter."""
@@ -192,7 +231,7 @@ class TestLoadDefaultMap:
         config.write_text("volumio:\n  bad-key: 1\n")
 
         with pytest.raises(click.BadParameter, match="unknown key 'bad-key'"):
-            load_default_map(str(config))
+            load_configuration(str(config))
 
     def test_malformed_yaml_raises(self, tmp_path):
         """Invalid YAML raises BadParameter."""
@@ -200,7 +239,7 @@ class TestLoadDefaultMap:
         config.write_text("host: [unterminated\n")
 
         with pytest.raises(click.BadParameter, match="cannot read configuration file"):
-            load_default_map(str(config))
+            load_configuration(str(config))
 
     def test_non_utf8_file_raises(self, tmp_path):
         """A non-UTF-8 (e.g. binary) file raises BadParameter, not UnicodeDecodeError."""
@@ -208,7 +247,7 @@ class TestLoadDefaultMap:
         config.write_bytes(b"\xff\xfe\x00\x01")
 
         with pytest.raises(click.BadParameter, match="is not a valid YAML file"):
-            load_default_map(str(config))
+            load_configuration(str(config))
 
 
 class TestRenderDefaultConfiguration:
@@ -224,7 +263,7 @@ class TestRenderDefaultConfiguration:
             "edit as needed (and remove this comment)"
         ) in result
         # A blank line separates the header from the first (lexicographically) section.
-        assert "(and remove this comment)\n\noutput:\n" in result
+        assert "(and remove this comment)\n\ndownloads:\n" in result
 
     def test_key_comments_present(self):
         """Each key is preceded by its explanatory comment, with units where relevant."""
@@ -237,11 +276,22 @@ class TestRenderDefaultConfiguration:
         assert "# Output format: json, pretty, or table" in result
 
     def test_comments_cover_all_keys(self):
-        """KEY_COMMENTS covers exactly the keys declared in SECTION_KEYS, all non-empty."""
-        all_keys = {key for keys in SECTION_KEYS.values() for key in keys}
+        """KEY_COMMENTS covers exactly the flat-section and download keys, all non-empty."""
+        all_keys = {key for keys in SECTION_KEYS.values() for key in keys} | set(DOWNLOAD_KEYS)
 
         assert set(KEY_COMMENTS) == all_keys
         assert all(comment.strip() for comment in KEY_COMMENTS.values())
+
+    def test_downloads_subsections_rendered(self):
+        """The downloads section is generated with sorted audio/albumart subsections."""
+        result = render_default_configuration(_DEFAULTS, "1.2.3")
+        document = yaml.safe_load(result)
+
+        assert document["downloads"]["audio"] == _DOWNLOAD_DEFAULTS
+        assert document["downloads"]["albumart"] == _DOWNLOAD_DEFAULTS
+        # downloads sorts first; albumart before audio within it.
+        assert "(and remove this comment)\n\ndownloads:\n" in result
+        assert result.index("  albumart:") < result.index("  audio:")
 
     def test_blank_line_after_each_key(self):
         """A single blank line follows every key within a section."""
@@ -259,11 +309,35 @@ class TestRenderDefaultConfiguration:
         assert "\n\n\nvolumio:\n" in result
 
     def test_round_trips_through_load(self, tmp_path):
-        """A rendered file loaded back yields exactly the input defaults."""
+        """A rendered file loaded back yields the nested config of the input defaults."""
         config = tmp_path / "volumito.yaml"
         config.write_text(render_default_configuration(_DEFAULTS, "1.2.3"))
 
-        assert load_default_map(str(config)) == _DEFAULTS
+        assert load_configuration(str(config)) == {
+            "volumio": {
+                "host": "volumio.local",
+                "scheme": "http",
+                "rest-api-port": 3000,
+                "mpd-port": 6600,
+            },
+            "timeouts": {
+                "rest-api-timeout": 5.0,
+                "mpd-timeout": 5.0,
+                "rest-api-sleep-before-next-call": 1.0,
+            },
+            "output": {
+                "verbose": False,
+                "machine-readable": False,
+                "fields": "short",
+                "format": "pretty",
+                "raw": False,
+                "print-resulting-state": True,
+            },
+            "downloads": {
+                "audio": _DOWNLOAD_DEFAULTS,
+                "albumart": _DOWNLOAD_DEFAULTS,
+            },
+        }
 
     def test_all_sections_and_keys_present(self):
         """Every recognized section and key appears in the rendered document."""
@@ -289,53 +363,62 @@ class TestRenderDefaultConfiguration:
                 "raw": False,
                 "print-resulting-state": True,
             },
+            "downloads": {
+                "audio": _DOWNLOAD_DEFAULTS,
+                "albumart": _DOWNLOAD_DEFAULTS,
+            },
         }
 
 
-class TestConfigurationValuesBySection:
-    """Test cases for configuration_values_by_section."""
+class TestFlattenConfiguration:
+    """Test cases for flatten_configuration."""
 
-    def test_groups_present_keys(self):
-        """A flat default map is regrouped into sections with hyphenated keys."""
-        result = configuration_values_by_section(
-            {
-                "host": "myhost.local",
-                "rest_api_port": 9999,
-                "verbose": True,
-                "output_format": "table",
-            }
-        )
-
-        assert result == {
+    def test_flattens_nested_config(self):
+        """A nested config flattens to ordered dotted-path/value pairs."""
+        config = {
             "volumio": {"host": "myhost.local", "rest-api-port": 9999},
             "output": {"verbose": True, "format": "table"},
+            "downloads": {
+                "output-dir": "/shared",
+                "audio": {"output-dir": "/music"},
+                "albumart": {"file-name-template": "{title}.{extension}"},
+            },
         }
 
-    def test_empty_map_yields_empty(self):
-        """An empty default map groups to an empty dict."""
-        assert configuration_values_by_section({}) == {}
+        assert flatten_configuration(config) == [
+            ("volumio.host", "myhost.local"),
+            ("volumio.rest-api-port", 9999),
+            ("output.verbose", True),
+            ("output.format", "table"),
+            ("downloads.output-dir", "/shared"),
+            ("downloads.audio.output-dir", "/music"),
+            ("downloads.albumart.file-name-template", "{title}.{extension}"),
+        ]
+
+    def test_empty_config_yields_empty(self):
+        """An empty config flattens to an empty list."""
+        assert flatten_configuration({}) == []
 
 
 class TestBuildClickDefaultMap:
     """Test cases for build_click_default_map."""
 
     def test_global_keys_stay_top_level(self):
-        """Non-formatting keys remain at the top level unchanged."""
+        """volumio/timeouts keys and output verbose/machine-readable stay top-level."""
         result = build_click_default_map(
-            {"host": "myhost.local", "verbose": True}
+            {"volumio": {"host": "myhost.local"}, "output": {"verbose": True}}
         )
 
         assert result == {"host": "myhost.local", "verbose": True}
 
-    def test_formatting_keys_replicated_under_each_command(self):
-        """fields/output_format/raw are nested under every output command path."""
+    def test_display_keys_replicated_under_each_command(self):
+        """fields/format/raw are nested under every output display command path."""
         result = build_click_default_map(
-            {"host": "myhost.local", "fields": "all", "output_format": "table", "raw": True}
+            {"output": {"fields": "all", "format": "table", "raw": True}}
         )
 
         formatting = {"fields": "all", "output_format": "table", "raw": True}
         assert result == {
-            "host": "myhost.local",
             "info": formatting,
             "player": {"state": formatting},
             "track": {"info": formatting},
@@ -343,8 +426,8 @@ class TestBuildClickDefaultMap:
         }
 
     def test_print_resulting_state_replicated_under_player_actions(self):
-        """print_resulting_state is nested under every player action, not the display paths."""
-        result = build_click_default_map({"print_resulting_state": False})
+        """print-resulting-state is nested under every player action, not the display paths."""
+        result = build_click_default_map({"output": {"print-resulting-state": False}})
 
         assert result == {
             "player": {
@@ -359,12 +442,42 @@ class TestBuildClickDefaultMap:
                 "unmute": {"print_resulting_state": False},
             }
         }
-        # Not applied to the display commands.
-        assert "info" not in result
-        assert "state" not in result["player"]
 
-    def test_no_formatting_keys_no_nesting(self):
-        """Without any command-scoped key, no command sub-dicts are added."""
-        result = build_click_default_map({"host": "myhost.local"})
+    def test_downloads_shared_applies_to_both_commands(self):
+        """A shared downloads key applies to both track audio and track albumart."""
+        result = build_click_default_map({"downloads": {"overwrite-existing-files": True}})
 
-        assert result == {"host": "myhost.local"}
+        assert result == {
+            "track": {
+                "audio": {"overwrite_existing_files": True},
+                "albumart": {"overwrite_existing_files": True},
+            }
+        }
+
+    def test_downloads_per_command_overrides_shared(self):
+        """A per-command subsection value overrides the shared value; templates differ."""
+        result = build_click_default_map(
+            {
+                "downloads": {
+                    "output-dir": "/shared",
+                    "audio": {
+                        "output-dir": "/music",
+                        "file-name-template": "{position}.{extension}",
+                    },
+                    "albumart": {"file-name-template": "{title}.{extension}"},
+                }
+            }
+        )
+
+        assert result["track"]["audio"] == {
+            "output_dir": "/music",
+            "file_name_template": "{position}.{extension}",
+        }
+        assert result["track"]["albumart"] == {
+            "output_dir": "/shared",
+            "file_name_template": "{title}.{extension}",
+        }
+
+    def test_empty_config_no_nesting(self):
+        """An empty config yields an empty default_map."""
+        assert build_click_default_map({}) == {}

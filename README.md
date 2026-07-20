@@ -159,6 +159,16 @@ output:
   format: pretty
   raw: false
   print-resulting-state: true
+downloads:
+  # Keys here apply to both track download commands...
+  overwrite-existing-files: false
+  audio:
+    # ...and can be overridden per command.
+    file-name-template: "{position:03d}_{title}.{extension}"
+    output-dir: ~/Music
+  albumart:
+    file-name-template: "{album}.{extension}"
+    output-dir: ~/Covers
 ```
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
@@ -166,6 +176,12 @@ The `output` section's `fields`, `format`, and `raw` keys set the defaults for t
 `track info`, and `queue list`). The `print-resulting-state` key sets the default for the `-r` option of
 the `player` action commands (`toggle`, `play`, `pause`, `stop`, `next`, `previous`, `volume`, `mute`,
 `unmute`).
+
+The `downloads` section sets the defaults for the `--file-name-template`, `--output-dir`,
+`--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
+placed directly under `downloads` applies to both commands; the optional `audio` and `albumart`
+subsections hold the same keys and override the shared value for that command (so each can have its own
+`file-name-template`).
 
 The `configuration` command group helps manage these files:
 

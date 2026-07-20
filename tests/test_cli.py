@@ -34,6 +34,14 @@ from volumito.clients.rest import (
     VolumioConnectionError,
 )
 
+# The four download keys with their default values, as generated per subsection.
+_DOWNLOAD_DEFAULTS = {
+    "file-name-template": "{file_name_from_uri}",
+    "output-dir": None,
+    "output-file": None,
+    "overwrite-existing-files": False,
+}
+
 
 @pytest.fixture(autouse=True)
 def _isolate_config_probing(mocker: MockerFixture):
@@ -3213,6 +3221,57 @@ class TestConfigurationFile:
         mock_maybe.assert_called_once()
         assert mock_maybe.call_args.args[1] is True
 
+    def test_downloads_per_command_output_dir_for_audio(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A per-command downloads.audio.output-dir sets the track audio download dir."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+
+        mpd = mocker.Mock()
+        mpd.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
+        mpd_class = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__enter__ = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mpd_class)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        # Patch open only in the volumito module so the config file (read via the
+        # configuration module) is still read for real.
+        mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
+
+        config = self._write_config(
+            tmp_path, "downloads:\n  audio:\n    output-dir: /music\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "track", "audio"])
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/music", "test.flac"), "wb")
+
+    def test_downloads_shared_output_dir_for_albumart(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A shared downloads.output-dir applies to the track albumart download dir."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
+
+        config = self._write_config(tmp_path, "downloads:\n  output-dir: /covers\n")
+
+        result = runner.invoke(main, ["-c", config, "track", "albumart"])
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/covers", "cover.jpg"), "wb")
+
     def test_no_config_uses_hardcoded_defaults(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -3310,6 +3369,10 @@ class TestConfigurationCommands:
                     "raw": False,
                     "print-resulting-state": True,
                 },
+                "downloads": {
+                    "audio": _DOWNLOAD_DEFAULTS,
+                    "albumart": _DOWNLOAD_DEFAULTS,
+                },
             }
 
     def test_create_output_dir(self, runner: CliRunner, tmp_path):
@@ -3384,7 +3447,9 @@ class TestConfigurationCommands:
         """`configuration check PATH` validates and prints the values read."""
         config = tmp_path / "volumito.yaml"
         config.write_text(
-            "volumio:\n  host: myhost.local\noutput:\n  verbose: true\n  format: table\n"
+            "volumio:\n  host: myhost.local\n"
+            "output:\n  verbose: true\n  format: table\n"
+            "downloads:\n  output-dir: /shared\n  audio:\n    file-name-template: 'a.flac'\n"
         )
 
         result = runner.invoke(main, ["configuration", "check", str(config)])
@@ -3394,6 +3459,8 @@ class TestConfigurationCommands:
         assert "volumio.host = myhost.local" in result.output
         assert "output.verbose = True" in result.output
         assert "output.format = table" in result.output
+        assert "downloads.output-dir = /shared" in result.output
+        assert "downloads.audio.file-name-template = a.flac" in result.output
 
     def test_check_invalid_content(self, runner: CliRunner, tmp_path):
         """An unrecognized key makes check exit 2."""

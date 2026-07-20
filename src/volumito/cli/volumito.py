@@ -18,9 +18,9 @@ from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     build_click_default_map,
     canonical_configuration_directories,
-    configuration_values_by_section,
+    flatten_configuration,
     found_and_used_configuration_paths,
-    load_default_map,
+    load_configuration,
     render_default_configuration,
     resolve_configuration_path,
 )
@@ -660,8 +660,8 @@ def configuration_file_callback(
     """
     path = resolve_configuration_path(value)
     if path is not None:
-        flat = load_default_map(path)
-        ctx.default_map = {**(ctx.default_map or {}), **build_click_default_map(flat)}
+        config = load_configuration(path)
+        ctx.default_map = {**(ctx.default_map or {}), **build_click_default_map(config)}
     ctx.ensure_object(dict)
     ctx.obj["configuration_file"] = path
     return value
@@ -817,19 +817,25 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     """Return the defaults of the per-command options used in the configuration file.
 
     These options live on subcommands, not the top-level group: fields/format/raw on
-    ``player state`` and print-resulting-state on the player action commands. Read them
-    from the ``player_state`` and ``toggle`` command objects so the generated
-    configuration mirrors the real defaults without duplication.
+    ``player state``, print-resulting-state on the player action commands, and the
+    download options on ``track audio``. Read them from the ``player_state``, ``toggle``,
+    and ``audio`` command objects so the generated configuration mirrors the real
+    defaults without duplication.
     """
+    wanted = {
+        "fields",
+        "output_format",
+        "raw",
+        "print_resulting_state",
+        "file_name_template",
+        "output_dir",
+        "output_file",
+        "overwrite_existing_files",
+    }
     defaults: dict[str, Any] = {}
-    for command in (player_state, toggle):
+    for command in (player_state, toggle, audio):
         for param in command.params:
-            if isinstance(param, click.Option) and param.name in {
-                "fields",
-                "output_format",
-                "raw",
-                "print_resulting_state",
-            }:
+            if isinstance(param, click.Option) and param.name in wanted:
                 defaults[param.name] = param.default
     return defaults
 
@@ -930,16 +936,14 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
                 click.echo("Error: no configuration file found", err=True)
             sys.exit(1)
 
-    values = load_default_map(resolved)  # type: ignore[arg-type]
-    grouped = configuration_values_by_section(values)
+    config = load_configuration(resolved)  # type: ignore[arg-type]
 
     if machine_readable:
-        click.echo(json.dumps(grouped))
+        click.echo(json.dumps(config))
     else:
         click.echo(f"Configuration file {resolved} is valid.")
-        for section, section_values in grouped.items():
-            for key, value in section_values.items():
-                click.echo(f"{section}.{key} = {value}")
+        for dotted, value in flatten_configuration(config):
+            click.echo(f"{dotted} = {value}")
 
 
 @configuration.command("search")

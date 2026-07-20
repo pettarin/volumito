@@ -10,13 +10,22 @@ from typing import Any
 import click
 import yaml
 
-# Recognized section names and their allowed (hyphenated) keys, in display order.
+# Recognized flat section names and their allowed (hyphenated) keys, in display order.
 # Keys mirror the CLI long options minus the leading "--".
 SECTION_KEYS: dict[str, list[str]] = {
     "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
     "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
     "output": ["verbose", "machine-readable", "fields", "format", "raw", "print-resulting-state"],
 }
+
+# The "downloads" section is hierarchical: its scalar keys are shared by both track
+# download commands, and optional "audio"/"albumart" subsections (mapping to the
+# "track audio"/"track albumart" commands) override the shared values per command.
+DOWNLOAD_KEYS = ["file-name-template", "output-dir", "output-file", "overwrite-existing-files"]
+DOWNLOAD_SUBSECTIONS = ["audio", "albumart"]
+
+# Every recognized top-level section.
+RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads"]
 
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
@@ -35,25 +44,29 @@ KEY_COMMENTS: dict[str, str] = {
     "print-resulting-state": (
         "After a player command like pause or volume, print the resulting player state"
     ),
+    "file-name-template": "Template (Python str.format) for the -d output file name",
+    "output-dir": "Directory to download into (mutually exclusive with output-file)",
+    "output-file": "Exact file path to download to (mutually exclusive with output-dir)",
+    "overwrite-existing-files": "Overwrite the destination file if it already exists",
 }
 
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
 _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 
-# CLI parameter names that are per-command options (not global), mapped to the
-# default_map paths of the commands that accept them. Display options live on the
-# state/info/list commands; --print-resulting-state lives on the player actions.
+# default_map paths of the commands that accept the "output" section options.
+# The display options live on the state/info/list commands; --print-resulting-state
+# lives on the player action commands.
 OUTPUT_COMMAND_PATHS = [["info"], ["player", "state"], ["track", "info"], ["queue", "list"]]
 ACTION_COMMAND_PATHS = [
     ["player", name]
     for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
 ]
-COMMAND_SCOPED_PARAMS: dict[str, list[list[str]]] = {
-    "fields": OUTPUT_COMMAND_PATHS,
-    "output_format": OUTPUT_COMMAND_PATHS,
-    "raw": OUTPUT_COMMAND_PATHS,
-    "print_resulting_state": ACTION_COMMAND_PATHS,
-}
+
+# "output" section config keys that are per-command display options.
+_DISPLAY_KEYS = {"fields", "format", "raw"}
+
+# "downloads" subsection name -> the command's default_map path.
+_DOWNLOAD_COMMAND_PATHS = {"audio": ["track", "audio"], "albumart": ["track", "albumart"]}
 
 
 def _param_name(key: str) -> str:
@@ -123,12 +136,24 @@ def resolve_configuration_path(explicit: str | None) -> str | None:
     return None
 
 
-def load_default_map(path: str) -> dict[str, Any]:
-    """Read a configuration file and return a flat Click ``default_map``.
+def _validate_flat_keys(
+    section: str, values: dict[str, Any], allowed: list[str], path: str
+) -> None:
+    """Raise BadParameter if any key in a flat mapping is not allowed."""
+    for key in values:
+        if key not in allowed:
+            raise click.BadParameter(
+                f"unknown key {key!r} in section {section!r} of configuration file {path}"
+            )
 
-    The returned mapping is keyed by the CLI parameter names (with underscores)
-    and holds the values found in the recognized sections. Unknown sections or
-    keys, a non-mapping document, or invalid YAML raise
+
+def load_configuration(path: str) -> dict[str, Any]:
+    """Read and validate a configuration file into a nested, by-section mapping.
+
+    The returned dict mirrors the recognized file structure, keyed by config keys
+    (hyphenated), holding only present keys, e.g.
+    ``{"volumio": {"host": ...}, "downloads": {"output-dir": ..., "audio": {...}}}``.
+    Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
     :class:`click.BadParameter`. An empty file yields an empty mapping.
     """
     try:
@@ -148,9 +173,9 @@ def load_default_map(path: str) -> dict[str, Any]:
             f"configuration file {path} must contain a mapping at the top level"
         )
 
-    default_map: dict[str, Any] = {}
+    config: dict[str, Any] = {}
     for section, values in data.items():
-        if section not in SECTION_KEYS:
+        if section not in RECOGNIZED_SECTIONS:
             raise click.BadParameter(
                 f"unknown section {section!r} in configuration file {path}"
             )
@@ -160,46 +185,95 @@ def load_default_map(path: str) -> dict[str, Any]:
             raise click.BadParameter(
                 f"section {section!r} in configuration file {path} must be a mapping"
             )
-        allowed = SECTION_KEYS[section]
-        for key, value in values.items():
-            if key not in allowed:
+        if section == "downloads":
+            config[section] = _validate_downloads(values, path)
+        else:
+            _validate_flat_keys(section, values, SECTION_KEYS[section], path)
+            config[section] = dict(values)
+    return config
+
+
+def _validate_downloads(values: dict[str, Any], path: str) -> dict[str, Any]:
+    """Validate the hierarchical ``downloads`` section and return it unchanged."""
+    downloads: dict[str, Any] = {}
+    for key, value in values.items():
+        if key in DOWNLOAD_SUBSECTIONS:
+            if value is None:
+                continue
+            if not isinstance(value, dict):
                 raise click.BadParameter(
-                    f"unknown key {key!r} in section {section!r} of configuration file {path}"
+                    f"section 'downloads.{key}' in configuration file {path} must be a mapping"
                 )
-            default_map[_param_name(key)] = value
-    return default_map
+            _validate_flat_keys(f"downloads.{key}", value, DOWNLOAD_KEYS, path)
+            downloads[key] = dict(value)
+        elif key in DOWNLOAD_KEYS:
+            downloads[key] = value
+        else:
+            raise click.BadParameter(
+                f"unknown key {key!r} in section 'downloads' of configuration file {path}"
+            )
+    return downloads
 
 
-def build_click_default_map(flat_defaults: dict[str, Any]) -> dict[str, Any]:
-    """Turn a flat param->value map into a Click ``default_map``.
+def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: object) -> None:
+    """Write ``result[path...][param] = value``, creating intermediate dicts."""
+    node = result
+    for part in path[:-1]:
+        node = node.setdefault(part, {})
+    node.setdefault(path[-1], {})[param] = value
 
-    Global option values stay at the top level; each per-command option is replicated
-    into the nested slot of every command that accepts it, since Click reads
-    ``default_map`` hierarchically by group/subcommand name.
+
+def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
+    """Turn a validated nested configuration into a Click ``default_map``.
+
+    Global option values stay at the top level; per-command options are placed in the
+    nested slot of every command that accepts them, since Click reads ``default_map``
+    hierarchically by group/subcommand name.
     """
-    result: dict[str, Any] = {
-        k: v for k, v in flat_defaults.items() if k not in COMMAND_SCOPED_PARAMS
-    }
-    for param, paths in COMMAND_SCOPED_PARAMS.items():
-        if param not in flat_defaults:
-            continue
-        for path in paths:
-            node = result
-            for part in path[:-1]:
-                node = node.setdefault(part, {})
-            node.setdefault(path[-1], {})[param] = flat_defaults[param]
+    result: dict[str, Any] = {}
+
+    for section in ("volumio", "timeouts"):
+        for key, value in config.get(section, {}).items():
+            result[_param_name(key)] = value
+
+    for key, value in config.get("output", {}).items():
+        param = _param_name(key)
+        if key in _DISPLAY_KEYS:
+            for command_path in OUTPUT_COMMAND_PATHS:
+                _assign_nested(result, command_path, param, value)
+        elif key == "print-resulting-state":
+            for command_path in ACTION_COMMAND_PATHS:
+                _assign_nested(result, command_path, param, value)
+        else:
+            result[param] = value
+
+    downloads = config.get("downloads", {})
+    shared = {k: v for k, v in downloads.items() if k in DOWNLOAD_KEYS}
+    for subsection, command_path in _DOWNLOAD_COMMAND_PATHS.items():
+        merged = {**shared, **downloads.get(subsection, {})}
+        for key, value in merged.items():
+            _assign_nested(result, command_path, _param_name(key), value)
+
     return result
+
+
+def _key_lines(key: str, value: object, indent: int) -> list[str]:
+    """Return the comment/value/blank lines for one config key at the given indent."""
+    pad = " " * indent
+    scalar = yaml.safe_dump({key: value}, sort_keys=False, default_flow_style=False).strip()
+    return [f"{pad}# {KEY_COMMENTS[key]}", f"{pad}{scalar}", ""]
 
 
 def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
     """Render a configuration file holding every known key and its default value.
 
     ``defaults`` is a flat mapping keyed by CLI parameter names (with underscores),
-    as produced from the ``main`` group option defaults; ``version`` is recorded in
-    the header. The result is a YAML document with the recognized sections and
-    hyphenated keys, sorted lexicographically at both levels, annotated with a header
-    (followed by a blank line) and an explanatory comment above each key, a blank line
-    after each key, and two blank lines between sections.
+    as produced from the CLI option defaults; ``version`` is recorded in the header.
+    The result is a YAML document with the recognized sections and hyphenated keys,
+    sorted lexicographically at every level, annotated with a header (followed by a
+    blank line) and an explanatory comment above each key, a blank line after each key,
+    and two blank lines between sections. The hierarchical ``downloads`` section is
+    generated with per-command ``audio``/``albumart`` subsections.
     """
     header_third = (
         f"# Generated with default values for version {version}: "
@@ -211,34 +285,47 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
         header_third,
         "",
     ]
-    for index, (section, keys) in enumerate(sorted(SECTION_KEYS.items())):
+    for index, section in enumerate(sorted(RECOGNIZED_SECTIONS)):
         if index > 0:
             lines.append("")
-        lines.append(f"{section}:")
-        for key in sorted(keys):
-            value = defaults[_param_name(key)]
-            scalar = yaml.safe_dump(
-                {key: value}, sort_keys=False, default_flow_style=False
-            ).strip()
-            lines.append(f"  # {KEY_COMMENTS[key]}")
-            lines.append(f"  {scalar}")
+        if section == "downloads":
+            shared_note = (
+                "  # A key here applies to both commands; "
+                "per-command overrides go under audio/albumart."
+            )
+            lines.append("downloads:")
+            lines.append(shared_note)
             lines.append("")
+            for sub_index, subsection in enumerate(sorted(DOWNLOAD_SUBSECTIONS)):
+                if sub_index > 0:
+                    lines.append("")
+                lines.append(f"  {subsection}:")
+                for key in sorted(DOWNLOAD_KEYS):
+                    lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
+        else:
+            lines.append(f"{section}:")
+            for key in sorted(SECTION_KEYS[section]):
+                lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
     return "\n".join(lines)
 
 
-def configuration_values_by_section(default_map: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Regroup a flat ``default_map`` into ``{section: {hyphenated-key: value}}``.
+def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Flatten a validated configuration into ordered ``(dotted-path, value)`` pairs.
 
-    Only keys actually present in ``default_map`` are included, preserving the
-    canonical section and key order.
+    Used to display the values read from a configuration file. Only present keys are
+    included, in canonical section/key order.
     """
-    grouped: dict[str, dict[str, Any]] = {}
+    pairs: list[tuple[str, Any]] = []
     for section, keys in SECTION_KEYS.items():
-        section_values = {
-            key: default_map[_param_name(key)]
-            for key in keys
-            if _param_name(key) in default_map
-        }
-        if section_values:
-            grouped[section] = section_values
-    return grouped
+        values = config.get(section, {})
+        pairs.extend((f"{section}.{key}", values[key]) for key in keys if key in values)
+    downloads = config.get("downloads", {})
+    pairs.extend((f"downloads.{key}", downloads[key]) for key in DOWNLOAD_KEYS if key in downloads)
+    for subsection in DOWNLOAD_SUBSECTIONS:
+        subvalues = downloads.get(subsection, {})
+        pairs.extend(
+            (f"downloads.{subsection}.{key}", subvalues[key])
+            for key in DOWNLOAD_KEYS
+            if key in subvalues
+        )
+    return pairs
