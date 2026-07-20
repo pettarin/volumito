@@ -324,7 +324,8 @@ Supported template keys:
 - `title`, `album`, `artist`, `trackType`, `bitdepth`, `samplerate` — strings
 - `duration` — track length as `HH:MM:SS`
 - `channels` — integer
-- `extension` — currently always `flac`
+- `extension` — the file extension from the URI, defaulting to `flac` for
+  `track audio` and `jpg` for `track albumart`
 
 ## API Reference
 

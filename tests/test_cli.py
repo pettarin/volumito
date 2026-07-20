@@ -243,29 +243,41 @@ class TestRenderOutputFilename:
     def test_default_template(self):
         """The default template reproduces the URI basename."""
         uri = "http://volumio.local:8000/music/song.flac"
-        assert render_output_filename("{file_name_from_uri}", uri, {}) == "song.flac"
+        assert render_output_filename("{file_name_from_uri}", uri, {}, "flac") == "song.flac"
 
     def test_custom_template(self):
         """Custom template renders metadata; position is 1-indexed; spaces -> underscores."""
         result = render_output_filename(
-            "{position:03d}_{title}.{extension}", "http://x/y.flac", self._state()
+            "{position:03d}_{title}.{extension}", "http://x/y.flac", self._state(), "flac"
         )
         assert result == "001_La_rondine.flac"
 
     def test_duration_key(self):
         """The duration key is formatted as HH:MM:SS."""
-        result = render_output_filename("{duration}.{extension}", "http://x/y", self._state())
+        result = render_output_filename(
+            "{duration}.{extension}", "http://x/y", self._state(), "flac"
+        )
         assert result == "00:03:20.flac"
+
+    def test_extension_from_uri(self):
+        """The extension key is taken from the URI file name."""
+        result = render_output_filename("{extension}", "http://x/song.mp3", self._state(), "flac")
+        assert result == "mp3"
+
+    def test_extension_default_when_uri_has_none(self):
+        """The default extension is used when the URI file has no extension."""
+        assert render_output_filename("{extension}", "http://x/song", {}, "flac") == "flac"
+        assert render_output_filename("{extension}", "http://x/albumart", {}, "jpg") == "jpg"
 
     def test_bad_template_unknown_key(self):
         """An unknown template key raises a UsageError."""
         with pytest.raises(click.UsageError):
-            render_output_filename("{unknown}", "http://x/y.flac", self._state())
+            render_output_filename("{unknown}", "http://x/y.flac", self._state(), "flac")
 
     def test_bad_template_bad_spec(self):
         """An invalid format specification raises a UsageError."""
         with pytest.raises(click.UsageError):
-            render_output_filename("{title:03d}", "http://x/y.flac", self._state())
+            render_output_filename("{title:03d}", "http://x/y.flac", self._state(), "flac")
 
 
 class TestVolumeParamType:
@@ -2448,7 +2460,35 @@ class TestCLICommands:
         )
 
         assert result.exit_code == 0
-        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "001_La_rondine.flac"), "wb")
+        # Extension derived from the album art URI (cover.jpg -> jpg)
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "001_La_rondine.jpg"), "wb")
+
+    def test_albumart_output_dir_template_default_extension(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Test albumart {extension} defaults to jpg when the URI has no extension."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "La rondine",
+            "albumart": "http://example.com/albumart",
+        }
+
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main, ["track", "albumart", "-d", "/tmp/covers", "-f", "{title}.{extension}"]
+        )
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "La_rondine.jpg"), "wb")
 
     def test_albumart_output_dir_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart -d with an invalid -f template errors out."""

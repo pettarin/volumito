@@ -193,19 +193,23 @@ def extract_filename_from_uri(uri: str) -> str:
     return os.path.basename(parsed.path)
 
 
-def render_output_filename(template: str, uri: str, state: dict[str, Any]) -> str:
+def render_output_filename(
+    template: str, uri: str, state: dict[str, Any], default_extension: str
+) -> str:
     """Render an output file name from a template, track metadata, and the URI.
 
     The template uses Python ``str.format`` syntax. Supported keys are:
     ``file_name_from_uri``, ``position`` (1-indexed int), ``title``, ``album``,
     ``artist``, ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``,
-    ``samplerate``, ``channels`` (int), and ``extension`` (currently always
-    "flac"). Spaces in the rendered name are replaced with underscores.
+    ``samplerate``, ``channels`` (int), and ``extension``. The ``extension`` is
+    taken from the URI file name, falling back to ``default_extension`` when the
+    URI file has none. Spaces in the rendered name are replaced with underscores.
 
     Args:
         template: The file-name template (``str.format`` syntax)
-        uri: The URI being downloaded (source of ``file_name_from_uri``)
+        uri: The URI being downloaded (source of ``file_name_from_uri`` and ``extension``)
         state: The current player state dictionary
+        default_extension: Extension to use when the URI file has none (no leading dot)
 
     Returns:
         The rendered file name, with spaces replaced by underscores
@@ -219,9 +223,12 @@ def render_output_filename(template: str, uri: str, state: dict[str, Any]) -> st
         value = state.get(key)
         return str(value).strip() if value is not None else ""
 
+    file_name_from_uri = extract_filename_from_uri(uri)
+    uri_extension = os.path.splitext(file_name_from_uri)[1].lstrip(".")
+
     duration = state.get("duration")
     keys: dict[str, object] = {
-        "file_name_from_uri": extract_filename_from_uri(uri),
+        "file_name_from_uri": file_name_from_uri,
         "position": int(state.get("position") or 0) + 1,
         "title": as_text("title"),
         "album": as_text("album"),
@@ -231,7 +238,7 @@ def render_output_filename(template: str, uri: str, state: dict[str, Any]) -> st
         "bitdepth": as_text("bitdepth"),
         "samplerate": as_text("samplerate"),
         "channels": int(state["channels"]) if isinstance(state.get("channels"), int) else 0,
-        "extension": "flac",
+        "extension": uri_extension or default_extension,
     }
 
     try:
@@ -247,6 +254,7 @@ def download_uri_to(
     output_file: str | None,
     output_dir: str | None,
     file_name_template: str,
+    default_extension: str,
     state: dict[str, Any],
     overwrite: bool,
     label: str,
@@ -267,6 +275,7 @@ def download_uri_to(
         output_file: Exact destination file path, or None
         output_dir: Destination directory (file name from the template), or None
         file_name_template: Template for the ``output_dir`` file name
+        default_extension: Extension for the ``{extension}`` key when the URI has none
         state: The current player state dictionary (source of template values)
         overwrite: Whether to overwrite the destination file if it already exists
         label: Human-readable noun for messages ("track" or "album art")
@@ -277,7 +286,7 @@ def download_uri_to(
     if output_file is not None:
         destination = output_file
     else:  # output_dir is not None
-        filename = render_output_filename(file_name_template, uri, state)
+        filename = render_output_filename(file_name_template, uri, state, default_extension)
         if not filename:
             if not machine_readable:
                 click.echo("\nError: cannot determine a file name for the download", err=True)
@@ -1095,6 +1104,7 @@ def audio(
                     output_file,
                     output_dir,
                     file_name_template,
+                    "flac",
                     state,
                     overwrite_existing_files,
                     "track",
@@ -1213,6 +1223,7 @@ def albumart(
                 output_file,
                 output_dir,
                 file_name_template,
+                "jpg",
                 state,
                 overwrite_existing_files,
                 "album art",
