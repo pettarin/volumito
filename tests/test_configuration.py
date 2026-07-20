@@ -223,8 +223,8 @@ class TestRenderDefaultConfiguration:
             "# Generated with default values for version 1.2.3: "
             "edit as needed (and remove this comment)"
         ) in result
-        # A blank line separates the header from the first section.
-        assert "(and remove this comment)\n\nvolumio:\n" in result
+        # A blank line separates the header from the first (lexicographically) section.
+        assert "(and remove this comment)\n\noutput:\n" in result
 
     def test_key_comments_present(self):
         """Each key is preceded by its explanatory comment, with units where relevant."""
@@ -247,15 +247,16 @@ class TestRenderDefaultConfiguration:
         """A single blank line follows every key within a section."""
         result = render_default_configuration(_DEFAULTS, "1.2.3")
 
-        assert "  host: volumio.local\n\n  # URL scheme" in result
-        assert "  verbose: false\n\n  # Produce machine-readable" in result
+        # Pairs valid under lexicographic ordering.
+        assert "  host: volumio.local\n\n  # MPD port of the Volumio instance" in result
+        assert "  fields: short\n\n  # Output format" in result
 
     def test_two_blank_lines_between_sections(self):
         """Two blank lines separate each section from the next."""
         result = render_default_configuration(_DEFAULTS, "1.2.3")
 
         assert "\n\n\ntimeouts:\n" in result
-        assert "\n\n\noutput:\n" in result
+        assert "\n\n\nvolumio:\n" in result
 
     def test_round_trips_through_load(self, tmp_path):
         """A rendered file loaded back yields exactly the input defaults."""

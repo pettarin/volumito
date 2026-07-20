@@ -197,9 +197,9 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
     ``defaults`` is a flat mapping keyed by CLI parameter names (with underscores),
     as produced from the ``main`` group option defaults; ``version`` is recorded in
     the header. The result is a YAML document with the recognized sections and
-    hyphenated keys, in canonical order, annotated with a header (followed by a blank
-    line) and an explanatory comment above each key, a blank line after each key, and
-    two blank lines between sections.
+    hyphenated keys, sorted lexicographically at both levels, annotated with a header
+    (followed by a blank line) and an explanatory comment above each key, a blank line
+    after each key, and two blank lines between sections.
     """
     header_third = (
         f"# Generated with default values for version {version}: "
@@ -211,11 +211,11 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
         header_third,
         "",
     ]
-    for index, (section, keys) in enumerate(SECTION_KEYS.items()):
+    for index, (section, keys) in enumerate(sorted(SECTION_KEYS.items())):
         if index > 0:
             lines.append("")
         lines.append(f"{section}:")
-        for key in keys:
+        for key in sorted(keys):
             value = defaults[_param_name(key)]
             scalar = yaml.safe_dump(
                 {key: value}, sort_keys=False, default_flow_style=False
