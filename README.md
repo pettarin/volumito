@@ -155,31 +155,37 @@ timeouts:
 output:
   verbose: true
   machine-readable: false
-  fields: short
-  format: pretty
-  raw: false
   print-resulting-state: true
+  # fields/format/raw here apply to all display commands...
+  format: pretty
+  player-state:
+    # ...and can be overridden per command.
+    format: table
+  track-info:
+    format: json
 downloads:
   # Keys here apply to both track download commands...
   overwrite-existing-files: false
-  audio:
+  track-audio:
     # ...and can be overridden per command.
     file-name-template: "{position:03d}_{title}.{extension}"
     output-directory: ~/Music
-  albumart:
+  track-albumart:
     file-name-template: "{album}.{extension}"
     output-directory: ~/Covers
 ```
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
 `--fields`/`--format`/`--raw` options of the commands that support them (`player state`, `info`,
-`track info`, and `queue list`). The `print-resulting-state` key sets the default for the `-r` option of
-the `player` action commands (`toggle`, `play`, `pause`, `stop`, `next`, `previous`, `volume`, `mute`,
-`unmute`).
+`track info`, and `queue list`). A key placed directly under `output` applies to all of them; the optional
+`player-state`, `track-info`, and `queue-list` subsections hold the same keys and override the shared value
+for that command (`player-state` also governs the `info` synonym). The `print-resulting-state` key sets the
+default for the `-r` option of the `player` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
+`previous`, `volume`, `mute`, `unmute`).
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
-placed directly under `downloads` applies to both commands; the optional `audio` and `albumart`
+placed directly under `downloads` applies to both commands; the optional `track-audio` and `track-albumart`
 subsections hold the same keys and override the shared value for that command (so each can have its own
 `file-name-template`).
 

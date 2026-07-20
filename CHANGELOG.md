@@ -18,13 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration file sections `volumio` (`host`, `scheme`, `rest-api-port`, `mpd-port`), `timeouts`
   (`rest-api-timeout`, `mpd-timeout`, `rest-api-sleep-before-next-call`), and `output` (`verbose`,
   `machine-readable`, `fields`, `format`, `raw`, `print-resulting-state` — `fields`/`format`/`raw` set the
-  `--fields`/`--format`/`--raw` defaults for `player state`, `info`, `track info`, and `queue list`, and
-  `print-resulting-state` sets the `-r` default for the `player` action commands); an unreadable `-c` file,
-  invalid YAML, or an unknown section/key is an error
+  `--fields`/`--format`/`--raw` defaults for `player state`, `info`, `track info`, and `queue list` (shared,
+  or overridden per command via optional `player-state`/`track-info`/`queue-list` subsections, with
+  `player-state` also governing `info`), and `print-resulting-state` sets the `-r` default for the `player`
+  action commands); an unreadable `-c` file, invalid YAML, or an unknown section/key is an error
 - Configuration file section `downloads` setting the `--file-name-template`, `--output-directory`,
   `--output-file`, and `--overwrite-existing-files` defaults for `track audio` and `track albumart`: keys
-  placed directly under `downloads` are shared by both commands, and optional `audio`/`albumart`
-  subsections override them per command (so each command can have its own `file-name-template`)
+  placed directly under `downloads` are shared by both commands, and optional
+  `track-audio`/`track-albumart` subsections override them per command (so each command can have its own
+  `file-name-template`)
 - Command group `configuration` with subcommands `create` (write a `volumito.yaml` with all keys set to
   their defaults; `-d`/`-f` choose the location, `--overwrite-existing-files` allows replacing an existing
   file), `check` (validate a configuration file, given or probed, and print the values read), and `search`

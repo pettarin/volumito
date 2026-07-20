@@ -14,6 +14,7 @@ from pytest_mock import MockerFixture
 from volumito.cli.configuration import (
     DOWNLOAD_KEYS,
     KEY_COMMENTS,
+    OUTPUT_SCALAR_KEYS,
     SECTION_KEYS,
     build_click_default_map,
     canonical_configuration_paths,
@@ -30,6 +31,9 @@ _DOWNLOAD_DEFAULTS = {
     "output-file": None,
     "overwrite-existing-files": False,
 }
+
+# The three display keys with their default values, as generated per subsection.
+_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty", "raw": False}
 
 # Flat param-name -> default value map, as produced from the CLI option defaults.
 _DEFAULTS = {
@@ -133,11 +137,13 @@ class TestLoadDefaultMap:
             "output:\n"
             "  verbose: true\n"
             "  format: table\n"
+            "  player-state:\n"
+            "    format: json\n"
             "downloads:\n"
             "  output-directory: /shared\n"
-            "  audio:\n"
+            "  track-audio:\n"
             "    output-directory: /music\n"
-            "  albumart:\n"
+            "  track-albumart:\n"
             "    file-name-template: '{title}.{extension}'\n"
         )
 
@@ -146,13 +152,39 @@ class TestLoadDefaultMap:
         assert result == {
             "volumio": {"host": "myconfig.local", "scheme": "https"},
             "timeouts": {"rest-api-timeout": 7.5},
-            "output": {"verbose": True, "format": "table"},
+            "output": {"verbose": True, "format": "table", "player-state": {"format": "json"}},
             "downloads": {
                 "output-directory": "/shared",
-                "audio": {"output-directory": "/music"},
-                "albumart": {"file-name-template": "{title}.{extension}"},
+                "track-audio": {"output-directory": "/music"},
+                "track-albumart": {"file-name-template": "{title}.{extension}"},
             },
         }
+
+    def test_output_unknown_key_raises(self, tmp_path):
+        """An unrecognized key directly under output raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  bogus: 1\n")
+
+        with pytest.raises(click.BadParameter, match="unknown key 'bogus' in section 'output'"):
+            load_configuration(str(config))
+
+    def test_output_subsection_unknown_key_raises(self, tmp_path):
+        """An unrecognized key in an output subsection raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  player-state:\n    verbose: true\n")
+
+        with pytest.raises(
+            click.BadParameter, match="unknown key 'verbose' in section 'output.player-state'"
+        ):
+            load_configuration(str(config))
+
+    def test_output_subsection_non_mapping_raises(self, tmp_path):
+        """An output subsection that is not a mapping raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  track-info: 5\n")
+
+        with pytest.raises(click.BadParameter, match="'output.track-info'.*must be a mapping"):
+            load_configuration(str(config))
 
     def test_downloads_unknown_key_raises(self, tmp_path):
         """An unrecognized key directly under downloads raises BadParameter."""
@@ -165,26 +197,26 @@ class TestLoadDefaultMap:
     def test_downloads_subsection_unknown_key_raises(self, tmp_path):
         """An unrecognized key in a downloads subsection raises BadParameter."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("downloads:\n  audio:\n    bogus: 1\n")
+        config.write_text("downloads:\n  track-audio:\n    bogus: 1\n")
 
         with pytest.raises(
-            click.BadParameter, match="unknown key 'bogus' in section 'downloads.audio'"
+            click.BadParameter, match="unknown key 'bogus' in section 'downloads.track-audio'"
         ):
             load_configuration(str(config))
 
     def test_downloads_null_subsection_skipped(self, tmp_path):
         """A downloads subsection present but empty (null) contributes nothing."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("downloads:\n  audio:\n")
+        config.write_text("downloads:\n  track-audio:\n")
 
         assert load_configuration(str(config)) == {"downloads": {}}
 
     def test_downloads_subsection_non_mapping_raises(self, tmp_path):
         """A downloads subsection that is not a mapping raises BadParameter."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("downloads:\n  audio: 5\n")
+        config.write_text("downloads:\n  track-audio: 5\n")
 
-        with pytest.raises(click.BadParameter, match="'downloads.audio'.*must be a mapping"):
+        with pytest.raises(click.BadParameter, match="'downloads.track-audio'.*must be a mapping"):
             load_configuration(str(config))
 
     def test_empty_file(self, tmp_path):
@@ -276,8 +308,12 @@ class TestRenderDefaultConfiguration:
         assert "# Output format: json, pretty, or table" in result
 
     def test_comments_cover_all_keys(self):
-        """KEY_COMMENTS covers exactly the flat-section and download keys, all non-empty."""
-        all_keys = {key for keys in SECTION_KEYS.values() for key in keys} | set(DOWNLOAD_KEYS)
+        """KEY_COMMENTS covers exactly the flat, output, and download keys, all non-empty."""
+        all_keys = (
+            {key for keys in SECTION_KEYS.values() for key in keys}
+            | set(OUTPUT_SCALAR_KEYS)
+            | set(DOWNLOAD_KEYS)
+        )
 
         assert set(KEY_COMMENTS) == all_keys
         assert all(comment.strip() for comment in KEY_COMMENTS.values())
@@ -287,11 +323,23 @@ class TestRenderDefaultConfiguration:
         result = render_default_configuration(_DEFAULTS, "1.2.3")
         document = yaml.safe_load(result)
 
-        assert document["downloads"]["audio"] == _DOWNLOAD_DEFAULTS
-        assert document["downloads"]["albumart"] == _DOWNLOAD_DEFAULTS
-        # downloads sorts first; albumart before audio within it.
+        assert document["downloads"]["track-audio"] == _DOWNLOAD_DEFAULTS
+        assert document["downloads"]["track-albumart"] == _DOWNLOAD_DEFAULTS
+        # downloads sorts first; track-albumart before track-audio within it.
         assert "(and remove this comment)\n\ndownloads:\n" in result
-        assert result.index("  albumart:") < result.index("  audio:")
+        assert result.index("  track-albumart:") < result.index("  track-audio:")
+
+    def test_output_subsections_rendered(self):
+        """The output section is generated with shared scalars and display subsections."""
+        result = render_default_configuration(_DEFAULTS, "1.2.3")
+        document = yaml.safe_load(result)
+
+        assert document["output"]["player-state"] == _DISPLAY_DEFAULTS
+        assert document["output"]["track-info"] == _DISPLAY_DEFAULTS
+        assert document["output"]["queue-list"] == _DISPLAY_DEFAULTS
+        # Shared scalars stay at the top level; fields/format/raw only in subsections.
+        assert document["output"]["verbose"] is False
+        assert "fields" not in document["output"]
 
     def test_blank_line_after_each_key(self):
         """A single blank line follows every key within a section."""
@@ -299,7 +347,8 @@ class TestRenderDefaultConfiguration:
 
         # Pairs valid under lexicographic ordering.
         assert "  host: volumio.local\n\n  # MPD port of the Volumio instance" in result
-        assert "  fields: short\n\n  # Output format" in result
+        # Within a subsection, keys are indented four spaces.
+        assert "    fields: short\n\n    # Output format" in result
 
     def test_two_blank_lines_between_sections(self):
         """Two blank lines separate each section from the next."""
@@ -328,14 +377,14 @@ class TestRenderDefaultConfiguration:
             "output": {
                 "verbose": False,
                 "machine-readable": False,
-                "fields": "short",
-                "format": "pretty",
-                "raw": False,
                 "print-resulting-state": True,
+                "player-state": _DISPLAY_DEFAULTS,
+                "track-info": _DISPLAY_DEFAULTS,
+                "queue-list": _DISPLAY_DEFAULTS,
             },
             "downloads": {
-                "audio": _DOWNLOAD_DEFAULTS,
-                "albumart": _DOWNLOAD_DEFAULTS,
+                "track-audio": _DOWNLOAD_DEFAULTS,
+                "track-albumart": _DOWNLOAD_DEFAULTS,
             },
         }
 
@@ -358,14 +407,14 @@ class TestRenderDefaultConfiguration:
             "output": {
                 "verbose": False,
                 "machine-readable": False,
-                "fields": "short",
-                "format": "pretty",
-                "raw": False,
                 "print-resulting-state": True,
+                "player-state": _DISPLAY_DEFAULTS,
+                "track-info": _DISPLAY_DEFAULTS,
+                "queue-list": _DISPLAY_DEFAULTS,
             },
             "downloads": {
-                "audio": _DOWNLOAD_DEFAULTS,
-                "albumart": _DOWNLOAD_DEFAULTS,
+                "track-audio": _DOWNLOAD_DEFAULTS,
+                "track-albumart": _DOWNLOAD_DEFAULTS,
             },
         }
 
@@ -377,11 +426,15 @@ class TestFlattenConfiguration:
         """A nested config flattens to ordered dotted-path/value pairs."""
         config = {
             "volumio": {"host": "myhost.local", "rest-api-port": 9999},
-            "output": {"verbose": True, "format": "table"},
+            "output": {
+                "verbose": True,
+                "format": "table",
+                "player-state": {"format": "json"},
+            },
             "downloads": {
                 "output-directory": "/shared",
-                "audio": {"output-directory": "/music"},
-                "albumart": {"file-name-template": "{title}.{extension}"},
+                "track-audio": {"output-directory": "/music"},
+                "track-albumart": {"file-name-template": "{title}.{extension}"},
             },
         }
 
@@ -390,9 +443,10 @@ class TestFlattenConfiguration:
             ("volumio.rest-api-port", 9999),
             ("output.verbose", True),
             ("output.format", "table"),
+            ("output.player-state.format", "json"),
             ("downloads.output-directory", "/shared"),
-            ("downloads.audio.output-directory", "/music"),
-            ("downloads.albumart.file-name-template", "{title}.{extension}"),
+            ("downloads.track-audio.output-directory", "/music"),
+            ("downloads.track-albumart.file-name-template", "{title}.{extension}"),
         ]
 
     def test_empty_config_yields_empty(self):
@@ -424,6 +478,25 @@ class TestBuildClickDefaultMap:
             "track": {"info": formatting},
             "queue": {"list": formatting},
         }
+
+    def test_output_subsection_overrides_shared(self):
+        """A per-command output subsection overrides the shared display value."""
+        result = build_click_default_map(
+            {
+                "output": {
+                    "format": "pretty",
+                    "player-state": {"format": "table"},
+                    "track-info": {"format": "json"},
+                }
+            }
+        )
+
+        # player-state override reaches both player.state and the info synonym.
+        assert result["info"] == {"output_format": "table"}
+        assert result["player"]["state"] == {"output_format": "table"}
+        assert result["track"]["info"] == {"output_format": "json"}
+        # queue-list has no override, so it keeps the shared value.
+        assert result["queue"]["list"] == {"output_format": "pretty"}
 
     def test_print_resulting_state_replicated_under_player_actions(self):
         """print-resulting-state is nested under every player action, not the display paths."""
@@ -460,11 +533,11 @@ class TestBuildClickDefaultMap:
             {
                 "downloads": {
                     "output-directory": "/shared",
-                    "audio": {
+                    "track-audio": {
                         "output-directory": "/music",
                         "file-name-template": "{position}.{extension}",
                     },
-                    "albumart": {"file-name-template": "{title}.{extension}"},
+                    "track-albumart": {"file-name-template": "{title}.{extension}"},
                 }
             }
         )

@@ -15,8 +15,21 @@ import yaml
 SECTION_KEYS: dict[str, list[str]] = {
     "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
     "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
-    "output": ["verbose", "machine-readable", "fields", "format", "raw", "print-resulting-state"],
 }
+
+# The "output" section is hierarchical: its scalar keys are shared, and optional
+# per-command subsections override the display keys (fields/format/raw). verbose and
+# machine-readable are global; print-resulting-state applies to the player actions.
+OUTPUT_SCALAR_KEYS = [
+    "verbose",
+    "machine-readable",
+    "fields",
+    "format",
+    "raw",
+    "print-resulting-state",
+]
+DISPLAY_KEYS = ["fields", "format", "raw"]
+DISPLAY_SUBSECTIONS = ["player-state", "track-info", "queue-list"]
 
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
@@ -27,10 +40,10 @@ DOWNLOAD_KEYS = [
     "output-file",
     "overwrite-existing-files",
 ]
-DOWNLOAD_SUBSECTIONS = ["audio", "albumart"]
+DOWNLOAD_SUBSECTIONS = ["track-audio", "track-albumart"]
 
 # Every recognized top-level section.
-RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads"]
+RECOGNIZED_SECTIONS = [*SECTION_KEYS, "output", "downloads"]
 
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
@@ -58,20 +71,30 @@ KEY_COMMENTS: dict[str, str] = {
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
 _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 
-# default_map paths of the commands that accept the "output" section options.
-# The display options live on the state/info/list commands; --print-resulting-state
-# lives on the player action commands.
-OUTPUT_COMMAND_PATHS = [["info"], ["player", "state"], ["track", "info"], ["queue", "list"]]
+# --print-resulting-state lives on the player action commands.
 ACTION_COMMAND_PATHS = [
     ["player", name]
     for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
 ]
 
-# "output" section config keys that are per-command display options.
-_DISPLAY_KEYS = {"fields", "format", "raw"}
+# Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
+# The "player-state" subsection also governs the top-level "info" synonym.
+DISPLAY_SUBSECTION_PATHS = {
+    "player-state": [["player", "state"], ["info"]],
+    "track-info": [["track", "info"]],
+    "queue-list": [["queue", "list"]],
+}
+DOWNLOAD_SUBSECTION_PATHS = {
+    "track-audio": [["track", "audio"]],
+    "track-albumart": [["track", "albumart"]],
+}
 
-# "downloads" subsection name -> the command's default_map path.
-_DOWNLOAD_COMMAND_PATHS = {"audio": ["track", "audio"], "albumart": ["track", "albumart"]}
+# Per hierarchical section: (allowed shared scalar keys, subsection names, allowed
+# subsection keys). Used for validation of the "output" and "downloads" sections.
+_HIERARCHICAL_SPECS: dict[str, tuple[list[str], list[str], list[str]]] = {
+    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTIONS, DISPLAY_KEYS),
+    "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS),
+}
 
 
 def _param_name(key: str) -> str:
@@ -190,34 +213,44 @@ def load_configuration(path: str) -> dict[str, Any]:
             raise click.BadParameter(
                 f"section {section!r} in configuration file {path} must be a mapping"
             )
-        if section == "downloads":
-            config[section] = _validate_downloads(values, path)
+        if section in _HIERARCHICAL_SPECS:
+            scalar_keys, subsections, subsection_keys = _HIERARCHICAL_SPECS[section]
+            config[section] = _validate_hierarchical(
+                section, values, scalar_keys, subsections, subsection_keys, path
+            )
         else:
             _validate_flat_keys(section, values, SECTION_KEYS[section], path)
             config[section] = dict(values)
     return config
 
 
-def _validate_downloads(values: dict[str, Any], path: str) -> dict[str, Any]:
-    """Validate the hierarchical ``downloads`` section and return it unchanged."""
-    downloads: dict[str, Any] = {}
+def _validate_hierarchical(
+    name: str,
+    values: dict[str, Any],
+    scalar_keys: list[str],
+    subsections: list[str],
+    subsection_keys: list[str],
+    path: str,
+) -> dict[str, Any]:
+    """Validate a hierarchical section (shared scalars + per-command subsections)."""
+    result: dict[str, Any] = {}
     for key, value in values.items():
-        if key in DOWNLOAD_SUBSECTIONS:
+        if key in subsections:
             if value is None:
                 continue
             if not isinstance(value, dict):
                 raise click.BadParameter(
-                    f"section 'downloads.{key}' in configuration file {path} must be a mapping"
+                    f"section '{name}.{key}' in configuration file {path} must be a mapping"
                 )
-            _validate_flat_keys(f"downloads.{key}", value, DOWNLOAD_KEYS, path)
-            downloads[key] = dict(value)
-        elif key in DOWNLOAD_KEYS:
-            downloads[key] = value
+            _validate_flat_keys(f"{name}.{key}", value, subsection_keys, path)
+            result[key] = dict(value)
+        elif key in scalar_keys:
+            result[key] = value
         else:
             raise click.BadParameter(
-                f"unknown key {key!r} in section 'downloads' of configuration file {path}"
+                f"unknown key {key!r} in section {name!r} of configuration file {path}"
             )
-    return downloads
+    return result
 
 
 def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: object) -> None:
@@ -226,6 +259,20 @@ def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: o
     for part in path[:-1]:
         node = node.setdefault(part, {})
     node.setdefault(path[-1], {})[param] = value
+
+
+def _apply_hierarchical(
+    result: dict[str, Any],
+    shared: dict[str, Any],
+    values: dict[str, Any],
+    subsection_paths: dict[str, list[list[str]]],
+) -> None:
+    """Place ``{**shared, **subsection}`` into each subsection's command path(s)."""
+    for subsection, paths in subsection_paths.items():
+        merged = {**shared, **values.get(subsection, {})}
+        for key, value in merged.items():
+            for path in paths:
+                _assign_nested(result, path, _param_name(key), value)
 
 
 def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
@@ -241,23 +288,19 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
         for key, value in config.get(section, {}).items():
             result[_param_name(key)] = value
 
-    for key, value in config.get("output", {}).items():
-        param = _param_name(key)
-        if key in _DISPLAY_KEYS:
-            for command_path in OUTPUT_COMMAND_PATHS:
-                _assign_nested(result, command_path, param, value)
+    output = config.get("output", {})
+    for key, value in output.items():
+        if key in ("verbose", "machine-readable"):
+            result[_param_name(key)] = value
         elif key == "print-resulting-state":
             for command_path in ACTION_COMMAND_PATHS:
-                _assign_nested(result, command_path, param, value)
-        else:
-            result[param] = value
+                _assign_nested(result, command_path, _param_name(key), value)
+    shared_display = {k: v for k, v in output.items() if k in DISPLAY_KEYS}
+    _apply_hierarchical(result, shared_display, output, DISPLAY_SUBSECTION_PATHS)
 
     downloads = config.get("downloads", {})
-    shared = {k: v for k, v in downloads.items() if k in DOWNLOAD_KEYS}
-    for subsection, command_path in _DOWNLOAD_COMMAND_PATHS.items():
-        merged = {**shared, **downloads.get(subsection, {})}
-        for key, value in merged.items():
-            _assign_nested(result, command_path, _param_name(key), value)
+    shared_download = {k: v for k, v in downloads.items() if k in DOWNLOAD_KEYS}
+    _apply_hierarchical(result, shared_download, downloads, DOWNLOAD_SUBSECTION_PATHS)
 
     return result
 
@@ -269,6 +312,35 @@ def _key_lines(key: str, value: object, indent: int) -> list[str]:
     return [f"{pad}# {KEY_COMMENTS[key]}", f"{pad}{scalar}", ""]
 
 
+def _shared_note_lines(subsections: list[str]) -> list[str]:
+    """Return the shared-key comment lines listing the override subsections."""
+    return [
+        "  # A key here applies to all relevant commands;",
+        "  # overrides can be specified under the following sections:",
+        f"  # {', '.join(sorted(subsections))}",
+    ]
+
+
+def _render_hierarchical(
+    defaults: dict[str, Any],
+    name: str,
+    scalar_keys: list[str],
+    subsections: list[str],
+    subsection_keys: list[str],
+) -> list[str]:
+    """Render a hierarchical section (shared note + shared scalars + subsections)."""
+    lines = [f"{name}:", *_shared_note_lines(subsections), ""]
+    for key in sorted(scalar_keys):
+        lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
+    for sub_index, subsection in enumerate(sorted(subsections)):
+        if sub_index > 0:
+            lines.append("")
+        lines.append(f"  {subsection}:")
+        for key in sorted(subsection_keys):
+            lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
+    return lines
+
+
 def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
     """Render a configuration file holding every known key and its default value.
 
@@ -277,8 +349,8 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
     The result is a YAML document with the recognized sections and hyphenated keys,
     sorted lexicographically at every level, annotated with a header (followed by a
     blank line) and an explanatory comment above each key, a blank line after each key,
-    and two blank lines between sections. The hierarchical ``downloads`` section is
-    generated with per-command ``audio``/``albumart`` subsections.
+    and two blank lines between sections. The hierarchical ``output`` and ``downloads``
+    sections are generated with per-command subsections.
     """
     header_third = (
         f"# Generated with default values for version {version}: "
@@ -293,20 +365,19 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
     for index, section in enumerate(sorted(RECOGNIZED_SECTIONS)):
         if index > 0:
             lines.append("")
-        if section == "downloads":
-            shared_note = (
-                "  # A key here applies to both commands; "
-                "per-command overrides go under audio/albumart."
+        if section == "output":
+            non_display = [key for key in OUTPUT_SCALAR_KEYS if key not in DISPLAY_KEYS]
+            lines.extend(
+                _render_hierarchical(
+                    defaults, "output", non_display, DISPLAY_SUBSECTIONS, DISPLAY_KEYS
+                )
             )
-            lines.append("downloads:")
-            lines.append(shared_note)
-            lines.append("")
-            for sub_index, subsection in enumerate(sorted(DOWNLOAD_SUBSECTIONS)):
-                if sub_index > 0:
-                    lines.append("")
-                lines.append(f"  {subsection}:")
-                for key in sorted(DOWNLOAD_KEYS):
-                    lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
+        elif section == "downloads":
+            lines.extend(
+                _render_hierarchical(
+                    defaults, "downloads", [], DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
+                )
+            )
         else:
             lines.append(f"{section}:")
             for key in sorted(SECTION_KEYS[section]):
@@ -324,6 +395,15 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     for section, keys in SECTION_KEYS.items():
         values = config.get(section, {})
         pairs.extend((f"{section}.{key}", values[key]) for key in keys if key in values)
+    output = config.get("output", {})
+    pairs.extend((f"output.{key}", output[key]) for key in OUTPUT_SCALAR_KEYS if key in output)
+    for subsection in DISPLAY_SUBSECTIONS:
+        subvalues = output.get(subsection, {})
+        pairs.extend(
+            (f"output.{subsection}.{key}", subvalues[key])
+            for key in DISPLAY_KEYS
+            if key in subvalues
+        )
     downloads = config.get("downloads", {})
     pairs.extend((f"downloads.{key}", downloads[key]) for key in DOWNLOAD_KEYS if key in downloads)
     for subsection in DOWNLOAD_SUBSECTIONS:

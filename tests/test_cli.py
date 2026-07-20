@@ -42,6 +42,9 @@ _DOWNLOAD_DEFAULTS = {
     "overwrite-existing-files": False,
 }
 
+# The three display keys with their default values, as generated per subsection.
+_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty", "raw": False}
+
 
 @pytest.fixture(autouse=True)
 def _isolate_config_probing(mocker: MockerFixture):
@@ -3196,6 +3199,30 @@ class TestConfigurationFile:
         assert "Volumio State" not in result.output
         assert '"title"' in result.output
 
+    def test_output_per_command_format_override(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A per-command output subsection overrides the format for that command only."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path,
+            "output:\n  player-state:\n    format: table\n  track-info:\n    format: json\n",
+        )
+
+        # player-state subsection -> table for both `player state` and `info`.
+        state_result = runner.invoke(main, ["-c", config, "player", "state"])
+        info_result = runner.invoke(main, ["-c", config, "info"])
+        # track-info subsection -> json (not a table).
+        track_result = runner.invoke(main, ["-c", config, "track", "info"])
+
+        assert state_result.exit_code == 0
+        assert "Volumio State" in state_result.output
+        assert info_result.exit_code == 0
+        assert "Volumio State" in info_result.output
+        assert track_result.exit_code == 0
+        assert "Track Info" not in track_result.output
+        assert '"title"' in track_result.output
+
     def test_print_resulting_state_from_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -3246,7 +3273,7 @@ class TestConfigurationFile:
         mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
 
         config = self._write_config(
-            tmp_path, "downloads:\n  audio:\n    output-directory: /music\n"
+            tmp_path, "downloads:\n  track-audio:\n    output-directory: /music\n"
         )
 
         result = runner.invoke(main, ["-c", config, "track", "audio"])
@@ -3366,14 +3393,14 @@ class TestConfigurationCommands:
                 "output": {
                     "verbose": False,
                     "machine-readable": False,
-                    "fields": "short",
-                    "format": "pretty",
-                    "raw": False,
                     "print-resulting-state": True,
+                    "player-state": _DISPLAY_DEFAULTS,
+                    "track-info": _DISPLAY_DEFAULTS,
+                    "queue-list": _DISPLAY_DEFAULTS,
                 },
                 "downloads": {
-                    "audio": _DOWNLOAD_DEFAULTS,
-                    "albumart": _DOWNLOAD_DEFAULTS,
+                    "track-audio": _DOWNLOAD_DEFAULTS,
+                    "track-albumart": _DOWNLOAD_DEFAULTS,
                 },
             }
 
@@ -3450,8 +3477,9 @@ class TestConfigurationCommands:
         config = tmp_path / "volumito.yaml"
         config.write_text(
             "volumio:\n  host: myhost.local\n"
-            "output:\n  verbose: true\n  format: table\n"
-            "downloads:\n  output-directory: /shared\n  audio:\n    file-name-template: 'a.flac'\n"
+            "output:\n  verbose: true\n  format: table\n  player-state:\n    format: json\n"
+            "downloads:\n  output-directory: /shared\n"
+            "  track-audio:\n    file-name-template: 'a.flac'\n"
         )
 
         result = runner.invoke(main, ["configuration", "check", str(config)])
@@ -3461,8 +3489,9 @@ class TestConfigurationCommands:
         assert "volumio.host = myhost.local" in result.output
         assert "output.verbose = True" in result.output
         assert "output.format = table" in result.output
+        assert "output.player-state.format = json" in result.output
         assert "downloads.output-directory = /shared" in result.output
-        assert "downloads.audio.file-name-template = a.flac" in result.output
+        assert "downloads.track-audio.file-name-template = a.flac" in result.output
 
     def test_check_invalid_content(self, runner: CliRunner, tmp_path):
         """An unrecognized key makes check exit 2."""
