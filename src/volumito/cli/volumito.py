@@ -69,7 +69,7 @@ TRACK_INFO_SHORT_FIELDS = [
 ]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.9"
+VERSION = "0.0.10"
 
 
 def filter_fields(
@@ -739,7 +739,7 @@ def main(
 def version(ctx: click.Context) -> None:
     """Show the volumito version.
 
-    In machine-readable mode the version string is printed quoted (e.g. ``"0.0.9"``)
+    In machine-readable mode the version string is printed quoted (e.g. ``"0.0.10"``)
     so it can be consumed by jq/yq; otherwise the program name is included.
     """
     if ctx.obj["machine_readable"]:
