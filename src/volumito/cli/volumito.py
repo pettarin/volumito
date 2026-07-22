@@ -84,7 +84,7 @@ TRACK_INFO_SHORT_FIELDS = [
 ]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.10"
+VERSION = "0.0.11"
 
 
 def filter_fields(
