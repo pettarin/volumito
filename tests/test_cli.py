@@ -3534,76 +3534,66 @@ class TestConfigurationCommands:
         assert result.exit_code == 0
         assert json.loads(result.output) == {"volumio": {"host": "myhost.local"}}
 
-    def test_search_found(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
-        """Search lists existing config files and marks the one being used."""
+    def test_search_lists_all_paths_with_status(
+        self, runner: CliRunner, tmp_path, mocker: MockerFixture
+    ):
+        """Search lists every probed path, marking found/used and found/NOT used."""
         first = tmp_path / "volumito.yaml"
         first.write_text("")
         second = tmp_path / "other.yaml"
         second.write_text("")
+        missing = tmp_path / "gone.yaml"
         mocker.patch(
             "volumito.cli.configuration.configuration_paths",
-            return_value=[str(first), str(second)],
-        )
-
-        result = runner.invoke(main, ["configuration", "search"])
-
-        assert result.exit_code == 0
-        assert f"{first} (used)" in result.output
-        assert str(second) in result.output
-
-    def test_search_none_found(self, runner: CliRunner, mocker: MockerFixture):
-        """Search reports the searched directories when no config file exists."""
-        mocker.patch(
-            "volumito.cli.volumito.configuration_directories",
-            return_value=["/dir/one", "/dir/two"],
+            return_value=[str(first), str(second), str(missing)],
         )
 
         result = runner.invoke(main, ["configuration", "search"])
 
         assert result.exit_code == 0
         assert (
-            "No configuration file volumito.yaml or .volumito.yaml "
-            "found in the following directories:"
-        ) in result.output
-        assert "/dir/one" in result.output
-        assert "/dir/two" in result.output
+            "Configuration file locations, in probing order, in decreasing order of priority:"
+            in result.output
+        )
+        assert f"{first} (found, used)" in result.output
+        assert f"{second} (found, NOT used)" in result.output
+        # A path that does not exist is listed without any status annotation.
+        assert f"  {missing}\n" in result.output
+        assert f"{missing} (" not in result.output
 
-    def test_search_machine_readable(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
-        """In machine-readable mode search prints found/used as JSON."""
-        config = tmp_path / "volumito.yaml"
-        config.write_text("")
+    def test_search_none_found(self, runner: CliRunner, mocker: MockerFixture):
+        """Search still lists every probed path, each flagged not found."""
         mocker.patch(
             "volumito.cli.configuration.configuration_paths",
-            return_value=[str(config)],
+            return_value=["/dir/one/volumito.yaml", "/dir/two/volumito.yaml"],
+        )
+
+        result = runner.invoke(main, ["configuration", "search"])
+
+        assert result.exit_code == 0
+        assert (
+            "Configuration file locations, in probing order, in decreasing order of priority:"
+            in result.output
+        )
+        # No status annotation is shown for paths that do not exist.
+        assert "  /dir/one/volumito.yaml\n" in result.output
+        assert "  /dir/two/volumito.yaml\n" in result.output
+        assert "(not found)" not in result.output
+
+    def test_search_machine_readable(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
+        """In machine-readable mode search prints a per-path object array as JSON."""
+        found = tmp_path / "volumito.yaml"
+        found.write_text("")
+        missing = tmp_path / "gone.yaml"
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=[str(found), str(missing)],
         )
 
         result = runner.invoke(main, ["-m", "configuration", "search"])
 
         assert result.exit_code == 0
-        assert json.loads(result.output) == {"found": [str(config)], "used": str(config)}
-
-    def test_locations(self, runner: CliRunner, mocker: MockerFixture):
-        """`configuration locations` prints the probed directories in order."""
-        mocker.patch(
-            "volumito.cli.volumito.configuration_directories",
-            return_value=["/dir/one", "/dir/two", "/etc"],
-        )
-
-        result = runner.invoke(main, ["configuration", "locations"])
-
-        assert result.exit_code == 0
-        assert "Configuration directories, in probing order:" in result.output
-        lines = [line.strip() for line in result.output.splitlines()[1:]]
-        assert lines == ["/dir/one", "/dir/two", "/etc"]
-
-    def test_locations_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
-        """In machine-readable mode locations prints the directories as JSON."""
-        mocker.patch(
-            "volumito.cli.volumito.configuration_directories",
-            return_value=["/dir/one", "/dir/two"],
-        )
-
-        result = runner.invoke(main, ["-m", "configuration", "locations"])
-
-        assert result.exit_code == 0
-        assert json.loads(result.output) == ["/dir/one", "/dir/two"]
+        assert json.loads(result.output) == [
+            {"path": str(found), "found": True, "used": True},
+            {"path": str(missing), "found": False, "used": False},
+        ]

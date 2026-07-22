@@ -134,16 +134,20 @@ def configuration_paths() -> list[str]:
     ]
 
 
-def found_and_used_configuration_paths() -> tuple[list[str], str | None]:
-    """Probe the search paths and report which files exist and which is used.
+def probe_configuration_paths() -> list[tuple[str, bool, bool]]:
+    """Return every probed path with (exists, used) flags, in probing order.
 
-    Returns a tuple ``(found, used)`` where ``found`` lists every existing
-    configuration file (in search order) and ``used`` is the first of them
-    (the one that would be loaded), or ``None`` if none exists.
+    ``used`` is True only for the first existing path (the one that would be loaded).
     """
-    found = [path for path in configuration_paths() if os.path.isfile(path)]
-    used = found[0] if found else None
-    return found, used
+    rows: list[tuple[str, bool, bool]] = []
+    used_assigned = False
+    for path in configuration_paths():
+        exists = os.path.isfile(path)
+        is_used = exists and not used_assigned
+        if is_used:
+            used_assigned = True
+        rows.append((path, exists, is_used))
+    return rows
 
 
 def resolve_configuration_path(explicit: str | None) -> str | None:

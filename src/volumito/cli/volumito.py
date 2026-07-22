@@ -17,10 +17,9 @@ import requests
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     build_click_default_map,
-    configuration_directories,
     flatten_configuration,
-    found_and_used_configuration_paths,
     load_configuration,
+    probe_configuration_paths,
     render_default_configuration,
     resolve_configuration_path,
 )
@@ -949,42 +948,27 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
 @configuration.command("search")
 @click.pass_context
 def configuration_search(ctx: click.Context) -> None:
-    """Probe the standard locations and print the configuration files found."""
+    """List every probed configuration path, marking those found and the one used."""
     machine_readable = ctx.obj["machine_readable"]
 
-    found, used = found_and_used_configuration_paths()
+    rows = probe_configuration_paths()
 
     if machine_readable:
-        click.echo(json.dumps({"found": found, "used": used}))
+        click.echo(
+            json.dumps(
+                [{"path": path, "found": found, "used": used} for path, found, used in rows]
+            )
+        )
         return
 
-    if not found:
-        filenames = " or ".join(CONFIGURATION_FILENAMES)
-        click.echo(f"No configuration file {filenames} found in the following directories:")
-        for directory in configuration_directories():
-            click.echo(f"  {directory}")
-        return
-
-    click.echo("Found configuration files:")
-    for path in found:
-        marker = " (used)" if path == used else ""
-        click.echo(f"  {path}{marker}")
-
-
-@configuration.command("locations")
-@click.pass_context
-def configuration_locations(ctx: click.Context) -> None:
-    """Print the directories probed for a configuration file, in probing order."""
-    machine_readable = ctx.obj["machine_readable"]
-    directories = configuration_directories()
-
-    if machine_readable:
-        click.echo(json.dumps(directories))
-        return
-
-    click.echo("Configuration directories, in probing order:")
-    for directory in directories:
-        click.echo(f"  {directory}")
+    click.echo("Configuration file locations, in probing order, in decreasing order of priority:")
+    for path, found, used in rows:
+        if not found:
+            click.echo(f"  {path}")
+        elif used:
+            click.echo(f"  {path} (found, used)")
+        else:
+            click.echo(f"  {path} (found, NOT used)")
 
 
 def render_state(

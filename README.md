@@ -202,11 +202,8 @@ volumito configuration create -f ./my-config.yaml   # at an exact path
 volumito configuration check ./volumito.yaml
 volumito configuration check            # no path: check the file that would be used
 
-# Show which configuration files exist and which one would be used
+# List every probed configuration path, in probing order, showing which exist and which is used
 volumito configuration search
-
-# Print the directories searched for a configuration file, in probing order
-volumito configuration locations
 ```
 
 ### Output Formats

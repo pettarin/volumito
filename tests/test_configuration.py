@@ -20,6 +20,7 @@ from volumito.cli.configuration import (
     configuration_paths,
     flatten_configuration,
     load_configuration,
+    probe_configuration_paths,
     render_default_configuration,
     resolve_configuration_path,
 )
@@ -78,6 +79,41 @@ class TestConfigurationPaths:
             os.path.join("/home/user", ".config", "volumito", ".volumito.yaml"),
             os.path.join("/etc", "volumito.yaml"),
             os.path.join("/etc", ".volumito.yaml"),
+        ]
+
+
+class TestProbeConfigurationPaths:
+    """Test cases for probe_configuration_paths."""
+
+    def test_flags_found_and_used(self, tmp_path, mocker: MockerFixture):
+        """Every path is annotated; only the first existing one is marked used."""
+        first_missing = tmp_path / "volumito.yaml"
+        used = tmp_path / ".volumito.yaml"
+        used.write_text("")
+        also_found = tmp_path / "other.yaml"
+        also_found.write_text("")
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=[str(first_missing), str(used), str(also_found)],
+        )
+
+        assert probe_configuration_paths() == [
+            (str(first_missing), False, False),
+            (str(used), True, True),
+            (str(also_found), True, False),
+        ]
+
+    def test_none_existing(self, mocker: MockerFixture):
+        """When nothing exists, every path is flagged not found and not used."""
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=["/a.yaml", "/b.yaml"],
+        )
+        mocker.patch("volumito.cli.configuration.os.path.isfile", return_value=False)
+
+        assert probe_configuration_paths() == [
+            ("/a.yaml", False, False),
+            ("/b.yaml", False, False),
         ]
 
 

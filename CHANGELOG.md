@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed the `player` command group to `playback` (its subcommands are unchanged, and `info`
   remains a top-level synonym for `playback state`)
 - Renamed the configuration file's `output.player-state` subsection to `output.playback-state`
+- `configuration search` now lists every probed path (directory and file name) in probing order,
+  marking the existing files as used or not used (its machine-readable output is now an array of
+  per-path objects)
+
+### Removed
+
+- The `configuration locations` subcommand (superseded by `configuration search`)
 
 
 ## [0.0.10] - 2026-07-20
