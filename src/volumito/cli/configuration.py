@@ -19,7 +19,8 @@ SECTION_KEYS: dict[str, list[str]] = {
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
 # per-command subsections override the display keys (fields/format/raw). verbose and
-# machine-readable are global; print-resulting-status applies to the playback actions.
+# machine-readable are global; print-resulting-status applies to the playback and
+# queue action commands.
 OUTPUT_SCALAR_KEYS = [
     "verbose",
     "machine-readable",
@@ -29,7 +30,7 @@ OUTPUT_SCALAR_KEYS = [
     "print-resulting-status",
 ]
 DISPLAY_KEYS = ["fields", "format", "raw"]
-DISPLAY_SUBSECTIONS = ["playback-status", "track-info", "queue-list"]
+DISPLAY_SUBSECTIONS = ["playback-status", "track-info", "queue-get"]
 
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
@@ -60,7 +61,7 @@ KEY_COMMENTS: dict[str, str] = {
     "format": "Output format: json, pretty, or table",
     "raw": "Output raw JSON, overriding the format",
     "print-resulting-status": (
-        "After a playback command like pause or volume, print the resulting playback status"
+        "After a playback or queue command like pause or clear, print the resulting playback status"
     ),
     "file-name-template": "Template (Python str.format) for the -d output file name",
     "output-directory": "Directory to download into (mutually exclusive with output-file)",
@@ -71,18 +72,18 @@ KEY_COMMENTS: dict[str, str] = {
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
 _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 
-# --print-resulting-status lives on the playback action commands.
+# --print-resulting-status lives on the playback and queue action commands.
 ACTION_COMMAND_PATHS = [
     ["playback", name]
     for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
-]
+] + [["queue", name] for name in ("clear", "repeat", "randomize")]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
 # The "playback-status" subsection also governs the top-level "info" synonym.
 DISPLAY_SUBSECTION_PATHS = {
     "playback-status": [["playback", "status"], ["info"]],
     "track-info": [["track", "info"]],
-    "queue-list": [["queue", "list"]],
+    "queue-get": [["queue", "get"]],
 }
 DOWNLOAD_SUBSECTION_PATHS = {
     "track-audio": [["track", "audio"]],

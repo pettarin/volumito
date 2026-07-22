@@ -18,6 +18,7 @@ from volumito.cli.volumito import (
     PLAYER_STATE_SHORT_FIELDS,
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
+    OnOffParamType,
     VolumeParamType,
     extract_filename_from_uri,
     filter_fields,
@@ -339,6 +340,38 @@ class TestVolumeParamType:
         """Only lowercase spellings are accepted; others are a usage error."""
         with pytest.raises(click.exceptions.BadParameter):
             VolumeParamType().convert(value, None, None)
+
+
+class TestOnOffParamType:
+    """Test cases for the OnOffParamType Click parameter type."""
+
+    def test_convert_already_bool(self):
+        """An already-converted bool value passes through unchanged."""
+        assert OnOffParamType().convert(True, None, None) is True
+        assert OnOffParamType().convert(False, None, None) is False
+
+    @pytest.mark.parametrize(
+        ("spelling", "expected"),
+        [
+            ("on", True),
+            ("true", True),
+            ("yes", True),
+            ("1", True),
+            ("off", False),
+            ("false", False),
+            ("no", False),
+            ("0", False),
+        ],
+    )
+    def test_convert_spellings(self, spelling: str, expected: bool):
+        """The accepted spellings normalize to their boolean value."""
+        assert OnOffParamType().convert(spelling, None, None) is expected
+
+    @pytest.mark.parametrize("value", ["ON", "True", "maybe", "2"])
+    def test_convert_invalid_rejected(self, value: str):
+        """Only the accepted lowercase spellings are valid; others are a usage error."""
+        with pytest.raises(click.exceptions.BadParameter):
+            OnOffParamType().convert(value, None, None)
 
 
 class TestCLICommands:
@@ -2620,7 +2653,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "queue" in result.output.lower()
-        assert "list" in result.output.lower()
+        assert "get" in result.output.lower()
 
     def test_queue_no_subcommand(self, runner: CliRunner):
         """Test queue group without subcommand."""
@@ -2630,19 +2663,19 @@ class TestCLICommands:
         assert result.exit_code == 2
         assert "queue" in result.output.lower()
         # Should show usage/error information when no subcommand is provided
-        assert "list" in result.output.lower()
+        assert "get" in result.output.lower()
 
-    def test_queue_list_help(self, runner: CliRunner):
-        """Test queue list command with --help."""
-        result = runner.invoke(main, ["queue", "list", "--help"])
+    def test_queue_get_help(self, runner: CliRunner):
+        """Test queue get command with --help."""
+        result = runner.invoke(main, ["queue", "get", "--help"])
 
         assert result.exit_code == 0
-        assert "list" in result.output.lower()
+        assert "get" in result.output.lower()
         assert "--format" in result.output
         assert "--fields" in result.output
 
-    def test_queue_list_success_default(self, runner: CliRunner, mocker: MockerFixture):
-        """Test successful queue list command with default options."""
+    def test_queue_get_success_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Test successful queue get command with default options."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2668,14 +2701,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list"])
+        result = runner.invoke(main, ["queue", "get"])
 
         assert result.exit_code == 0
         assert "Song 1" in result.output
         assert "Song 2" in result.output
 
-    def test_queue_list_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with custom host."""
+    def test_queue_get_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with custom host."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2688,14 +2721,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "list"])
+        result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "get"])
 
         assert result.exit_code == 0
         host_configuration = mock_client_class.call_args[0][0]
         assert host_configuration.host == "192.168.1.100"
 
-    def test_queue_list_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with --format json."""
+    def test_queue_get_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --format json."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2708,7 +2741,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list", "--format", "json"])
+        result = runner.invoke(main, ["queue", "get", "--format", "json"])
 
         assert result.exit_code == 0
         # Should be valid JSON
@@ -2718,8 +2751,8 @@ class TestCLICommands:
         assert output_data[0]["title"] == "Test Song"
         assert output_data[0]["position"] == 1
 
-    def test_queue_list_with_format_table(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with --format table."""
+    def test_queue_get_with_format_table(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --format table."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2732,14 +2765,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list", "--format", "table"])
+        result = runner.invoke(main, ["queue", "get", "--format", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Queue" in result.output
         assert "Test Song" in result.output
 
-    def test_queue_list_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with --fields all."""
+    def test_queue_get_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --fields all."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2756,14 +2789,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list", "--fields", "all"])
+        result = runner.invoke(main, ["queue", "get", "--fields", "all"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
         assert "extra_field" in output_data[0]
 
-    def test_queue_list_with_fields_short(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with --fields short."""
+    def test_queue_get_with_fields_short(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --fields short."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2780,7 +2813,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list", "--fields", "short"])
+        result = runner.invoke(main, ["queue", "get", "--fields", "short"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -2788,8 +2821,8 @@ class TestCLICommands:
         assert "artist" in output_data[0]
         assert "extra_field" not in output_data[0]
 
-    def test_queue_list_with_raw_flag(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with --raw flag."""
+    def test_queue_get_with_raw_flag(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --raw flag."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2802,7 +2835,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list", "--raw"])
+        result = runner.invoke(main, ["queue", "get", "--raw"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -2810,8 +2843,8 @@ class TestCLICommands:
         assert "queue" in output_data
         assert "extra_field" in output_data["queue"][0]
 
-    def test_queue_list_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with --verbose flag."""
+    def test_queue_get_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --verbose flag."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2824,13 +2857,13 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "queue", "list"])
+        result = runner.invoke(main, ["--verbose", "queue", "get"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output or "Successfully retrieved" in result.output
 
-    def test_queue_list_connection_error(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with connection error."""
+    def test_queue_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with connection error."""
         mock_client = mocker.Mock()
         mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
 
@@ -2839,13 +2872,13 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list"])
+        result = runner.invoke(main, ["queue", "get"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
 
-    def test_queue_list_api_error(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with API error."""
+    def test_queue_get_api_error(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with API error."""
         mock_client = mocker.Mock()
         mock_client.get_queue.side_effect = VolumioAPIError("API error")
 
@@ -2854,15 +2887,15 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list"])
+        result = runner.invoke(main, ["queue", "get"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
 
-    def test_queue_list_machine_readable_suppresses_errors(
+    def test_queue_get_machine_readable_suppresses_errors(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test queue list command with --machine-readable flag suppresses errors."""
+        """Test queue get command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
 
@@ -2871,14 +2904,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "queue", "list"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "get"])
 
         assert result.exit_code == 1
         # No error output with machine-readable flag
         assert result.output == ""
 
-    def test_queue_list_empty_queue(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue list command with empty queue."""
+    def test_queue_get_empty_queue(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with empty queue."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {"queue": []}
 
@@ -2887,11 +2920,174 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "list", "--format", "table"])
+        result = runner.invoke(main, ["queue", "get", "--format", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Queue" in result.output
         assert "(empty)" in result.output
+
+
+class TestQueueActions:
+    """Test cases for the queue clear/repeat/randomize action commands."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with usable queue-action methods; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.clear.return_value = {"response": "clearQueue"}
+        mock_client.repeat.return_value = {"response": "repeat"}
+        mock_client.randomize.return_value = {"response": "random"}
+        # The resulting print is the playback status (getState), like the playback actions.
+        mock_client.get_state.return_value = {
+            "title": "Test Song",
+            "artist": "StatusMarkerArtist",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_clear_default_prints_resulting_status(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """By default, queue clear waits 1 second and prints the resulting playback status."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "clear"])
+
+        assert result.exit_code == 0
+        assert "Command 'clear' executed successfully" in result.output
+        assert "StatusMarkerArtist" in result.output
+        mock_client.clear.assert_called_once()
+        mock_client.get_state.assert_called_once()
+        mock_sleep.assert_called_once_with(1.0)
+
+    def test_clear_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-status skips the sleep and the status print."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "clear", "--no-print-resulting-status"])
+
+        assert result.exit_code == 0
+        assert "Command 'clear' executed successfully" in result.output
+        assert "StatusMarkerArtist" not in result.output
+        mock_client.clear.assert_called_once()
+        mock_client.get_state.assert_not_called()
+        mock_sleep.assert_not_called()
+
+    def test_repeat_toggle(self, runner: CliRunner, mocker: MockerFixture):
+        """queue repeat with no value toggles the repeat mode (None passed to the client)."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "repeat", "--no-print-resulting-status"])
+
+        assert result.exit_code == 0
+        assert "Command 'repeat' executed successfully" in result.output
+        mock_client.repeat.assert_called_once_with(None)
+
+    @pytest.mark.parametrize(
+        ("spelling", "expected"),
+        [
+            ("on", True),
+            ("true", True),
+            ("yes", True),
+            ("1", True),
+            ("off", False),
+            ("false", False),
+            ("no", False),
+            ("0", False),
+        ],
+    )
+    def test_repeat_with_value(
+        self, runner: CliRunner, mocker: MockerFixture, spelling, expected
+    ):
+        """queue repeat accepts on/true/yes/1 and off/false/no/0 to set the mode explicitly."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["queue", "repeat", spelling, "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.repeat.assert_called_once_with(expected)
+
+    def test_repeat_invalid_value(self, runner: CliRunner, mocker: MockerFixture):
+        """queue repeat rejects a value that is not an accepted on/off spelling."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["queue", "repeat", "maybe", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 2
+        assert "must be one of" in result.output
+
+    def test_randomize_toggle(self, runner: CliRunner, mocker: MockerFixture):
+        """queue randomize with no value toggles the random mode (None passed to the client)."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "randomize", "--no-print-resulting-status"])
+
+        assert result.exit_code == 0
+        assert "Command 'randomize' executed successfully" in result.output
+        mock_client.randomize.assert_called_once_with(None)
+
+    @pytest.mark.parametrize(
+        ("spelling", "expected"),
+        [
+            ("on", True),
+            ("true", True),
+            ("yes", True),
+            ("1", True),
+            ("off", False),
+            ("false", False),
+            ("no", False),
+            ("0", False),
+        ],
+    )
+    def test_randomize_with_value(
+        self, runner: CliRunner, mocker: MockerFixture, spelling, expected
+    ):
+        """queue randomize accepts on/true/yes/1 and off/false/no/0 to set the mode explicitly."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["queue", "randomize", spelling, "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.randomize.assert_called_once_with(expected)
+
+    def test_short_flag_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """The -r short flag prints the resulting playback status after the action."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "repeat", "-r"])
+
+        assert result.exit_code == 0
+        assert "StatusMarkerArtist" in result.output
+        mock_client.get_state.assert_called_once()
+        mock_sleep.assert_called_once_with(1.0)
+
+    def test_machine_readable_suppresses_success_message(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """In machine-readable mode the success message is suppressed."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["--machine-readable", "queue", "clear", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        assert "executed successfully" not in result.output
+        mock_client.clear.assert_called_once()
 
 
 class TestPrintResultingState:
@@ -3396,7 +3592,7 @@ class TestConfigurationCommands:
                     "print-resulting-status": True,
                     "playback-status": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,
-                    "queue-list": _DISPLAY_DEFAULTS,
+                    "queue-get": _DISPLAY_DEFAULTS,
                 },
                 "downloads": {
                     "track-audio": _DOWNLOAD_DEFAULTS,

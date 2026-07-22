@@ -177,11 +177,11 @@ downloads:
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
 `--fields`/`--format`/`--raw` options of the commands that support them (`playback status`, `info`,
-`track info`, and `queue list`). A key placed directly under `output` applies to all of them; the optional
-`playback-status`, `track-info`, and `queue-list` subsections hold the same keys and override the shared value
+`track info`, and `queue get`). A key placed directly under `output` applies to all of them; the optional
+`playback-status`, `track-info`, and `queue-get` subsections hold the same keys and override the shared value
 for that command (`playback-status` also governs the `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
-`previous`, `volume`, `mute`, `unmute`).
+`previous`, `volume`, `mute`, `unmute`) and the `queue` action commands (`clear`, `repeat`, `randomize`).
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
@@ -296,6 +296,37 @@ Start playback of a specific track in the queue (1-indexed):
 # -p is a shorthand for --position
 volumito playback play --position 3
 volumito playback play -p 3
+```
+
+### Queue
+
+Inspect and manage the playback queue:
+
+```bash
+# Print the current queue (same --fields/--format/--raw options as playback status)
+volumito queue get
+volumito queue get --format table
+
+# Clear the queue
+volumito queue clear
+
+# Toggle the repeat and random (shuffle) modes (no value toggles the current mode)
+volumito queue repeat
+volumito queue randomize
+
+# Set the modes explicitly with on/true/yes/1 or off/false/no/0
+volumito queue repeat on
+volumito queue randomize off
+```
+
+The `repeat` and `random` modes are properties of playback, so — like the `playback` action commands —
+`queue clear`, `queue repeat`, and `queue randomize` wait and print the resulting `playback status`
+afterward by default. Disable that with `--no-print-resulting-status` (short flag `-r` /
+`--print-resulting-status`):
+
+```bash
+# Clear the queue without printing the resulting playback status
+volumito queue clear --no-print-resulting-status
 ```
 
 ### Resulting Status

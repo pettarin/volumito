@@ -649,6 +649,36 @@ class VolumeParamType(click.ParamType):
         return level
 
 
+class OnOffParamType(click.ParamType):
+    """Click parameter type for an on/off toggle value.
+
+    Accepts "on"/"true"/"yes"/"1" (True) or "off"/"false"/"no"/"0" (False),
+    lowercase only; anything else is a usage error.
+    """
+
+    name = "on/off"
+
+    # Boolean value -> accepted spellings (lowercase only)
+    ALIASES = {True: ["on", "true", "yes", "1"], False: ["off", "false", "no", "0"]}
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> bool:
+        if isinstance(value, bool):
+            return value
+        text = str(value)
+        for canonical, spellings in self.ALIASES.items():
+            if text in spellings:
+                return canonical
+        accepted = ", ".join(
+            sorted(s for spellings in self.ALIASES.values() for s in spellings)
+        )
+        self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+
 def configuration_file_callback(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:
@@ -816,10 +846,10 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     """Return the defaults of the per-command options used in the configuration file.
 
     These options live on subcommands, not the top-level group: fields/format/raw on
-    ``playback status``, print-resulting-status on the playback action commands, and the
-    download options on ``track audio``. Read them from the ``playback_status``, ``toggle``,
-    and ``audio`` command objects so the generated configuration mirrors the real
-    defaults without duplication.
+    ``playback status``, print-resulting-status on the playback and queue action commands,
+    and the download options on ``track audio``. Read them from the ``playback_status``,
+    ``toggle``, and ``audio`` command objects so the generated configuration mirrors the
+    real defaults without duplication.
     """
     wanted = {
         "fields",
@@ -1479,7 +1509,7 @@ def queue(ctx: click.Context) -> None:
     pass
 
 
-@queue.command("list")
+@queue.command("get")
 @click.pass_context
 @click.option(
     "--fields",
@@ -1505,13 +1535,13 @@ def queue(ctx: click.Context) -> None:
     default=False,
     help="Output raw JSON without formatting (overrides --format)",
 )
-def queue_list(
+def queue_get(
     ctx: click.Context,
     fields: str,
     output_format: str,
     raw: bool,
 ) -> None:
-    """List the playback queue.
+    """Get the playback queue.
 
     This command retrieves and prints the current playback queue,
     showing all queued tracks with their metadata.
@@ -1570,6 +1600,53 @@ def queue_list(
         if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
+
+
+@queue.command()
+@click.pass_context
+@print_resulting_status_option
+def clear(ctx: click.Context, print_resulting_status: bool) -> None:
+    """Clear the playback queue of the Volumio instance."""
+    execute_command(
+        ctx, "clear", lambda c: c.clear(), "/api/v1/commands/?cmd=clearQueue"
+    )
+    maybe_print_resulting_status(ctx, print_resulting_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=OnOffParamType())
+@print_resulting_status_option
+def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
+    """Set or toggle the repeat mode of the Volumio instance.
+
+    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
+    or "off"/"false"/"no"/"0".
+    """
+    suffix = "" if value is None else f"&value={str(value).lower()}"
+    label = "repeat" if value is None else f"repeat {'on' if value else 'off'}"
+    execute_command(
+        ctx, label, lambda c: c.repeat(value), f"/api/v1/commands/?cmd=repeat{suffix}"
+    )
+    maybe_print_resulting_status(ctx, print_resulting_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=OnOffParamType())
+@print_resulting_status_option
+def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
+    """Set or toggle the random (shuffle) mode of the Volumio instance.
+
+    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
+    or "off"/"false"/"no"/"0".
+    """
+    suffix = "" if value is None else f"&value={str(value).lower()}"
+    label = "randomize" if value is None else f"randomize {'on' if value else 'off'}"
+    execute_command(
+        ctx, label, lambda c: c.randomize(value), f"/api/v1/commands/?cmd=random{suffix}"
+    )
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -530,6 +530,79 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("volume&volume=mute")
         assert result["response"] == "volume"
 
+    def test_clear(self, mocker: MockerFixture):
+        """Test clear() method sends the clearQueue command."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "clearQueue"}
+
+        result = client.clear()
+
+        mock_send_command.assert_called_once_with("clearQueue")
+        assert result["response"] == "clearQueue"
+
+    def test_repeat_toggle(self, mocker: MockerFixture):
+        """Test repeat() with no value sends the bare repeat command (toggle)."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "repeat"}
+
+        result = client.repeat()
+
+        mock_send_command.assert_called_once_with("repeat")
+        assert result["response"] == "repeat"
+
+    def test_repeat_on(self, mocker: MockerFixture):
+        """Test repeat(True) sends the repeat command with value=true."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "repeat"}
+
+        client.repeat(True)
+
+        mock_send_command.assert_called_once_with("repeat&value=true")
+
+    def test_repeat_off(self, mocker: MockerFixture):
+        """Test repeat(False) sends the repeat command with value=false."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "repeat"}
+
+        client.repeat(False)
+
+        mock_send_command.assert_called_once_with("repeat&value=false")
+
+    def test_randomize_toggle(self, mocker: MockerFixture):
+        """Test randomize() with no value sends the bare random command (toggle)."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "random"}
+
+        result = client.randomize()
+
+        mock_send_command.assert_called_once_with("random")
+        assert result["response"] == "random"
+
+    def test_randomize_on(self, mocker: MockerFixture):
+        """Test randomize(True) sends the random command with value=true."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "random"}
+
+        client.randomize(True)
+
+        mock_send_command.assert_called_once_with("random&value=true")
+
+    def test_randomize_off(self, mocker: MockerFixture):
+        """Test randomize(False) sends the random command with value=false."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "random"}
+
+        client.randomize(False)
+
+        mock_send_command.assert_called_once_with("random&value=false")
+
 
 class TestVolumioExceptions:
     """Test cases for Volumio exception classes."""

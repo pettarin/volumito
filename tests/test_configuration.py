@@ -372,7 +372,7 @@ class TestRenderDefaultConfiguration:
 
         assert document["output"]["playback-status"] == _DISPLAY_DEFAULTS
         assert document["output"]["track-info"] == _DISPLAY_DEFAULTS
-        assert document["output"]["queue-list"] == _DISPLAY_DEFAULTS
+        assert document["output"]["queue-get"] == _DISPLAY_DEFAULTS
         # Shared scalars stay at the top level; fields/format/raw only in subsections.
         assert document["output"]["verbose"] is False
         assert "fields" not in document["output"]
@@ -416,7 +416,7 @@ class TestRenderDefaultConfiguration:
                 "print-resulting-status": True,
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
-                "queue-list": _DISPLAY_DEFAULTS,
+                "queue-get": _DISPLAY_DEFAULTS,
             },
             "downloads": {
                 "track-audio": _DOWNLOAD_DEFAULTS,
@@ -446,7 +446,7 @@ class TestRenderDefaultConfiguration:
                 "print-resulting-status": True,
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
-                "queue-list": _DISPLAY_DEFAULTS,
+                "queue-get": _DISPLAY_DEFAULTS,
             },
             "downloads": {
                 "track-audio": _DOWNLOAD_DEFAULTS,
@@ -512,7 +512,7 @@ class TestBuildClickDefaultMap:
             "info": formatting,
             "playback": {"status": formatting},
             "track": {"info": formatting},
-            "queue": {"list": formatting},
+            "queue": {"get": formatting},
         }
 
     def test_output_subsection_overrides_shared(self):
@@ -531,11 +531,11 @@ class TestBuildClickDefaultMap:
         assert result["info"] == {"output_format": "table"}
         assert result["playback"]["status"] == {"output_format": "table"}
         assert result["track"]["info"] == {"output_format": "json"}
-        # queue-list has no override, so it keeps the shared value.
-        assert result["queue"]["list"] == {"output_format": "pretty"}
+        # queue-get has no override, so it keeps the shared value.
+        assert result["queue"]["get"] == {"output_format": "pretty"}
 
-    def test_print_resulting_status_replicated_under_playback_actions(self):
-        """print-resulting-status is nested under every playback action, not the display paths."""
+    def test_print_resulting_status_replicated_under_action_commands(self):
+        """print-resulting-status is nested under every playback and queue action command."""
         result = build_click_default_map({"output": {"print-resulting-status": False}})
 
         assert result == {
@@ -549,7 +549,12 @@ class TestBuildClickDefaultMap:
                 "volume": {"print_resulting_status": False},
                 "mute": {"print_resulting_status": False},
                 "unmute": {"print_resulting_status": False},
-            }
+            },
+            "queue": {
+                "clear": {"print_resulting_status": False},
+                "repeat": {"print_resulting_status": False},
+                "randomize": {"print_resulting_status": False},
+            },
         }
 
     def test_downloads_shared_applies_to_both_commands(self):

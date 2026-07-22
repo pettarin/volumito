@@ -275,3 +275,51 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self.send_command(f"volume&volume={value}")
+
+    def clear(self) -> dict[str, Any]:
+        """Clear the playback queue.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self.send_command("clearQueue")
+
+    def repeat(self, value: bool | None = None) -> dict[str, Any]:
+        """Set or toggle the repeat mode.
+
+        Args:
+            value: True to enable, False to disable, or None (the default) to let
+                the Volumio API toggle the current repeat mode
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        if value is None:
+            return self.send_command("repeat")
+        return self.send_command(f"repeat&value={str(value).lower()}")
+
+    def randomize(self, value: bool | None = None) -> dict[str, Any]:
+        """Set or toggle the random (shuffle) mode.
+
+        Args:
+            value: True to enable, False to disable, or None (the default) to let
+                the Volumio API toggle the current random mode
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        if value is None:
+            return self.send_command("random")
+        return self.send_command(f"random&value={str(value).lower()}")
