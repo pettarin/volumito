@@ -71,7 +71,7 @@ Query a Volumio instance at the default location (`volumio.local:3000`):
 volumito playback status
 ```
 
-`volumito info` is a synonym for `volumito playback status`.
+`volumito info` is a synonym for `volumito system info`.
 
 ### Version
 
@@ -83,6 +83,22 @@ volumito version
 # Quoted version string, consumable by jq/yq (e.g. "0.0.9")
 volumito --machine-readable version
 ```
+
+### System
+
+Query the Volumio instance's system utilities:
+
+```bash
+# Health check (prints "pong")
+volumito system ping
+
+# System version and system information (pretty JSON; -R/--raw for compact)
+volumito system version
+volumito system info
+volumito system info --raw
+```
+
+`volumito info` is a synonym for `volumito system info`.
 
 ### Connection Options
 
@@ -176,10 +192,10 @@ downloads:
 ```
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
-`--fields`/`--format`/`--raw` options of the commands that support them (`playback status`, `info`,
+`--fields`/`--format`/`--raw` options of the commands that support them (`playback status`,
 `track info`, and `queue get`). A key placed directly under `output` applies to all of them; the optional
 `playback-status`, `track-info`, and `queue-get` subsections hold the same keys and override the shared value
-for that command (`playback-status` also governs the `info` synonym). The `print-resulting-status` key sets the
+for that command. The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
 `previous`, `volume`, `mute`, `unmute`) and the `queue` action commands (`clear`, `repeat`, `randomize`).
 

@@ -537,14 +537,20 @@ def execute_command(
         sys.exit(1)
 
 
-def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
-    """Fetch the current state, printing errors and exiting (1) on failure.
+def fetch_or_exit[T](
+    ctx: click.Context,
+    fetch: Callable[[VolumioRESTAPIClient], T],
+    endpoint: str,
+) -> T:
+    """Fetch data from the Volumio instance, printing errors and exiting (1) on failure.
 
     Args:
         ctx: Click context object containing shared options
+        fetch: Function to call on the VolumioRESTAPIClient, returning the payload
+        endpoint: API endpoint being called (for verbose output)
 
     Returns:
-        The state dictionary from the /api/v1/getState endpoint
+        Whatever ``fetch`` returns (a dict for the JSON endpoints, text for ping)
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -552,11 +558,11 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
     machine_readable = ctx.obj["machine_readable"]
 
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}{endpoint}...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        return client.get_state()
+        return fetch(client)
     except VolumioConnectionError as e:
         if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
@@ -569,6 +575,19 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
         if not machine_readable:
             click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
+
+
+def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
+    """Fetch the current state, printing errors and exiting (1) on failure.
+
+    Args:
+        ctx: Click context object containing shared options
+
+    Returns:
+        The state dictionary from the /api/v1/getState endpoint
+    """
+    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.get_state(), "/api/v1/getState")
+    return state
 
 
 def print_resulting_status_option(func: Callable[..., None]) -> Callable[..., None]:
@@ -1047,6 +1066,19 @@ def render_state(
     click.echo(output)
 
 
+def echo_payload(ctx: click.Context, data: dict[str, Any]) -> None:
+    """Print a JSON payload as pretty JSON, or compact in machine-readable mode.
+
+    Args:
+        ctx: Click context object containing shared options
+        data: The JSON object to print
+    """
+    if ctx.obj["machine_readable"]:
+        click.echo(json.dumps(data))
+    else:
+        click.echo(json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False))
+
+
 @main.group()
 @click.pass_context
 def playback(ctx: click.Context) -> None:
@@ -1089,14 +1121,9 @@ def playback_status(
     """Get the current playback status from a Volumio instance.
 
     Retrieves and displays the current state of a Volumio music player instance,
-    including playback status, volume, track information, and more. Also available
-    as the top-level ``info`` command.
+    including playback status, volume, track information, and more.
     """
     render_state(ctx, fields, output_format, raw, PLAYER_STATE_SHORT_FIELDS)
-
-
-# "info" is a top-level synonym for "playback status"
-main.add_command(playback_status, name="info")
 
 
 @playback.command()
@@ -1647,6 +1674,66 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
         ctx, label, lambda c: c.randomize(value), f"/api/v1/commands/?cmd=random{suffix}"
     )
     maybe_print_resulting_status(ctx, print_resulting_status)
+
+
+@main.group()
+@click.pass_context
+def system(ctx: click.Context) -> None:
+    """Query system utilities of the Volumio instance."""
+    pass
+
+
+@system.command("ping")
+@click.pass_context
+def system_ping(ctx: click.Context) -> None:
+    """Ping the Volumio instance (prints pong on success)."""
+    text = fetch_or_exit(ctx, lambda c: c.ping(), "/api/v1/ping").strip()
+    if ctx.obj["machine_readable"]:
+        click.echo(json.dumps(text))
+    else:
+        click.echo(text)
+
+
+@system.command("version")
+@click.pass_context
+@click.option(
+    "--raw",
+    "-R",
+    is_flag=True,
+    default=False,
+    help="Output compact JSON instead of pretty-printed JSON",
+)
+def system_version(ctx: click.Context, raw: bool) -> None:
+    """Get the system version of the Volumio instance."""
+    data = fetch_or_exit(
+        ctx, lambda c: c.get_system_version(), "/api/v1/getSystemVersion"
+    )
+    if raw:
+        click.echo(json.dumps(data))
+    else:
+        echo_payload(ctx, data)
+
+
+@system.command("info")
+@click.pass_context
+@click.option(
+    "--raw",
+    "-R",
+    is_flag=True,
+    default=False,
+    help="Output compact JSON instead of pretty-printed JSON",
+)
+def system_info(ctx: click.Context, raw: bool) -> None:
+    """Get the system information of the Volumio instance."""
+    data = fetch_or_exit(ctx, lambda c: c.get_system_info(), "/api/v1/getSystemInfo")
+    if raw:
+        click.echo(json.dumps(data))
+    else:
+        echo_payload(ctx, data)
+
+
+# "info" is a top-level synonym for "system info"
+main.add_command(system_info, name="info")
 
 
 if __name__ == "__main__":  # pragma: no cover

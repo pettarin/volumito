@@ -79,9 +79,8 @@ ACTION_COMMAND_PATHS = [
 ] + [["queue", name] for name in ("clear", "repeat", "randomize")]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
-# The "playback-status" subsection also governs the top-level "info" synonym.
 DISPLAY_SUBSECTION_PATHS = {
-    "playback-status": [["playback", "status"], ["info"]],
+    "playback-status": [["playback", "status"]],
     "track-info": [["track", "info"]],
     "queue-get": [["queue", "get"]],
 }

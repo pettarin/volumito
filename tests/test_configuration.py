@@ -509,7 +509,6 @@ class TestBuildClickDefaultMap:
 
         formatting = {"fields": "all", "output_format": "table", "raw": True}
         assert result == {
-            "info": formatting,
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"get": formatting},
@@ -527,8 +526,7 @@ class TestBuildClickDefaultMap:
             }
         )
 
-        # playback-status override reaches both playback.status and the info synonym.
-        assert result["info"] == {"output_format": "table"}
+        # playback-status override reaches the playback.status command.
         assert result["playback"]["status"] == {"output_format": "table"}
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-get has no override, so it keeps the shared value.

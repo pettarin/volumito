@@ -453,22 +453,21 @@ class TestCLICommands:
         assert result.output.strip() == '"0.0.11"'
 
     def test_info_help(self, runner: CliRunner):
-        """Test info command with --help."""
+        """The top-level info command is an alias for system info (minimal surface)."""
         result = runner.invoke(main, ["info", "--help"])
 
         assert result.exit_code == 0
-        assert "--format" in result.output
-        assert "--fields" in result.output
-        # Global options like --scheme and --host are shown in main --help, not subcommand help
+        assert "--raw" in result.output
+        # info is now system info: no --format/--fields
+        assert "--format" not in result.output
+        assert "--fields" not in result.output
 
     def test_info_success_default(self, runner: CliRunner, mocker: MockerFixture):
-        """Test successful info command with default options."""
-        # Mock VolumioRESTAPIClient
+        """The info alias fetches the system info and prints it as pretty JSON."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
-            "position": 0,
-            "title": "Test Song",
-            "artist": "Test Artist",
+        mock_client.get_system_info.return_value = {
+            "name": "Living Room",
+            "systemversion": "3.601",
         }
 
         mocker.patch(
@@ -479,7 +478,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["info"])
 
         assert result.exit_code == 0
-        assert "Test Song" in result.output
+        assert "Living Room" in result.output
+        mock_client.get_system_info.assert_called_once()
 
     def test_playback_status_help(self, runner: CliRunner):
         """Test playback status command with --help."""
@@ -515,7 +515,7 @@ class TestCLICommands:
     def test_info_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with custom host."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
+        mock_client.get_system_info.return_value = {"name": "Test"}
 
         mock_client_class = mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -529,85 +529,10 @@ class TestCLICommands:
         host_configuration = mock_client_class.call_args[0][0]
         assert host_configuration.host == "192.168.1.100"
 
-    def test_info_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
-        """Test info command with --format json."""
-        mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
-
-        mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
-            return_value=mock_client,
-        )
-
-        result = runner.invoke(main, ["info", "--format", "json"])
-
-        assert result.exit_code == 0
-        # Should be valid JSON
-        output_data = json.loads(result.output)
-        assert output_data["title"] == "Test"
-
-    def test_info_with_format_table(self, runner: CliRunner, mocker: MockerFixture):
-        """Test info command with --format table."""
-        mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
-
-        mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
-            return_value=mock_client,
-        )
-
-        result = runner.invoke(main, ["info", "--format", "table"])
-
-        assert result.exit_code == 0
-        assert "Volumio Status" in result.output
-        assert "Test Song" in result.output
-
-    def test_info_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
-        """Test info command with --fields all."""
-        mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
-            "title": "Test",
-            "volume": 100,
-            "extra": "data",
-        }
-
-        mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
-            return_value=mock_client,
-        )
-
-        result = runner.invoke(main, ["info", "--fields", "all"])
-
-        assert result.exit_code == 0
-        output_data = json.loads(result.output)
-        assert "extra" in output_data
-
-    def test_info_with_fields_short(self, runner: CliRunner, mocker: MockerFixture):
-        """Test info command with --fields short."""
-        mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
-            "title": "Test",
-            "volume": 100,
-            "extra": "data",
-        }
-
-        mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
-            return_value=mock_client,
-        )
-
-        result = runner.invoke(main, ["info", "--fields", "short"])
-
-        assert result.exit_code == 0
-        output_data = json.loads(result.output)
-        assert "title" in output_data
-        assert "volume" in output_data
-        assert "extra" not in output_data
-
     def test_info_with_raw_flag(self, runner: CliRunner, mocker: MockerFixture):
-        """Test info command with --raw flag."""
+        """Test info command with --raw flag prints compact JSON."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test", "volume": 100}
+        mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -617,15 +542,16 @@ class TestCLICommands:
         result = runner.invoke(main, ["info", "--raw"])
 
         assert result.exit_code == 0
+        # Compact single-line JSON
+        assert "\n" not in result.output.strip()
         output_data = json.loads(result.output)
-        # Raw should include all fields
-        assert "title" in output_data
-        assert "volume" in output_data
+        assert output_data["name"] == "Test"
+        assert output_data["systemversion"] == "3.601"
 
     def test_short_option_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -H shorthand for --host."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
+        mock_client.get_system_info.return_value = {"name": "Test"}
 
         mock_client_class = mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -641,7 +567,7 @@ class TestCLICommands:
     def test_short_option_ports(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -M/-P shorthands for --mpd-port/--rest-api-port."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
+        mock_client.get_system_info.return_value = {"name": "Test"}
 
         mock_client_class = mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -656,7 +582,7 @@ class TestCLICommands:
         assert host_configuration.rest_api_port == 8080
 
     def test_short_option_format(self, runner: CliRunner, mocker: MockerFixture):
-        """Test the -F shorthand for --format."""
+        """Test the -F shorthand for --format (on playback status)."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
 
@@ -665,14 +591,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["info", "-F", "table"])
+        result = runner.invoke(main, ["playback", "status", "-F", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Status" in result.output
         assert "Test Song" in result.output
 
     def test_short_option_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """Test the -L shorthand for --fields."""
+        """Test the -L shorthand for --fields (on playback status)."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "title": "Test",
@@ -685,16 +611,16 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["info", "-L", "all"])
+        result = runner.invoke(main, ["playback", "status", "-L", "all"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
         assert "extra" in output_data
 
     def test_short_option_raw(self, runner: CliRunner, mocker: MockerFixture):
-        """Test the -R shorthand for --raw."""
+        """Test the -R shorthand for --raw (on the info/system info command)."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test", "volume": 100}
+        mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -705,8 +631,8 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
-        assert "title" in output_data
-        assert "volume" in output_data
+        assert output_data["name"] == "Test"
+        assert output_data["systemversion"] == "3.601"
 
     def test_short_option_position(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -p shorthand for --position on playback play."""
@@ -727,7 +653,7 @@ class TestCLICommands:
     def test_info_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with --verbose flag."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
+        mock_client.get_system_info.return_value = {"name": "Test"}
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -743,7 +669,7 @@ class TestCLICommands:
     def test_info_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with connection error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        mock_client.get_system_info.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -758,7 +684,7 @@ class TestCLICommands:
     def test_info_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with API error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioAPIError("API error")
+        mock_client.get_system_info.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -775,7 +701,7 @@ class TestCLICommands:
     ):
         """Test info command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        mock_client.get_system_info.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -2927,6 +2853,123 @@ class TestCLICommands:
         assert "(empty)" in result.output
 
 
+class TestSystemCommands:
+    """Test cases for the system ping/version/info commands."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with usable system-utility methods."""
+        mock_client = mocker.Mock()
+        mock_client.ping.return_value = "pong"
+        mock_client.get_system_version.return_value = {
+            "systemversion": "3.601",
+            "hardware": "pi",
+        }
+        mock_client.get_system_info.return_value = {
+            "name": "Living Room",
+            "systemversion": "3.601",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_ping(self, runner: CliRunner, mocker: MockerFixture):
+        """system ping prints the response text."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "ping"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "pong"
+
+    def test_ping_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode ping prints the text as a quoted JSON string."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "system", "ping"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == '"pong"'
+
+    def test_ping_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """system ping exits 1 on a connection error."""
+        mock_client = self._mock_client(mocker)
+        mock_client.ping.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["system", "ping"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+    def test_version_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """system version prints pretty JSON by default."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "version"])
+
+        assert result.exit_code == 0
+        assert "\n" in result.output.strip()  # indented / multi-line
+        assert json.loads(result.output)["systemversion"] == "3.601"
+
+    def test_version_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """system version -R prints compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "version", "-R"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
+        assert json.loads(result.output)["hardware"] == "pi"
+
+    def test_version_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode system version prints compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "system", "version"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
+        assert json.loads(result.output)["systemversion"] == "3.601"
+
+    def test_version_api_error(self, runner: CliRunner, mocker: MockerFixture):
+        """system version exits 1 on an API error."""
+        mock_client = self._mock_client(mocker)
+        mock_client.get_system_version.side_effect = VolumioAPIError("API error")
+
+        result = runner.invoke(main, ["system", "version"])
+
+        assert result.exit_code == 1
+        assert "API error" in result.output
+
+    def test_info(self, runner: CliRunner, mocker: MockerFixture):
+        """system info prints the system information as pretty JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "info"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["name"] == "Living Room"
+
+    def test_top_level_info_is_alias_for_system_info(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The top-level info command produces the same output as system info."""
+        self._mock_client(mocker)
+
+        info_result = runner.invoke(main, ["info"])
+        system_info_result = runner.invoke(main, ["system", "info"])
+
+        assert info_result.exit_code == 0
+        assert info_result.output == system_info_result.output
+        assert json.loads(info_result.output)["name"] == "Living Room"
+
+
 class TestQueueActions:
     """Test cases for the queue clear/repeat/randomize action commands."""
 
@@ -3275,7 +3318,7 @@ class TestConfigurationFile:
         return CliRunner()
 
     def _mock_rest_client(self, mocker: MockerFixture):
-        """Patch VolumioRESTAPIClient so `info` succeeds with a minimal state."""
+        """Patch VolumioRESTAPIClient so `playback status` succeeds with a minimal state."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
@@ -3305,7 +3348,7 @@ class TestConfigurationFile:
             "volumio:\n  host: myconfig.local\n  scheme: https\n  rest-api-port: 9999\n",
         )
 
-        result = runner.invoke(main, ["-c", config, "-v", "info"])
+        result = runner.invoke(main, ["-c", config, "-v", "playback", "status"])
 
         assert result.exit_code == 0
         assert "https://myconfig.local:9999/api/v1/getState" in result.output
@@ -3321,7 +3364,9 @@ class TestConfigurationFile:
             "volumio:\n  host: myconfig.local\n  scheme: https\n  rest-api-port: 9999\n",
         )
 
-        result = runner.invoke(main, ["-c", config, "-H", "override.local", "-v", "info"])
+        result = runner.invoke(
+            main, ["-c", config, "-H", "override.local", "-v", "playback", "status"]
+        )
 
         assert result.exit_code == 0
         assert "https://override.local:9999/api/v1/getState" in result.output
@@ -3338,7 +3383,7 @@ class TestConfigurationFile:
             return_value=[config],
         )
 
-        result = runner.invoke(main, ["-v", "info"])
+        result = runner.invoke(main, ["-v", "playback", "status"])
 
         assert result.exit_code == 0
         assert "http://probed.local:3000/api/v1/getState" in result.output
@@ -3351,24 +3396,11 @@ class TestConfigurationFile:
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "output:\n  verbose: true\n")
 
-        result = runner.invoke(main, ["-c", config, "info"])
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
 
         assert result.exit_code == 0
         # Verbose output only appears because the config enabled it.
         assert "Connecting to" in result.output
-
-    def test_output_section_sets_format_for_info(
-        self, runner: CliRunner, mocker: MockerFixture, tmp_path
-    ):
-        """The output section's format applies to the top-level info command."""
-        self._mock_rest_client(mocker)
-        config = self._write_config(tmp_path, "output:\n  format: table\n")
-
-        result = runner.invoke(main, ["-c", config, "info"])
-
-        assert result.exit_code == 0
-        # 'table' format renders the heading banner instead of JSON.
-        assert "Volumio Status" in result.output
 
     def test_output_section_sets_format_for_playback_status(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -3389,7 +3421,7 @@ class TestConfigurationFile:
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "output:\n  format: table\n")
 
-        result = runner.invoke(main, ["-c", config, "info", "-F", "json"])
+        result = runner.invoke(main, ["-c", config, "playback", "status", "-F", "json"])
 
         assert result.exit_code == 0
         assert "Volumio Status" not in result.output
@@ -3405,16 +3437,13 @@ class TestConfigurationFile:
             "output:\n  playback-status:\n    format: table\n  track-info:\n    format: json\n",
         )
 
-        # playback-status subsection -> table for both `playback status` and `info`.
+        # playback-status subsection -> table for `playback status`.
         state_result = runner.invoke(main, ["-c", config, "playback", "status"])
-        info_result = runner.invoke(main, ["-c", config, "info"])
         # track-info subsection -> json (not a table).
         track_result = runner.invoke(main, ["-c", config, "track", "info"])
 
         assert state_result.exit_code == 0
         assert "Volumio Status" in state_result.output
-        assert info_result.exit_code == 0
-        assert "Volumio Status" in info_result.output
         assert track_result.exit_code == 0
         assert "Track Info" not in track_result.output
         assert '"title"' in track_result.output
@@ -3503,7 +3532,7 @@ class TestConfigurationFile:
         """With no config file anywhere, the hardcoded defaults are used."""
         self._mock_rest_client(mocker)
 
-        result = runner.invoke(main, ["-v", "info"])
+        result = runner.invoke(main, ["-v", "playback", "status"])
 
         assert result.exit_code == 0
         assert "http://volumio.local:3000/api/v1/getState" in result.output

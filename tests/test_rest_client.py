@@ -309,6 +309,146 @@ class TestVolumioRESTAPIClient:
 
         assert "Request to Volumio instance" in str(exc_info.value)
 
+    def test_ping_success(self, mocker: MockerFixture):
+        """Test successful ping() returns the response body text."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = "pong"
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.ping()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/ping", timeout=5.0
+        )
+        assert result == "pong"
+
+    def test_ping_connection_error(self, mocker: MockerFixture):
+        """Test ping() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection refused"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.ping()
+
+        assert "Failed to connect" in str(exc_info.value)
+
+    def test_ping_http_error(self, mocker: MockerFixture):
+        """Test ping() translates an HTTP error."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 503
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "503 Service Unavailable"
+        )
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.ping()
+
+        assert "HTTP error 503" in str(exc_info.value)
+
+    def test_get_system_version_success(self, mocker: MockerFixture):
+        """Test successful get_system_version() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "systemversion": "3.601",
+            "builddate": "2023-01-01",
+            "variant": "volumio",
+            "hardware": "pi",
+        }
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.get_system_version()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/getSystemVersion", timeout=5.0
+        )
+        assert data["systemversion"] == "3.601"
+
+    def test_get_system_version_timeout_error(self, mocker: MockerFixture):
+        """Test get_system_version() translates a timeout error."""
+        mocker.patch(
+            "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.get_system_version()
+
+        assert "timed out" in str(exc_info.value)
+
+    def test_get_system_version_invalid_json(self, mocker: MockerFixture):
+        """Test get_system_version() with an invalid JSON response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.get_system_version()
+
+        assert "Failed to parse JSON" in str(exc_info.value)
+
+    def test_get_system_info_success(self, mocker: MockerFixture):
+        """Test successful get_system_info() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "id": "abc",
+            "host": "http://volumio.local",
+            "name": "volumio",
+            "systemversion": "3.601",
+        }
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.get_system_info()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/getSystemInfo", timeout=5.0
+        )
+        assert data["name"] == "volumio"
+
+    def test_get_system_info_non_dict_response(self, mocker: MockerFixture):
+        """Test get_system_info() when the API returns non-dictionary JSON."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = []
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.get_system_info()
+
+        assert "Expected JSON object" in str(exc_info.value)
+
+    def test_get_system_info_generic_request_exception(self, mocker: MockerFixture):
+        """Test get_system_info() with a generic RequestException."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.RequestException("Generic error"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.get_system_info()
+
+        assert "Request to Volumio instance" in str(exc_info.value)
+
     def test_send_command_success(self, mocker: MockerFixture):
         """Test successful send_command() call."""
         # Mock response

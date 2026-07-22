@@ -10,11 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Command group `system` with `ping`, `version`, and `info` commands
 - Commands `queue clear`, `queue repeat`, and `queue randomize` to clear the queue and set the
   repeat and random modes
 
 ### Changed
 
+- The top-level `info` command is now an alias for `system info` instead of `playback status`
 - Renamed the `queue list` command to `queue get` and the corresponding configuration key
 - Renamed the `player` command group to `playback` and its `state` subcommand to `status`
   and the corresponding configuration key

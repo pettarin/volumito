@@ -323,3 +323,124 @@ class VolumioRESTAPIClient:
         if value is None:
             return self.send_command("random")
         return self.send_command(f"random&value={str(value).lower()}")
+
+    def _get(self, path: str) -> requests.Response:
+        """GET ``{rest_base_url}{path}``, translating request failures to Volumio errors.
+
+        Args:
+            path: The URL path (including any query string) to request
+
+        Returns:
+            The successful :class:`requests.Response`
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an HTTP error response
+        """
+        url = f"{self.host_configuration.rest_base_url}{path}"
+
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as e:
+            raise VolumioConnectionError(
+                f"Failed to connect to Volumio instance at "
+                f"{self.host_configuration.rest_base_url}: {e}"
+            ) from e
+        except requests.exceptions.Timeout as e:
+            raise VolumioConnectionError(
+                f"Connection to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} "
+                f"timed out after {self.timeout} seconds: {e}"
+            ) from e
+        except requests.exceptions.HTTPError as e:
+            raise VolumioAPIError(
+                f"Volumio API returned HTTP error {response.status_code}: {e}"
+            ) from e
+        except requests.exceptions.RequestException as e:
+            raise VolumioConnectionError(
+                f"Request to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} failed: {e}"
+            ) from e
+
+        return response
+
+    def _get_json(self, path: str) -> dict[str, Any]:
+        """GET ``path`` and parse the response as a JSON object.
+
+        Args:
+            path: The URL path (including any query string) to request
+
+        Returns:
+            The parsed JSON object
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        response = self._get(path)
+
+        try:
+            data = response.json()
+        except ValueError as e:
+            raise VolumioAPIError(
+                f"Failed to parse JSON response from Volumio API: {e}"
+            ) from e
+
+        if not isinstance(data, dict):
+            raise VolumioAPIError(
+                f"Expected JSON object from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
+    def _get_text(self, path: str) -> str:
+        """GET ``path`` and return the response body as text.
+
+        Args:
+            path: The URL path (including any query string) to request
+
+        Returns:
+            The response body text
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an HTTP error response
+        """
+        return self._get(path).text
+
+    def ping(self) -> str:
+        """Query the /api/v1/ping endpoint.
+
+        Returns:
+            The response body text (``"pong"`` from a healthy Volumio instance)
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_text("/api/v1/ping")
+
+    def get_system_version(self) -> dict[str, Any]:
+        """Query the /api/v1/getSystemVersion endpoint.
+
+        Returns:
+            A dictionary containing the Volumio system version information
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getSystemVersion")
+
+    def get_system_info(self) -> dict[str, Any]:
+        """Query the /api/v1/getSystemInfo endpoint.
+
+        Returns:
+            A dictionary containing the Volumio system information
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getSystemInfo")
