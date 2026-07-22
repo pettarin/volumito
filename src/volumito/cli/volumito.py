@@ -45,7 +45,7 @@ MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
     "Options -d/--output-directory and -f/--output-file are mutually exclusive."
 )
 
-# Short fields list for the "player state" command
+# Short fields list for the "playback state" command
 PLAYER_STATE_SHORT_FIELDS = [
     "status",
     "position",
@@ -573,13 +573,13 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
 
 
 def print_resulting_state_option(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-r``/``--print-resulting-state`` option to a player subcommand."""
+    """Add the ``-r``/``--print-resulting-state`` option to a playback subcommand."""
     return click.option(
         "--print-resulting-state/--no-print-resulting-state",
         "-r",
         default=True,
         show_default=True,
-        help="After the command, wait 1 second and print the resulting player state",
+        help="After the command, wait 1 second and print the resulting playback state",
     )(func)
 
 
@@ -593,7 +593,7 @@ def rest_api_sleep(ctx: click.Context) -> None:
 
 
 def maybe_print_resulting_state(ctx: click.Context, enabled: bool) -> None:
-    """When enabled, wait the configured number of seconds and invoke "player state".
+    """When enabled, wait the configured number of seconds and invoke "playback state".
 
     Args:
         ctx: Click context object (its ``obj`` is inherited by the invoked command)
@@ -601,7 +601,7 @@ def maybe_print_resulting_state(ctx: click.Context, enabled: bool) -> None:
     """
     if enabled:
         rest_api_sleep(ctx)
-        ctx.invoke(player_state)
+        ctx.invoke(playback_state)
 
 
 class VolumeParamType(click.ParamType):
@@ -817,8 +817,8 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     """Return the defaults of the per-command options used in the configuration file.
 
     These options live on subcommands, not the top-level group: fields/format/raw on
-    ``player state``, print-resulting-state on the player action commands, and the
-    download options on ``track audio``. Read them from the ``player_state``, ``toggle``,
+    ``playback state``, print-resulting-state on the playback action commands, and the
+    download options on ``track audio``. Read them from the ``playback_state``, ``toggle``,
     and ``audio`` command objects so the generated configuration mirrors the real
     defaults without duplication.
     """
@@ -833,7 +833,7 @@ def command_scoped_option_defaults() -> dict[str, Any]:
         "overwrite_existing_files",
     }
     defaults: dict[str, Any] = {}
-    for command in (player_state, toggle, audio):
+    for command in (playback_state, toggle, audio):
         for param in command.params:
             if isinstance(param, click.Option) and param.name in wanted:
                 defaults[param.name] = param.default
@@ -1035,12 +1035,12 @@ def render_state(
 
 @main.group()
 @click.pass_context
-def player(ctx: click.Context) -> None:
+def playback(ctx: click.Context) -> None:
     """Commands for controlling the playback of the Volumio instance."""
     pass
 
 
-@player.command("state")
+@playback.command("state")
 @click.pass_context
 @click.option(
     "--fields",
@@ -1066,13 +1066,13 @@ def player(ctx: click.Context) -> None:
     default=False,
     help="Output raw JSON without formatting (overrides --format)",
 )
-def player_state(
+def playback_state(
     ctx: click.Context,
     fields: str,
     output_format: str,
     raw: bool,
 ) -> None:
-    """Get the current player state from a Volumio instance.
+    """Get the current playback state from a Volumio instance.
 
     Retrieves and displays the current state of a Volumio music player instance,
     including playback status, volume, track information, and more. Also available
@@ -1081,11 +1081,11 @@ def player_state(
     render_state(ctx, fields, output_format, raw, PLAYER_STATE_SHORT_FIELDS)
 
 
-# "info" is a top-level synonym for "player state"
-main.add_command(player_state, name="info")
+# "info" is a top-level synonym for "playback state"
+main.add_command(playback_state, name="info")
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
@@ -1096,7 +1096,7 @@ def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @click.option(
     "--position",
@@ -1120,7 +1120,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_state: bool) 
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def pause(ctx: click.Context, print_resulting_state: bool) -> None:
@@ -1129,7 +1129,7 @@ def pause(ctx: click.Context, print_resulting_state: bool) -> None:
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def stop(ctx: click.Context, print_resulting_state: bool) -> None:
@@ -1138,7 +1138,7 @@ def stop(ctx: click.Context, print_resulting_state: bool) -> None:
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def next(ctx: click.Context, print_resulting_state: bool) -> None:
@@ -1147,7 +1147,7 @@ def next(ctx: click.Context, print_resulting_state: bool) -> None:
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def previous(ctx: click.Context, print_resulting_state: bool) -> None:
@@ -1158,7 +1158,7 @@ def previous(ctx: click.Context, print_resulting_state: bool) -> None:
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=VolumeParamType())
 @print_resulting_state_option
@@ -1178,11 +1178,11 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_state: b
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def mute(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Mute the volume of the Volumio instance (synonym for `player volume mute`)."""
+    """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
     execute_command(
         ctx,
         "volume mute",
@@ -1192,11 +1192,11 @@ def mute(ctx: click.Context, print_resulting_state: bool) -> None:
     maybe_print_resulting_state(ctx, print_resulting_state)
 
 
-@player.command()
+@playback.command()
 @click.pass_context
 @print_resulting_state_option
 def unmute(ctx: click.Context, print_resulting_state: bool) -> None:
-    """Unmute the volume of the Volumio instance (synonym for `player volume unmute`)."""
+    """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
     execute_command(
         ctx,
         "volume unmute",

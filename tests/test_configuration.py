@@ -137,7 +137,7 @@ class TestLoadDefaultMap:
             "output:\n"
             "  verbose: true\n"
             "  format: table\n"
-            "  player-state:\n"
+            "  playback-state:\n"
             "    format: json\n"
             "downloads:\n"
             "  output-directory: /shared\n"
@@ -152,7 +152,7 @@ class TestLoadDefaultMap:
         assert result == {
             "volumio": {"host": "myconfig.local", "scheme": "https"},
             "timeouts": {"rest-api-timeout": 7.5},
-            "output": {"verbose": True, "format": "table", "player-state": {"format": "json"}},
+            "output": {"verbose": True, "format": "table", "playback-state": {"format": "json"}},
             "downloads": {
                 "output-directory": "/shared",
                 "track-audio": {"output-directory": "/music"},
@@ -171,10 +171,10 @@ class TestLoadDefaultMap:
     def test_output_subsection_unknown_key_raises(self, tmp_path):
         """An unrecognized key in an output subsection raises BadParameter."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("output:\n  player-state:\n    verbose: true\n")
+        config.write_text("output:\n  playback-state:\n    verbose: true\n")
 
         with pytest.raises(
-            click.BadParameter, match="unknown key 'verbose' in section 'output.player-state'"
+            click.BadParameter, match="unknown key 'verbose' in section 'output.playback-state'"
         ):
             load_configuration(str(config))
 
@@ -334,7 +334,7 @@ class TestRenderDefaultConfiguration:
         result = render_default_configuration(_DEFAULTS, "1.2.3")
         document = yaml.safe_load(result)
 
-        assert document["output"]["player-state"] == _DISPLAY_DEFAULTS
+        assert document["output"]["playback-state"] == _DISPLAY_DEFAULTS
         assert document["output"]["track-info"] == _DISPLAY_DEFAULTS
         assert document["output"]["queue-list"] == _DISPLAY_DEFAULTS
         # Shared scalars stay at the top level; fields/format/raw only in subsections.
@@ -378,7 +378,7 @@ class TestRenderDefaultConfiguration:
                 "verbose": False,
                 "machine-readable": False,
                 "print-resulting-state": True,
-                "player-state": _DISPLAY_DEFAULTS,
+                "playback-state": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-list": _DISPLAY_DEFAULTS,
             },
@@ -408,7 +408,7 @@ class TestRenderDefaultConfiguration:
                 "verbose": False,
                 "machine-readable": False,
                 "print-resulting-state": True,
-                "player-state": _DISPLAY_DEFAULTS,
+                "playback-state": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-list": _DISPLAY_DEFAULTS,
             },
@@ -429,7 +429,7 @@ class TestFlattenConfiguration:
             "output": {
                 "verbose": True,
                 "format": "table",
-                "player-state": {"format": "json"},
+                "playback-state": {"format": "json"},
             },
             "downloads": {
                 "output-directory": "/shared",
@@ -443,7 +443,7 @@ class TestFlattenConfiguration:
             ("volumio.rest-api-port", 9999),
             ("output.verbose", True),
             ("output.format", "table"),
-            ("output.player-state.format", "json"),
+            ("output.playback-state.format", "json"),
             ("downloads.output-directory", "/shared"),
             ("downloads.track-audio.output-directory", "/music"),
             ("downloads.track-albumart.file-name-template", "{title}.{extension}"),
@@ -474,7 +474,7 @@ class TestBuildClickDefaultMap:
         formatting = {"fields": "all", "output_format": "table", "raw": True}
         assert result == {
             "info": formatting,
-            "player": {"state": formatting},
+            "playback": {"state": formatting},
             "track": {"info": formatting},
             "queue": {"list": formatting},
         }
@@ -485,25 +485,25 @@ class TestBuildClickDefaultMap:
             {
                 "output": {
                     "format": "pretty",
-                    "player-state": {"format": "table"},
+                    "playback-state": {"format": "table"},
                     "track-info": {"format": "json"},
                 }
             }
         )
 
-        # player-state override reaches both player.state and the info synonym.
+        # playback-state override reaches both playback.state and the info synonym.
         assert result["info"] == {"output_format": "table"}
-        assert result["player"]["state"] == {"output_format": "table"}
+        assert result["playback"]["state"] == {"output_format": "table"}
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-list has no override, so it keeps the shared value.
         assert result["queue"]["list"] == {"output_format": "pretty"}
 
-    def test_print_resulting_state_replicated_under_player_actions(self):
-        """print-resulting-state is nested under every player action, not the display paths."""
+    def test_print_resulting_state_replicated_under_playback_actions(self):
+        """print-resulting-state is nested under every playback action, not the display paths."""
         result = build_click_default_map({"output": {"print-resulting-state": False}})
 
         assert result == {
-            "player": {
+            "playback": {
                 "toggle": {"print_resulting_state": False},
                 "play": {"print_resulting_state": False},
                 "pause": {"print_resulting_state": False},

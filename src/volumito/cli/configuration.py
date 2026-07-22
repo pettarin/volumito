@@ -19,7 +19,7 @@ SECTION_KEYS: dict[str, list[str]] = {
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
 # per-command subsections override the display keys (fields/format/raw). verbose and
-# machine-readable are global; print-resulting-state applies to the player actions.
+# machine-readable are global; print-resulting-state applies to the playback actions.
 OUTPUT_SCALAR_KEYS = [
     "verbose",
     "machine-readable",
@@ -29,7 +29,7 @@ OUTPUT_SCALAR_KEYS = [
     "print-resulting-state",
 ]
 DISPLAY_KEYS = ["fields", "format", "raw"]
-DISPLAY_SUBSECTIONS = ["player-state", "track-info", "queue-list"]
+DISPLAY_SUBSECTIONS = ["playback-state", "track-info", "queue-list"]
 
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
@@ -60,7 +60,7 @@ KEY_COMMENTS: dict[str, str] = {
     "format": "Output format: json, pretty, or table",
     "raw": "Output raw JSON, overriding the format",
     "print-resulting-state": (
-        "After a player command like pause or volume, print the resulting player state"
+        "After a playback command like pause or volume, print the resulting playback state"
     ),
     "file-name-template": "Template (Python str.format) for the -d output file name",
     "output-directory": "Directory to download into (mutually exclusive with output-file)",
@@ -71,16 +71,16 @@ KEY_COMMENTS: dict[str, str] = {
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
 _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 
-# --print-resulting-state lives on the player action commands.
+# --print-resulting-state lives on the playback action commands.
 ACTION_COMMAND_PATHS = [
-    ["player", name]
+    ["playback", name]
     for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
 ]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
-# The "player-state" subsection also governs the top-level "info" synonym.
+# The "playback-state" subsection also governs the top-level "info" synonym.
 DISPLAY_SUBSECTION_PATHS = {
-    "player-state": [["player", "state"], ["info"]],
+    "playback-state": [["playback", "state"], ["info"]],
     "track-info": [["track", "info"]],
     "queue-list": [["queue", "list"]],
 }

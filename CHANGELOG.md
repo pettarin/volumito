@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.11] - 2026-07-22
 
+### Changed
+
+- Renamed the `player` command group to `playback` (its subcommands are unchanged, and `info`
+  remains a top-level synonym for `playback state`)
+- Renamed the configuration file's `output.player-state` subsection to `output.playback-state`
+
 
 ## [0.0.10] - 2026-07-20
 

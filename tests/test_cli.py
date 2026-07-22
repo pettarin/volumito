@@ -353,7 +353,7 @@ class TestCLICommands:
     def _no_resulting_state(self, mocker: MockerFixture):
         """Isolate per-command tests from the print-resulting-state feature.
 
-        Player action subcommands print the resulting "player state" by default;
+        Player action subcommands print the resulting "playback state" by default;
         no-op the helper here so these tests stay focused (and fast). The feature
         itself is covered by TestPrintResultingState.
         """
@@ -401,14 +401,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.10" in result.output
+        assert "volumito, version 0.0.11" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.10"'
+        assert result.output.strip() == '"0.0.11"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -417,7 +417,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.10"'
+        assert result.output.strip() == '"0.0.11"'
 
     def test_info_help(self, runner: CliRunner):
         """Test info command with --help."""
@@ -448,9 +448,9 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Test Song" in result.output
 
-    def test_player_state_help(self, runner: CliRunner):
-        """Test player state command with --help."""
-        result = runner.invoke(main, ["player", "state", "--help"])
+    def test_playback_state_help(self, runner: CliRunner):
+        """Test playback state command with --help."""
+        result = runner.invoke(main, ["playback", "state", "--help"])
 
         assert result.exit_code == 0
         assert "--format" in result.output
@@ -460,8 +460,8 @@ class TestCLICommands:
         assert "-L" in result.output
         assert "-R" in result.output
 
-    def test_player_state_success_default(self, runner: CliRunner, mocker: MockerFixture):
-        """Test player state (the canonical form of info) with default options."""
+    def test_playback_state_success_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Test playback state (the canonical form of info) with default options."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "position": 0,
@@ -474,7 +474,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "state"])
+        result = runner.invoke(main, ["playback", "state"])
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
@@ -676,7 +676,7 @@ class TestCLICommands:
         assert "volume" in output_data
 
     def test_short_option_position(self, runner: CliRunner, mocker: MockerFixture):
-        """Test the -p shorthand for --position on player play."""
+        """Test the -p shorthand for --position on playback play."""
         mock_client = mocker.Mock()
         mock_client.play.return_value = {"response": "play"}
 
@@ -685,7 +685,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "play", "-p", "3"])
+        result = runner.invoke(main, ["playback", "play", "-p", "3"])
 
         assert result.exit_code == 0
         # Position is 1-indexed on the CLI, 0-indexed to the client
@@ -755,12 +755,12 @@ class TestCLICommands:
         # No error output with machine-readable flag
         assert result.output == ""
 
-    def test_player_help(self, runner: CliRunner):
-        """Test player group with --help."""
-        result = runner.invoke(main, ["player", "--help"])
+    def test_playback_help(self, runner: CliRunner):
+        """Test playback group with --help."""
+        result = runner.invoke(main, ["playback", "--help"])
 
         assert result.exit_code == 0
-        assert "player" in result.output.lower()
+        assert "playback" in result.output.lower()
         assert "state" in result.output.lower()
         assert "toggle" in result.output.lower()
         assert "play" in result.output.lower()
@@ -769,19 +769,19 @@ class TestCLICommands:
         assert "mute" in result.output.lower()
         assert "unmute" in result.output.lower()
 
-    def test_player_no_subcommand(self, runner: CliRunner):
-        """Test player group without subcommand."""
-        result = runner.invoke(main, ["player"])
+    def test_playback_no_subcommand(self, runner: CliRunner):
+        """Test playback group without subcommand."""
+        result = runner.invoke(main, ["playback"])
 
         # Click returns exit code 2 when a group is invoked without a subcommand
         assert result.exit_code == 2
-        assert "player" in result.output.lower()
+        assert "playback" in result.output.lower()
         # Should show usage/error information when no subcommand is provided
         assert "toggle" in result.output.lower() or "play" in result.output.lower()
 
     def test_toggle_help(self, runner: CliRunner):
         """Test toggle command with --help."""
-        result = runner.invoke(main, ["player", "toggle", "--help"])
+        result = runner.invoke(main, ["playback", "toggle", "--help"])
 
         assert result.exit_code == 0
         assert "toggle" in result.output.lower()
@@ -797,7 +797,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "toggle"])
+        result = runner.invoke(main, ["playback", "toggle"])
 
         assert result.exit_code == 0
         assert "Command 'toggle' executed successfully" in result.output
@@ -812,7 +812,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--host", "192.168.1.50", "player", "toggle"])
+        result = runner.invoke(main, ["--host", "192.168.1.50", "playback", "toggle"])
 
         assert result.exit_code == 0
         host_configuration = mock_client_class.call_args[0][0]
@@ -828,7 +828,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "player", "toggle"])
+        result = runner.invoke(main, ["--verbose", "playback", "toggle"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -843,7 +843,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "toggle"])
+        result = runner.invoke(main, ["playback", "toggle"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -858,7 +858,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "toggle"])
+        result = runner.invoke(main, ["playback", "toggle"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -873,7 +873,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "play"])
+        result = runner.invoke(main, ["playback", "play"])
 
         assert result.exit_code == 0
         assert "Command 'play' executed successfully" in result.output
@@ -888,7 +888,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "play"])
+        result = runner.invoke(main, ["playback", "play"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -903,7 +903,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "player", "play"])
+        result = runner.invoke(main, ["--verbose", "playback", "play"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -918,7 +918,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "pause"])
+        result = runner.invoke(main, ["playback", "pause"])
 
         assert result.exit_code == 0
         assert "Command 'pause' executed successfully" in result.output
@@ -933,7 +933,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "pause"])
+        result = runner.invoke(main, ["playback", "pause"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -948,7 +948,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "player", "pause"])
+        result = runner.invoke(main, ["--machine-readable", "playback", "pause"])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -963,7 +963,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "stop"])
+        result = runner.invoke(main, ["playback", "stop"])
 
         assert result.exit_code == 0
         assert "Command 'stop' executed successfully" in result.output
@@ -978,7 +978,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "stop"])
+        result = runner.invoke(main, ["playback", "stop"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -993,7 +993,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "next"])
+        result = runner.invoke(main, ["playback", "next"])
 
         assert result.exit_code == 0
         assert "Command 'next' executed successfully" in result.output
@@ -1014,7 +1014,7 @@ class TestCLICommands:
                 "--host", "192.168.1.100",
                 "--rest-api-port", "8080",
                 "--rest-api-timeout", "10",
-                "player", "next"
+                "playback", "next"
             ],
         )
 
@@ -1035,7 +1035,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "previous"])
+        result = runner.invoke(main, ["playback", "previous"])
 
         assert result.exit_code == 0
         assert "Command 'previous' executed successfully" in result.output
@@ -1050,7 +1050,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "previous"])
+        result = runner.invoke(main, ["playback", "previous"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -1067,7 +1067,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "player", "play"])
+        result = runner.invoke(main, ["--machine-readable", "playback", "play"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -1082,7 +1082,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "player", "stop"])
+        result = runner.invoke(main, ["--verbose", "playback", "stop"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -1097,7 +1097,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "next"])
+        result = runner.invoke(main, ["playback", "next"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -1112,7 +1112,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "previous"])
+        result = runner.invoke(main, ["playback", "previous"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -1127,7 +1127,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "player", "toggle"])
+        result = runner.invoke(main, ["--machine-readable", "playback", "toggle"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -1142,7 +1142,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "play"])
+        result = runner.invoke(main, ["playback", "play"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -1157,7 +1157,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "pause"])
+        result = runner.invoke(main, ["playback", "pause"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -1172,7 +1172,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "stop"])
+        result = runner.invoke(main, ["playback", "stop"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -1187,7 +1187,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "next"])
+        result = runner.invoke(main, ["playback", "next"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -1202,7 +1202,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "player", "pause"])
+        result = runner.invoke(main, ["--verbose", "playback", "pause"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -1218,7 +1218,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "player", "next"])
+        result = runner.invoke(main, ["--verbose", "playback", "next"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -1234,21 +1234,21 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "player", "previous"])
+        result = runner.invoke(main, ["--verbose", "playback", "previous"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
         assert "Response:" in result.output
 
     def test_volume_help(self, runner: CliRunner):
-        """Test player volume command with --help."""
-        result = runner.invoke(main, ["player", "volume", "--help"])
+        """Test playback volume command with --help."""
+        result = runner.invoke(main, ["playback", "volume", "--help"])
 
         assert result.exit_code == 0
         assert "volume" in result.output.lower()
 
     def test_volume_absolute_success(self, runner: CliRunner, mocker: MockerFixture):
-        """Test player volume with an absolute integer level."""
+        """Test playback volume with an absolute integer level."""
         mock_client = mocker.Mock()
         mock_client.volume.return_value = {"response": "volume"}
 
@@ -1257,7 +1257,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume", "50"])
+        result = runner.invoke(main, ["playback", "volume", "50"])
 
         assert result.exit_code == 0
         assert "Command 'volume 50' executed successfully" in result.output
@@ -1265,7 +1265,7 @@ class TestCLICommands:
         mock_client.volume.assert_called_once_with(50)
 
     def test_volume_no_value_prints_current(self, runner: CliRunner, mocker: MockerFixture):
-        """Test player volume without a value prints the current volume."""
+        """Test playback volume without a value prints the current volume."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"volume": 42, "title": "Test"}
 
@@ -1274,7 +1274,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume"])
+        result = runner.invoke(main, ["playback", "volume"])
 
         assert result.exit_code == 0
         assert "42" in result.output
@@ -1293,7 +1293,7 @@ class TestCLICommands:
     def test_volume_alias_success(
         self, runner: CliRunner, mocker: MockerFixture, spelling: str, canonical: str
     ):
-        """Test player volume normalizes step aliases to the canonical keyword."""
+        """Test playback volume normalizes step aliases to the canonical keyword."""
         mock_client = mocker.Mock()
         mock_client.volume.return_value = {"response": "volume"}
 
@@ -1302,7 +1302,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume", spelling])
+        result = runner.invoke(main, ["playback", "volume", spelling])
 
         assert result.exit_code == 0
         mock_client.volume.assert_called_once_with(canonical)
@@ -1311,7 +1311,7 @@ class TestCLICommands:
     def test_volume_keyword_success(
         self, runner: CliRunner, mocker: MockerFixture, keyword: str
     ):
-        """Test player volume with each accepted keyword value."""
+        """Test playback volume with each accepted keyword value."""
         mock_client = mocker.Mock()
         mock_client.volume.return_value = {"response": "volume"}
 
@@ -1320,14 +1320,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume", keyword])
+        result = runner.invoke(main, ["playback", "volume", keyword])
 
         assert result.exit_code == 0
         mock_client.volume.assert_called_once_with(keyword)
 
     @pytest.mark.parametrize("level", ["0", "100"])
     def test_volume_boundaries(self, runner: CliRunner, mocker: MockerFixture, level: str):
-        """Test player volume accepts the 0 and 100 boundary levels."""
+        """Test playback volume accepts the 0 and 100 boundary levels."""
         mock_client = mocker.Mock()
         mock_client.volume.return_value = {"response": "volume"}
 
@@ -1336,14 +1336,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume", level])
+        result = runner.invoke(main, ["playback", "volume", level])
 
         assert result.exit_code == 0
         mock_client.volume.assert_called_once_with(int(level))
 
     @pytest.mark.parametrize("bad_value", ["101", "-1", "foo", "UP", "+"])
     def test_volume_invalid(self, runner: CliRunner, mocker: MockerFixture, bad_value: str):
-        """Test player volume rejects out-of-range, non-numeric, and non-lowercase values."""
+        """Test playback volume rejects out-of-range, non-numeric, and non-lowercase values."""
         mock_client = mocker.Mock()
 
         mocker.patch(
@@ -1351,14 +1351,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "volume", bad_value])
+        result = runner.invoke(main, ["playback", "volume", bad_value])
 
         # Click reports a usage error (exit code 2) and never calls the client
         assert result.exit_code == 2
         mock_client.volume.assert_not_called()
 
     def test_mute_synonym(self, runner: CliRunner, mocker: MockerFixture):
-        """Test player mute is a synonym for player volume mute."""
+        """Test playback mute is a synonym for playback volume mute."""
         mock_client = mocker.Mock()
         mock_client.volume.return_value = {"response": "volume"}
 
@@ -1367,14 +1367,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "mute"])
+        result = runner.invoke(main, ["playback", "mute"])
 
         assert result.exit_code == 0
         assert "Command 'volume mute' executed successfully" in result.output
         mock_client.volume.assert_called_once_with("mute")
 
     def test_unmute_synonym(self, runner: CliRunner, mocker: MockerFixture):
-        """Test player unmute is a synonym for player volume unmute."""
+        """Test playback unmute is a synonym for playback volume unmute."""
         mock_client = mocker.Mock()
         mock_client.volume.return_value = {"response": "volume"}
 
@@ -1383,7 +1383,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["player", "unmute"])
+        result = runner.invoke(main, ["playback", "unmute"])
 
         assert result.exit_code == 0
         assert "Command 'volume unmute' executed successfully" in result.output
@@ -1493,7 +1493,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "info", "-F", "table"])
 
         assert result.exit_code == 0
-        # Heading is "Track Info", not the player's "Volumio State"
+        # Heading is "Track Info", not the playback's "Volumio State"
         assert "Track Info" in result.output
         assert "Volumio State" not in result.output
         assert "Test Song" in result.output
@@ -2895,7 +2895,7 @@ class TestCLICommands:
 
 
 class TestPrintResultingState:
-    """Test cases for the -r/--print-resulting-state option on player commands."""
+    """Test cases for the -r/--print-resulting-state option on playback commands."""
 
     @pytest.fixture
     def runner(self):
@@ -2919,10 +2919,10 @@ class TestPrintResultingState:
         return mock_client, mock_sleep
 
     def test_default_prints_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
-        """By default, a player action waits 1 second and prints the resulting state."""
+        """By default, a playback action waits 1 second and prints the resulting state."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["player", "pause"])
+        result = runner.invoke(main, ["playback", "pause"])
 
         assert result.exit_code == 0
         assert "Command 'pause' executed successfully" in result.output
@@ -2935,7 +2935,7 @@ class TestPrintResultingState:
         """--no-print-resulting-state skips the sleep and the state print."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["player", "pause", "--no-print-resulting-state"])
+        result = runner.invoke(main, ["playback", "pause", "--no-print-resulting-state"])
 
         assert result.exit_code == 0
         assert "Command 'pause' executed successfully" in result.output
@@ -2947,7 +2947,7 @@ class TestPrintResultingState:
         """The -r short flag behaves like the enabled default."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["player", "pause", "-r"])
+        result = runner.invoke(main, ["playback", "pause", "-r"])
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
@@ -2959,7 +2959,7 @@ class TestPrintResultingState:
         """A command taking an argument (volume) also prints the resulting state."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["player", "volume", "50"])
+        result = runner.invoke(main, ["playback", "volume", "50"])
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
@@ -2971,7 +2971,7 @@ class TestPrintResultingState:
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["--rest-api-sleep-before-next-call", "0.5", "player", "pause"]
+            main, ["--rest-api-sleep-before-next-call", "0.5", "playback", "pause"]
         )
 
         assert result.exit_code == 0
@@ -3174,14 +3174,14 @@ class TestConfigurationFile:
         # 'table' format renders the heading banner instead of JSON.
         assert "Volumio State" in result.output
 
-    def test_output_section_sets_format_for_player_state(
+    def test_output_section_sets_format_for_playback_state(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The output section's format applies to the group-nested player state command."""
+        """The output section's format applies to the group-nested playback state command."""
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "output:\n  format: table\n")
 
-        result = runner.invoke(main, ["-c", config, "player", "state"])
+        result = runner.invoke(main, ["-c", config, "playback", "state"])
 
         assert result.exit_code == 0
         assert "Volumio State" in result.output
@@ -3206,11 +3206,11 @@ class TestConfigurationFile:
         self._mock_rest_client(mocker)
         config = self._write_config(
             tmp_path,
-            "output:\n  player-state:\n    format: table\n  track-info:\n    format: json\n",
+            "output:\n  playback-state:\n    format: table\n  track-info:\n    format: json\n",
         )
 
-        # player-state subsection -> table for both `player state` and `info`.
-        state_result = runner.invoke(main, ["-c", config, "player", "state"])
+        # playback-state subsection -> table for both `playback state` and `info`.
+        state_result = runner.invoke(main, ["-c", config, "playback", "state"])
         info_result = runner.invoke(main, ["-c", config, "info"])
         # track-info subsection -> json (not a table).
         track_result = runner.invoke(main, ["-c", config, "track", "info"])
@@ -3226,12 +3226,12 @@ class TestConfigurationFile:
     def test_print_resulting_state_from_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The output section can disable the resulting-state print for player actions."""
+        """The output section can disable the resulting-state print for playback actions."""
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
         mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
         config = self._write_config(tmp_path, "output:\n  print-resulting-state: false\n")
 
-        result = runner.invoke(main, ["-c", config, "player", "toggle"])
+        result = runner.invoke(main, ["-c", config, "playback", "toggle"])
 
         assert result.exit_code == 0
         mock_maybe.assert_called_once()
@@ -3244,7 +3244,7 @@ class TestConfigurationFile:
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
         mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
 
-        result = runner.invoke(main, ["player", "toggle"])
+        result = runner.invoke(main, ["playback", "toggle"])
 
         assert result.exit_code == 0
         mock_maybe.assert_called_once()
@@ -3394,7 +3394,7 @@ class TestConfigurationCommands:
                     "verbose": False,
                     "machine-readable": False,
                     "print-resulting-state": True,
-                    "player-state": _DISPLAY_DEFAULTS,
+                    "playback-state": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,
                     "queue-list": _DISPLAY_DEFAULTS,
                 },
@@ -3477,7 +3477,7 @@ class TestConfigurationCommands:
         config = tmp_path / "volumito.yaml"
         config.write_text(
             "volumio:\n  host: myhost.local\n"
-            "output:\n  verbose: true\n  format: table\n  player-state:\n    format: json\n"
+            "output:\n  verbose: true\n  format: table\n  playback-state:\n    format: json\n"
             "downloads:\n  output-directory: /shared\n"
             "  track-audio:\n    file-name-template: 'a.flac'\n"
         )
@@ -3489,7 +3489,7 @@ class TestConfigurationCommands:
         assert "volumio.host = myhost.local" in result.output
         assert "output.verbose = True" in result.output
         assert "output.format = table" in result.output
-        assert "output.player-state.format = json" in result.output
+        assert "output.playback-state.format = json" in result.output
         assert "downloads.output-directory = /shared" in result.output
         assert "downloads.track-audio.file-name-template = a.flac" in result.output
 
