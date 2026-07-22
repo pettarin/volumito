@@ -497,6 +497,53 @@ class TestVolumioRESTAPIClient:
 
         assert "Failed to parse JSON" in str(exc_info.value)
 
+    def test_get_zones_success(self, mocker: MockerFixture):
+        """Test successful get_zones() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "zones": [
+                {"id": "abc", "host": "http://192.168.1.1", "name": "Volumio", "isSelf": True}
+            ]
+        }
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.get_zones()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/getzones", timeout=5.0
+        )
+        assert data["zones"][0]["name"] == "Volumio"
+
+    def test_get_zones_connection_error(self, mocker: MockerFixture):
+        """Test get_zones() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.get_zones()
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_get_zones_invalid_json(self, mocker: MockerFixture):
+        """Test get_zones() with an invalid JSON response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.get_zones()
+
+        assert "Failed to parse JSON" in str(exc_info.value)
+
     def test_send_command_success(self, mocker: MockerFixture):
         """Test successful send_command() call."""
         # Mock response

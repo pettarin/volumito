@@ -36,6 +36,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-get": DISPLAY_KEYS,
+    "zones-get": DISPLAY_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
@@ -92,6 +93,7 @@ DISPLAY_SUBSECTION_PATHS = {
     "playback-status": [["playback", "status"]],
     "track-info": [["track", "info"]],
     "queue-get": [["queue", "get"]],
+    "zones-get": [["zones", "get"]],
     "system-version": [["system", "version"]],
     # "info" is the top-level synonym of "system info"
     "system-info": [["system", "info"], ["info"]],

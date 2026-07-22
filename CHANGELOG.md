@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Command group `collection` with the `statistics` command
+- Command group `zones` with the `get` command
 - Command group `system` with `ping`, `version`, and `info` commands
 - Commands `queue clear`, `queue repeat`, and `queue randomize` to clear the queue and set the
   repeat and random modes

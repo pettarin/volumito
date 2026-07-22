@@ -111,6 +111,19 @@ volumito collection statistics
 volumito collection statistics --format table
 ```
 
+### Zones
+
+List the multiroom zones seen by the Volumio instance:
+
+```bash
+# Host, name, isSelf, and playback state of every zone (default short fields)
+volumito zones get
+volumito zones get --format table
+
+# All available fields
+volumito zones get --fields all
+```
+
 ### Connection Options
 
 Specify custom connection parameters:
@@ -206,10 +219,11 @@ downloads:
 
 The `output` section's `fields` and `format` keys set the defaults for the corresponding
 `--fields`/`--format` options of the commands that support them: `format` applies to `playback status`,
-`track info`, `queue get`, `system version`, `system info`, and `collection statistics`, while `fields`
-applies to the first three only. A key placed directly under `output` applies to all the commands accepting
-it; the optional `playback-status`, `track-info`, `queue-get`, `system-version`, `system-info`, and
-`collection-statistics` subsections hold the same keys and override the shared value for that command
+`track info`, `queue get`, `zones get`, `system version`, `system info`, and `collection statistics`, while
+`fields` applies to the first four only. A key placed directly under `output` applies to all the commands
+accepting it; the optional `playback-status`, `track-info`, `queue-get`, `zones-get`, `system-version`,
+`system-info`, and `collection-statistics` subsections hold the same keys and override the shared value
+for that command
 (`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
 `previous`, `volume`, `mute`, `unmute`) and the `queue` action commands (`clear`, `repeat`, `randomize`).

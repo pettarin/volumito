@@ -6,6 +6,7 @@
 
 import json
 import os
+import re
 import sys
 import time
 from collections.abc import Callable
@@ -67,6 +68,19 @@ QUEUE_LIST_SHORT_FIELDS = [
     "artist",
     "album",
     "duration",
+]
+
+# Short fields list for the "zones get" command
+ZONES_GET_SHORT_FIELDS = [
+    "host",
+    "name",
+    "isSelf",
+    "state",
+]
+
+# Keys of the "state" subdictionary omitted by the short fields of "zones get"
+ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS = [
+    "albumart",
 ]
 
 # Short fields list for the "track info" command
@@ -483,6 +497,89 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
             lines.append(f"   Bit Depth: {bitdepth}")
         if channels:
             lines.append(f"   Channels: {channels}")
+
+    return "\n".join(lines)
+
+
+def filter_zones_fields(
+    zones_data: dict[str, Any], fields: Literal["short", "all"]
+) -> list[dict[str, Any]]:
+    """Filter the zones based on the fields option.
+
+    Args:
+        zones_data: The zones data dictionary from the Volumio API (contains "zones" key)
+        fields: The fields option ("short" or "all")
+
+    Returns:
+        A list of filtered zone dictionaries; in short mode the "state" subdictionary
+        is filtered too
+    """
+    zones = zones_data.get("zones", [])
+    if fields == "all":
+        return [zone.copy() for zone in zones]
+
+    filtered_zones = []
+    for zone in zones:
+        filtered_zone = {key: zone[key] for key in ZONES_GET_SHORT_FIELDS if key in zone}
+        state = filtered_zone.get("state")
+        if isinstance(state, dict):
+            filtered_zone["state"] = {
+                key: value
+                for key, value in state.items()
+                if key not in ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS
+            }
+        filtered_zones.append(filtered_zone)
+    return filtered_zones
+
+
+def split_camel_case(key: str) -> str:
+    """Turn a key into a readable label, splitting underscores and camel case.
+
+    For example, ``isSelf`` becomes ``Is Self`` and ``output_file`` becomes ``Output File``.
+
+    Args:
+        key: The key to turn into a label
+
+    Returns:
+        The label for the key
+    """
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", key.replace("_", " "))
+    return spaced.title()
+
+
+def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
+    """Format the zones as a readable table.
+
+    Each zone is printed as a numbered block whose key/value lines are indented to
+    start at the same column as the zone name.
+
+    Args:
+        zones: List of (potentially filtered) zone dictionaries
+
+    Returns:
+        A formatted string representation of the zones
+    """
+    lines = []
+    lines.append("Volumio Zones")
+    lines.append("=" * 50)
+
+    if not zones:
+        lines.append("(empty)")
+        return "\n".join(lines)
+
+    for index, zone in enumerate(zones, start=1):
+        lines.append(f"\n{index}. {zone.get('name', 'Unknown')}")
+        for key, value in zone.items():
+            if key == "name":
+                # The name is already the heading of the block
+                continue
+            label = split_camel_case(key)
+            if isinstance(value, dict):
+                lines.append(f"   {label:17}:")
+                for sub_key, sub_value in value.items():
+                    lines.append(f"     {split_camel_case(sub_key):15}: {sub_value}")
+            else:
+                lines.append(f"   {label:17}: {value}")
 
     return "\n".join(lines)
 
@@ -1721,6 +1818,43 @@ def collection_statistics(ctx: click.Context, output_format: str) -> None:
     """Get the statistics of the music collection of the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.collectionstats(), "/api/v1/collectionstats")
     render_payload(ctx, data, output_format, heading="Collection Statistics")
+
+
+@main.group()
+@click.pass_context
+def zones(ctx: click.Context) -> None:
+    """Query the multiroom zones of the Volumio instance."""
+    pass
+
+
+@zones.command("get")
+@click.pass_context
+@click.option(
+    "--fields",
+    "-L",
+    type=click.Choice(["short", "all"], case_sensitive=False),
+    default="short",
+    show_default=True,
+    help="Fields to display (applies to json, pretty, and table formats)",
+)
+@format_option("Output format for the zones information")
+def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Get the multiroom zones seen by the Volumio instance."""
+    data = fetch_or_exit(ctx, lambda c: c.get_zones(), "/api/v1/getzones")
+
+    if output_format == "raw":
+        # Raw JSON without formatting (ignores fields filter)
+        output = json.dumps(data)
+    else:
+        filtered_zones = filter_zones_fields(data, fields)  # type: ignore[arg-type]
+        if output_format == "json":
+            output = json.dumps(filtered_zones, indent=2)
+        elif output_format == "table":
+            output = format_zones_as_table(filtered_zones)
+        else:  # pretty
+            output = json.dumps(filtered_zones, indent=4, sort_keys=True, ensure_ascii=False)
+
+    click.echo(output)
 
 
 # "info" is a top-level synonym for "system info"

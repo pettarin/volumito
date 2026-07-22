@@ -3133,6 +3133,157 @@ class TestCollectionCommands:
         assert "Connection error" in result.output
 
 
+class TestZonesCommands:
+    """Test cases for the zones get command."""
+
+    ZONES = {
+        "zones": [
+            {
+                "id": "zone-1",
+                "host": "http://192.168.211.1",
+                "name": "Volumio",
+                "isSelf": True,
+                "type": "device",
+                "state": {"status": "stop", "volume": 43, "mute": False, "albumart": "/art1.png"},
+            },
+            {
+                "id": "zone-2",
+                "host": "http://192.168.1.22",
+                "name": "Volumio Studio",
+                "isSelf": False,
+                "type": "device",
+                "state": {"status": "play", "volume": 10, "mute": False, "albumart": "/art2.png"},
+            },
+        ]
+    }
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, zones=None):
+        """Mock VolumioRESTAPIClient with a usable get_zones method."""
+        mock_client = mocker.Mock()
+        mock_client.get_zones.return_value = self.ZONES if zones is None else zones
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_get_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get prints pretty JSON with the short fields, including the state."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["zones", "get"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        assert [zone["name"] for zone in output_data] == ["Volumio", "Volumio Studio"]
+        assert output_data[0]["host"] == "http://192.168.211.1"
+        assert output_data[0]["state"]["status"] == "stop"
+        # Fields outside the short set are filtered out
+        assert "id" not in output_data[0]
+        assert "type" not in output_data[0]
+        # The albumart of the state is hidden in short mode
+        assert "albumart" not in output_data[0]["state"]
+
+    def test_get_all_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get -L all keeps every field of each zone."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["zones", "get", "-L", "all"])
+
+        assert result.exit_code == 0
+        output_data = json.loads(result.output)
+        assert output_data[0]["id"] == "zone-1"
+        assert output_data[0]["type"] == "device"
+        assert output_data[0]["state"]["status"] == "stop"
+        # The albumart of the state is kept with all fields
+        assert output_data[0]["state"]["albumart"] == "/art1.png"
+
+    def test_get_json_format(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get -F json prints JSON with 2-space indentation."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["zones", "get", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert '\n    "' in result.output
+        assert json.loads(result.output)[1]["name"] == "Volumio Studio"
+
+    def test_get_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get -F table prints numbered blocks with aligned labels."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        lines = result.output.splitlines()
+
+        assert result.exit_code == 0
+        assert "Volumio Zones" in lines
+        assert "1. Volumio" in lines
+        assert "2. Volumio Studio" in lines
+        # The labels are indented to start at the column of the zone name
+        assert f"   {'Host':17}: http://192.168.211.1" in lines
+        assert f"   {'Is Self':17}: True" in lines
+        # The name is the block heading and is not repeated in the body
+        assert not any(line.strip().startswith("Name ") for line in lines)
+
+    def test_get_table_format_nested_state(self, runner: CliRunner, mocker: MockerFixture):
+        """The nested state is printed one key/value per line, also with the short fields."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        lines = result.output.splitlines()
+
+        assert result.exit_code == 0
+        assert f"   {'State':17}:" in lines
+        assert f"     {'Status':15}: stop" in lines
+        assert f"     {'Volume':15}: 43" in lines
+
+    def test_get_table_format_empty(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get -F table reports an empty zone list."""
+        self._mock_client(mocker, zones={"zones": []})
+
+        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Zones" in result.output
+        assert "(empty)" in result.output
+
+    def test_get_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get -F raw prints the unfiltered payload as compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["zones", "get", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
+        output_data = json.loads(result.output)
+        # Raw is the whole response, including the nested state
+        assert output_data["zones"][0]["state"]["volume"] == 43
+
+    def test_get_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode zones get still honors the format option."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "zones", "get", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["zones"][1]["name"] == "Volumio Studio"
+
+    def test_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """zones get exits 1 on a connection error."""
+        mock_client = self._mock_client(mocker)
+        mock_client.get_zones.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["zones", "get"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+
 class TestQueueActions:
     """Test cases for the queue clear/repeat/randomize action commands."""
 
@@ -3812,6 +3963,7 @@ class TestConfigurationCommands:
                     "playback-status": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,
                     "queue-get": _DISPLAY_DEFAULTS,
+                    "zones-get": _DISPLAY_DEFAULTS,
                     "system-version": _FORMAT_DEFAULTS,
                     "system-info": _FORMAT_DEFAULTS,
                     "collection-statistics": _FORMAT_DEFAULTS,

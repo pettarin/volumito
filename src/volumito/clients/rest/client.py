@@ -456,3 +456,15 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._get_json("/api/v1/collectionstats")
+
+    def get_zones(self) -> dict[str, Any]:
+        """Query the /api/v1/getzones endpoint.
+
+        Returns:
+            A dictionary containing the multiroom zones (under the "zones" key)
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getzones")

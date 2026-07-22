@@ -427,6 +427,7 @@ class TestRenderDefaultConfiguration:
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-get": _DISPLAY_DEFAULTS,
+                "zones-get": _DISPLAY_DEFAULTS,
                 "system-version": _FORMAT_DEFAULTS,
                 "system-info": _FORMAT_DEFAULTS,
                 "collection-statistics": _FORMAT_DEFAULTS,
@@ -460,6 +461,7 @@ class TestRenderDefaultConfiguration:
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-get": _DISPLAY_DEFAULTS,
+                "zones-get": _DISPLAY_DEFAULTS,
                 "system-version": _FORMAT_DEFAULTS,
                 "system-info": _FORMAT_DEFAULTS,
                 "collection-statistics": _FORMAT_DEFAULTS,
@@ -530,6 +532,7 @@ class TestBuildClickDefaultMap:
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"get": formatting},
+            "zones": {"get": formatting},
             "system": {"version": format_only, "info": format_only},
             "collection": {"statistics": format_only},
             # "info" is the top-level synonym of "system info"
