@@ -449,6 +449,54 @@ class TestVolumioRESTAPIClient:
 
         assert "Request to Volumio instance" in str(exc_info.value)
 
+    def test_collectionstats_success(self, mocker: MockerFixture):
+        """Test successful collectionstats() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "artists": 3,
+            "albums": 4,
+            "songs": 105,
+            "playtime": "7:11:15",
+        }
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.collectionstats()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/collectionstats", timeout=5.0
+        )
+        assert data["songs"] == 105
+
+    def test_collectionstats_connection_error(self, mocker: MockerFixture):
+        """Test collectionstats() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.collectionstats()
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_collectionstats_invalid_json(self, mocker: MockerFixture):
+        """Test collectionstats() with an invalid JSON response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.collectionstats()
+
+        assert "Failed to parse JSON" in str(exc_info.value)
+
     def test_send_command_success(self, mocker: MockerFixture):
         """Test successful send_command() call."""
         # Mock response

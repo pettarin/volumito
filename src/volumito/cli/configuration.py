@@ -29,7 +29,18 @@ OUTPUT_SCALAR_KEYS = [
     "print-resulting-status",
 ]
 DISPLAY_KEYS = ["fields", "format"]
-DISPLAY_SUBSECTIONS = ["playback-status", "track-info", "queue-get"]
+# Commands accepting only --format, not --fields.
+FORMAT_KEYS = ["format"]
+# Display subsection name -> the keys it accepts.
+DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "playback-status": DISPLAY_KEYS,
+    "track-info": DISPLAY_KEYS,
+    "queue-get": DISPLAY_KEYS,
+    "system-version": FORMAT_KEYS,
+    "system-info": FORMAT_KEYS,
+    "collection-statistics": FORMAT_KEYS,
+}
+DISPLAY_SUBSECTIONS = list(DISPLAY_SUBSECTION_KEYS)
 
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
@@ -81,17 +92,24 @@ DISPLAY_SUBSECTION_PATHS = {
     "playback-status": [["playback", "status"]],
     "track-info": [["track", "info"]],
     "queue-get": [["queue", "get"]],
+    "system-version": [["system", "version"]],
+    # "info" is the top-level synonym of "system info"
+    "system-info": [["system", "info"], ["info"]],
+    "collection-statistics": [["collection", "statistics"]],
 }
 DOWNLOAD_SUBSECTION_PATHS = {
     "track-audio": [["track", "audio"]],
     "track-albumart": [["track", "albumart"]],
 }
+DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
+    DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
+)
 
-# Per hierarchical section: (allowed shared scalar keys, subsection names, allowed
-# subsection keys). Used for validation of the "output" and "downloads" sections.
-_HIERARCHICAL_SPECS: dict[str, tuple[list[str], list[str], list[str]]] = {
-    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTIONS, DISPLAY_KEYS),
-    "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS),
+# Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
+# Used for validation of the "output" and "downloads" sections.
+_HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
+    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
+    "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTION_KEYS),
 }
 
 
@@ -216,9 +234,9 @@ def load_configuration(path: str) -> dict[str, Any]:
                 f"section {section!r} in configuration file {path} must be a mapping"
             )
         if section in _HIERARCHICAL_SPECS:
-            scalar_keys, subsections, subsection_keys = _HIERARCHICAL_SPECS[section]
+            scalar_keys, subsection_keys = _HIERARCHICAL_SPECS[section]
             config[section] = _validate_hierarchical(
-                section, values, scalar_keys, subsections, subsection_keys, path
+                section, values, scalar_keys, subsection_keys, path
             )
         else:
             _validate_flat_keys(section, values, SECTION_KEYS[section], path)
@@ -230,21 +248,20 @@ def _validate_hierarchical(
     name: str,
     values: dict[str, Any],
     scalar_keys: list[str],
-    subsections: list[str],
-    subsection_keys: list[str],
+    subsection_keys: dict[str, list[str]],
     path: str,
 ) -> dict[str, Any]:
     """Validate a hierarchical section (shared scalars + per-command subsections)."""
     result: dict[str, Any] = {}
     for key, value in values.items():
-        if key in subsections:
+        if key in subsection_keys:
             if value is None:
                 continue
             if not isinstance(value, dict):
                 raise click.BadParameter(
                     f"section '{name}.{key}' in configuration file {path} must be a mapping"
                 )
-            _validate_flat_keys(f"{name}.{key}", value, subsection_keys, path)
+            _validate_flat_keys(f"{name}.{key}", value, subsection_keys[key], path)
             result[key] = dict(value)
         elif key in scalar_keys:
             result[key] = value
@@ -268,10 +285,19 @@ def _apply_hierarchical(
     shared: dict[str, Any],
     values: dict[str, Any],
     subsection_paths: dict[str, list[list[str]]],
+    subsection_keys: dict[str, list[str]],
 ) -> None:
-    """Place ``{**shared, **subsection}`` into each subsection's command path(s)."""
+    """Place ``{**shared, **subsection}`` into each subsection's command path(s).
+
+    Only the keys accepted by a subsection are taken from the shared values, so a
+    shared key is not propagated to commands that do not have the matching option.
+    """
     for subsection, paths in subsection_paths.items():
-        merged = {**shared, **values.get(subsection, {})}
+        allowed = subsection_keys[subsection]
+        merged = {
+            **{key: value for key, value in shared.items() if key in allowed},
+            **values.get(subsection, {}),
+        }
         for key, value in merged.items():
             for path in paths:
                 _assign_nested(result, path, _param_name(key), value)
@@ -298,11 +324,15 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
             for command_path in ACTION_COMMAND_PATHS:
                 _assign_nested(result, command_path, _param_name(key), value)
     shared_display = {k: v for k, v in output.items() if k in DISPLAY_KEYS}
-    _apply_hierarchical(result, shared_display, output, DISPLAY_SUBSECTION_PATHS)
+    _apply_hierarchical(
+        result, shared_display, output, DISPLAY_SUBSECTION_PATHS, DISPLAY_SUBSECTION_KEYS
+    )
 
     downloads = config.get("downloads", {})
     shared_download = {k: v for k, v in downloads.items() if k in DOWNLOAD_KEYS}
-    _apply_hierarchical(result, shared_download, downloads, DOWNLOAD_SUBSECTION_PATHS)
+    _apply_hierarchical(
+        result, shared_download, downloads, DOWNLOAD_SUBSECTION_PATHS, DOWNLOAD_SUBSECTION_KEYS
+    )
 
     return result
 
@@ -327,18 +357,17 @@ def _render_hierarchical(
     defaults: dict[str, Any],
     name: str,
     scalar_keys: list[str],
-    subsections: list[str],
-    subsection_keys: list[str],
+    subsection_keys: dict[str, list[str]],
 ) -> list[str]:
     """Render a hierarchical section (shared note + shared scalars + subsections)."""
-    lines = [f"{name}:", *_shared_note_lines(subsections), ""]
+    lines = [f"{name}:", *_shared_note_lines(list(subsection_keys)), ""]
     for key in sorted(scalar_keys):
         lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
-    for sub_index, subsection in enumerate(sorted(subsections)):
+    for sub_index, subsection in enumerate(sorted(subsection_keys)):
         if sub_index > 0:
             lines.append("")
         lines.append(f"  {subsection}:")
-        for key in sorted(subsection_keys):
+        for key in sorted(subsection_keys[subsection]):
             lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
     return lines
 
@@ -370,15 +399,11 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
         if section == "output":
             non_display = [key for key in OUTPUT_SCALAR_KEYS if key not in DISPLAY_KEYS]
             lines.extend(
-                _render_hierarchical(
-                    defaults, "output", non_display, DISPLAY_SUBSECTIONS, DISPLAY_KEYS
-                )
+                _render_hierarchical(defaults, "output", non_display, DISPLAY_SUBSECTION_KEYS)
             )
         elif section == "downloads":
             lines.extend(
-                _render_hierarchical(
-                    defaults, "downloads", [], DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
-                )
+                _render_hierarchical(defaults, "downloads", [], DOWNLOAD_SUBSECTION_KEYS)
             )
         else:
             lines.append(f"{section}:")

@@ -1695,7 +1695,7 @@ def system_version(ctx: click.Context, output_format: str) -> None:
     data = fetch_or_exit(
         ctx, lambda c: c.get_system_version(), "/api/v1/getSystemVersion"
     )
-    render_payload(ctx, data, output_format, heading="System Version")
+    render_payload(ctx, data, output_format, heading="Volumio System Version")
 
 
 @system.command("info")
@@ -1704,7 +1704,23 @@ def system_version(ctx: click.Context, output_format: str) -> None:
 def system_info(ctx: click.Context, output_format: str) -> None:
     """Get the system information of the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.get_system_info(), "/api/v1/getSystemInfo")
-    render_payload(ctx, data, output_format, heading="System Info")
+    render_payload(ctx, data, output_format, heading="Volumio System Info")
+
+
+@main.group()
+@click.pass_context
+def collection(ctx: click.Context) -> None:
+    """Query the music collection of the Volumio instance."""
+    pass
+
+
+@collection.command("statistics")
+@click.pass_context
+@format_option("Output format for the collection statistics")
+def collection_statistics(ctx: click.Context, output_format: str) -> None:
+    """Get the statistics of the music collection of the Volumio instance."""
+    data = fetch_or_exit(ctx, lambda c: c.collectionstats(), "/api/v1/collectionstats")
+    render_payload(ctx, data, output_format, heading="Collection Statistics")
 
 
 # "info" is a top-level synonym for "system info"

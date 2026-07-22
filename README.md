@@ -101,6 +101,16 @@ volumito system info --format raw
 
 `volumito info` is a synonym for `volumito system info`.
 
+### Collection
+
+Query the music collection of the Volumio instance:
+
+```bash
+# Number of artists, albums, and songs, and the total playtime
+volumito collection statistics
+volumito collection statistics --format table
+```
+
 ### Connection Options
 
 Specify custom connection parameters:
@@ -180,6 +190,8 @@ output:
     format: table
   track-info:
     format: json
+  collection-statistics:
+    format: table
 downloads:
   # Keys here apply to both track download commands...
   overwrite-existing-files: false
@@ -193,10 +205,12 @@ downloads:
 ```
 
 The `output` section's `fields` and `format` keys set the defaults for the corresponding
-`--fields`/`--format` options of the commands that support them (`playback status`,
-`track info`, and `queue get`). A key placed directly under `output` applies to all of them; the optional
-`playback-status`, `track-info`, and `queue-get` subsections hold the same keys and override the shared value
-for that command. The `print-resulting-status` key sets the
+`--fields`/`--format` options of the commands that support them: `format` applies to `playback status`,
+`track info`, `queue get`, `system version`, `system info`, and `collection statistics`, while `fields`
+applies to the first three only. A key placed directly under `output` applies to all the commands accepting
+it; the optional `playback-status`, `track-info`, `queue-get`, `system-version`, `system-info`, and
+`collection-statistics` subsections hold the same keys and override the shared value for that command
+(`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
 `previous`, `volume`, `mute`, `unmute`) and the `queue` action commands (`clear`, `repeat`, `randomize`).
 

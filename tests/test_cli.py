@@ -46,6 +46,9 @@ _DOWNLOAD_DEFAULTS = {
 # The display keys with their default values, as generated per subsection.
 _DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty"}
 
+# The keys generated for the subsections of the commands that accept only --format.
+_FORMAT_DEFAULTS = {"format": "pretty"}
+
 
 @pytest.fixture(autouse=True)
 def _isolate_config_probing(mocker: MockerFixture):
@@ -2973,7 +2976,7 @@ class TestSystemCommands:
         result = runner.invoke(main, ["system", "version", "-F", "table"])
 
         assert result.exit_code == 0
-        assert "System Version" in result.output
+        assert "Volumio System Version" in result.output
         assert "Hardware" in result.output
         assert "pi" in result.output
 
@@ -3029,7 +3032,7 @@ class TestSystemCommands:
         result = runner.invoke(main, ["system", "info", "-F", "table"])
 
         assert result.exit_code == 0
-        assert "System Info" in result.output
+        assert "Volumio System Info" in result.output
         assert "Living Room" in result.output
 
     def test_info_raw(self, runner: CliRunner, mocker: MockerFixture):
@@ -3054,6 +3057,80 @@ class TestSystemCommands:
         assert info_result.exit_code == 0
         assert info_result.output == system_info_result.output
         assert json.loads(info_result.output)["name"] == "Living Room"
+
+
+class TestCollectionCommands:
+    """Test cases for the collection statistics command."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with a usable collectionstats method."""
+        mock_client = mocker.Mock()
+        mock_client.collectionstats.return_value = {
+            "artists": 3,
+            "albums": 4,
+            "songs": 105,
+            "playtime": "7:11:15",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_statistics(self, runner: CliRunner, mocker: MockerFixture):
+        """collection statistics prints the collection statistics as pretty JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "statistics"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["songs"] == 105
+
+    def test_statistics_table(self, runner: CliRunner, mocker: MockerFixture):
+        """collection statistics -F table prints a table with its heading."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "statistics", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Collection Statistics" in result.output
+        assert "Playtime" in result.output
+        assert "7:11:15" in result.output
+
+    def test_statistics_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """collection statistics -F raw prints compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "statistics", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
+        assert json.loads(result.output)["artists"] == 3
+
+    def test_statistics_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode collection statistics prints compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "collection", "statistics"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
+        assert json.loads(result.output)["albums"] == 4
+
+    def test_statistics_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """collection statistics exits 1 on a connection error."""
+        mock_client = self._mock_client(mocker)
+        mock_client.collectionstats.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["collection", "statistics"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
 
 
 class TestQueueActions:
@@ -3534,6 +3611,33 @@ class TestConfigurationFile:
         assert "Track Info" not in track_result.output
         assert '"title"' in track_result.output
 
+    def test_format_only_commands_from_config(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The format of the system and collection commands can be set from the config."""
+        mock_client = self._mock_rest_client(mocker)
+        mock_client.get_system_info.return_value = {"name": "Living Room"}
+        mock_client.collectionstats.return_value = {"songs": 105}
+        config = self._write_config(
+            tmp_path,
+            "output:\n"
+            "  format: raw\n"
+            "  collection-statistics:\n"
+            "    format: table\n",
+        )
+
+        # The shared format reaches system info and its top-level info synonym.
+        system_result = runner.invoke(main, ["-c", config, "system", "info"])
+        info_result = runner.invoke(main, ["-c", config, "info"])
+        # The subsection overrides it for collection statistics only.
+        statistics_result = runner.invoke(main, ["-c", config, "collection", "statistics"])
+
+        assert system_result.exit_code == 0
+        assert system_result.output.strip() == '{"name": "Living Room"}'
+        assert info_result.output == system_result.output
+        assert statistics_result.exit_code == 0
+        assert "Collection Statistics" in statistics_result.output
+
     def test_print_resulting_status_from_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -3708,6 +3812,9 @@ class TestConfigurationCommands:
                     "playback-status": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,
                     "queue-get": _DISPLAY_DEFAULTS,
+                    "system-version": _FORMAT_DEFAULTS,
+                    "system-info": _FORMAT_DEFAULTS,
+                    "collection-statistics": _FORMAT_DEFAULTS,
                 },
                 "downloads": {
                     "track-audio": _DOWNLOAD_DEFAULTS,

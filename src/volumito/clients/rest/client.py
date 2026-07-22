@@ -444,3 +444,15 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._get_json("/api/v1/getSystemInfo")
+
+    def collectionstats(self) -> dict[str, Any]:
+        """Query the /api/v1/collectionstats endpoint.
+
+        Returns:
+            A dictionary containing the statistics of the music collection
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/collectionstats")

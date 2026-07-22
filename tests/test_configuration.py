@@ -36,6 +36,9 @@ _DOWNLOAD_DEFAULTS = {
 # The display keys with their default values, as generated per subsection.
 _DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty"}
 
+# The keys generated for the subsections of the commands that accept only --format.
+_FORMAT_DEFAULTS = {"format": "pretty"}
+
 # Flat param-name -> default value map, as produced from the CLI option defaults.
 _DEFAULTS = {
     "host": "volumio.local",
@@ -424,6 +427,9 @@ class TestRenderDefaultConfiguration:
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-get": _DISPLAY_DEFAULTS,
+                "system-version": _FORMAT_DEFAULTS,
+                "system-info": _FORMAT_DEFAULTS,
+                "collection-statistics": _FORMAT_DEFAULTS,
             },
             "downloads": {
                 "track-audio": _DOWNLOAD_DEFAULTS,
@@ -454,6 +460,9 @@ class TestRenderDefaultConfiguration:
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-get": _DISPLAY_DEFAULTS,
+                "system-version": _FORMAT_DEFAULTS,
+                "system-info": _FORMAT_DEFAULTS,
+                "collection-statistics": _FORMAT_DEFAULTS,
             },
             "downloads": {
                 "track-audio": _DOWNLOAD_DEFAULTS,
@@ -509,17 +518,37 @@ class TestBuildClickDefaultMap:
         assert result == {"host": "myhost.local", "verbose": True}
 
     def test_display_keys_replicated_under_each_command(self):
-        """fields/format are nested under every output display command path."""
+        """fields/format are nested under every command accepting them, and only those."""
         result = build_click_default_map(
             {"output": {"fields": "all", "format": "table"}}
         )
 
         formatting = {"fields": "all", "output_format": "table"}
+        # The commands accepting only --format do not receive the shared fields value.
+        format_only = {"output_format": "table"}
         assert result == {
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"get": formatting},
+            "system": {"version": format_only, "info": format_only},
+            "collection": {"statistics": format_only},
+            # "info" is the top-level synonym of "system info"
+            "info": format_only,
         }
+
+    def test_format_only_subsection_overrides_shared(self):
+        """A subsection of a format-only command overrides the shared format value."""
+        result = build_click_default_map(
+            {
+                "output": {
+                    "format": "pretty",
+                    "collection-statistics": {"format": "table"},
+                }
+            }
+        )
+
+        assert result["collection"]["statistics"] == {"output_format": "table"}
+        assert result["system"]["info"] == {"output_format": "pretty"}
 
     def test_output_subsection_overrides_shared(self):
         """A per-command output subsection overrides the shared display value."""

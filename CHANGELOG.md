@@ -10,9 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Command group `collection` with the `statistics` command
 - Command group `system` with `ping`, `version`, and `info` commands
 - Commands `queue clear`, `queue repeat`, and `queue randomize` to clear the queue and set the
   repeat and random modes
+- Subsections for the `system` and `collection` subcommands of the `output` section
+  of the configuration file
 
 ### Changed
 
@@ -27,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   marking the existing files as used or not used, instead of stopping at the first one found
 - The `-F`/`--format` option accepts the new value `raw`
 - The `system version` and `system info` commands now accept `-F`/`--format`
-- In table format, nested objects are printed one key/value per line
+- In table format, nested objects are printed one key/value per line and indented
 
 ### Removed
 
