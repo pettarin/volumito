@@ -206,7 +206,7 @@ class TestFormatFunctions:
 
         result = format_as_table(state)
 
-        assert "Volumio State" in result
+        assert "Volumio Status" in result
         assert "=" * 50 in result
         assert "Test Song" in result
         assert "Test Artist" in result
@@ -225,7 +225,7 @@ class TestFormatFunctions:
 
         result = format_as_table(state)
 
-        assert "Volumio State" in result
+        assert "Volumio Status" in result
         assert "Test" in result
 
 
@@ -350,14 +350,14 @@ class TestCLICommands:
         return CliRunner()
 
     @pytest.fixture(autouse=True)
-    def _no_resulting_state(self, mocker: MockerFixture):
-        """Isolate per-command tests from the print-resulting-state feature.
+    def _no_resulting_status(self, mocker: MockerFixture):
+        """Isolate per-command tests from the print-resulting-status feature.
 
-        Player action subcommands print the resulting "playback state" by default;
+        Player action subcommands print the resulting "playback status" by default;
         no-op the helper here so these tests stay focused (and fast). The feature
         itself is covered by TestPrintResultingState.
         """
-        mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
+        mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
 
     def _mock_mpd_client(
         self,
@@ -448,9 +448,9 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Test Song" in result.output
 
-    def test_playback_state_help(self, runner: CliRunner):
-        """Test playback state command with --help."""
-        result = runner.invoke(main, ["playback", "state", "--help"])
+    def test_playback_status_help(self, runner: CliRunner):
+        """Test playback status command with --help."""
+        result = runner.invoke(main, ["playback", "status", "--help"])
 
         assert result.exit_code == 0
         assert "--format" in result.output
@@ -460,8 +460,8 @@ class TestCLICommands:
         assert "-L" in result.output
         assert "-R" in result.output
 
-    def test_playback_state_success_default(self, runner: CliRunner, mocker: MockerFixture):
-        """Test playback state (the canonical form of info) with default options."""
+    def test_playback_status_success_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Test playback status (the canonical form of info) with default options."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {
             "position": 0,
@@ -474,7 +474,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["playback", "state"])
+        result = runner.invoke(main, ["playback", "status"])
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
@@ -526,7 +526,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["info", "--format", "table"])
 
         assert result.exit_code == 0
-        assert "Volumio State" in result.output
+        assert "Volumio Status" in result.output
         assert "Test Song" in result.output
 
     def test_info_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
@@ -635,7 +635,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["info", "-F", "table"])
 
         assert result.exit_code == 0
-        assert "Volumio State" in result.output
+        assert "Volumio Status" in result.output
         assert "Test Song" in result.output
 
     def test_short_option_fields(self, runner: CliRunner, mocker: MockerFixture):
@@ -761,7 +761,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "playback" in result.output.lower()
-        assert "state" in result.output.lower()
+        assert "status" in result.output.lower()
         assert "toggle" in result.output.lower()
         assert "play" in result.output.lower()
         assert "pause" in result.output.lower()
@@ -1493,9 +1493,9 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "info", "-F", "table"])
 
         assert result.exit_code == 0
-        # Heading is "Track Info", not the playback's "Volumio State"
+        # Heading is "Track Info", not the playback's "Volumio Status"
         assert "Track Info" in result.output
-        assert "Volumio State" not in result.output
+        assert "Volumio Status" not in result.output
         assert "Test Song" in result.output
         assert "Samplerate" in result.output
         # Fields appear in TRACK_INFO_SHORT_FIELDS order, not sorted alphabetically
@@ -2895,7 +2895,7 @@ class TestCLICommands:
 
 
 class TestPrintResultingState:
-    """Test cases for the -r/--print-resulting-state option on playback commands."""
+    """Test cases for the -r/--print-resulting-status option on playback commands."""
 
     @pytest.fixture
     def runner(self):
@@ -2918,24 +2918,24 @@ class TestPrintResultingState:
         mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
         return mock_client, mock_sleep
 
-    def test_default_prints_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
-        """By default, a playback action waits 1 second and prints the resulting state."""
+    def test_default_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """By default, a playback action waits 1 second and prints the resulting status."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(main, ["playback", "pause"])
 
         assert result.exit_code == 0
         assert "Command 'pause' executed successfully" in result.output
-        # The resulting state is printed after the command
+        # The resulting status is printed after the command
         assert "Test Song" in result.output
         mock_sleep.assert_called_once_with(1.0)
         mock_client.get_state.assert_called_once()
 
-    def test_no_print_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
-        """--no-print-resulting-state skips the sleep and the state print."""
+    def test_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-status skips the sleep and the state print."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["playback", "pause", "--no-print-resulting-state"])
+        result = runner.invoke(main, ["playback", "pause", "--no-print-resulting-status"])
 
         assert result.exit_code == 0
         assert "Command 'pause' executed successfully" in result.output
@@ -2943,7 +2943,7 @@ class TestPrintResultingState:
         mock_sleep.assert_not_called()
         mock_client.get_state.assert_not_called()
 
-    def test_short_flag_prints_resulting_state(self, runner: CliRunner, mocker: MockerFixture):
+    def test_short_flag_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
         """The -r short flag behaves like the enabled default."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
@@ -2953,10 +2953,10 @@ class TestPrintResultingState:
         assert "Test Song" in result.output
         mock_sleep.assert_called_once_with(1.0)
 
-    def test_command_with_argument_prints_resulting_state(
+    def test_command_with_argument_prints_resulting_status(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """A command taking an argument (volume) also prints the resulting state."""
+        """A command taking an argument (volume) also prints the resulting status."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(main, ["playback", "volume", "50"])
@@ -2967,7 +2967,7 @@ class TestPrintResultingState:
         mock_sleep.assert_called_once_with(1.0)
 
     def test_custom_sleep_before_next_call(self, runner: CliRunner, mocker: MockerFixture):
-        """--rest-api-sleep-before-next-call sets the pause before the resulting-state fetch."""
+        """--rest-api-sleep-before-next-call sets the pause before the resulting-status fetch."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(
@@ -3172,19 +3172,19 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         # 'table' format renders the heading banner instead of JSON.
-        assert "Volumio State" in result.output
+        assert "Volumio Status" in result.output
 
-    def test_output_section_sets_format_for_playback_state(
+    def test_output_section_sets_format_for_playback_status(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The output section's format applies to the group-nested playback state command."""
+        """The output section's format applies to the group-nested playback status command."""
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "output:\n  format: table\n")
 
-        result = runner.invoke(main, ["-c", config, "playback", "state"])
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
 
         assert result.exit_code == 0
-        assert "Volumio State" in result.output
+        assert "Volumio Status" in result.output
 
     def test_cli_format_overrides_config_format(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -3196,7 +3196,7 @@ class TestConfigurationFile:
         result = runner.invoke(main, ["-c", config, "info", "-F", "json"])
 
         assert result.exit_code == 0
-        assert "Volumio State" not in result.output
+        assert "Volumio Status" not in result.output
         assert '"title"' in result.output
 
     def test_output_per_command_format_override(
@@ -3206,30 +3206,30 @@ class TestConfigurationFile:
         self._mock_rest_client(mocker)
         config = self._write_config(
             tmp_path,
-            "output:\n  playback-state:\n    format: table\n  track-info:\n    format: json\n",
+            "output:\n  playback-status:\n    format: table\n  track-info:\n    format: json\n",
         )
 
-        # playback-state subsection -> table for both `playback state` and `info`.
-        state_result = runner.invoke(main, ["-c", config, "playback", "state"])
+        # playback-status subsection -> table for both `playback status` and `info`.
+        state_result = runner.invoke(main, ["-c", config, "playback", "status"])
         info_result = runner.invoke(main, ["-c", config, "info"])
         # track-info subsection -> json (not a table).
         track_result = runner.invoke(main, ["-c", config, "track", "info"])
 
         assert state_result.exit_code == 0
-        assert "Volumio State" in state_result.output
+        assert "Volumio Status" in state_result.output
         assert info_result.exit_code == 0
-        assert "Volumio State" in info_result.output
+        assert "Volumio Status" in info_result.output
         assert track_result.exit_code == 0
         assert "Track Info" not in track_result.output
         assert '"title"' in track_result.output
 
-    def test_print_resulting_state_from_config(
+    def test_print_resulting_status_from_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The output section can disable the resulting-state print for playback actions."""
+        """The output section can disable the resulting-status print for playback actions."""
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
-        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
-        config = self._write_config(tmp_path, "output:\n  print-resulting-state: false\n")
+        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
+        config = self._write_config(tmp_path, "output:\n  print-resulting-status: false\n")
 
         result = runner.invoke(main, ["-c", config, "playback", "toggle"])
 
@@ -3237,12 +3237,12 @@ class TestConfigurationFile:
         mock_maybe.assert_called_once()
         assert mock_maybe.call_args.args[1] is False
 
-    def test_print_resulting_state_default_true(
+    def test_print_resulting_status_default_true(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """With no config, the resulting-state print keeps its True default."""
+        """With no config, the resulting-status print keeps its True default."""
         mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
-        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_state")
+        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
 
         result = runner.invoke(main, ["playback", "toggle"])
 
@@ -3393,8 +3393,8 @@ class TestConfigurationCommands:
                 "output": {
                     "verbose": False,
                     "machine-readable": False,
-                    "print-resulting-state": True,
-                    "playback-state": _DISPLAY_DEFAULTS,
+                    "print-resulting-status": True,
+                    "playback-status": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,
                     "queue-list": _DISPLAY_DEFAULTS,
                 },
@@ -3477,7 +3477,7 @@ class TestConfigurationCommands:
         config = tmp_path / "volumito.yaml"
         config.write_text(
             "volumio:\n  host: myhost.local\n"
-            "output:\n  verbose: true\n  format: table\n  playback-state:\n    format: json\n"
+            "output:\n  verbose: true\n  format: table\n  playback-status:\n    format: json\n"
             "downloads:\n  output-directory: /shared\n"
             "  track-audio:\n    file-name-template: 'a.flac'\n"
         )
@@ -3489,7 +3489,7 @@ class TestConfigurationCommands:
         assert "volumio.host = myhost.local" in result.output
         assert "output.verbose = True" in result.output
         assert "output.format = table" in result.output
-        assert "output.playback-state.format = json" in result.output
+        assert "output.playback-status.format = json" in result.output
         assert "downloads.output-directory = /shared" in result.output
         assert "downloads.track-audio.file-name-template = a.flac" in result.output
 

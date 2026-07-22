@@ -10,9 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Renamed the `player` command group to `playback` (its subcommands are unchanged, and `info`
-  remains a top-level synonym for `playback state`)
-- Renamed the configuration file's `output.player-state` subsection to `output.playback-state`
+- Renamed the `player` command group to `playback` and its `state` subcommand to `status`, so
+  `player state` is now `playback status` (`info` remains a top-level synonym for it)
+- Renamed the configuration file's `output.player-state` subsection to `output.playback-status`
+- Renamed the `Volumio State` heading (shown by `playback status`/`info` in table format) to
+  `Volumio Status`
+- Renamed the `-r`/`--print-resulting-state` option to `-r`/`--print-resulting-status` (and the
+  corresponding `output.print-resulting-state` configuration key to `output.print-resulting-status`)
 - `configuration search` now lists every probed path (directory and file name) in probing order,
   marking the existing files as used or not used (its machine-readable output is now an array of
   per-path objects)

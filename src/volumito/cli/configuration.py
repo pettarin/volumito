@@ -19,17 +19,17 @@ SECTION_KEYS: dict[str, list[str]] = {
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
 # per-command subsections override the display keys (fields/format/raw). verbose and
-# machine-readable are global; print-resulting-state applies to the playback actions.
+# machine-readable are global; print-resulting-status applies to the playback actions.
 OUTPUT_SCALAR_KEYS = [
     "verbose",
     "machine-readable",
     "fields",
     "format",
     "raw",
-    "print-resulting-state",
+    "print-resulting-status",
 ]
 DISPLAY_KEYS = ["fields", "format", "raw"]
-DISPLAY_SUBSECTIONS = ["playback-state", "track-info", "queue-list"]
+DISPLAY_SUBSECTIONS = ["playback-status", "track-info", "queue-list"]
 
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
@@ -59,8 +59,8 @@ KEY_COMMENTS: dict[str, str] = {
     "fields": "Fields to display: short or all",
     "format": "Output format: json, pretty, or table",
     "raw": "Output raw JSON, overriding the format",
-    "print-resulting-state": (
-        "After a playback command like pause or volume, print the resulting playback state"
+    "print-resulting-status": (
+        "After a playback command like pause or volume, print the resulting playback status"
     ),
     "file-name-template": "Template (Python str.format) for the -d output file name",
     "output-directory": "Directory to download into (mutually exclusive with output-file)",
@@ -71,16 +71,16 @@ KEY_COMMENTS: dict[str, str] = {
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
 _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 
-# --print-resulting-state lives on the playback action commands.
+# --print-resulting-status lives on the playback action commands.
 ACTION_COMMAND_PATHS = [
     ["playback", name]
     for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
 ]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
-# The "playback-state" subsection also governs the top-level "info" synonym.
+# The "playback-status" subsection also governs the top-level "info" synonym.
 DISPLAY_SUBSECTION_PATHS = {
-    "playback-state": [["playback", "state"], ["info"]],
+    "playback-status": [["playback", "status"], ["info"]],
     "track-info": [["track", "info"]],
     "queue-list": [["queue", "list"]],
 }
@@ -296,7 +296,7 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
     for key, value in output.items():
         if key in ("verbose", "machine-readable"):
             result[_param_name(key)] = value
-        elif key == "print-resulting-state":
+        elif key == "print-resulting-status":
             for command_path in ACTION_COMMAND_PATHS:
                 _assign_nested(result, command_path, _param_name(key), value)
     shared_display = {k: v for k, v in output.items() if k in DISPLAY_KEYS}

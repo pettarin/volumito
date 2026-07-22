@@ -44,7 +44,7 @@ MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
     "Options -d/--output-directory and -f/--output-file are mutually exclusive."
 )
 
-# Short fields list for the "playback state" command
+# Short fields list for the "playback status" command
 PLAYER_STATE_SHORT_FIELDS = [
     "status",
     "position",
@@ -342,7 +342,7 @@ def download_uri_to(
 
 def format_as_table(
     state: dict[str, Any],
-    heading: str = "Volumio State",
+    heading: str = "Volumio Status",
     field_order: list[str] | None = None,
 ) -> str:
     """Format the state dictionary as a readable table.
@@ -571,14 +571,14 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
         sys.exit(1)
 
 
-def print_resulting_state_option(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-r``/``--print-resulting-state`` option to a playback subcommand."""
+def print_resulting_status_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--print-resulting-status`` option to a playback subcommand."""
     return click.option(
-        "--print-resulting-state/--no-print-resulting-state",
+        "--print-resulting-status/--no-print-resulting-status",
         "-r",
         default=True,
         show_default=True,
-        help="After the command, wait 1 second and print the resulting playback state",
+        help="After the command, wait 1 second and print the resulting playback status",
     )(func)
 
 
@@ -591,16 +591,16 @@ def rest_api_sleep(ctx: click.Context) -> None:
     time.sleep(ctx.obj["rest_api_sleep_before_next_call"])
 
 
-def maybe_print_resulting_state(ctx: click.Context, enabled: bool) -> None:
-    """When enabled, wait the configured number of seconds and invoke "playback state".
+def maybe_print_resulting_status(ctx: click.Context, enabled: bool) -> None:
+    """When enabled, wait the configured number of seconds and invoke "playback status".
 
     Args:
         ctx: Click context object (its ``obj`` is inherited by the invoked command)
-        enabled: Whether to print the resulting state
+        enabled: Whether to print the resulting status
     """
     if enabled:
         rest_api_sleep(ctx)
-        ctx.invoke(playback_state)
+        ctx.invoke(playback_status)
 
 
 class VolumeParamType(click.ParamType):
@@ -816,8 +816,8 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     """Return the defaults of the per-command options used in the configuration file.
 
     These options live on subcommands, not the top-level group: fields/format/raw on
-    ``playback state``, print-resulting-state on the playback action commands, and the
-    download options on ``track audio``. Read them from the ``playback_state``, ``toggle``,
+    ``playback status``, print-resulting-status on the playback action commands, and the
+    download options on ``track audio``. Read them from the ``playback_status``, ``toggle``,
     and ``audio`` command objects so the generated configuration mirrors the real
     defaults without duplication.
     """
@@ -825,14 +825,14 @@ def command_scoped_option_defaults() -> dict[str, Any]:
         "fields",
         "output_format",
         "raw",
-        "print_resulting_state",
+        "print_resulting_status",
         "file_name_template",
         "output_directory",
         "output_file",
         "overwrite_existing_files",
     }
     defaults: dict[str, Any] = {}
-    for command in (playback_state, toggle, audio):
+    for command in (playback_status, toggle, audio):
         for param in command.params:
             if isinstance(param, click.Option) and param.name in wanted:
                 defaults[param.name] = param.default
@@ -977,7 +977,7 @@ def render_state(
     output_format: str,
     raw: bool,
     short_fields: list[str],
-    heading: str = "Volumio State",
+    heading: str = "Volumio Status",
 ) -> None:
     """Fetch the current state and print it per the fields/format/raw options.
 
@@ -1024,7 +1024,7 @@ def playback(ctx: click.Context) -> None:
     pass
 
 
-@playback.command("state")
+@playback.command("status")
 @click.pass_context
 @click.option(
     "--fields",
@@ -1050,13 +1050,13 @@ def playback(ctx: click.Context) -> None:
     default=False,
     help="Output raw JSON without formatting (overrides --format)",
 )
-def playback_state(
+def playback_status(
     ctx: click.Context,
     fields: str,
     output_format: str,
     raw: bool,
 ) -> None:
-    """Get the current playback state from a Volumio instance.
+    """Get the current playback status from a Volumio instance.
 
     Retrieves and displays the current state of a Volumio music player instance,
     including playback status, volume, track information, and more. Also available
@@ -1065,19 +1065,19 @@ def playback_state(
     render_state(ctx, fields, output_format, raw, PLAYER_STATE_SHORT_FIELDS)
 
 
-# "info" is a top-level synonym for "playback state"
-main.add_command(playback_state, name="info")
+# "info" is a top-level synonym for "playback status"
+main.add_command(playback_status, name="info")
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     """Toggle between play and pause states of the Volumio instance."""
     execute_command(
         ctx, "toggle", lambda c: c.toggle(), "/api/v1/commands/?cmd=toggle"
     )
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
@@ -1089,8 +1089,8 @@ def toggle(ctx: click.Context, print_resulting_state: bool) -> None:
     default=None,
     help="Position in the queue to play (1-indexed)",
 )
-@print_resulting_state_option
-def play(ctx: click.Context, position: int | None, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
     """Start playback of the Volumio instance.
 
     Optionally specify a position to play a specific track in the queue.
@@ -1101,52 +1101,52 @@ def play(ctx: click.Context, position: int | None, print_resulting_state: bool) 
         execute_command(ctx, "play", lambda c: c.play(position), endpoint)
     else:
         execute_command(ctx, "play", lambda c: c.play(), "/api/v1/commands/?cmd=play")
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def pause(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def pause(ctx: click.Context, print_resulting_status: bool) -> None:
     """Pause playback of the Volumio instance."""
     execute_command(ctx, "pause", lambda c: c.pause(), "/api/v1/commands/?cmd=pause")
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def stop(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def stop(ctx: click.Context, print_resulting_status: bool) -> None:
     """Stop playback of the Volumio instance."""
     execute_command(ctx, "stop", lambda c: c.stop(), "/api/v1/commands/?cmd=stop")
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def next(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def next(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the next track of the Volumio instance."""
     execute_command(ctx, "next", lambda c: c.next(), "/api/v1/commands/?cmd=next")
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def previous(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the previous track of the Volumio instance."""
     execute_command(
         ctx, "previous", lambda c: c.previous(), "/api/v1/commands/?cmd=prev"
     )
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=VolumeParamType())
-@print_resulting_state_option
-def volume(ctx: click.Context, value: int | str | None, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def volume(ctx: click.Context, value: int | str | None, print_resulting_status: bool) -> None:
     """Set, adjust, or show the volume of the Volumio instance.
 
     Without VALUE, print the current volume. Otherwise VALUE is an integer
@@ -1159,13 +1159,13 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_state: b
         return
     endpoint = f"/api/v1/commands/?cmd=volume&volume={value}"
     execute_command(ctx, f"volume {value}", lambda c: c.volume(value), endpoint)
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def mute(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def mute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
     execute_command(
         ctx,
@@ -1173,13 +1173,13 @@ def mute(ctx: click.Context, print_resulting_state: bool) -> None:
         lambda c: c.volume("mute"),
         "/api/v1/commands/?cmd=volume&volume=mute",
     )
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @playback.command()
 @click.pass_context
-@print_resulting_state_option
-def unmute(ctx: click.Context, print_resulting_state: bool) -> None:
+@print_resulting_status_option
+def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
     execute_command(
         ctx,
@@ -1187,7 +1187,7 @@ def unmute(ctx: click.Context, print_resulting_state: bool) -> None:
         lambda c: c.volume("unmute"),
         "/api/v1/commands/?cmd=volume&volume=unmute",
     )
-    maybe_print_resulting_state(ctx, print_resulting_state)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 @main.group()

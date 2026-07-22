@@ -68,10 +68,10 @@ $ micromamba activate volumito_dev
 Query a Volumio instance at the default location (`volumio.local:3000`):
 
 ```bash
-volumito playback state
+volumito playback status
 ```
 
-`volumito info` is a synonym for `volumito playback state`.
+`volumito info` is a synonym for `volumito playback status`.
 
 ### Version
 
@@ -90,21 +90,21 @@ Specify custom connection parameters:
 
 ```bash
 # Custom host (-H is a shorthand for --host)
-volumito playback state --host my-volumio.local
-volumito playback state -H 192.168.1.100
+volumito playback status --host my-volumio.local
+volumito playback status -H 192.168.1.100
 
 # HTTPS connection
-volumito playback state --scheme https
+volumito playback status --scheme https
 
 # Custom ports (-P for --rest-api-port, -M for --mpd-port)
-volumito playback state --rest-api-port 8080 --mpd-port 7000
-volumito playback state -P 8080 -M 7000
+volumito playback status --rest-api-port 8080 --mpd-port 7000
+volumito playback status -P 8080 -M 7000
 
 # Custom timeouts (in seconds)
-volumito playback state --rest-api-timeout 10
+volumito playback status --rest-api-timeout 10
 volumito track audio --mpd-timeout 3
 
-# Pause before the resulting-state fetch (default 1.0 s; see Resulting State)
+# Pause before the resulting-status fetch (default 1.0 s; see Resulting Status)
 volumito --rest-api-sleep-before-next-call 0.5 playback pause
 ```
 
@@ -125,7 +125,7 @@ command-line option  >  configuration file  >  built-in default
 Point at an explicit file with `-c`/`--configuration-file`:
 
 ```bash
-volumito -c /path/to/volumito.yaml playback state
+volumito -c /path/to/volumito.yaml playback status
 ```
 
 If `-c` is omitted, the following directories are probed in order (highest priority first), and within
@@ -155,10 +155,10 @@ timeouts:
 output:
   verbose: true
   machine-readable: false
-  print-resulting-state: true
+  print-resulting-status: true
   # fields/format/raw here apply to all display commands...
   format: pretty
-  playback-state:
+  playback-status:
     # ...and can be overridden per command.
     format: table
   track-info:
@@ -176,10 +176,10 @@ downloads:
 ```
 
 The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
-`--fields`/`--format`/`--raw` options of the commands that support them (`playback state`, `info`,
+`--fields`/`--format`/`--raw` options of the commands that support them (`playback status`, `info`,
 `track info`, and `queue list`). A key placed directly under `output` applies to all of them; the optional
-`playback-state`, `track-info`, and `queue-list` subsections hold the same keys and override the shared value
-for that command (`playback-state` also governs the `info` synonym). The `print-resulting-state` key sets the
+`playback-status`, `track-info`, and `queue-list` subsections hold the same keys and override the shared value
+for that command (`playback-status` also governs the `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
 `previous`, `volume`, `mute`, `unmute`).
 
@@ -212,18 +212,18 @@ Choose from multiple output formats:
 
 ```bash
 # Pretty JSON with 4-space indentation (default)
-volumito playback state --format pretty
+volumito playback status --format pretty
 
 # Compact JSON with 2-space indentation
-volumito playback state --format json
+volumito playback status --format json
 
 # Human-readable table (-F is a shorthand for --format)
-volumito playback state --format table
-volumito playback state -F table
+volumito playback status --format table
+volumito playback status -F table
 
 # Raw unformatted JSON (-R is a shorthand for --raw)
-volumito playback state --raw
-volumito playback state -R
+volumito playback status --raw
+volumito playback status -R
 ```
 
 ### Field Filtering
@@ -232,11 +232,11 @@ Control which fields are displayed:
 
 ```bash
 # Show only key playback information (default)
-volumito playback state --fields short
+volumito playback status --fields short
 
 # Show all available fields (-L is a shorthand for --fields)
-volumito playback state --fields all
-volumito playback state -L all
+volumito playback status --fields all
+volumito playback status -L all
 ```
 
 Short fields include:
@@ -258,10 +258,10 @@ Short fields include:
 
 ```bash
 # Verbose mode
-volumito playback state --verbose
+volumito playback status --verbose
 
 # Machine-readable mode (always supersedes the verbose option)
-volumito playback state --machine-readable
+volumito playback status --machine-readable
 ```
 
 ### Volume Control
@@ -298,22 +298,22 @@ volumito playback play --position 3
 volumito playback play -p 3
 ```
 
-### Resulting State
+### Resulting Status
 
 By default, every `playback` action subcommand (`toggle`, `play`, `pause`, `stop`, `next`, `previous`,
-`volume`, `mute`, `unmute`) waits before fetching and printing the resulting `playback state`. The pause
+`volume`, `mute`, `unmute`) waits before fetching and printing the resulting `playback status`. The pause
 is 1 second by default; change it with the global `--rest-api-sleep-before-next-call` option. Disable
-the whole behavior with `--no-print-resulting-state`:
+the whole behavior with `--no-print-resulting-status`:
 
 ```bash
-# Pause, then show the resulting state (default)
+# Pause, then show the resulting status (default)
 volumito playback pause
 
-# Use a shorter pause before the resulting state
+# Use a shorter pause before the resulting status
 volumito --rest-api-sleep-before-next-call 0.5 playback pause
 
-# Pause without printing the resulting state
-volumito playback pause --no-print-resulting-state
+# Pause without printing the resulting status
+volumito playback pause --no-print-resulting-status
 ```
 
 ### Examples
@@ -322,25 +322,25 @@ Combine options for specific use cases:
 
 ```bash
 # Table format with all fields
-volumito playback state --format table --fields all
+volumito playback status --format table --fields all
 
 # Pipe to jq for advanced JSON processing
-volumito playback state --raw | jq '.title, .artist'
+volumito playback status --raw | jq '.title, .artist'
 
 # Save state to file
-volumito playback state --format json > volumio_state.json
+volumito playback status --format json > volumio_state.json
 
 # Monitor playback every 5 seconds
 while true; do
     clear
-    volumito playback state --format table
+    volumito playback status --format table
     sleep 5
 done
 ```
 
 ### Track Information
 
-Show metadata for the currently playing track. This works like `playback state`
+Show metadata for the currently playing track. This works like `playback status`
 (same `--fields`/`--format`/`--raw` options, and their `-L`/`-F`/`-R` shorthands),
 but its default `short` field set is track-oriented:
 
