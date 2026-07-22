@@ -33,8 +33,8 @@ _DOWNLOAD_DEFAULTS = {
     "overwrite-existing-files": False,
 }
 
-# The three display keys with their default values, as generated per subsection.
-_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty", "raw": False}
+# The display keys with their default values, as generated per subsection.
+_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty"}
 
 # Flat param-name -> default value map, as produced from the CLI option defaults.
 _DEFAULTS = {
@@ -49,7 +49,6 @@ _DEFAULTS = {
     "machine_readable": False,
     "fields": "short",
     "output_format": "pretty",
-    "raw": False,
     "print_resulting_status": True,
     "file_name_template": "{file_name_from_uri}",
     "output_directory": None,
@@ -204,6 +203,14 @@ class TestLoadDefaultMap:
         with pytest.raises(click.BadParameter, match="unknown key 'bogus' in section 'output'"):
             load_configuration(str(config))
 
+    def test_output_raw_key_no_longer_recognized(self, tmp_path):
+        """The removed raw key is now reported as an unrecognized key."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  raw: true\n")
+
+        with pytest.raises(click.BadParameter, match="unknown key 'raw' in section 'output'"):
+            load_configuration(str(config))
+
     def test_output_subsection_unknown_key_raises(self, tmp_path):
         """An unrecognized key in an output subsection raises BadParameter."""
         config = tmp_path / "volumito.yaml"
@@ -341,7 +348,7 @@ class TestRenderDefaultConfiguration:
         assert "# REST API request timeout, in seconds" in result
         assert "in seconds" in result
         assert "# Fields to display: short or all" in result
-        assert "# Output format: json, pretty, or table" in result
+        assert "# Output format: json, pretty, table, or raw" in result
 
     def test_comments_cover_all_keys(self):
         """KEY_COMMENTS covers exactly the flat, output, and download keys, all non-empty."""
@@ -373,7 +380,7 @@ class TestRenderDefaultConfiguration:
         assert document["output"]["playback-status"] == _DISPLAY_DEFAULTS
         assert document["output"]["track-info"] == _DISPLAY_DEFAULTS
         assert document["output"]["queue-get"] == _DISPLAY_DEFAULTS
-        # Shared scalars stay at the top level; fields/format/raw only in subsections.
+        # Shared scalars stay at the top level; fields/format only in subsections.
         assert document["output"]["verbose"] is False
         assert "fields" not in document["output"]
 
@@ -502,12 +509,12 @@ class TestBuildClickDefaultMap:
         assert result == {"host": "myhost.local", "verbose": True}
 
     def test_display_keys_replicated_under_each_command(self):
-        """fields/format/raw are nested under every output display command path."""
+        """fields/format are nested under every output display command path."""
         result = build_click_default_map(
-            {"output": {"fields": "all", "format": "table", "raw": True}}
+            {"output": {"fields": "all", "format": "table"}}
         )
 
-        formatting = {"fields": "all", "output_format": "table", "raw": True}
+        formatting = {"fields": "all", "output_format": "table"}
         assert result == {
             "playback": {"status": formatting},
             "track": {"info": formatting},

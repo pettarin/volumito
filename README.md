@@ -92,10 +92,11 @@ Query the Volumio instance's system utilities:
 # Health check (prints "pong")
 volumito system ping
 
-# System version and system information (pretty JSON; -R/--raw for compact)
+# System version and system information (pretty JSON by default)
 volumito system version
 volumito system info
-volumito system info --raw
+volumito system info --format table
+volumito system info --format raw
 ```
 
 `volumito info` is a synonym for `volumito system info`.
@@ -172,7 +173,7 @@ output:
   verbose: true
   machine-readable: false
   print-resulting-status: true
-  # fields/format/raw here apply to all display commands...
+  # fields/format here apply to all display commands...
   format: pretty
   playback-status:
     # ...and can be overridden per command.
@@ -191,8 +192,8 @@ downloads:
     output-directory: ~/Covers
 ```
 
-The `output` section's `fields`, `format`, and `raw` keys set the defaults for the corresponding
-`--fields`/`--format`/`--raw` options of the commands that support them (`playback status`,
+The `output` section's `fields` and `format` keys set the defaults for the corresponding
+`--fields`/`--format` options of the commands that support them (`playback status`,
 `track info`, and `queue get`). A key placed directly under `output` applies to all of them; the optional
 `playback-status`, `track-info`, and `queue-get` subsections hold the same keys and override the shared value
 for that command. The `print-resulting-status` key sets the
@@ -237,9 +238,9 @@ volumito playback status --format json
 volumito playback status --format table
 volumito playback status -F table
 
-# Raw unformatted JSON (-R is a shorthand for --raw)
-volumito playback status --raw
-volumito playback status -R
+# Raw unformatted JSON, exactly as returned by the API
+volumito playback status --format raw
+volumito playback status -F raw
 ```
 
 ### Field Filtering
@@ -319,7 +320,7 @@ volumito playback play -p 3
 Inspect and manage the playback queue:
 
 ```bash
-# Print the current queue (same --fields/--format/--raw options as playback status)
+# Print the current queue (same --fields/--format options as playback status)
 volumito queue get
 volumito queue get --format table
 
@@ -372,7 +373,7 @@ Combine options for specific use cases:
 volumito playback status --format table --fields all
 
 # Pipe to jq for advanced JSON processing
-volumito playback status --raw | jq '.title, .artist'
+volumito playback status --format raw | jq '.title, .artist'
 
 # Save state to file
 volumito playback status --format json > volumio_state.json
@@ -388,7 +389,7 @@ done
 ### Track Information
 
 Show metadata for the currently playing track. This works like `playback status`
-(same `--fields`/`--format`/`--raw` options, and their `-L`/`-F`/`-R` shorthands),
+(same `--fields`/`--format` options, and their `-L`/`-F` shorthands),
 but its default `short` field set is track-oriented:
 
 ```bash
@@ -399,7 +400,7 @@ volumito track info
 volumito track info -L all -F json
 
 # Raw unfiltered JSON
-volumito track info -R
+volumito track info -F raw
 ```
 
 Its short fields are:

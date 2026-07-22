@@ -82,6 +82,9 @@ TRACK_INFO_SHORT_FIELDS = [
     "channels",
 ]
 
+# Accepted values of the -F/--format option
+OUTPUT_FORMATS = ["json", "pretty", "table", "raw"]
+
 # Version of the CLI (and of the underlying library)
 VERSION = "0.0.11"
 
@@ -393,7 +396,15 @@ def format_as_table(
             # Format seek (milliseconds) as HH:MM:SS.mmm
             if key == "seek" and isinstance(value, int):
                 value = format_seek(value)
-            lines.append(f"{label:20}: {value}")
+            if isinstance(value, dict):
+                # Print a nested object as one indented key/value line per sub-key,
+                # in the order returned by the API
+                lines.append(f"{label:20}:")
+                for sub_key, sub_value in value.items():
+                    sub_label = sub_key.replace("_", " ").title()
+                    lines.append(f"  {sub_label:18}: {sub_value}")
+            else:
+                lines.append(f"{label:20}: {value}")
 
     return "\n".join(lines)
 
@@ -599,6 +610,26 @@ def print_resulting_status_option(func: Callable[..., None]) -> Callable[..., No
         show_default=True,
         help="After the command, wait 1 second and print the resulting playback status",
     )(func)
+
+
+def format_option(help_text: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
+    """Return the ``-F``/``--format`` option decorator with the given help text.
+
+    Args:
+        help_text: The help text shown for the option
+
+    Returns:
+        A Click option decorator adding ``-F``/``--format``
+    """
+    return click.option(
+        "--format",
+        "-F",
+        "output_format",
+        type=click.Choice(OUTPUT_FORMATS, case_sensitive=False),
+        default="pretty",
+        show_default=True,
+        help=help_text,
+    )
 
 
 def rest_api_sleep(ctx: click.Context) -> None:
@@ -864,7 +895,7 @@ def root_option_defaults(ctx: click.Context) -> dict[str, Any]:
 def command_scoped_option_defaults() -> dict[str, Any]:
     """Return the defaults of the per-command options used in the configuration file.
 
-    These options live on subcommands, not the top-level group: fields/format/raw on
+    These options live on subcommands, not the top-level group: fields/format on
     ``playback status``, print-resulting-status on the playback and queue action commands,
     and the download options on ``track audio``. Read them from the ``playback_status``,
     ``toggle``, and ``audio`` command objects so the generated configuration mirrors the
@@ -873,7 +904,6 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     wanted = {
         "fields",
         "output_format",
-        "raw",
         "print_resulting_status",
         "file_name_template",
         "output_directory",
@@ -1024,17 +1054,15 @@ def render_state(
     ctx: click.Context,
     fields: str,
     output_format: str,
-    raw: bool,
     short_fields: list[str],
     heading: str = "Volumio Status",
 ) -> None:
-    """Fetch the current state and print it per the fields/format/raw options.
+    """Fetch the current state and print it per the fields/format options.
 
     Args:
         ctx: Click context object containing shared options
         fields: The fields option ("short" or "all")
-        output_format: The output format ("json", "pretty", or "table")
-        raw: When True, print the raw unfiltered JSON (ignores fields/format)
+        output_format: The output format ("json", "pretty", "table", or "raw")
         short_fields: The list of keys to keep when ``fields`` is "short"
         heading: The heading line for the table output format
     """
@@ -1047,7 +1075,7 @@ def render_state(
         click.echo("Successfully retrieved state", err=True)
 
     # Determine output format
-    if raw:
+    if output_format == "raw":
         # Raw JSON without formatting (ignores fields filter)
         output = json.dumps(state)
     else:
@@ -1066,17 +1094,30 @@ def render_state(
     click.echo(output)
 
 
-def echo_payload(ctx: click.Context, data: dict[str, Any]) -> None:
-    """Print a JSON payload as pretty JSON, or compact in machine-readable mode.
+def render_payload(
+    ctx: click.Context,
+    data: dict[str, Any],
+    output_format: str,
+    heading: str,
+) -> None:
+    """Print a JSON payload per the format option, or compact in machine-readable mode.
 
     Args:
         ctx: Click context object containing shared options
         data: The JSON object to print
+        output_format: The output format ("json", "pretty", "table", or "raw")
+        heading: The heading line for the table output format
     """
-    if ctx.obj["machine_readable"]:
-        click.echo(json.dumps(data))
-    else:
-        click.echo(json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False))
+    if ctx.obj["machine_readable"] or output_format == "raw":
+        output = json.dumps(data)
+    elif output_format == "json":
+        output = format_as_json(data)
+    elif output_format == "table":
+        output = format_as_table(data, heading=heading)
+    else:  # pretty
+        output = format_as_pretty(data)
+
+    click.echo(output)
 
 
 @main.group()
@@ -1096,34 +1137,18 @@ def playback(ctx: click.Context) -> None:
     show_default=True,
     help="Fields to display (applies to json and pretty formats)",
 )
-@click.option(
-    "--format",
-    "-F",
-    "output_format",
-    type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
-    default="pretty",
-    show_default=True,
-    help="Output format for the state information",
-)
-@click.option(
-    "--raw",
-    "-R",
-    is_flag=True,
-    default=False,
-    help="Output raw JSON without formatting (overrides --format)",
-)
+@format_option("Output format for the state information")
 def playback_status(
     ctx: click.Context,
     fields: str,
     output_format: str,
-    raw: bool,
 ) -> None:
     """Get the current playback status from a Volumio instance.
 
     Retrieves and displays the current state of a Volumio music player instance,
     including playback status, volume, track information, and more.
     """
-    render_state(ctx, fields, output_format, raw, PLAYER_STATE_SHORT_FIELDS)
+    render_state(ctx, fields, output_format, PLAYER_STATE_SHORT_FIELDS)
 
 
 @playback.command()
@@ -1264,30 +1289,14 @@ def track(ctx: click.Context) -> None:
     show_default=True,
     help="Fields to display (applies to json and pretty formats)",
 )
-@click.option(
-    "--format",
-    "-F",
-    "output_format",
-    type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
-    default="pretty",
-    show_default=True,
-    help="Output format for the track information",
-)
-@click.option(
-    "--raw",
-    "-R",
-    is_flag=True,
-    default=False,
-    help="Output raw JSON without formatting (overrides --format)",
-)
+@format_option("Output format for the track information")
 def track_info(
     ctx: click.Context,
     fields: str,
     output_format: str,
-    raw: bool,
 ) -> None:
     """Print the information of the current track."""
-    render_state(ctx, fields, output_format, raw, TRACK_INFO_SHORT_FIELDS, heading="Track Info")
+    render_state(ctx, fields, output_format, TRACK_INFO_SHORT_FIELDS, heading="Track Info")
 
 
 @track.command()
@@ -1546,27 +1555,11 @@ def queue(ctx: click.Context) -> None:
     show_default=True,
     help="Fields to display (applies to json and pretty formats)",
 )
-@click.option(
-    "--format",
-    "-F",
-    "output_format",
-    type=click.Choice(["json", "pretty", "table"], case_sensitive=False),
-    default="pretty",
-    show_default=True,
-    help="Output format for the queue information",
-)
-@click.option(
-    "--raw",
-    "-R",
-    is_flag=True,
-    default=False,
-    help="Output raw JSON without formatting (overrides --format)",
-)
+@format_option("Output format for the queue information")
 def queue_get(
     ctx: click.Context,
     fields: str,
     output_format: str,
-    raw: bool,
 ) -> None:
     """Get the playback queue.
 
@@ -1589,7 +1582,7 @@ def queue_get(
             click.echo("Successfully retrieved queue", err=True)
 
         # Determine output format
-        if raw:
+        if output_format == "raw":
             # Raw JSON without formatting (ignores fields filter)
             output = json.dumps(queue_data)
         else:
@@ -1696,40 +1689,22 @@ def system_ping(ctx: click.Context) -> None:
 
 @system.command("version")
 @click.pass_context
-@click.option(
-    "--raw",
-    "-R",
-    is_flag=True,
-    default=False,
-    help="Output compact JSON instead of pretty-printed JSON",
-)
-def system_version(ctx: click.Context, raw: bool) -> None:
+@format_option("Output format for the system version")
+def system_version(ctx: click.Context, output_format: str) -> None:
     """Get the system version of the Volumio instance."""
     data = fetch_or_exit(
         ctx, lambda c: c.get_system_version(), "/api/v1/getSystemVersion"
     )
-    if raw:
-        click.echo(json.dumps(data))
-    else:
-        echo_payload(ctx, data)
+    render_payload(ctx, data, output_format, heading="System Version")
 
 
 @system.command("info")
 @click.pass_context
-@click.option(
-    "--raw",
-    "-R",
-    is_flag=True,
-    default=False,
-    help="Output compact JSON instead of pretty-printed JSON",
-)
-def system_info(ctx: click.Context, raw: bool) -> None:
+@format_option("Output format for the system information")
+def system_info(ctx: click.Context, output_format: str) -> None:
     """Get the system information of the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.get_system_info(), "/api/v1/getSystemInfo")
-    if raw:
-        click.echo(json.dumps(data))
-    else:
-        echo_payload(ctx, data)
+    render_payload(ctx, data, output_format, heading="System Info")
 
 
 # "info" is a top-level synonym for "system info"

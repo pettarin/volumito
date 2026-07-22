@@ -43,8 +43,8 @@ _DOWNLOAD_DEFAULTS = {
     "overwrite-existing-files": False,
 }
 
-# The three display keys with their default values, as generated per subsection.
-_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty", "raw": False}
+# The display keys with their default values, as generated per subsection.
+_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty"}
 
 
 @pytest.fixture(autouse=True)
@@ -228,6 +228,25 @@ class TestFormatFunctions:
 
         assert "Volumio Status" in result
         assert "Test" in result
+
+    def test_format_as_table_nested_dictionary(self):
+        """A nested object is printed as one indented key/value line per sub-key."""
+        state = {
+            "name": "volumio4b",
+            "state": {"status": "play", "volume": 20, "mute": False},
+        }
+
+        result = format_as_table(state, heading="System Info")
+        lines = result.splitlines()
+
+        assert f"{'State':20}:" in lines
+        assert f"  {'Status':18}: play" in lines
+        assert f"  {'Volume':18}: 20" in lines
+        assert f"  {'Mute':18}: False" in lines
+        # Sub-keys keep the order returned by the API
+        assert lines.index("  " + f"{'Status':18}: play") < lines.index(
+            "  " + f"{'Volume':18}: 20"
+        )
 
 
 class TestExtractFilenameFromUri:
@@ -457,9 +476,9 @@ class TestCLICommands:
         result = runner.invoke(main, ["info", "--help"])
 
         assert result.exit_code == 0
-        assert "--raw" in result.output
-        # info is now system info: no --format/--fields
-        assert "--format" not in result.output
+        assert "--format" in result.output
+        assert "--raw" not in result.output
+        # info is now system info: no --fields
         assert "--fields" not in result.output
 
     def test_info_success_default(self, runner: CliRunner, mocker: MockerFixture):
@@ -491,7 +510,16 @@ class TestCLICommands:
         # Short options
         assert "-F" in result.output
         assert "-L" in result.output
-        assert "-R" in result.output
+        # The --raw flag has been replaced by the "raw" value of --format
+        assert "--raw" not in result.output
+        assert "raw" in result.output
+
+    def test_playback_status_raw_option_removed(self, runner: CliRunner):
+        """The removed -R/--raw option is now a usage error."""
+        for option in ("-R", "--raw"):
+            result = runner.invoke(main, ["playback", "status", option])
+            assert result.exit_code == 2
+            assert "No such option" in result.output
 
     def test_playback_status_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback status (the canonical form of info) with default options."""
@@ -529,8 +557,8 @@ class TestCLICommands:
         host_configuration = mock_client_class.call_args[0][0]
         assert host_configuration.host == "192.168.1.100"
 
-    def test_info_with_raw_flag(self, runner: CliRunner, mocker: MockerFixture):
-        """Test info command with --raw flag prints compact JSON."""
+    def test_info_with_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """Test info command with --format raw prints compact JSON."""
         mock_client = mocker.Mock()
         mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
 
@@ -539,7 +567,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["info", "--raw"])
+        result = runner.invoke(main, ["info", "--format", "raw"])
 
         assert result.exit_code == 0
         # Compact single-line JSON
@@ -617,8 +645,8 @@ class TestCLICommands:
         output_data = json.loads(result.output)
         assert "extra" in output_data
 
-    def test_short_option_raw(self, runner: CliRunner, mocker: MockerFixture):
-        """Test the -R shorthand for --raw (on the info/system info command)."""
+    def test_short_option_format_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """Test the -F shorthand with the raw format (on the info/system info command)."""
         mock_client = mocker.Mock()
         mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
 
@@ -627,7 +655,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["info", "-R"])
+        result = runner.invoke(main, ["info", "-F", "raw"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -1358,7 +1386,8 @@ class TestCLICommands:
         # Short options
         assert "-L" in result.output
         assert "-F" in result.output
-        assert "-R" in result.output
+        assert "--raw" not in result.output
+        assert "raw" in result.output
 
     def test_track_info_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test successful track info command with default options."""
@@ -1467,7 +1496,7 @@ class TestCLICommands:
         )
 
     def test_track_info_raw(self, runner: CliRunner, mocker: MockerFixture):
-        """Test track info with the -R (raw) flag."""
+        """Test track info with the raw format."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test", "extra": "data"}
 
@@ -1476,7 +1505,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info", "-R"])
+        result = runner.invoke(main, ["track", "info", "-F", "raw"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -2747,8 +2776,8 @@ class TestCLICommands:
         assert "artist" in output_data[0]
         assert "extra_field" not in output_data[0]
 
-    def test_queue_get_with_raw_flag(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --raw flag."""
+    def test_queue_get_with_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue get command with --format raw."""
         mock_client = mocker.Mock()
         mock_client.get_queue.return_value = {
             "queue": [
@@ -2761,7 +2790,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--raw"])
+        result = runner.invoke(main, ["queue", "get", "--format", "raw"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -2918,14 +2947,51 @@ class TestSystemCommands:
         assert json.loads(result.output)["systemversion"] == "3.601"
 
     def test_version_raw(self, runner: CliRunner, mocker: MockerFixture):
-        """system version -R prints compact JSON."""
+        """system version -F raw prints compact JSON."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["system", "version", "-R"])
+        result = runner.invoke(main, ["system", "version", "-F", "raw"])
 
         assert result.exit_code == 0
         assert "\n" not in result.output.strip()
         assert json.loads(result.output)["hardware"] == "pi"
+
+    def test_version_json(self, runner: CliRunner, mocker: MockerFixture):
+        """system version -F json prints JSON with 2-space indentation."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "version", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert '\n  "' in result.output
+        assert json.loads(result.output)["hardware"] == "pi"
+
+    def test_version_table(self, runner: CliRunner, mocker: MockerFixture):
+        """system version -F table prints a table with its heading."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "version", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "System Version" in result.output
+        assert "Hardware" in result.output
+        assert "pi" in result.output
+
+    def test_version_invalid_format(self, runner: CliRunner, mocker: MockerFixture):
+        """An unknown --format value is a usage error."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "version", "-F", "yaml"])
+
+        assert result.exit_code == 2
+        assert "'yaml' is not one of" in result.output
+
+    def test_version_raw_option_removed(self, runner: CliRunner):
+        """The removed -R/--raw option is now a usage error."""
+        for option in ("-R", "--raw"):
+            result = runner.invoke(main, ["system", "version", option])
+            assert result.exit_code == 2
+            assert "No such option" in result.output
 
     def test_version_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """In machine-readable mode system version prints compact JSON."""
@@ -2954,6 +3020,26 @@ class TestSystemCommands:
         result = runner.invoke(main, ["system", "info"])
 
         assert result.exit_code == 0
+        assert json.loads(result.output)["name"] == "Living Room"
+
+    def test_info_table(self, runner: CliRunner, mocker: MockerFixture):
+        """system info -F table prints a table with its heading."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "info", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "System Info" in result.output
+        assert "Living Room" in result.output
+
+    def test_info_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """system info -F raw prints compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["system", "info", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
         assert json.loads(result.output)["name"] == "Living Room"
 
     def test_top_level_info_is_alias_for_system_info(

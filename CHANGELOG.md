@@ -25,9 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the corresponding configuration key
 - `configuration search` now lists every probed path (directory and file name) in probing order,
   marking the existing files as used or not used, instead of stopping at the first one found
+- The `-F`/`--format` option accepts the new value `raw`
+- The `system version` and `system info` commands now accept `-F`/`--format`
+- In table format, nested objects are printed one key/value per line
 
 ### Removed
 
+- The `-R`/`--raw` option and the corresponding configuration key
 - The `configuration locations` subcommand, superseded by the new behavior
   of `configuration search`
 

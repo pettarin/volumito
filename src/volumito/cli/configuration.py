@@ -18,7 +18,7 @@ SECTION_KEYS: dict[str, list[str]] = {
 }
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
-# per-command subsections override the display keys (fields/format/raw). verbose and
+# per-command subsections override the display keys (fields/format). verbose and
 # machine-readable are global; print-resulting-status applies to the playback and
 # queue action commands.
 OUTPUT_SCALAR_KEYS = [
@@ -26,10 +26,9 @@ OUTPUT_SCALAR_KEYS = [
     "machine-readable",
     "fields",
     "format",
-    "raw",
     "print-resulting-status",
 ]
-DISPLAY_KEYS = ["fields", "format", "raw"]
+DISPLAY_KEYS = ["fields", "format"]
 DISPLAY_SUBSECTIONS = ["playback-status", "track-info", "queue-get"]
 
 # The "downloads" section is hierarchical: its scalar keys are shared by both track
@@ -58,8 +57,7 @@ KEY_COMMENTS: dict[str, str] = {
     "verbose": "Enable verbose output",
     "machine-readable": "Produce machine-readable output only",
     "fields": "Fields to display: short or all",
-    "format": "Output format: json, pretty, or table",
-    "raw": "Output raw JSON, overriding the format",
+    "format": "Output format: json, pretty, table, or raw",
     "print-resulting-status": (
         "After a playback or queue command like pause or clear, print the resulting playback status"
     ),
