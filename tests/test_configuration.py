@@ -429,6 +429,7 @@ class TestRenderDefaultConfiguration:
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-get": _DISPLAY_DEFAULTS,
+                "playlist-list": _FORMAT_DEFAULTS,
                 "zones-get": _DISPLAY_DEFAULTS,
                 "system-version": _FORMAT_DEFAULTS,
                 "system-info": _FORMAT_DEFAULTS,
@@ -464,6 +465,7 @@ class TestRenderDefaultConfiguration:
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
                 "queue-get": _DISPLAY_DEFAULTS,
+                "playlist-list": _FORMAT_DEFAULTS,
                 "zones-get": _DISPLAY_DEFAULTS,
                 "system-version": _FORMAT_DEFAULTS,
                 "system-info": _FORMAT_DEFAULTS,
@@ -535,6 +537,7 @@ class TestBuildClickDefaultMap:
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"get": formatting},
+            "playlist": {"list": format_only},
             "zones": {"get": formatting},
             "system": {"version": format_only, "info": format_only},
             "collection": {"statistics": format_only},
@@ -575,7 +578,7 @@ class TestBuildClickDefaultMap:
         assert result["queue"]["get"] == {"output_format": "pretty"}
 
     def test_print_resulting_status_replicated_under_action_commands(self):
-        """print-resulting-status is nested under every playback and queue action command."""
+        """print-resulting-status is nested under every playback, queue, and playlist action."""
         result = build_click_default_map({"output": {"print-resulting-status": False}})
 
         assert result == {
@@ -594,6 +597,9 @@ class TestBuildClickDefaultMap:
                 "clear": {"print_resulting_status": False},
                 "repeat": {"print_resulting_status": False},
                 "randomize": {"print_resulting_status": False},
+            },
+            "playlist": {
+                "play": {"print_resulting_status": False},
             },
         }
 

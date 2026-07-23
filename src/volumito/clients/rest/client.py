@@ -5,6 +5,7 @@
 """
 
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
@@ -394,6 +395,35 @@ class VolumioRESTAPIClient:
 
         return data
 
+    def _get_json_list(self, path: str) -> list[Any]:
+        """GET ``path`` and parse the response as a JSON array.
+
+        Args:
+            path: The URL path (including any query string) to request
+
+        Returns:
+            The parsed JSON array
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-array response
+        """
+        response = self._get(path)
+
+        try:
+            data = response.json()
+        except ValueError as e:
+            raise VolumioAPIError(
+                f"Failed to parse JSON response from Volumio API: {e}"
+            ) from e
+
+        if not isinstance(data, list):
+            raise VolumioAPIError(
+                f"Expected JSON array from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
     def _get_text(self, path: str) -> str:
         """GET ``path`` and return the response body as text.
 
@@ -468,3 +498,30 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._get_json("/api/v1/getzones")
+
+    def list_playlists(self) -> list[Any]:
+        """Query the /api/v1/listplaylists endpoint.
+
+        Returns:
+            A list containing the names of the saved playlists
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json_list("/api/v1/listplaylists")
+
+    def play_playlist(self, name: str) -> dict[str, Any]:
+        """Start playback of a saved playlist.
+
+        Args:
+            name: The name of the playlist to play
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self.send_command(f"playplaylist&name={quote(name, safe='')}")

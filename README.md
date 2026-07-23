@@ -124,6 +124,20 @@ volumito zones get --format table
 volumito zones get --fields all
 ```
 
+### Playlists
+
+List and play the playlists saved on the Volumio instance:
+
+```bash
+# Names of the saved playlists
+volumito playlist list
+volumito playlist list --format table
+
+# Play a playlist by name (quote names containing spaces)
+volumito playlist play Rock
+volumito playlist play "Jazz Classics"
+```
+
 ### Connection Options
 
 Specify custom connection parameters:
@@ -204,6 +218,8 @@ output:
     format: table
   track-info:
     format: json
+  playlist-list:
+    format: table
   collection-statistics:
     format: table
 downloads:
@@ -220,14 +236,16 @@ downloads:
 
 The `output` section's `fields` and `format` keys set the defaults for the corresponding
 `--fields`/`--format` options of the commands that support them: `format` applies to `playback status`,
-`track info`, `queue get`, `zones get`, `system version`, `system info`, and `collection statistics`, while
-`fields` applies to the first four only. A key placed directly under `output` applies to all the commands
-accepting it; the optional `playback-status`, `track-info`, `queue-get`, `zones-get`, `system-version`,
-`system-info`, and `collection-statistics` subsections hold the same keys and override the shared value
+`track info`, `queue get`, `zones get`, `playlist list`, `system version`, `system info`, and
+`collection statistics`, while `fields` applies to the first four only. A key placed directly under
+`output` applies to all the commands accepting it; the optional `playback-status`, `track-info`,
+`queue-get`, `playlist-list`, `zones-get`, `system-version`, `system-info`, and
+`collection-statistics` subsections hold the same keys and override the shared value
 for that command
 (`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
-`previous`, `volume`, `mute`, `unmute`) and the `queue` action commands (`clear`, `repeat`, `randomize`).
+`previous`, `volume`, `mute`, `unmute`), the `queue` action commands (`clear`, `repeat`, `randomize`),
+and `playlist play`.
 The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the defaults for the
 corresponding global options and cannot be overridden per command.
 

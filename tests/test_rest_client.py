@@ -544,6 +544,109 @@ class TestVolumioRESTAPIClient:
 
         assert "Failed to parse JSON" in str(exc_info.value)
 
+    def test_list_playlists_success(self, mocker: MockerFixture):
+        """Test successful list_playlists() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = ["Rock", "Jazz"]
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.list_playlists()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/listplaylists", timeout=5.0
+        )
+        assert data == ["Rock", "Jazz"]
+
+    def test_list_playlists_connection_error(self, mocker: MockerFixture):
+        """Test list_playlists() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.list_playlists()
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_list_playlists_invalid_json(self, mocker: MockerFixture):
+        """Test list_playlists() with an invalid JSON response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.list_playlists()
+
+        assert "Failed to parse JSON" in str(exc_info.value)
+
+    def test_list_playlists_non_list_response(self, mocker: MockerFixture):
+        """Test list_playlists() rejects a payload that is not a JSON array."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"playlists": ["Rock"]}
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.list_playlists()
+
+        assert "Expected JSON array from Volumio API, got dict" in str(exc_info.value)
+
+    def test_play_playlist_success(self, mocker: MockerFixture):
+        """Test successful play_playlist() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "playPlaylist Response"}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.play_playlist("Rock")
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/commands/?cmd=playplaylist&name=Rock",
+            timeout=5.0,
+        )
+        assert data["response"] == "playPlaylist Response"
+
+    def test_play_playlist_name_is_percent_encoded(self, mocker: MockerFixture):
+        """Test play_playlist() percent-encodes the playlist name."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "playPlaylist Response"}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.play_playlist("Rock & Roll/Best")
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/commands/"
+            "?cmd=playplaylist&name=Rock%20%26%20Roll%2FBest",
+            timeout=5.0,
+        )
+
+    def test_play_playlist_connection_error(self, mocker: MockerFixture):
+        """Test play_playlist() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.play_playlist("Rock")
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
     def test_send_command_success(self, mocker: MockerFixture):
         """Test successful send_command() call."""
         # Mock response

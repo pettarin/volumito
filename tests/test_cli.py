@@ -524,14 +524,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.12" in result.output
+        assert "volumito, version 0.0.13" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.12"'
+        assert result.output.strip() == '"0.0.13"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -540,7 +540,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.12"'
+        assert result.output.strip() == '"0.0.13"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3380,6 +3380,202 @@ class TestZonesCommands:
         assert "Connection error" in result.output
 
 
+class TestPlaylistCommands:
+    """Test cases for the playlist list and playlist play commands."""
+
+    PLAYLISTS = ["Rock", "Jazz Classics", "Ambient"]
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, playlists=None):
+        """Mock VolumioRESTAPIClient with usable playlist methods; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.list_playlists.return_value = (
+            self.PLAYLISTS if playlists is None else playlists
+        )
+        mock_client.play_playlist.return_value = {"response": "playPlaylist Response"}
+        mock_client.get_state.return_value = {
+            "title": "Test Song",
+            "artist": "StatusMarkerArtist",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_group_help(self, runner: CliRunner):
+        """The playlist group lists both of its commands."""
+        result = runner.invoke(main, ["playlist", "--help"])
+
+        assert result.exit_code == 0
+        assert "list" in result.output
+        assert "play" in result.output
+
+    def test_list_default_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list prints the playlist names as pretty JSON by default."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.PLAYLISTS
+        # Pretty uses 4-space indentation
+        assert '\n    "Rock"' in result.output
+
+    def test_list_json_format(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list -F json prints JSON with 2-space indentation."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "list", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.PLAYLISTS
+        assert '\n  "Rock"' in result.output
+
+    def test_list_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list -F table prints a numbered list."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "list", "-F", "table"])
+        lines = result.output.splitlines()
+
+        assert result.exit_code == 0
+        assert "Volumio Playlists" in lines
+        assert "1. Rock" in lines
+        assert "2. Jazz Classics" in lines
+        assert "3. Ambient" in lines
+
+    def test_list_table_format_two_digit_numbers(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With 10+ playlists the numbers are right-aligned."""
+        self._mock_client(mocker, playlists=[f"Playlist {index}" for index in range(1, 12)])
+
+        result = runner.invoke(main, ["playlist", "list", "-F", "table"])
+        lines = result.output.splitlines()
+
+        assert result.exit_code == 0
+        assert " 9. Playlist 9" in lines
+        assert "10. Playlist 10" in lines
+
+    def test_list_table_format_empty(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list -F table reports an empty playlist list."""
+        self._mock_client(mocker, playlists=[])
+
+        result = runner.invoke(main, ["playlist", "list", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Playlists" in result.output
+        assert "(empty)" in result.output
+
+    def test_list_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list -F raw prints the payload as compact JSON."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "list", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert "\n" not in result.output.strip()
+        assert json.loads(result.output) == self.PLAYLISTS
+
+    def test_list_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list exits 1 on a connection error."""
+        mock_client, _ = self._mock_client(mocker)
+        mock_client.list_playlists.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["playlist", "list"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+    def test_list_api_error(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist list exits 1 on an API error."""
+        mock_client, _ = self._mock_client(mocker)
+        mock_client.list_playlists.side_effect = VolumioAPIError("Bad payload")
+
+        result = runner.invoke(main, ["playlist", "list"])
+
+        assert result.exit_code == 1
+        assert "API error" in result.output
+
+    def test_play_calls_the_client_with_the_name(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """playlist play passes the playlist name to the client."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["playlist", "play", "Jazz Classics", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.play_playlist.assert_called_once_with("Jazz Classics")
+        assert "executed successfully" in result.output
+
+    def test_play_requires_the_name(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist play without a name is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "play"])
+
+        assert result.exit_code != 0
+        mock_client.play_playlist.assert_not_called()
+
+    def test_play_verbose_shows_the_encoded_endpoint(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """In verbose mode the printed endpoint carries the percent-encoded name."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["-v", "playlist", "play", "Rock & Roll", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        assert "cmd=playplaylist&name=Rock%20%26%20Roll" in result.output
+
+    def test_play_default_prints_resulting_status(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """By default, playlist play waits and prints the resulting playback status."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "play", "Rock"])
+
+        assert result.exit_code == 0
+        mock_sleep.assert_called_once_with(1.0)
+        mock_client.get_state.assert_called_once()
+        assert "StatusMarkerArtist" in result.output
+
+    def test_play_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """With --no-print-resulting-status the status is not fetched."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["playlist", "play", "Rock", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_sleep.assert_not_called()
+        mock_client.get_state.assert_not_called()
+        assert "StatusMarkerArtist" not in result.output
+
+    def test_play_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist play exits 1 on a connection error."""
+        mock_client, _ = self._mock_client(mocker)
+        mock_client.play_playlist.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["playlist", "play", "Rock"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+
 class TestQueueActions:
     """Test cases for the queue clear/repeat/randomize action commands."""
 
@@ -4156,6 +4352,22 @@ class TestConfigurationFile:
         # Verbose output only appears because the config enabled it.
         assert "Connecting to" in result.output
 
+    def test_output_subsection_sets_format_for_playlist_list(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The playlist-list subsection sets the format of the playlist list command."""
+        mock_client = self._mock_rest_client(mocker)
+        mock_client.list_playlists.return_value = ["Rock"]
+        config = self._write_config(
+            tmp_path, "output:\n  format: json\n  playlist-list:\n    format: table\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "playlist", "list"])
+
+        assert result.exit_code == 0
+        assert "Volumio Playlists" in result.output
+        assert "1. Rock" in result.output
+
     def test_output_section_sets_position_indexing(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -4417,6 +4629,7 @@ class TestConfigurationCommands:
                     "playback-status": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,
                     "queue-get": _DISPLAY_DEFAULTS,
+                    "playlist-list": _FORMAT_DEFAULTS,
                     "zones-get": _DISPLAY_DEFAULTS,
                     "system-version": _FORMAT_DEFAULTS,
                     "system-info": _FORMAT_DEFAULTS,

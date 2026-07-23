@@ -40,6 +40,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-get": DISPLAY_KEYS,
+    "playlist-list": FORMAT_KEYS,
     "zones-get": DISPLAY_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
@@ -93,12 +94,13 @@ _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 ACTION_COMMAND_PATHS = [
     ["playback", name]
     for name in ("mute", "next", "pause", "play", "previous", "stop", "toggle", "unmute", "volume")
-] + [["queue", name] for name in ("clear", "randomize", "repeat")]
+] + [["queue", name] for name in ("clear", "randomize", "repeat")] + [["playlist", "play"]]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
 DISPLAY_SUBSECTION_PATHS = {
     "collection-statistics": [["collection", "statistics"]],
     "playback-status": [["playback", "status"]],
+    "playlist-list": [["playlist", "list"]],
     "queue-get": [["queue", "get"]],
     # "info" is the top-level synonym of "system info"
     "system-info": [["system", "info"], ["info"]],

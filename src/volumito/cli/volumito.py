@@ -11,6 +11,7 @@ import sys
 import time
 from collections.abc import Callable
 from typing import Any, Literal
+from urllib.parse import quote
 
 import click
 import requests
@@ -100,7 +101,7 @@ TRACK_INFO_SHORT_FIELDS = [
 OUTPUT_FORMATS = ["json", "pretty", "raw", "table"]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.12"
+VERSION = "0.0.13"
 
 
 def filter_fields(
@@ -657,6 +658,31 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
                     lines.append(f"{indent}  {split_camel_case(sub_key):15}: {sub_value}")
             else:
                 lines.append(f"{indent}{label:17}: {value}")
+
+    return "\n".join(lines)
+
+
+def format_playlists_as_table(names: list[Any]) -> str:
+    """Format the playlists as a readable table.
+
+    Args:
+        names: List of playlist names
+
+    Returns:
+        A formatted string representation of the playlists
+    """
+    lines = []
+    lines.append("Volumio Playlists")
+    lines.append("=" * 50)
+
+    if not names:
+        lines.append("(empty)")
+        return "\n".join(lines)
+
+    width = number_prefix_width([str(index) for index in range(1, len(names) + 1)])
+
+    for index, name in enumerate(names, start=1):
+        lines.append(f"{index:>{width}}. {name}")
 
     return "\n".join(lines)
 
@@ -1963,6 +1989,43 @@ def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
             output = json.dumps(filtered_zones, indent=4, sort_keys=True, ensure_ascii=False)
 
     click.echo(output)
+
+
+@main.group()
+@click.pass_context
+def playlist(ctx: click.Context) -> None:
+    """Query and play the saved playlists of the Volumio instance."""
+    pass
+
+
+@playlist.command("list")
+@click.pass_context
+@format_option("Output format for the playlists")
+def playlist_list(ctx: click.Context, output_format: str) -> None:
+    """List the playlists saved on the Volumio instance."""
+    names = fetch_or_exit(ctx, lambda c: c.list_playlists(), "/api/v1/listplaylists")
+
+    if output_format == "raw":
+        output = json.dumps(names)
+    elif output_format == "json":
+        output = json.dumps(names, indent=2)
+    elif output_format == "table":
+        output = format_playlists_as_table(names)
+    else:  # pretty
+        output = json.dumps(names, indent=4, ensure_ascii=False)
+
+    click.echo(output)
+
+
+@playlist.command("play")
+@click.pass_context
+@click.argument("name", type=str)
+@print_resulting_status_option
+def playlist_play(ctx: click.Context, name: str, print_resulting_status: bool) -> None:
+    """Start playback of the playlist named NAME."""
+    endpoint = f"/api/v1/commands/?cmd=playplaylist&name={quote(name, safe='')}"
+    execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name), endpoint)
+    maybe_print_resulting_status(ctx, print_resulting_status)
 
 
 # "info" is a top-level synonym for "system info"
