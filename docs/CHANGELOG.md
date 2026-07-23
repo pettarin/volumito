@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.14] - 2026-07-23
+
+### Changed
+
+- Moved the documentation to the `docs` directory, with the CLI usage and the new library usage
+  in their own files
+
+
 ## [0.0.13] - 2026-07-23
 
 ### Added
