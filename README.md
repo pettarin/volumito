@@ -136,6 +136,10 @@ volumito playlist list --format table
 # Play a playlist by name (quote names containing spaces)
 volumito playlist play Rock
 volumito playlist play "Jazz Classics"
+
+# The name is checked against the saved playlists first, since the Volumio API
+# reports no error for a name matching no playlist; skip the check with:
+volumito playlist play Rock --no-check-playlist-name
 ```
 
 ### Connection Options
@@ -206,6 +210,8 @@ timeouts:
   rest-api-timeout: 5.0
   mpd-timeout: 5.0
   rest-api-sleep-before-next-call: 1.0
+miscellaneous:
+  check-playlist-name: true
 output:
   verbose: true
   machine-readable: false
@@ -248,6 +254,9 @@ default for the `-r` option of the `playback` action commands (`toggle`, `play`,
 and `playlist play`.
 The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the defaults for the
 corresponding global options and cannot be overridden per command.
+
+The `miscellaneous` section holds the defaults of options belonging to a single command: its
+`check-playlist-name` key sets the default for the corresponding option of `playlist play`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key

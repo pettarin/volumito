@@ -11,8 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Command group `playlist` with the `list` and `play` commands
+- Option `--check-playlist-name`/`--no-check-playlist-name` (default on) for `playlist play`,
+  checking that the given name matches an existing playlist
 - Subsection for the `playlist list` subcommand of the `output` section
   of the configuration file
+- Configuration file section `miscellaneous` for the defaults of the options belonging
+  to a single command
 
 
 ## [0.0.12] - 2026-07-23

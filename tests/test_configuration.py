@@ -48,6 +48,7 @@ _DEFAULTS = {
     "rest_api_timeout": 5.0,
     "mpd_timeout": 5.0,
     "rest_api_sleep_before_next_call": 1.0,
+    "check_playlist_name": True,
     "verbose": False,
     "machine_readable": False,
     "position_starting_at_one": True,
@@ -231,6 +232,25 @@ class TestLoadDefaultMap:
         config.write_text("output:\n  track-info: 5\n")
 
         with pytest.raises(click.BadParameter, match="'output.track-info'.*must be a mapping"):
+            load_configuration(str(config))
+
+    def test_miscellaneous_section(self, tmp_path):
+        """The miscellaneous section accepts check-playlist-name."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  check-playlist-name: false\n")
+
+        assert load_configuration(str(config)) == {
+            "miscellaneous": {"check-playlist-name": False}
+        }
+
+    def test_miscellaneous_unknown_key_raises(self, tmp_path):
+        """An unrecognized key under miscellaneous raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  check-name: false\n")
+
+        with pytest.raises(
+            click.BadParameter, match="unknown key 'check-name' in section 'miscellaneous'"
+        ):
             load_configuration(str(config))
 
     def test_downloads_unknown_key_raises(self, tmp_path):
@@ -421,6 +441,7 @@ class TestRenderDefaultConfiguration:
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 1.0,
             },
+            "miscellaneous": {"check-playlist-name": True},
             "output": {
                 "verbose": False,
                 "machine-readable": False,
@@ -457,6 +478,7 @@ class TestRenderDefaultConfiguration:
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 1.0,
             },
+            "miscellaneous": {"check-playlist-name": True},
             "output": {
                 "verbose": False,
                 "machine-readable": False,
@@ -576,6 +598,14 @@ class TestBuildClickDefaultMap:
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-get has no override, so it keeps the shared value.
         assert result["queue"]["get"] == {"output_format": "pretty"}
+
+    def test_miscellaneous_keys_nested_under_their_command(self):
+        """A miscellaneous key lands in its command slot, not at the top level."""
+        result = build_click_default_map(
+            {"miscellaneous": {"check-playlist-name": False}}
+        )
+
+        assert result == {"playlist": {"play": {"check_playlist_name": False}}}
 
     def test_print_resulting_status_replicated_under_action_commands(self):
         """print-resulting-status is nested under every playback, queue, and playlist action."""

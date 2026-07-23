@@ -1105,11 +1105,13 @@ def command_scoped_option_defaults() -> dict[str, Any]:
 
     These options live on subcommands, not the top-level group: fields/format on
     ``playback status``, print-resulting-status on the playback and queue action commands,
-    and the download options on ``track audio``. Read them from the ``playback_status``,
-    ``toggle``, and ``audio`` command objects so the generated configuration mirrors the
-    real defaults without duplication.
+    the download options on ``track audio``, and check-playlist-name on ``playlist play``.
+    Read them from the ``playback_status``, ``toggle``, ``audio``, and ``playlist_play``
+    command objects so the generated configuration mirrors the real defaults without
+    duplication.
     """
     wanted = {
+        "check_playlist_name",
         "fields",
         "output_format",
         "print_resulting_status",
@@ -1119,7 +1121,7 @@ def command_scoped_option_defaults() -> dict[str, Any]:
         "overwrite_existing_files",
     }
     defaults: dict[str, Any] = {}
-    for command in (playback_status, toggle, audio):
+    for command in (playback_status, toggle, audio, playlist_play):
         for param in command.params:
             if isinstance(param, click.Option) and param.name in wanted:
                 defaults[param.name] = param.default
@@ -2020,9 +2022,34 @@ def playlist_list(ctx: click.Context, output_format: str) -> None:
 @playlist.command("play")
 @click.pass_context
 @click.argument("name", type=str)
+@click.option(
+    "--check-playlist-name/--no-check-playlist-name",
+    default=True,
+    show_default=True,
+    help="Check that the playlist name exists before playing it",
+)
 @print_resulting_status_option
-def playlist_play(ctx: click.Context, name: str, print_resulting_status: bool) -> None:
-    """Start playback of the playlist named NAME."""
+def playlist_play(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    print_resulting_status: bool,
+) -> None:
+    """Start playback of the playlist named NAME.
+
+    The Volumio API does not report an error for a name matching no playlist, so
+    unless --no-check-playlist-name is given, the name is looked up first.
+    """
+    if check_playlist_name:
+        names = fetch_or_exit(ctx, lambda c: c.list_playlists(), "/api/v1/listplaylists")
+        if name not in names:
+            if not ctx.obj["machine_readable"]:
+                click.echo(f"Error: playlist not found: {name}", err=True)
+                click.echo("Available playlists:", err=True)
+                for available in names or ["(none)"]:
+                    click.echo(f"  {available}", err=True)
+            sys.exit(1)
+
     endpoint = f"/api/v1/commands/?cmd=playplaylist&name={quote(name, safe='')}"
     execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name), endpoint)
     maybe_print_resulting_status(ctx, print_resulting_status)

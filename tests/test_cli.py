@@ -3530,7 +3530,7 @@ class TestPlaylistCommands:
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """In verbose mode the printed endpoint carries the percent-encoded name."""
-        self._mock_client(mocker)
+        self._mock_client(mocker, playlists=["Rock & Roll"])
 
         result = runner.invoke(
             main, ["-v", "playlist", "play", "Rock & Roll", "--no-print-resulting-status"]
@@ -3564,6 +3564,97 @@ class TestPlaylistCommands:
         mock_sleep.assert_not_called()
         mock_client.get_state.assert_not_called()
         assert "StatusMarkerArtist" not in result.output
+
+    def test_play_checks_the_name_by_default(self, runner: CliRunner, mocker: MockerFixture):
+        """By default the name is looked up before the command is sent."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["playlist", "play", "Rock", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.list_playlists.assert_called_once()
+        mock_client.play_playlist.assert_called_once_with("Rock")
+
+    def test_play_unknown_name(self, runner: CliRunner, mocker: MockerFixture):
+        """An unknown playlist name exits 1, listing the available names."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "play", "Nope"])
+
+        assert result.exit_code == 1
+        assert "playlist not found: Nope" in result.output
+        assert "Available playlists:" in result.output
+        for name in self.PLAYLISTS:
+            assert f"  {name}" in result.output
+        mock_client.play_playlist.assert_not_called()
+
+    def test_play_unknown_name_is_case_sensitive(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The name must match exactly: a different casing is not accepted."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", "play", "rock"])
+
+        assert result.exit_code == 1
+        mock_client.play_playlist.assert_not_called()
+
+    def test_play_unknown_name_with_no_playlists(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With no saved playlists the error reports that none are available."""
+        mock_client, _ = self._mock_client(mocker, playlists=[])
+
+        result = runner.invoke(main, ["playlist", "play", "Rock"])
+
+        assert result.exit_code == 1
+        assert "Available playlists:" in result.output
+        assert "  (none)" in result.output
+        mock_client.play_playlist.assert_not_called()
+
+    def test_play_unknown_name_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """In machine-readable mode the not-found error is silent."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "playlist", "play", "Nope"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+        mock_client.play_playlist.assert_not_called()
+
+    def test_play_no_check_playlist_name(self, runner: CliRunner, mocker: MockerFixture):
+        """With --no-check-playlist-name the name is not looked up."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                "playlist",
+                "play",
+                "Nope",
+                "--no-check-playlist-name",
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.list_playlists.assert_not_called()
+        mock_client.play_playlist.assert_called_once_with("Nope")
+
+    def test_play_check_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A failing lookup exits 1 without sending the command."""
+        mock_client, _ = self._mock_client(mocker)
+        mock_client.list_playlists.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["playlist", "play", "Rock"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+        mock_client.play_playlist.assert_not_called()
 
     def test_play_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """playlist play exits 1 on a connection error."""
@@ -4352,6 +4443,24 @@ class TestConfigurationFile:
         # Verbose output only appears because the config enabled it.
         assert "Connecting to" in result.output
 
+    def test_miscellaneous_section_disables_the_playlist_name_check(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The miscellaneous section can turn off the playlist name check."""
+        mock_client = self._mock_rest_client(mocker)
+        mock_client.play_playlist.return_value = {"response": "playPlaylist Response"}
+        config = self._write_config(
+            tmp_path, "miscellaneous:\n  check-playlist-name: false\n"
+        )
+
+        result = runner.invoke(
+            main, ["-c", config, "playlist", "play", "Nope", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.list_playlists.assert_not_called()
+        mock_client.play_playlist.assert_called_once_with("Nope")
+
     def test_output_subsection_sets_format_for_playlist_list(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -4621,6 +4730,7 @@ class TestConfigurationCommands:
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 1.0,
                 },
+                "miscellaneous": {"check-playlist-name": True},
                 "output": {
                     "verbose": False,
                     "machine-readable": False,

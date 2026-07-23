@@ -10,11 +10,18 @@ from typing import Any
 import click
 import yaml
 
+# The "miscellaneous" section holds the keys of options living on a specific command:
+# key -> the default_map path(s) of the command(s) it targets.
+MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
+    "check-playlist-name": [["playlist", "play"]],
+}
+
 # Recognized flat section names and their allowed (hyphenated) keys, in display order.
 # Keys mirror the CLI long options minus the leading "--".
 SECTION_KEYS: dict[str, list[str]] = {
     "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
     "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
+    "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
 }
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
@@ -64,6 +71,7 @@ RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads", "output"]
 
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
+    "check-playlist-name": "Check that the playlist name exists before playing it",
     "fields": "Fields to display: short or all",
     "file-name-template": "Template (Python str.format) for the -d output file name",
     "format": "Output format: json, pretty, raw, or table",
@@ -326,6 +334,12 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
     for section in ("volumio", "timeouts"):
         for key, value in config.get(section, {}).items():
             result[_param_name(key)] = value
+
+    # The miscellaneous keys map to options living on a specific command, not to
+    # options of the top-level group
+    for key, value in config.get("miscellaneous", {}).items():
+        for command_path in MISCELLANEOUS_KEY_PATHS[key]:
+            _assign_nested(result, command_path, _param_name(key), value)
 
     output = config.get("output", {})
     for key, value in output.items():
