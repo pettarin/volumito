@@ -3526,19 +3526,6 @@ class TestPlaylistCommands:
         assert result.exit_code != 0
         mock_client.play_playlist.assert_not_called()
 
-    def test_play_verbose_shows_the_encoded_endpoint(
-        self, runner: CliRunner, mocker: MockerFixture
-    ):
-        """In verbose mode the printed endpoint carries the percent-encoded name."""
-        self._mock_client(mocker, playlists=["Rock & Roll"])
-
-        result = runner.invoke(
-            main, ["-v", "playlist", "play", "Rock & Roll", "--no-print-resulting-status"]
-        )
-
-        assert result.exit_code == 0
-        assert "cmd=playplaylist&name=Rock%20%26%20Roll" in result.output
-
     def test_play_default_prints_resulting_status(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -4392,7 +4379,7 @@ class TestConfigurationFile:
         result = runner.invoke(main, ["-c", config, "-v", "playback", "status"])
 
         assert result.exit_code == 0
-        assert "https://myconfig.local:9999/api/v1/getState" in result.output
+        assert "https://myconfig.local:9999" in result.output
         assert f"Using configuration file: {config}" in result.output
 
     def test_cli_flag_overrides_config(
@@ -4410,7 +4397,7 @@ class TestConfigurationFile:
         )
 
         assert result.exit_code == 0
-        assert "https://override.local:9999/api/v1/getState" in result.output
+        assert "https://override.local:9999" in result.output
         assert "myconfig.local" not in result.output
 
     def test_config_discovered_by_probing(
@@ -4427,7 +4414,7 @@ class TestConfigurationFile:
         result = runner.invoke(main, ["-v", "playback", "status"])
 
         assert result.exit_code == 0
-        assert "http://probed.local:3000/api/v1/getState" in result.output
+        assert "http://probed.local:3000" in result.output
         assert f"Using configuration file: {config}" in result.output
 
     def test_output_section_enables_verbose(
@@ -4650,7 +4637,7 @@ class TestConfigurationFile:
         result = runner.invoke(main, ["-v", "playback", "status"])
 
         assert result.exit_code == 0
-        assert "http://volumio.local:3000/api/v1/getState" in result.output
+        assert "http://volumio.local:3000" in result.output
         assert "Using configuration file" not in result.output
 
     def test_explicit_missing_file_errors(self, runner: CliRunner, tmp_path):

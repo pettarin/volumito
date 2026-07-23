@@ -11,7 +11,6 @@ import sys
 import time
 from collections.abc import Callable
 from typing import Any, Literal
-from urllib.parse import quote
 
 import click
 import requests
@@ -706,7 +705,6 @@ def execute_command(
     ctx: click.Context,
     command_name: str,
     command_func: Callable[[VolumioRESTAPIClient], dict[str, Any]],
-    endpoint: str,
 ) -> None:
     """Execute a playback control command.
 
@@ -714,7 +712,6 @@ def execute_command(
         ctx: Click context object containing shared options
         command_name: Name of the command (for messages)
         command_func: Function to call on the VolumioRESTAPIClient
-        endpoint: API endpoint being called (for verbose output)
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -722,7 +719,7 @@ def execute_command(
     machine_readable = ctx.obj["machine_readable"]
 
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}{endpoint}...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
@@ -751,14 +748,12 @@ def execute_command(
 def fetch_or_exit[T](
     ctx: click.Context,
     fetch: Callable[[VolumioRESTAPIClient], T],
-    endpoint: str,
 ) -> T:
     """Fetch data from the Volumio instance, printing errors and exiting (1) on failure.
 
     Args:
         ctx: Click context object containing shared options
         fetch: Function to call on the VolumioRESTAPIClient, returning the payload
-        endpoint: API endpoint being called (for verbose output)
 
     Returns:
         Whatever ``fetch`` returns (a dict for the JSON endpoints, text for ping)
@@ -769,7 +764,7 @@ def fetch_or_exit[T](
     machine_readable = ctx.obj["machine_readable"]
 
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}{endpoint}...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
@@ -795,9 +790,9 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
         ctx: Click context object containing shared options
 
     Returns:
-        The state dictionary from the /api/v1/getState endpoint
+        The state dictionary returned by the client
     """
-    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.get_state(), "/api/v1/getState")
+    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.get_state())
     return state
 
 
@@ -1376,9 +1371,7 @@ def playback_status(
 @print_resulting_status_option
 def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     """Toggle between play and pause states of the Volumio instance."""
-    execute_command(
-        ctx, "toggle", lambda c: c.toggle(), "/api/v1/commands/?cmd=toggle"
-    )
+    execute_command(ctx, "toggle", lambda c: c.toggle())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1407,10 +1400,9 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
             raise click.UsageError(f"position must be {minimum} or greater, got {position}")
         if starting_at_one:
             position -= 1
-        endpoint = f"/api/v1/commands/?cmd=play&N={position}"
-        execute_command(ctx, "play", lambda c: c.play(position), endpoint)
+        execute_command(ctx, "play", lambda c: c.play(position))
     else:
-        execute_command(ctx, "play", lambda c: c.play(), "/api/v1/commands/?cmd=play")
+        execute_command(ctx, "play", lambda c: c.play())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1419,7 +1411,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
 @print_resulting_status_option
 def pause(ctx: click.Context, print_resulting_status: bool) -> None:
     """Pause playback of the Volumio instance."""
-    execute_command(ctx, "pause", lambda c: c.pause(), "/api/v1/commands/?cmd=pause")
+    execute_command(ctx, "pause", lambda c: c.pause())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1428,7 +1420,7 @@ def pause(ctx: click.Context, print_resulting_status: bool) -> None:
 @print_resulting_status_option
 def stop(ctx: click.Context, print_resulting_status: bool) -> None:
     """Stop playback of the Volumio instance."""
-    execute_command(ctx, "stop", lambda c: c.stop(), "/api/v1/commands/?cmd=stop")
+    execute_command(ctx, "stop", lambda c: c.stop())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1437,7 +1429,7 @@ def stop(ctx: click.Context, print_resulting_status: bool) -> None:
 @print_resulting_status_option
 def next(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the next track of the Volumio instance."""
-    execute_command(ctx, "next", lambda c: c.next(), "/api/v1/commands/?cmd=next")
+    execute_command(ctx, "next", lambda c: c.next())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1446,9 +1438,7 @@ def next(ctx: click.Context, print_resulting_status: bool) -> None:
 @print_resulting_status_option
 def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the previous track of the Volumio instance."""
-    execute_command(
-        ctx, "previous", lambda c: c.previous(), "/api/v1/commands/?cmd=prev"
-    )
+    execute_command(ctx, "previous", lambda c: c.previous())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1467,8 +1457,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
         state = fetch_state_or_exit(ctx)
         click.echo(state.get("volume"))
         return
-    endpoint = f"/api/v1/commands/?cmd=volume&volume={value}"
-    execute_command(ctx, f"volume {value}", lambda c: c.volume(value), endpoint)
+    execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1477,12 +1466,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
 @print_resulting_status_option
 def mute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
-    execute_command(
-        ctx,
-        "volume mute",
-        lambda c: c.volume("mute"),
-        "/api/v1/commands/?cmd=volume&volume=mute",
-    )
+    execute_command(ctx, "volume mute", lambda c: c.volume("mute"))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1491,12 +1475,7 @@ def mute(ctx: click.Context, print_resulting_status: bool) -> None:
 @print_resulting_status_option
 def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
-    execute_command(
-        ctx,
-        "volume unmute",
-        lambda c: c.volume("unmute"),
-        "/api/v1/commands/?cmd=volume&volume=unmute",
-    )
+    execute_command(ctx, "volume unmute", lambda c: c.volume("unmute"))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1583,7 +1562,7 @@ def audio(
     machine_readable = ctx.obj["machine_readable"]
 
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
         # Get current track metadata (also validates REST connectivity)
@@ -1703,7 +1682,7 @@ def albumart(
     machine_readable = ctx.obj["machine_readable"]
 
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getState...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
         # Get current state metadata
@@ -1803,7 +1782,7 @@ def queue_get(
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
     if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getQueue...", err=True)
+        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
@@ -1860,9 +1839,7 @@ def queue_get(
 @print_resulting_status_option
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue of the Volumio instance."""
-    execute_command(
-        ctx, "clear", lambda c: c.clear(), "/api/v1/commands/?cmd=clearQueue"
-    )
+    execute_command(ctx, "clear", lambda c: c.clear())
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1876,11 +1853,8 @@ def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool)
     Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
     or "off"/"false"/"no"/"0".
     """
-    suffix = "" if value is None else f"&value={str(value).lower()}"
     label = "repeat" if value is None else f"repeat {'on' if value else 'off'}"
-    execute_command(
-        ctx, label, lambda c: c.repeat(value), f"/api/v1/commands/?cmd=repeat{suffix}"
-    )
+    execute_command(ctx, label, lambda c: c.repeat(value))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1894,11 +1868,8 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
     Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
     or "off"/"false"/"no"/"0".
     """
-    suffix = "" if value is None else f"&value={str(value).lower()}"
     label = "randomize" if value is None else f"randomize {'on' if value else 'off'}"
-    execute_command(
-        ctx, label, lambda c: c.randomize(value), f"/api/v1/commands/?cmd=random{suffix}"
-    )
+    execute_command(ctx, label, lambda c: c.randomize(value))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 
@@ -1913,7 +1884,7 @@ def system(ctx: click.Context) -> None:
 @click.pass_context
 def system_ping(ctx: click.Context) -> None:
     """Ping the Volumio instance (prints pong on success)."""
-    text = fetch_or_exit(ctx, lambda c: c.ping(), "/api/v1/ping").strip()
+    text = fetch_or_exit(ctx, lambda c: c.ping()).strip()
     if ctx.obj["machine_readable"]:
         click.echo(json.dumps(text))
     else:
@@ -1925,9 +1896,7 @@ def system_ping(ctx: click.Context) -> None:
 @format_option("Output format for the system version")
 def system_version(ctx: click.Context, output_format: str) -> None:
     """Get the system version of the Volumio instance."""
-    data = fetch_or_exit(
-        ctx, lambda c: c.get_system_version(), "/api/v1/getSystemVersion"
-    )
+    data = fetch_or_exit(ctx, lambda c: c.get_system_version())
     render_payload(ctx, data, output_format, heading="Volumio System Version")
 
 
@@ -1936,7 +1905,7 @@ def system_version(ctx: click.Context, output_format: str) -> None:
 @format_option("Output format for the system information")
 def system_info(ctx: click.Context, output_format: str) -> None:
     """Get the system information of the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.get_system_info(), "/api/v1/getSystemInfo")
+    data = fetch_or_exit(ctx, lambda c: c.get_system_info())
     render_payload(ctx, data, output_format, heading="Volumio System Info")
 
 
@@ -1952,7 +1921,7 @@ def collection(ctx: click.Context) -> None:
 @format_option("Output format for the collection statistics")
 def collection_statistics(ctx: click.Context, output_format: str) -> None:
     """Get the statistics of the music collection of the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.collectionstats(), "/api/v1/collectionstats")
+    data = fetch_or_exit(ctx, lambda c: c.collectionstats())
     render_payload(ctx, data, output_format, heading="Collection Statistics")
 
 
@@ -1976,7 +1945,7 @@ def zones(ctx: click.Context) -> None:
 @format_option("Output format for the zones information")
 def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
     """Get the multiroom zones seen by the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.get_zones(), "/api/v1/getzones")
+    data = fetch_or_exit(ctx, lambda c: c.get_zones())
 
     if output_format == "raw":
         # Raw JSON without formatting (ignores fields filter)
@@ -2005,7 +1974,7 @@ def playlist(ctx: click.Context) -> None:
 @format_option("Output format for the playlists")
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the playlists saved on the Volumio instance."""
-    names = fetch_or_exit(ctx, lambda c: c.list_playlists(), "/api/v1/listplaylists")
+    names = fetch_or_exit(ctx, lambda c: c.list_playlists())
 
     if output_format == "raw":
         output = json.dumps(names)
@@ -2041,7 +2010,7 @@ def playlist_play(
     unless --no-check-playlist-name is given, the name is looked up first.
     """
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.list_playlists(), "/api/v1/listplaylists")
+        names = fetch_or_exit(ctx, lambda c: c.list_playlists())
         if name not in names:
             if not ctx.obj["machine_readable"]:
                 click.echo(f"Error: playlist not found: {name}", err=True)
@@ -2050,8 +2019,7 @@ def playlist_play(
                     click.echo(f"  {available}", err=True)
             sys.exit(1)
 
-    endpoint = f"/api/v1/commands/?cmd=playplaylist&name={quote(name, safe='')}"
-    execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name), endpoint)
+    execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 

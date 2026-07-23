@@ -40,45 +40,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        url = f"{self.host_configuration.rest_base_url}/api/v1/getState"
-
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError as e:
-            raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at "
-                f"{self.host_configuration.rest_base_url}: {e}"
-            ) from e
-        except requests.exceptions.Timeout as e:
-            raise VolumioConnectionError(
-                f"Connection to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} "
-                f"timed out after {self.timeout} seconds: {e}"
-            ) from e
-        except requests.exceptions.HTTPError as e:
-            raise VolumioAPIError(
-                f"Volumio API returned HTTP error {response.status_code}: {e}"
-            ) from e
-        except requests.exceptions.RequestException as e:
-            raise VolumioConnectionError(
-                f"Request to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} failed: {e}"
-            ) from e
-
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, dict):
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
+        return self._get_json("/api/v1/getState")
 
     def get_queue(self) -> dict[str, Any]:
         """Query the /api/v1/getQueue endpoint.
@@ -90,45 +52,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        url = f"{self.host_configuration.rest_base_url}/api/v1/getQueue"
-
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError as e:
-            raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at "
-                f"{self.host_configuration.rest_base_url}: {e}"
-            ) from e
-        except requests.exceptions.Timeout as e:
-            raise VolumioConnectionError(
-                f"Connection to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} "
-                f"timed out after {self.timeout} seconds: {e}"
-            ) from e
-        except requests.exceptions.HTTPError as e:
-            raise VolumioAPIError(
-                f"Volumio API returned HTTP error {response.status_code}: {e}"
-            ) from e
-        except requests.exceptions.RequestException as e:
-            raise VolumioConnectionError(
-                f"Request to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} failed: {e}"
-            ) from e
-
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, dict):
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
+        return self._get_json("/api/v1/getQueue")
 
     def send_command(self, cmd: str) -> dict[str, Any]:
         """Send a command to the /api/v1/commands endpoint.

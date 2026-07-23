@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration file section `miscellaneous` for the defaults of the options belonging
   to a single command
 
+### Changed
+
+- In verbose mode, the connection message prints the base URL instead of the full endpoint
+
 
 ## [0.0.12] - 2026-07-23
 
