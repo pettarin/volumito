@@ -619,6 +619,7 @@ class TestBuildClickDefaultMap:
                 "stop": {"print_resulting_status": False},
                 "next": {"print_resulting_status": False},
                 "previous": {"print_resulting_status": False},
+                "seek": {"print_resulting_status": False},
                 "volume": {"print_resulting_status": False},
                 "mute": {"print_resulting_status": False},
                 "unmute": {"print_resulting_status": False},

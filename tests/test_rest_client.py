@@ -868,6 +868,42 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("volume&volume=mute")
         assert result["response"] == "volume"
 
+    def test_seek_seconds(self, mocker: MockerFixture):
+        """Test seek() method with a number of seconds."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "seek"}
+
+        result = client.seek(252)
+
+        mock_send_command.assert_called_once_with("seek&position=252")
+        assert result["response"] == "seek"
+
+    def test_seek_keyword(self, mocker: MockerFixture):
+        """Test seek() method with a relative keyword value."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "seek"}
+
+        result = client.seek("plus")
+
+        mock_send_command.assert_called_once_with("seek&position=plus")
+        assert result["response"] == "seek"
+
+    def test_seek_connection_error(self, mocker: MockerFixture):
+        """Test seek() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.seek(10)
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
     def test_clear(self, mocker: MockerFixture):
         """Test clear() method sends the clearQueue command."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())

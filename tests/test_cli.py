@@ -19,6 +19,7 @@ from volumito.cli.volumito import (
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
     OnOffParamType,
+    SeekParamType,
     VolumeParamType,
     display_position,
     extract_filename_from_uri,
@@ -29,6 +30,7 @@ from volumito.cli.volumito import (
     format_as_table,
     format_queue_as_table,
     main,
+    parse_time_to_seconds,
     rebase_queue_positions,
     render_output_filename,
 )
@@ -395,6 +397,81 @@ class TestRenderOutputFilename:
         """An invalid format specification raises a UsageError."""
         with pytest.raises(click.UsageError):
             render_output_filename("{title:03d}", "http://x/y.flac", self._state(), "flac")
+
+
+class TestParseTimeToSeconds:
+    """Test cases for the parse_time_to_seconds function."""
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("00:00", 0),
+            ("04:12", 252),
+            ("01:04:12", 3852),
+            ("00:04:12", 252),
+            ("99:00:00", 356400),
+        ],
+    )
+    def test_colon_times(self, text: str, expected: int):
+        """A HH:MM:SS or MM:SS time is converted to seconds."""
+        assert parse_time_to_seconds(text) == expected
+
+    @pytest.mark.parametrize(
+        "text",
+        ["42", "", "1:2:3:4", "00:99", "01:60:00", "aa:bb", "-1:00", "1.5:00", "00:04:12.345"],
+    )
+    def test_not_a_colon_time(self, text: str):
+        """Anything that is not a well-formed colon time yields None."""
+        assert parse_time_to_seconds(text) is None
+
+
+class TestSeekParamType:
+    """Test cases for the SeekParamType Click parameter type."""
+
+    def test_convert_already_int(self):
+        """An already-converted int value passes through unchanged."""
+        assert SeekParamType().convert(252, None, None) == 252
+
+    def test_convert_numeric_string(self):
+        """A numeric string is converted to an int number of seconds."""
+        assert SeekParamType().convert("252", None, None) == 252
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [("04:12", 252), ("01:04:12", 3852)],
+    )
+    def test_convert_colon_time(self, text: str, expected: int):
+        """A colon time is converted to the corresponding number of seconds."""
+        assert SeekParamType().convert(text, None, None) == expected
+
+    @pytest.mark.parametrize(
+        ("spelling", "canonical"),
+        [
+            ("plus", "plus"),
+            ("increase", "plus"),
+            ("up", "plus"),
+            ("forward", "plus"),
+            ("minus", "minus"),
+            ("decrease", "minus"),
+            ("down", "minus"),
+            ("backward", "minus"),
+        ],
+    )
+    def test_convert_alias(self, spelling: str, canonical: str):
+        """Relative aliases are normalized to their canonical keyword."""
+        assert SeekParamType().convert(spelling, None, None) == canonical
+
+    @pytest.mark.parametrize("value", ["bogus", "UP", "Plus", "12s", "00:99"])
+    def test_convert_invalid_rejected(self, value: str):
+        """A value that is neither a keyword, a time, nor a number is a usage error."""
+        with pytest.raises(click.exceptions.BadParameter):
+            SeekParamType().convert(value, None, None)
+
+    @pytest.mark.parametrize("value", ["-1", -5])
+    def test_convert_negative_rejected(self, value: str | int):
+        """A negative position is a usage error."""
+        with pytest.raises(click.exceptions.BadParameter):
+            SeekParamType().convert(value, None, None)
 
 
 class TestVolumeParamType:
@@ -3815,6 +3892,160 @@ class TestQueueActions:
         assert result.exit_code == 0
         assert "executed successfully" not in result.output
         mock_client.clear.assert_called_once()
+
+
+class TestSeekCommand:
+    """Test cases for the playback seek command."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, state=None):
+        """Mock VolumioRESTAPIClient with a usable seek/get_state; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.seek.return_value = {"response": "seek"}
+        mock_client.get_state.return_value = (
+            {"seek": 252345, "artist": "StatusMarkerArtist"} if state is None else state
+        )
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_help(self, runner: CliRunner):
+        """playback seek documents its accepted values."""
+        result = runner.invoke(main, ["playback", "seek", "--help"])
+
+        assert result.exit_code == 0
+        assert "VALUE" in result.output
+        assert "plus" in result.output
+
+    def test_no_value_prints_the_position(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a value, the current position is printed as HH:MM:SS.mmm."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playback", "seek"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "00:04:12.345"
+        mock_client.seek.assert_not_called()
+
+    def test_no_value_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode the position is printed as a quoted string."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "playback", "seek"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == '"00:04:12.345"'
+
+    def test_no_value_without_seek_in_state(self, runner: CliRunner, mocker: MockerFixture):
+        """A state carrying no integer seek exits 1."""
+        self._mock_client(mocker, state={"title": "Test Song"})
+
+        result = runner.invoke(main, ["playback", "seek"])
+
+        assert result.exit_code == 1
+        assert "no seek position found" in result.output
+
+    def test_no_value_without_seek_in_state_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The missing-seek error is silent in machine-readable mode."""
+        self._mock_client(mocker, state={"title": "Test Song"})
+
+        result = runner.invoke(main, ["-m", "playback", "seek"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+
+    @pytest.mark.parametrize(
+        ("spelling", "canonical"),
+        [
+            ("plus", "plus"),
+            ("increase", "plus"),
+            ("up", "plus"),
+            ("forward", "plus"),
+            ("minus", "minus"),
+            ("decrease", "minus"),
+            ("down", "minus"),
+            ("backward", "minus"),
+        ],
+    )
+    def test_relative_values(
+        self, runner: CliRunner, mocker: MockerFixture, spelling: str, canonical: str
+    ):
+        """The relative aliases reach the client as their canonical keyword."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["playback", "seek", spelling, "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.seek.assert_called_once_with(canonical)
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [("42", 42), ("0", 0), ("04:12", 252), ("01:04:12", 3852)],
+    )
+    def test_absolute_values(
+        self, runner: CliRunner, mocker: MockerFixture, value: str, expected: int
+    ):
+        """Seconds and colon times reach the client as a number of seconds."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["playback", "seek", value, "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.seek.assert_called_once_with(expected)
+
+    @pytest.mark.parametrize("value", ["-1", "bogus", "1:2:3:4", "00:99", "12s"])
+    def test_invalid_values(self, runner: CliRunner, mocker: MockerFixture, value: str):
+        """An unparsable or negative value is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playback", "seek", "--", value])
+
+        assert result.exit_code != 0
+        mock_client.seek.assert_not_called()
+
+    def test_default_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """By default, playback seek waits and prints the resulting playback status."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playback", "seek", "42"])
+
+        assert result.exit_code == 0
+        mock_sleep.assert_called_once_with(1.0)
+        mock_client.get_state.assert_called_once()
+        assert "StatusMarkerArtist" in result.output
+
+    def test_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """With --no-print-resulting-status the status is not fetched."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playback", "seek", "42", "--no-print-resulting-status"])
+
+        assert result.exit_code == 0
+        mock_sleep.assert_not_called()
+        mock_client.get_state.assert_not_called()
+
+    def test_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """playback seek exits 1 on a connection error."""
+        mock_client, _ = self._mock_client(mocker)
+        mock_client.seek.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["playback", "seek", "42"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
 
 
 class TestPrintResultingState:

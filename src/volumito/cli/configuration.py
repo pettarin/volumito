@@ -101,8 +101,19 @@ _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 # --print-resulting-status lives on the playback and queue action commands.
 ACTION_COMMAND_PATHS = [
     ["playback", name]
-    for name in ("mute", "next", "pause", "play", "previous", "stop", "toggle", "unmute", "volume")
-] + [["queue", name] for name in ("clear", "randomize", "repeat")] + [["playlist", "play"]]
+    for name in (
+        "mute",
+        "next",
+        "pause",
+        "play",
+        "previous",
+        "seek",
+        "stop",
+        "toggle",
+        "unmute",
+        "volume",
+    )
+] + [["playlist", "play"]] + [["queue", name] for name in ("clear", "randomize", "repeat")]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
 DISPLAY_SUBSECTION_PATHS = {

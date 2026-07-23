@@ -201,6 +201,22 @@ class VolumioRESTAPIClient:
         """
         return self.send_command(f"volume&volume={value}")
 
+    def seek(self, value: int | str) -> dict[str, Any]:
+        """Seek to a position in the track currently playing.
+
+        Args:
+            value: The position to seek to, in seconds, or one of the strings
+                "plus" and "minus" to seek relatively to the current position
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self.send_command(f"seek&position={value}")
+
     def clear(self) -> dict[str, Any]:
         """Clear the playback queue.
 

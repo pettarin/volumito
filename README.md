@@ -250,7 +250,7 @@ The `output` section's `fields` and `format` keys set the defaults for the corre
 for that command
 (`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
-`previous`, `volume`, `mute`, `unmute`), the `queue` action commands (`clear`, `repeat`, `randomize`),
+`previous`, `seek`, `volume`, `mute`, `unmute`), the `queue` action commands (`clear`, `repeat`, `randomize`),
 and `playlist play`.
 The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the defaults for the
 corresponding global options and cannot be overridden per command.
@@ -380,6 +380,24 @@ volumito playback volume unmute
 # `playback mute` and `playback unmute` are synonyms for the two commands above
 volumito playback mute
 volumito playback unmute
+```
+
+### Seek Control
+
+Print, set, or adjust the position within the track being played:
+
+```bash
+# Print the current position as HH:MM:SS.mmm (no value)
+volumito playback seek
+
+# Seek to an absolute position, in seconds or as a HH:MM:SS (or MM:SS) time
+volumito playback seek 252
+volumito playback seek 04:12
+volumito playback seek 01:04:12
+
+# Seek relatively (the step is the one applied by the Volumio instance)
+volumito playback seek plus     # also: increase, up, forward
+volumito playback seek minus    # also: decrease, down, backward
 ```
 
 ### Playing A Queue Position

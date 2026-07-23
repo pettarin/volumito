@@ -213,6 +213,34 @@ def format_seek(milliseconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
+def parse_time_to_seconds(text: str) -> int | None:
+    """Convert a colon time to the corresponding number of seconds.
+
+    Accepts HH:MM:SS and MM:SS, where the minutes and seconds components are
+    below 60 and the hours component is unbounded.
+
+    Args:
+        text: The colon time to convert
+
+    Returns:
+        The number of seconds, or None if ``text`` is not a colon time
+    """
+    components = text.split(":")
+    if len(components) not in (2, 3):
+        return None
+    if not all(component.isdigit() for component in components):
+        return None
+
+    values = [int(component) for component in components]
+    if any(value > 59 for value in values[1:]):
+        return None
+
+    seconds = 0
+    for value in values:
+        seconds = seconds * 60 + value
+    return seconds
+
+
 def extract_filename_from_uri(uri: str) -> str:
     """Extract the file-name component of a URI.
 
@@ -848,6 +876,57 @@ def maybe_print_resulting_status(ctx: click.Context, enabled: bool) -> None:
         ctx.invoke(playback_status)
 
 
+class SeekParamType(click.ParamType):
+    """Click parameter type for the seek position value.
+
+    Accepts any (lowercase) spelling in ``ALIASES``, normalized to its canonical
+    keyword, a colon time (HH:MM:SS or MM:SS), or a non-negative integer number
+    of seconds; anything else is a usage error.
+    """
+
+    name = "seek"
+
+    # Canonical seek keyword -> accepted spellings (lowercase only)
+    ALIASES = {
+        "minus": ["backward", "decrease", "down", "minus"],
+        "plus": ["forward", "increase", "plus", "up"],
+    }
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> int | str:
+        if isinstance(value, int):
+            seconds = value
+        else:
+            text = str(value)
+            for canonical, spellings in self.ALIASES.items():
+                if text in spellings:
+                    return canonical
+
+            parsed = parse_time_to_seconds(text)
+            if parsed is None:
+                try:
+                    parsed = int(text)
+                except ValueError:
+                    accepted = ", ".join(
+                        sorted(s for spellings in self.ALIASES.values() for s in spellings)
+                    )
+                    self.fail(
+                        f"{text!r} must be a number of seconds, a HH:MM:SS or MM:SS time, "
+                        f"or one of {accepted}",
+                        param,
+                        ctx,
+                    )
+            seconds = parsed
+
+        if seconds < 0:
+            self.fail(f"seek position must be 0 or greater, got {seconds}", param, ctx)
+        return seconds
+
+
 class VolumeParamType(click.ParamType):
     """Click parameter type for the volume value.
 
@@ -1439,6 +1518,32 @@ def next(ctx: click.Context, print_resulting_status: bool) -> None:
 def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the previous track of the Volumio instance."""
     execute_command(ctx, "previous", lambda c: c.previous())
+    maybe_print_resulting_status(ctx, print_resulting_status)
+
+
+@playback.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=SeekParamType())
+@print_resulting_status_option
+def seek(ctx: click.Context, value: int | str | None, print_resulting_status: bool) -> None:
+    """Print, set, or adjust the seek position of the Volumio instance.
+
+    Without VALUE, print the current position as HH:MM:SS.mmm. Otherwise VALUE is
+    the position to seek to, as a number of seconds or as a HH:MM:SS (or MM:SS)
+    time, or one of "plus" (also "increase"/"up"/"forward") and "minus" (also
+    "decrease"/"down"/"backward") to seek relatively to the current position.
+    """
+    if value is None:
+        state = fetch_state_or_exit(ctx)
+        current = state.get("seek")
+        if not isinstance(current, int):
+            if not ctx.obj["machine_readable"]:
+                click.echo("Error: no seek position found in current state", err=True)
+            sys.exit(1)
+        position = format_seek(current)
+        click.echo(json.dumps(position) if ctx.obj["machine_readable"] else position)
+        return
+    execute_command(ctx, f"seek {value}", lambda c: c.seek(value))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
 

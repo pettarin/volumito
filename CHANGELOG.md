@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Command `playback seek`: with no value prints the current position as HH:MM:SS.mmm; otherwise
+  accepts `plus`, `minus`, a number of seconds, or a HH:MM:SS (or MM:SS) time
 - Command group `playlist` with the `list` and `play` commands
 - Option `--check-playlist-name`/`--no-check-playlist-name` (default on) for `playlist play`,
   checking that the given name matches an existing playlist
