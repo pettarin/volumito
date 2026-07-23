@@ -31,7 +31,7 @@ class VolumioRESTAPIClient:
         self.timeout = timeout
 
     def get_state(self) -> dict[str, Any]:
-        """Query the /api/v1/getState endpoint.
+        """Get the current playback state of the Volumio instance.
 
         Returns:
             A dictionary containing the current state of the Volumio instance
@@ -43,7 +43,7 @@ class VolumioRESTAPIClient:
         return self._get_json("/api/v1/getState")
 
     def get_queue(self) -> dict[str, Any]:
-        """Query the /api/v1/getQueue endpoint.
+        """Get the current playback queue of the Volumio instance.
 
         Returns:
             A dictionary containing the current playback queue
@@ -55,7 +55,7 @@ class VolumioRESTAPIClient:
         return self._get_json("/api/v1/getQueue")
 
     def send_command(self, cmd: str) -> dict[str, Any]:
-        """Send a command to the /api/v1/commands endpoint.
+        """Send a playback control command to the Volumio instance.
 
         Args:
             cmd: The command to send (e.g., "play", "pause", "stop", "toggle", "next", "prev")
@@ -364,7 +364,7 @@ class VolumioRESTAPIClient:
         return self._get(path).text
 
     def ping(self) -> str:
-        """Query the /api/v1/ping endpoint.
+        """Ping the Volumio instance to check that it is reachable.
 
         Returns:
             The response body text (``"pong"`` from a healthy Volumio instance)
@@ -376,7 +376,7 @@ class VolumioRESTAPIClient:
         return self._get_text("/api/v1/ping")
 
     def get_system_version(self) -> dict[str, Any]:
-        """Query the /api/v1/getSystemVersion endpoint.
+        """Get the system version of the Volumio instance.
 
         Returns:
             A dictionary containing the Volumio system version information
@@ -388,7 +388,7 @@ class VolumioRESTAPIClient:
         return self._get_json("/api/v1/getSystemVersion")
 
     def get_system_info(self) -> dict[str, Any]:
-        """Query the /api/v1/getSystemInfo endpoint.
+        """Get the system information of the Volumio instance.
 
         Returns:
             A dictionary containing the Volumio system information
@@ -400,7 +400,7 @@ class VolumioRESTAPIClient:
         return self._get_json("/api/v1/getSystemInfo")
 
     def collectionstats(self) -> dict[str, Any]:
-        """Query the /api/v1/collectionstats endpoint.
+        """Get the statistics of the music collection of the Volumio instance.
 
         Returns:
             A dictionary containing the statistics of the music collection
@@ -412,7 +412,7 @@ class VolumioRESTAPIClient:
         return self._get_json("/api/v1/collectionstats")
 
     def get_zones(self) -> dict[str, Any]:
-        """Query the /api/v1/getzones endpoint.
+        """Get the multiroom zones seen by the Volumio instance.
 
         Returns:
             A dictionary containing the multiroom zones (under the "zones" key)
@@ -424,7 +424,7 @@ class VolumioRESTAPIClient:
         return self._get_json("/api/v1/getzones")
 
     def list_playlists(self) -> list[Any]:
-        """Query the /api/v1/listplaylists endpoint.
+        """List the playlists saved on the Volumio instance.
 
         Returns:
             A list containing the names of the saved playlists
