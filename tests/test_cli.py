@@ -20,6 +20,7 @@ from volumito.cli.volumito import (
     TRACK_INFO_SHORT_FIELDS,
     OnOffParamType,
     VolumeParamType,
+    display_position,
     extract_filename_from_uri,
     filter_fields,
     filter_queue_fields,
@@ -28,6 +29,7 @@ from volumito.cli.volumito import (
     format_as_table,
     format_queue_as_table,
     main,
+    rebase_queue_positions,
     render_output_filename,
 )
 from volumito.clients.rest import (
@@ -197,6 +199,35 @@ class TestFormatFunctions:
         parsed = json.loads(result)
         assert parsed["seek"] == "00:00:42.123"
 
+    def test_display_position(self):
+        """Test display_position with both indexing bases."""
+        assert display_position(0, True) == 1
+        assert display_position(0, False) == 0
+        assert display_position(7, True) == 8
+        assert display_position(7, False) == 7
+
+    def test_format_as_pretty_position_starting_at_one(self):
+        """Test format_as_pretty renders position starting at one by default."""
+        state = {"title": "Test", "position": 0}
+
+        parsed = json.loads(format_as_pretty(state))
+
+        assert parsed["position"] == 1
+
+    def test_format_as_pretty_position_starting_at_zero(self):
+        """Test format_as_pretty leaves position as returned by the API when 0-based."""
+        state = {"title": "Test", "position": 0}
+
+        parsed = json.loads(format_as_pretty(state, position_starting_at_one=False))
+
+        assert parsed["position"] == 0
+
+    def test_format_as_json_ignores_position_indexing(self):
+        """Test format_as_json always prints the position as returned by the API."""
+        state = {"title": "Test", "position": 0}
+
+        assert json.loads(format_as_json(state))["position"] == 0
+
     def test_format_as_table_short(self):
         """Test format_as_table with short fields."""
         state = {
@@ -231,6 +262,16 @@ class TestFormatFunctions:
 
         assert "Volumio Status" in result
         assert "Test" in result
+
+    def test_format_as_table_position_indexing(self):
+        """Test format_as_table renders position per the indexing base."""
+        state = {"status": "play", "position": 0, "title": "Test Song"}
+
+        one_based = format_as_table(state)
+        zero_based = format_as_table(state, position_starting_at_one=False)
+
+        assert f"{'Position':20}: 1" in one_based
+        assert f"{'Position':20}: 0" in zero_based
 
     def test_format_as_table_nested_dictionary(self):
         """A nested object is printed as one indented key/value line per sub-key."""
@@ -295,11 +336,22 @@ class TestRenderOutputFilename:
         assert render_output_filename("{file_name_from_uri}", uri, {}, "flac") == "song.flac"
 
     def test_custom_template(self):
-        """Custom template renders metadata; position is 1-indexed; spaces -> underscores."""
+        """Custom template renders metadata; position starts at one; spaces -> underscores."""
         result = render_output_filename(
             "{position:03d}_{title}.{extension}", "http://x/y.flac", self._state(), "flac"
         )
         assert result == "001_La_rondine.flac"
+
+    def test_custom_template_position_starting_at_zero(self):
+        """The position key follows the indexing base."""
+        result = render_output_filename(
+            "{position:03d}_{title}.{extension}",
+            "http://x/y.flac",
+            self._state(),
+            "flac",
+            position_starting_at_one=False,
+        )
+        assert result == "000_La_rondine.flac"
 
     def test_duration_key(self):
         """The duration key is formatted as HH:MM:SS."""
@@ -456,14 +508,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.11" in result.output
+        assert "volumito, version 0.0.12" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.11"'
+        assert result.output.strip() == '"0.0.12"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -472,7 +524,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.11"'
+        assert result.output.strip() == '"0.0.12"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3597,6 +3649,31 @@ class TestQueueHelperFunctions:
         assert "extra_field" not in result[0]
         assert "another_field" not in result[0]
 
+    def test_rebase_queue_positions_starting_at_one(self):
+        """The 1-indexed positions are left untouched when displaying from one."""
+        tracks = [{"position": 1, "title": "Song 1"}, {"position": 2, "title": "Song 2"}]
+
+        result = rebase_queue_positions(tracks, True)
+
+        assert [track["position"] for track in result] == [1, 2]
+        # The input items are not modified
+        assert tracks[0]["position"] == 1
+
+    def test_rebase_queue_positions_starting_at_zero(self):
+        """The positions are shifted down by one when displaying from zero."""
+        tracks = [{"position": 1, "title": "Song 1"}, {"position": 2, "title": "Song 2"}]
+
+        result = rebase_queue_positions(tracks, False)
+
+        assert [track["position"] for track in result] == [0, 1]
+        assert tracks[0]["position"] == 1
+
+    def test_rebase_queue_positions_without_position(self):
+        """An item without an integer position is copied unchanged."""
+        tracks = [{"title": "Song 1"}]
+
+        assert rebase_queue_positions(tracks, False) == [{"title": "Song 1"}]
+
     def test_format_queue_as_table(self):
         """Test format_queue_as_table function."""
         tracks = [
@@ -3621,6 +3698,264 @@ class TestQueueHelperFunctions:
         assert "Test Song" in result
         assert "Test Artist" in result
         assert "Another Song" in result
+
+
+class TestPositionIndexing:
+    """Test cases for --position-starting-at-one/--position-starting-at-zero."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_state_client(self, mocker: MockerFixture):
+        """Mock the REST client, returning a state whose position is the API's second track."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "status": "play",
+            "position": 1,
+            "title": "Test Song",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_queue_client(self, mocker: MockerFixture):
+        """Mock the REST client, returning a two-track queue."""
+        mock_client = mocker.Mock()
+        mock_client.get_queue.return_value = {
+            "queue": [
+                {"title": "Song 1", "artist": "Artist 1"},
+                {"title": "Song 2", "artist": "Artist 2"},
+            ]
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_help_lists_the_option(self, runner: CliRunner):
+        """Both flags of the option are shown in the top-level help."""
+        result = runner.invoke(main, ["--help"])
+
+        assert result.exit_code == 0
+        assert "--position-starting-at-one" in result.output
+        assert "--position-starting-at-zero" in result.output
+
+    def test_playback_status_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """playback status -F pretty rebases the position."""
+        self._mock_state_client(mocker)
+
+        one_based = runner.invoke(main, ["playback", "status", "-F", "pretty"])
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "playback", "status", "-F", "pretty"]
+        )
+
+        assert json.loads(one_based.output)["position"] == 2
+        assert json.loads(zero_based.output)["position"] == 1
+
+    def test_playback_status_table(self, runner: CliRunner, mocker: MockerFixture):
+        """playback status -F table rebases the position."""
+        self._mock_state_client(mocker)
+
+        one_based = runner.invoke(main, ["playback", "status", "-F", "table"])
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "playback", "status", "-F", "table"]
+        )
+
+        assert f"{'Position':20}: 2" in one_based.output
+        assert f"{'Position':20}: 1" in zero_based.output
+
+    def test_playback_status_json_and_raw_unaffected(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The json and raw formats always print the position as returned by the API."""
+        self._mock_state_client(mocker)
+
+        for output_format in ("json", "raw"):
+            one_based = runner.invoke(main, ["playback", "status", "-F", output_format])
+            zero_based = runner.invoke(
+                main,
+                ["--position-starting-at-zero", "playback", "status", "-F", output_format],
+            )
+
+            assert json.loads(one_based.output)["position"] == 1
+            assert json.loads(zero_based.output)["position"] == 1
+
+    def test_track_info_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """track info -F pretty rebases the position too."""
+        self._mock_state_client(mocker)
+
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "track", "info", "-F", "pretty"]
+        )
+
+        assert json.loads(zero_based.output)["position"] == 1
+
+    def test_queue_get_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """queue get -F pretty rebases the synthetic positions."""
+        self._mock_queue_client(mocker)
+
+        one_based = runner.invoke(main, ["queue", "get", "-F", "pretty"])
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "queue", "get", "-F", "pretty"]
+        )
+
+        assert [t["position"] for t in json.loads(one_based.output)] == [1, 2]
+        assert [t["position"] for t in json.loads(zero_based.output)] == [0, 1]
+
+    def test_queue_get_table(self, runner: CliRunner, mocker: MockerFixture):
+        """queue get -F table rebases the synthetic positions."""
+        self._mock_queue_client(mocker)
+
+        one_based = runner.invoke(main, ["queue", "get", "-F", "table"])
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "queue", "get", "-F", "table"]
+        )
+
+        assert "1. Song 1" in one_based.output
+        assert "0. Song 1" in zero_based.output
+
+    def test_queue_get_json_unaffected(self, runner: CliRunner, mocker: MockerFixture):
+        """queue get -F json keeps its 1-indexed synthetic positions."""
+        self._mock_queue_client(mocker)
+
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "queue", "get", "-F", "json"]
+        )
+
+        assert [t["position"] for t in json.loads(zero_based.output)] == [1, 2]
+
+    def test_play_position_starting_at_one(self, runner: CliRunner, mocker: MockerFixture):
+        """With the default base, the position is decremented before the API call."""
+        mock_client = mocker.Mock()
+        mock_client.play.return_value = {"response": "play"}
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["playback", "play", "-p", "1", "--no-print-resulting-status"])
+
+        assert result.exit_code == 0
+        mock_client.play.assert_called_once_with(0)
+
+    def test_play_position_starting_at_zero(self, runner: CliRunner, mocker: MockerFixture):
+        """With the zero base, the position is passed to the API unchanged."""
+        mock_client = mocker.Mock()
+        mock_client.play.return_value = {"response": "play"}
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                "playback",
+                "play",
+                "-p",
+                "0",
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.play.assert_called_once_with(0)
+
+    def test_play_position_below_minimum(self, runner: CliRunner, mocker: MockerFixture):
+        """A position below the minimum of the current base is a usage error."""
+        mock_client = mocker.Mock()
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        one_based = runner.invoke(main, ["playback", "play", "-p", "0"])
+        zero_based = runner.invoke(
+            main, ["--position-starting-at-zero", "playback", "play", "-p", "-1"]
+        )
+
+        assert one_based.exit_code != 0
+        assert "position must be 1 or greater" in one_based.output
+        assert zero_based.exit_code != 0
+        assert "position must be 0 or greater" in zero_based.output
+        mock_client.play.assert_not_called()
+
+    def test_track_audio_template(self, runner: CliRunner, mocker: MockerFixture):
+        """The {position} template key follows the indexing base."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"position": 1, "title": "La rondine"}
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_mpd_instance = mocker.Mock()
+        mock_mpd_instance.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
+        mock_mpd_client_class = mocker.Mock(return_value=mock_mpd_instance)
+        mock_mpd_client_class.return_value.__enter__ = mocker.Mock(return_value=mock_mpd_instance)
+        mock_mpd_client_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mock_mpd_client_class)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                "track",
+                "audio",
+                "-d",
+                "/tmp/music",
+                "-f",
+                "{position:03d}_{title}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
+
+    def test_albumart_template(self, runner: CliRunner, mocker: MockerFixture):
+        """The {position} template key follows the indexing base for album art too."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "position": 1,
+            "title": "La rondine",
+            "albumart": "http://volumio.local:3000/albumart?path=/mnt/x/cover.jpg",
+        }
+        mocker.patch(
+            "volumito.cli.volumito.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                "track",
+                "albumart",
+                "-d",
+                "/tmp/covers",
+                "-f",
+                "{position:03d}_{title}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "001_La_rondine.jpg"), "wb")
 
 
 class TestConfigurationFile:
@@ -3715,6 +4050,19 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         # Verbose output only appears because the config enabled it.
         assert "Connecting to" in result.output
+
+    def test_output_section_sets_position_indexing(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The output section can select the zero-based position indexing."""
+        mock_client = self._mock_rest_client(mocker)
+        mock_client.get_state.return_value = {"title": "Test Song", "position": 1}
+        config = self._write_config(tmp_path, "output:\n  position-starting-at-one: false\n")
+
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["position"] == 1
 
     def test_output_section_sets_format_for_playback_status(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -3959,6 +4307,7 @@ class TestConfigurationCommands:
                 "output": {
                     "verbose": False,
                     "machine-readable": False,
+                    "position-starting-at-one": True,
                     "print-resulting-status": True,
                     "playback-status": _DISPLAY_DEFAULTS,
                     "track-info": _DISPLAY_DEFAULTS,

@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.12] - 2026-07-23
+
+### Added
+
+- Global option `--position-starting-at-one`/`--position-starting-at-zero` selecting the indexing
+  of the `--position` option and of the displayed positions
+
+### Changed
+
+- The `--position` option of `playback play` now rejects a position below the minimum of the
+  selected indexing
+
+### Fixed
+
+- In `pretty` format, `position` is printed as an integer instead of a string
+
+
 ## [0.0.11] - 2026-07-22
 
 ### Added

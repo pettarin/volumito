@@ -195,6 +195,7 @@ timeouts:
 output:
   verbose: true
   machine-readable: false
+  position-starting-at-one: true
   print-resulting-status: true
   # fields/format here apply to all display commands...
   format: pretty
@@ -227,6 +228,8 @@ for that command
 (`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
 `previous`, `volume`, `mute`, `unmute`) and the `queue` action commands (`clear`, `repeat`, `randomize`).
+The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the defaults for the
+corresponding global options and cannot be overridden per command.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
@@ -270,6 +273,25 @@ volumito playback status -F table
 volumito playback status --format raw
 volumito playback status -F raw
 ```
+
+### Position Indexing
+
+Queue positions and track numbers are indexed starting at one by default; the global
+`--position-starting-at-zero` flag switches to the zero-based indexing used by the Volumio API:
+
+```bash
+# Positions start at one (default)
+volumito playback status -F table
+volumito queue get -F table
+
+# Positions start at zero
+volumito --position-starting-at-zero playback status -F table
+volumito --position-starting-at-zero queue get -F table
+```
+
+The flag applies to the `--position` option of `playback play`, to the positions shown by the
+`pretty` and `table` formats, and to the `{position}` key of `-f`/`--file-name-template`.
+The `json` and `raw` formats are unaffected: they always print the position as returned by the API.
 
 ### Field Filtering
 
@@ -335,12 +357,16 @@ volumito playback unmute
 
 ### Playing A Queue Position
 
-Start playback of a specific track in the queue (1-indexed):
+Start playback of a specific track in the queue (indexed as per Position Indexing above,
+i.e. starting at one by default):
 
 ```bash
 # -p is a shorthand for --position
 volumito playback play --position 3
 volumito playback play -p 3
+
+# The same track, with the zero-based indexing
+volumito --position-starting-at-zero playback play -p 2
 ```
 
 ### Queue
@@ -491,7 +517,7 @@ volumito track audio -d /path/to/music/ -f "{position:03d}_{title}.{extension}"
 
 Supported template keys:
 - `file_name_from_uri` — the file name taken from the URI (the default)
-- `position` — 1-indexed track position (e.g. `{position:03d}` → `001`)
+- `position` — track position, indexed as per Position Indexing (e.g. `{position:03d}` → `001`)
 - `title`, `album`, `artist`, `trackType`, `bitdepth`, `samplerate` — strings
 - `duration` — track length as `HH:MM:SS`
 - `channels` — integer

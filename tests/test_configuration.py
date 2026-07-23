@@ -50,6 +50,7 @@ _DEFAULTS = {
     "rest_api_sleep_before_next_call": 1.0,
     "verbose": False,
     "machine_readable": False,
+    "position_starting_at_one": True,
     "fields": "short",
     "output_format": "pretty",
     "print_resulting_status": True,
@@ -423,6 +424,7 @@ class TestRenderDefaultConfiguration:
             "output": {
                 "verbose": False,
                 "machine-readable": False,
+                "position-starting-at-one": True,
                 "print-resulting-status": True,
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,
@@ -457,6 +459,7 @@ class TestRenderDefaultConfiguration:
             "output": {
                 "verbose": False,
                 "machine-readable": False,
+                "position-starting-at-one": True,
                 "print-resulting-status": True,
                 "playback-status": _DISPLAY_DEFAULTS,
                 "track-info": _DISPLAY_DEFAULTS,

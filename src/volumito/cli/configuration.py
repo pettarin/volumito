@@ -18,16 +18,20 @@ SECTION_KEYS: dict[str, list[str]] = {
 }
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
-# per-command subsections override the display keys (fields/format). verbose and
-# machine-readable are global; print-resulting-status applies to the playback and
-# queue action commands.
+# per-command subsections override the display keys (fields/format). verbose,
+# machine-readable, and position-starting-at-one are global; print-resulting-status
+# applies to the playback and queue action commands.
 OUTPUT_SCALAR_KEYS = [
     "verbose",
     "machine-readable",
+    "position-starting-at-one",
     "fields",
     "format",
     "print-resulting-status",
 ]
+
+# Keys of the "output" section mapping to a global (top-level group) option.
+GLOBAL_OUTPUT_KEYS = ["verbose", "machine-readable", "position-starting-at-one"]
 DISPLAY_KEYS = ["fields", "format"]
 # Commands accepting only --format, not --fields.
 FORMAT_KEYS = ["format"]
@@ -68,6 +72,9 @@ KEY_COMMENTS: dict[str, str] = {
     "rest-api-sleep-before-next-call": "Seconds to sleep before the next REST API call",
     "verbose": "Enable verbose output",
     "machine-readable": "Produce machine-readable output only",
+    "position-starting-at-one": (
+        "Index queue positions and track numbers starting at one (or at zero)"
+    ),
     "fields": "Fields to display: short or all",
     "format": "Output format: json, pretty, table, or raw",
     "print-resulting-status": (
@@ -320,7 +327,7 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
 
     output = config.get("output", {})
     for key, value in output.items():
-        if key in ("verbose", "machine-readable"):
+        if key in GLOBAL_OUTPUT_KEYS:
             result[_param_name(key)] = value
         elif key == "print-resulting-status":
             for command_path in ACTION_COMMAND_PATHS:

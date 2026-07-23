@@ -100,7 +100,7 @@ TRACK_INFO_SHORT_FIELDS = [
 OUTPUT_FORMATS = ["json", "pretty", "table", "raw"]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.11"
+VERSION = "0.0.12"
 
 
 def filter_fields(
@@ -136,26 +136,27 @@ def format_as_json(state: dict[str, Any]) -> str:
     return json.dumps(state, indent=2)
 
 
-def format_as_pretty(state: dict[str, Any]) -> str:
+def format_as_pretty(state: dict[str, Any], position_starting_at_one: bool = True) -> str:
     """Format the state dictionary as pretty JSON with 4-space indentation.
 
     Keys are sorted alphabetically, Unicode escape sequences are unescaped,
-    leading/trailing spaces are removed from string values, and duration
-    is formatted as HH:MM:SS.
+    leading/trailing spaces are removed from string values, position is
+    rebased for display, and duration is formatted as HH:MM:SS.
 
     Args:
         state: The (potentially filtered) state dictionary from the Volumio API
+        position_starting_at_one: Whether the displayed positions start at one
 
     Returns:
         A formatted JSON string with 4-space indentation
     """
     # Strip leading/trailing spaces from string values and format duration
-    cleaned_state = {}
+    cleaned_state: dict[str, Any] = {}
     for key, value in state.items():
         if isinstance(value, str):
             cleaned_state[key] = value.strip()
         elif key == "position" and isinstance(value, int):
-            cleaned_state[key] = str(value + 1)
+            cleaned_state[key] = display_position(value, position_starting_at_one)
         elif key == "duration" and isinstance(value, int):
             cleaned_state[key] = format_duration(value)
         elif key == "seek" and isinstance(value, int):
@@ -179,6 +180,21 @@ def format_duration(seconds: int) -> str:
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def display_position(api_position: int, starting_at_one: bool) -> int:
+    """Convert a position as returned by the Volumio API to the displayed one.
+
+    The Volumio HTTP API indexes queue positions starting from zero.
+
+    Args:
+        api_position: The position as returned by the API (starting from zero)
+        starting_at_one: Whether the displayed positions start at one
+
+    Returns:
+        The position to display
+    """
+    return api_position + 1 if starting_at_one else api_position
 
 
 def format_seek(milliseconds: int) -> str:
@@ -225,14 +241,19 @@ def extract_filename_from_uri(uri: str) -> str:
 
 
 def render_output_filename(
-    template: str, uri: str, state: dict[str, Any], default_extension: str
+    template: str,
+    uri: str,
+    state: dict[str, Any],
+    default_extension: str,
+    position_starting_at_one: bool = True,
 ) -> str:
     """Render an output file name from a template, track metadata, and the URI.
 
     The template uses Python ``str.format`` syntax. Supported keys are:
-    ``file_name_from_uri``, ``position`` (1-indexed int), ``title``, ``album``,
-    ``artist``, ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``,
-    ``samplerate``, ``channels`` (int), and ``extension``. The ``extension`` is
+    ``file_name_from_uri``, ``position`` (int, indexed according to
+    ``position_starting_at_one``), ``title``, ``album``, ``artist``,
+    ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
+    ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
     URI file has none. Spaces in the rendered name are replaced with underscores.
 
@@ -241,6 +262,7 @@ def render_output_filename(
         uri: The URI being downloaded (source of ``file_name_from_uri`` and ``extension``)
         state: The current player state dictionary
         default_extension: Extension to use when the URI file has none (no leading dot)
+        position_starting_at_one: Whether the ``position`` key starts at one
 
     Returns:
         The rendered file name, with spaces replaced by underscores
@@ -260,7 +282,9 @@ def render_output_filename(
     duration = state.get("duration")
     keys: dict[str, object] = {
         "file_name_from_uri": file_name_from_uri,
-        "position": int(state.get("position") or 0) + 1,
+        "position": display_position(
+            int(state.get("position") or 0), position_starting_at_one
+        ),
         "title": as_text("title"),
         "album": as_text("album"),
         "artist": as_text("artist"),
@@ -292,6 +316,7 @@ def download_uri_to(
     timeout: float,
     verbose: bool,
     machine_readable: bool,
+    position_starting_at_one: bool = True,
 ) -> None:
     """Download ``uri`` to a file, printing errors and exiting (1) on failure.
 
@@ -313,11 +338,14 @@ def download_uri_to(
         timeout: Request timeout in seconds
         verbose: Whether to print progress messages
         machine_readable: Whether machine-readable mode is active (suppresses messages)
+        position_starting_at_one: Whether the template ``position`` key starts at one
     """
     if output_file is not None:
         destination = output_file
     else:  # output_directory is not None
-        filename = render_output_filename(file_name_template, uri, state, default_extension)
+        filename = render_output_filename(
+            file_name_template, uri, state, default_extension, position_starting_at_one
+        )
         if not filename:
             if not machine_readable:
                 click.echo("\nError: cannot determine a file name for the download", err=True)
@@ -361,6 +389,7 @@ def format_as_table(
     state: dict[str, Any],
     heading: str = "Volumio Status",
     field_order: list[str] | None = None,
+    position_starting_at_one: bool = True,
 ) -> str:
     """Format the state dictionary as a readable table.
 
@@ -370,6 +399,7 @@ def format_as_table(
         field_order: When given, the keys to display in this exact order (with
             title-cased labels); otherwise labels and order are derived from the
             state (predefined labels for the short set, sorted keys otherwise)
+        position_starting_at_one: Whether the displayed positions start at one
 
     Returns:
         A formatted string representation of the state
@@ -401,9 +431,8 @@ def format_as_table(
     for label, key in field_list:
         value = state.get(key)
         if value is not None:
-            # The Volumio HTTP API returns "position" starting from zero
             if key == "position" and isinstance(value, int):
-                value += 1
+                value = display_position(value, position_starting_at_one)
             # Format duration as HH:MM:SS
             if key == "duration" and isinstance(value, int):
                 value = format_duration(value)
@@ -433,7 +462,9 @@ def filter_queue_fields(
         fields: The fields option ("short" or "all")
 
     Returns:
-        A list of filtered queue item dictionaries with synthetic "position" field added
+        A list of filtered queue item dictionaries with a synthetic "position" field
+        added, always starting at one (see ``rebase_queue_positions`` for the
+        display rebasing)
     """
     queue = queue_data.get("queue", [])
     filtered_queue = []
@@ -444,11 +475,35 @@ def filter_queue_fields(
         else:  # short
             filtered_item = {key: item[key] for key in QUEUE_LIST_SHORT_FIELDS if key in item}
 
-        # Add synthetic 1-indexed position
+        # Add synthetic position, always 1-indexed here
         filtered_item["position"] = index + 1
         filtered_queue.append(filtered_item)
 
     return filtered_queue
+
+
+def rebase_queue_positions(
+    tracks: list[dict[str, Any]], starting_at_one: bool
+) -> list[dict[str, Any]]:
+    """Return copies of the queue items with "position" rebased for display.
+
+    The items produced by ``filter_queue_fields`` carry a 1-indexed position;
+    this shifts it when the displayed positions start at zero.
+
+    Args:
+        tracks: List of (potentially filtered) queue item dictionaries
+        starting_at_one: Whether the displayed positions start at one
+
+    Returns:
+        A list of copies of the queue items, with the position rebased
+    """
+    rebased = []
+    for track in tracks:
+        item = track.copy()
+        if isinstance(item.get("position"), int):
+            item["position"] = display_position(item["position"] - 1, starting_at_one)
+        rebased.append(item)
+    return rebased
 
 
 def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
@@ -892,6 +947,12 @@ def configuration_file_callback(
     help="MPD connection timeout in seconds",
 )
 @click.option(
+    "--position-starting-at-one/--position-starting-at-zero",
+    default=True,
+    show_default=True,
+    help="Index queue positions and track numbers starting at one (or at zero)",
+)
+@click.option(
     "--rest-api-port",
     "-P",
     type=int,
@@ -934,6 +995,7 @@ def main(
     machine_readable: bool,
     mpd_port: int,
     mpd_timeout: float,
+    position_starting_at_one: bool,
     rest_api_port: int,
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
@@ -954,6 +1016,7 @@ def main(
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
+    ctx.obj["position_starting_at_one"] = position_starting_at_one
 
     configuration_file = ctx.obj.get("configuration_file")
     if verbose and not machine_readable and configuration_file is not None:
@@ -1165,6 +1228,7 @@ def render_state(
     """
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
 
     state = fetch_state_or_exit(ctx)
 
@@ -1182,11 +1246,16 @@ def render_state(
         if output_format == "table":
             # Preserve the short_fields order (and their labels) in the table
             field_order = short_fields if fields == "short" else None
-            output = format_as_table(filtered_state, heading=heading, field_order=field_order)
+            output = format_as_table(
+                filtered_state,
+                heading=heading,
+                field_order=field_order,
+                position_starting_at_one=position_starting_at_one,
+            )
         elif output_format == "json":
             output = format_as_json(filtered_state)
         else:  # pretty
-            output = format_as_pretty(filtered_state)
+            output = format_as_pretty(filtered_state, position_starting_at_one)
 
     click.echo(output)
 
@@ -1210,9 +1279,13 @@ def render_payload(
     elif output_format == "json":
         output = format_as_json(data)
     elif output_format == "table":
-        output = format_as_table(data, heading=heading)
+        output = format_as_table(
+            data,
+            heading=heading,
+            position_starting_at_one=ctx.obj["position_starting_at_one"],
+        )
     else:  # pretty
-        output = format_as_pretty(data)
+        output = format_as_pretty(data, ctx.obj["position_starting_at_one"])
 
     click.echo(output)
 
@@ -1266,7 +1339,10 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     "-p",
     type=int,
     default=None,
-    help="Position in the queue to play (1-indexed)",
+    help=(
+        "Position in the queue to play (indexed according to "
+        "--position-starting-at-one/--position-starting-at-zero)"
+    ),
 )
 @print_resulting_status_option
 def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
@@ -1275,7 +1351,12 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
     Optionally specify a position to play a specific track in the queue.
     """
     if position is not None:
-        position -= 1
+        starting_at_one = ctx.obj["position_starting_at_one"]
+        minimum = 1 if starting_at_one else 0
+        if position < minimum:
+            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
+        if starting_at_one:
+            position -= 1
         endpoint = f"/api/v1/commands/?cmd=play&N={position}"
         execute_command(ctx, "play", lambda c: c.play(position), endpoint)
     else:
@@ -1496,6 +1577,7 @@ def audio(
                     rest_api_timeout,
                     verbose,
                     machine_readable,
+                    ctx.obj["position_starting_at_one"],
                 )
 
     except click.UsageError:
@@ -1615,6 +1697,7 @@ def albumart(
                 rest_api_timeout,
                 verbose,
                 machine_readable,
+                ctx.obj["position_starting_at_one"],
             )
 
     except click.UsageError:
@@ -1667,6 +1750,7 @@ def queue_get(
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
 
     if verbose and not machine_readable:
         click.echo(f"Connecting to {host_configuration.rest_base_url}/api/v1/getQueue...", err=True)
@@ -1692,14 +1776,16 @@ def queue_get(
             elif output_format == "pretty":
                 # Format durations as HH:MM:SS for pretty output
                 pretty_tracks = []
-                for track in tracks:
+                for track in rebase_queue_positions(tracks, position_starting_at_one):
                     pretty_track = track.copy()
                     if "duration" in pretty_track and isinstance(pretty_track["duration"], int):
                         pretty_track["duration"] = format_duration(pretty_track["duration"])
                     pretty_tracks.append(pretty_track)
                 output = json.dumps(pretty_tracks, indent=4, sort_keys=True, ensure_ascii=False)
             elif output_format == "table":
-                output = format_queue_as_table(tracks)
+                output = format_queue_as_table(
+                    rebase_queue_positions(tracks, position_starting_at_one)
+                )
             else:  # pragma: no cover
                 output = json.dumps(tracks, indent=2)
 
