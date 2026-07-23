@@ -10,21 +10,21 @@ Clone this repository and install from source
 in a virtual environment, with development extras:
 
 ```bash
-git clone https://github.com/pettarin/volumito
-cd volumito
+$ git clone https://github.com/pettarin/volumito
+$ cd volumito
 
-micromamba create -n volumito_dev python=3.13
-micromamba activate volumito_dev
+$ micromamba create -n volumito_dev python=3.13
+$ micromamba activate volumito_dev
 
-(volumito_dev) pip install -e ".[dev]"
-(volumito_dev) # or
-(volumito_dev) make install-e-this-dev
+(volumito_dev) $ pip install -e ".[dev]"
+(volumito_dev) $ # or
+(volumito_dev) $ make install-e-this-dev
 ```
 
 You should be able to run:
 
 ```bash
-(volumito_dev) volumito version
+(volumito_dev) $ volumito version
 volumito, version 0.0.13
 ```
 
@@ -33,21 +33,21 @@ volumito, version 0.0.13
 
 ```bash
 # Run all checks (unit tests, linter, and type checker)
-make test-all
+(volumito_dev) $ make test-all
 # OR equivalently
-make test
+(volumito_dev) $ make test
 
 # Run unit tests only
-make test-unit
+(volumito_dev) $ make test-unit
 
 # Run unit tests with coverage (HTML report in htmlcov/)
-make coverage
+(volumito_dev) $ make coverage
 
 # Run linter
-make lint
+(volumito_dev) $ make lint
 
 # Run type checker
-make check-type-hints
+(volumito_dev) $ make check-type-hints
 ```
 
 

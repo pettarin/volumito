@@ -3,6 +3,9 @@
 This document describes how to use `volumito` as a Python library.
 For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
 
+**IMPORTANT**: this document needs to be reworked,
+               it might contain wrong pieces of information.
+
 ## Contents
 
 - [Quick Start](#quick-start)
