@@ -49,6 +49,7 @@ _DEFAULTS = {
     "mpd_timeout": 5.0,
     "rest_api_sleep_before_next_call": 1.0,
     "check_playlist_name": True,
+    "check_seek_position": True,
     "verbose": False,
     "machine_readable": False,
     "position_starting_at_one": True,
@@ -241,6 +242,15 @@ class TestLoadDefaultMap:
 
         assert load_configuration(str(config)) == {
             "miscellaneous": {"check-playlist-name": False}
+        }
+
+    def test_miscellaneous_section_seek(self, tmp_path):
+        """The miscellaneous section accepts check-seek-position."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  check-seek-position: false\n")
+
+        assert load_configuration(str(config)) == {
+            "miscellaneous": {"check-seek-position": False}
         }
 
     def test_miscellaneous_unknown_key_raises(self, tmp_path):
@@ -441,7 +451,10 @@ class TestRenderDefaultConfiguration:
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 1.0,
             },
-            "miscellaneous": {"check-playlist-name": True},
+            "miscellaneous": {
+                "check-playlist-name": True,
+                "check-seek-position": True,
+            },
             "output": {
                 "verbose": False,
                 "machine-readable": False,
@@ -478,7 +491,10 @@ class TestRenderDefaultConfiguration:
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 1.0,
             },
-            "miscellaneous": {"check-playlist-name": True},
+            "miscellaneous": {
+                "check-playlist-name": True,
+                "check-seek-position": True,
+            },
             "output": {
                 "verbose": False,
                 "machine-readable": False,
@@ -600,12 +616,20 @@ class TestBuildClickDefaultMap:
         assert result["queue"]["get"] == {"output_format": "pretty"}
 
     def test_miscellaneous_keys_nested_under_their_command(self):
-        """A miscellaneous key lands in its command slot, not at the top level."""
+        """The miscellaneous keys land in their command slot, not at the top level."""
         result = build_click_default_map(
-            {"miscellaneous": {"check-playlist-name": False}}
+            {
+                "miscellaneous": {
+                    "check-playlist-name": False,
+                    "check-seek-position": False,
+                }
+            }
         )
 
-        assert result == {"playlist": {"play": {"check_playlist_name": False}}}
+        assert result == {
+            "playlist": {"play": {"check_playlist_name": False}},
+            "playback": {"seek": {"check_seek_position": False}},
+        }
 
     def test_print_resulting_status_replicated_under_action_commands(self):
         """print-resulting-status is nested under every playback, queue, and playlist action."""

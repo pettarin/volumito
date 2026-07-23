@@ -3907,7 +3907,9 @@ class TestSeekCommand:
         mock_client = mocker.Mock()
         mock_client.seek.return_value = {"response": "seek"}
         mock_client.get_state.return_value = (
-            {"seek": 252345, "artist": "StatusMarkerArtist"} if state is None else state
+            {"seek": 252345, "duration": 4000, "artist": "StatusMarkerArtist"}
+            if state is None
+            else state
         )
         mocker.patch(
             "volumito.cli.volumito.VolumioRESTAPIClient",
@@ -4020,7 +4022,7 @@ class TestSeekCommand:
         """By default, playback seek waits and prints the resulting playback status."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["playback", "seek", "42"])
+        result = runner.invoke(main, ["playback", "seek", "42", "--no-check-seek-position"])
 
         assert result.exit_code == 0
         mock_sleep.assert_called_once_with(1.0)
@@ -4031,11 +4033,129 @@ class TestSeekCommand:
         """With --no-print-resulting-status the status is not fetched."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["playback", "seek", "42", "--no-print-resulting-status"])
+        result = runner.invoke(
+            main,
+            [
+                "playback",
+                "seek",
+                "42",
+                "--no-check-seek-position",
+                "--no-print-resulting-status",
+            ],
+        )
 
         assert result.exit_code == 0
         mock_sleep.assert_not_called()
         mock_client.get_state.assert_not_called()
+
+    def test_position_within_the_duration(self, runner: CliRunner, mocker: MockerFixture):
+        """A position inside the track duration is checked and sent."""
+        mock_client, _ = self._mock_client(mocker, state={"duration": 300})
+
+        result = runner.invoke(
+            main, ["playback", "seek", "42", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.get_state.assert_called_once()
+        mock_client.seek.assert_called_once_with(42)
+
+    def test_position_equal_to_the_duration(self, runner: CliRunner, mocker: MockerFixture):
+        """A position exactly at the end of the track is accepted."""
+        mock_client, _ = self._mock_client(mocker, state={"duration": 300})
+
+        result = runner.invoke(
+            main, ["playback", "seek", "300", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.seek.assert_called_once_with(300)
+
+    def test_position_past_the_duration(self, runner: CliRunner, mocker: MockerFixture):
+        """A position past the track duration exits 1 without sending the command."""
+        mock_client, _ = self._mock_client(mocker, state={"duration": 300})
+
+        result = runner.invoke(main, ["playback", "seek", "01:00:00"])
+
+        assert result.exit_code == 1
+        assert "seek position out of range: 01:00:00" in result.output
+        assert "current track duration: 00:05:00" in result.output
+        mock_client.seek.assert_not_called()
+
+    def test_position_past_the_duration_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The out-of-range error is silent in machine-readable mode."""
+        mock_client, _ = self._mock_client(mocker, state={"duration": 300})
+
+        result = runner.invoke(main, ["-m", "playback", "seek", "3600"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+        mock_client.seek.assert_not_called()
+
+    def test_no_check_seek_position(self, runner: CliRunner, mocker: MockerFixture):
+        """With --no-check-seek-position an out-of-range position is sent unchecked."""
+        mock_client, _ = self._mock_client(mocker, state={"duration": 300})
+
+        result = runner.invoke(
+            main,
+            [
+                "playback",
+                "seek",
+                "3600",
+                "--no-check-seek-position",
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.get_state.assert_not_called()
+        mock_client.seek.assert_called_once_with(3600)
+
+    @pytest.mark.parametrize("spelling", ["plus", "minus"])
+    def test_relative_values_are_not_checked(
+        self, runner: CliRunner, mocker: MockerFixture, spelling: str
+    ):
+        """The relative keywords are exempt from the check."""
+        mock_client, _ = self._mock_client(mocker, state={"duration": 300})
+
+        result = runner.invoke(
+            main, ["playback", "seek", spelling, "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.get_state.assert_not_called()
+        mock_client.seek.assert_called_once_with(spelling)
+
+    @pytest.mark.parametrize(
+        "state",
+        [{}, {"duration": 0}, {"duration": "unknown"}],
+        ids=["missing", "zero", "not-an-integer"],
+    )
+    def test_unknown_duration_skips_the_check(
+        self, runner: CliRunner, mocker: MockerFixture, state: dict
+    ):
+        """With no usable duration the position cannot be checked, so it is sent."""
+        mock_client, _ = self._mock_client(mocker, state=state)
+
+        result = runner.invoke(
+            main, ["playback", "seek", "3600", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.seek.assert_called_once_with(3600)
+
+    def test_check_state_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A failing state fetch during the check exits 1 without sending the command."""
+        mock_client, _ = self._mock_client(mocker)
+        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["playback", "seek", "42"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+        mock_client.seek.assert_not_called()
 
     def test_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """playback seek exits 1 on a connection error."""
@@ -4679,6 +4799,24 @@ class TestConfigurationFile:
         mock_client.list_playlists.assert_not_called()
         mock_client.play_playlist.assert_called_once_with("Nope")
 
+    def test_miscellaneous_section_disables_the_seek_position_check(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The miscellaneous section can turn off the seek position check."""
+        mock_client = self._mock_rest_client(mocker)
+        mock_client.seek.return_value = {"response": "seek"}
+        config = self._write_config(
+            tmp_path, "miscellaneous:\n  check-seek-position: false\n"
+        )
+
+        result = runner.invoke(
+            main, ["-c", config, "playback", "seek", "3600", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.get_state.assert_not_called()
+        mock_client.seek.assert_called_once_with(3600)
+
     def test_output_subsection_sets_format_for_playlist_list(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -4948,7 +5086,10 @@ class TestConfigurationCommands:
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 1.0,
                 },
-                "miscellaneous": {"check-playlist-name": True},
+                "miscellaneous": {
+                    "check-playlist-name": True,
+                    "check-seek-position": True,
+                },
                 "output": {
                     "verbose": False,
                     "machine-readable": False,

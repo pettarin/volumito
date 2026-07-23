@@ -212,6 +212,7 @@ timeouts:
   rest-api-sleep-before-next-call: 1.0
 miscellaneous:
   check-playlist-name: true
+  check-seek-position: true
 output:
   verbose: true
   machine-readable: false
@@ -256,7 +257,8 @@ The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the d
 corresponding global options and cannot be overridden per command.
 
 The `miscellaneous` section holds the defaults of options belonging to a single command: its
-`check-playlist-name` key sets the default for the corresponding option of `playlist play`.
+`check-playlist-name` and `check-seek-position` keys set the defaults for the corresponding
+options of `playlist play` and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
@@ -398,6 +400,10 @@ volumito playback seek 01:04:12
 # Seek relatively (the step is the one applied by the Volumio instance)
 volumito playback seek plus     # also: increase, up, forward
 volumito playback seek minus    # also: decrease, down, backward
+
+# An absolute position is checked against the duration of the current track
+# (when known: web radios and streams report none); skip the check with:
+volumito playback seek 3600 --no-check-seek-position
 ```
 
 ### Playing A Queue Position

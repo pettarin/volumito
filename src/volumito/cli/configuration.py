@@ -14,6 +14,7 @@ import yaml
 # key -> the default_map path(s) of the command(s) it targets.
 MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "check-playlist-name": [["playlist", "play"]],
+    "check-seek-position": [["playback", "seek"]],
 }
 
 # Recognized flat section names and their allowed (hyphenated) keys, in display order.
@@ -72,6 +73,9 @@ RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads", "output"]
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
     "check-playlist-name": "Check that the playlist name exists before playing it",
+    "check-seek-position": (
+        "Check that the seek position is within the duration of the current track"
+    ),
     "fields": "Fields to display: short or all",
     "file-name-template": "Template (Python str.format) for the -d output file name",
     "format": "Output format: json, pretty, raw, or table",

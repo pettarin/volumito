@@ -1179,13 +1179,14 @@ def command_scoped_option_defaults() -> dict[str, Any]:
 
     These options live on subcommands, not the top-level group: fields/format on
     ``playback status``, print-resulting-status on the playback and queue action commands,
-    the download options on ``track audio``, and check-playlist-name on ``playlist play``.
-    Read them from the ``playback_status``, ``toggle``, ``audio``, and ``playlist_play``
-    command objects so the generated configuration mirrors the real defaults without
-    duplication.
+    the download options on ``track audio``, check-playlist-name on ``playlist play``,
+    and check-seek-position on ``playback seek``. Read them from the ``playback_status``,
+    ``toggle``, ``audio``, ``playlist_play``, and ``seek`` command objects so the
+    generated configuration mirrors the real defaults without duplication.
     """
     wanted = {
         "check_playlist_name",
+        "check_seek_position",
         "fields",
         "output_format",
         "print_resulting_status",
@@ -1195,7 +1196,7 @@ def command_scoped_option_defaults() -> dict[str, Any]:
         "overwrite_existing_files",
     }
     defaults: dict[str, Any] = {}
-    for command in (playback_status, toggle, audio, playlist_play):
+    for command in (playback_status, toggle, audio, playlist_play, seek):
         for param in command.params:
             if isinstance(param, click.Option) and param.name in wanted:
                 defaults[param.name] = param.default
@@ -1524,14 +1525,28 @@ def previous(ctx: click.Context, print_resulting_status: bool) -> None:
 @playback.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=SeekParamType())
+@click.option(
+    "--check-seek-position/--no-check-seek-position",
+    default=True,
+    show_default=True,
+    help="Check that the seek position is within the duration of the current track",
+)
 @print_resulting_status_option
-def seek(ctx: click.Context, value: int | str | None, print_resulting_status: bool) -> None:
+def seek(
+    ctx: click.Context,
+    value: int | str | None,
+    check_seek_position: bool,
+    print_resulting_status: bool,
+) -> None:
     """Print, set, or adjust the seek position of the Volumio instance.
 
     Without VALUE, print the current position as HH:MM:SS.mmm. Otherwise VALUE is
     the position to seek to, as a number of seconds or as a HH:MM:SS (or MM:SS)
     time, or one of "plus" (also "increase"/"up"/"forward") and "minus" (also
     "decrease"/"down"/"backward") to seek relatively to the current position.
+
+    Unless --no-check-seek-position is given, an absolute position is checked
+    against the duration of the current track, when the latter is known.
     """
     if value is None:
         state = fetch_state_or_exit(ctx)
@@ -1543,6 +1558,19 @@ def seek(ctx: click.Context, value: int | str | None, print_resulting_status: bo
         position = format_seek(current)
         click.echo(json.dumps(position) if ctx.obj["machine_readable"] else position)
         return
+
+    if check_seek_position and isinstance(value, int):
+        duration = fetch_state_or_exit(ctx).get("duration")
+        # The duration is unknown for web radios and streams: skip the check
+        if isinstance(duration, int) and duration > 0 and value > duration:
+            if not ctx.obj["machine_readable"]:
+                click.echo(
+                    f"Error: seek position out of range: {format_duration(value)} "
+                    f"(current track duration: {format_duration(duration)})",
+                    err=True,
+                )
+            sys.exit(1)
+
     execute_command(ctx, f"seek {value}", lambda c: c.seek(value))
     maybe_print_resulting_status(ctx, print_resulting_status)
 
