@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - In `pretty` format, `position` is printed as an integer instead of a string
+- In `table` format, the entry numbers of the queue and of the zones are right-aligned and their
+  key/value lines are indented accordingly
 
 
 ## [0.0.11] - 2026-07-22

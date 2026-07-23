@@ -352,7 +352,7 @@ class TestRenderDefaultConfiguration:
         assert "# REST API request timeout, in seconds" in result
         assert "in seconds" in result
         assert "# Fields to display: short or all" in result
-        assert "# Output format: json, pretty, table, or raw" in result
+        assert "# Output format: json, pretty, raw, or table" in result
 
     def test_comments_cover_all_keys(self):
         """KEY_COMMENTS covers exactly the flat, output, and download keys, all non-empty."""

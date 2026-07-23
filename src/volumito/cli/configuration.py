@@ -31,7 +31,7 @@ OUTPUT_SCALAR_KEYS = [
 ]
 
 # Keys of the "output" section mapping to a global (top-level group) option.
-GLOBAL_OUTPUT_KEYS = ["verbose", "machine-readable", "position-starting-at-one"]
+GLOBAL_OUTPUT_KEYS = ["machine-readable", "position-starting-at-one", "verbose"]
 DISPLAY_KEYS = ["fields", "format"]
 # Commands accepting only --format, not --fields.
 FORMAT_KEYS = ["format"]
@@ -59,31 +59,31 @@ DOWNLOAD_KEYS = [
 DOWNLOAD_SUBSECTIONS = ["track-audio", "track-albumart"]
 
 # Every recognized top-level section.
-RECOGNIZED_SECTIONS = [*SECTION_KEYS, "output", "downloads"]
+RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads", "output"]
 
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
-    "host": "Hostname or IP address of the Volumio instance",
-    "scheme": "URL scheme used to connect: http or https",
-    "rest-api-port": "REST API port of the Volumio instance",
-    "mpd-port": "MPD port of the Volumio instance",
-    "rest-api-timeout": "REST API request timeout, in seconds",
-    "mpd-timeout": "MPD connection timeout, in seconds",
-    "rest-api-sleep-before-next-call": "Seconds to sleep before the next REST API call",
-    "verbose": "Enable verbose output",
-    "machine-readable": "Produce machine-readable output only",
-    "position-starting-at-one": (
-        "Index queue positions and track numbers starting at one (or at zero)"
-    ),
     "fields": "Fields to display: short or all",
-    "format": "Output format: json, pretty, table, or raw",
-    "print-resulting-status": (
-        "After a playback or queue command like pause or clear, print the resulting playback status"
-    ),
     "file-name-template": "Template (Python str.format) for the -d output file name",
+    "format": "Output format: json, pretty, raw, or table",
+    "host": "Hostname or IP address of the Volumio instance",
+    "machine-readable": "Produce machine-readable output only",
+    "mpd-port": "MPD port of the Volumio instance",
+    "mpd-timeout": "MPD connection timeout, in seconds",
     "output-directory": "Directory to download into (mutually exclusive with output-file)",
     "output-file": "Exact file path to download to (mutually exclusive with output-directory)",
     "overwrite-existing-files": "Overwrite the destination file if it already exists",
+    "position-starting-at-one": (
+        "Index queue positions and track numbers starting at one (or at zero)"
+    ),
+    "print-resulting-status": (
+        "After a playback or queue command like pause or clear, print the resulting playback status"
+    ),
+    "rest-api-port": "REST API port of the Volumio instance",
+    "rest-api-sleep-before-next-call": "Seconds to sleep before the next REST API call",
+    "rest-api-timeout": "REST API request timeout, in seconds",
+    "scheme": "URL scheme used to connect: http or https",
+    "verbose": "Enable verbose output",
 }
 
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
@@ -92,23 +92,23 @@ _KEY_PARAM_OVERRIDES = {"format": "output_format"}
 # --print-resulting-status lives on the playback and queue action commands.
 ACTION_COMMAND_PATHS = [
     ["playback", name]
-    for name in ("toggle", "play", "pause", "stop", "next", "previous", "volume", "mute", "unmute")
-] + [["queue", name] for name in ("clear", "repeat", "randomize")]
+    for name in ("mute", "next", "pause", "play", "previous", "stop", "toggle", "unmute", "volume")
+] + [["queue", name] for name in ("clear", "randomize", "repeat")]
 
 # Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
 DISPLAY_SUBSECTION_PATHS = {
+    "collection-statistics": [["collection", "statistics"]],
     "playback-status": [["playback", "status"]],
-    "track-info": [["track", "info"]],
     "queue-get": [["queue", "get"]],
-    "zones-get": [["zones", "get"]],
-    "system-version": [["system", "version"]],
     # "info" is the top-level synonym of "system info"
     "system-info": [["system", "info"], ["info"]],
-    "collection-statistics": [["collection", "statistics"]],
+    "system-version": [["system", "version"]],
+    "track-info": [["track", "info"]],
+    "zones-get": [["zones", "get"]],
 }
 DOWNLOAD_SUBSECTION_PATHS = {
-    "track-audio": [["track", "audio"]],
     "track-albumart": [["track", "albumart"]],
+    "track-audio": [["track", "audio"]],
 }
 DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
     DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
@@ -117,8 +117,8 @@ DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
 # Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
 # Used for validation of the "output" and "downloads" sections.
 _HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
-    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
     "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTION_KEYS),
+    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
 }
 
 

@@ -97,7 +97,7 @@ TRACK_INFO_SHORT_FIELDS = [
 ]
 
 # Accepted values of the -F/--format option
-OUTPUT_FORMATS = ["json", "pretty", "table", "raw"]
+OUTPUT_FORMATS = ["json", "pretty", "raw", "table"]
 
 # Version of the CLI (and of the underlying library)
 VERSION = "0.0.12"
@@ -506,6 +506,22 @@ def rebase_queue_positions(
     return rebased
 
 
+def number_prefix_width(numbers: list[str]) -> int:
+    """Return the width of the widest entry number of a numbered table block.
+
+    The numbers are right-aligned to this width, so that the detail lines of every
+    block, indented by this width plus two (the dot and the following space), start
+    at the same column as the entry name.
+
+    Args:
+        numbers: The entry numbers, as rendered
+
+    Returns:
+        The width of the widest entry number
+    """
+    return max(len(number) for number in numbers)
+
+
 def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
     """Format the queue as a readable table.
 
@@ -523,6 +539,9 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
         lines.append("(empty)")
         return "\n".join(lines)
 
+    width = number_prefix_width([str(track.get("position", "?")) for track in tracks])
+    indent = " " * (width + 2)
+
     for track in tracks:
         position = track.get("position", "?")
         title = track.get("title", "Unknown")
@@ -531,15 +550,15 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
         duration = track.get("duration")
         service = track.get("service", "")
 
-        lines.append(f"\n{position}. {title}")
+        lines.append(f"\n{position:>{width}}. {title}")
         if artist:
-            lines.append(f"   Artist : {artist}")
+            lines.append(f"{indent}Artist : {artist}")
         if album:
-            lines.append(f"   Album  : {album}")
+            lines.append(f"{indent}Album  : {album}")
         if duration and isinstance(duration, int):
-            lines.append(f"   Duration: {format_duration(duration)}")
+            lines.append(f"{indent}Duration: {format_duration(duration)}")
         if service:
-            lines.append(f"   Service: {service}")
+            lines.append(f"{indent}Service: {service}")
 
         # Add optional audio quality fields if present
         samplerate = track.get("samplerate")
@@ -547,11 +566,11 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
         channels = track.get("channels")
 
         if samplerate:
-            lines.append(f"   Sample Rate: {samplerate}")
+            lines.append(f"{indent}Sample Rate: {samplerate}")
         if bitdepth:
-            lines.append(f"   Bit Depth: {bitdepth}")
+            lines.append(f"{indent}Bit Depth: {bitdepth}")
         if channels:
-            lines.append(f"   Channels: {channels}")
+            lines.append(f"{indent}Channels: {channels}")
 
     return "\n".join(lines)
 
@@ -622,19 +641,22 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
         lines.append("(empty)")
         return "\n".join(lines)
 
+    width = number_prefix_width([str(index) for index in range(1, len(zones) + 1)])
+    indent = " " * (width + 2)
+
     for index, zone in enumerate(zones, start=1):
-        lines.append(f"\n{index}. {zone.get('name', 'Unknown')}")
+        lines.append(f"\n{index:>{width}}. {zone.get('name', 'Unknown')}")
         for key, value in zone.items():
             if key == "name":
                 # The name is already the heading of the block
                 continue
             label = split_camel_case(key)
             if isinstance(value, dict):
-                lines.append(f"   {label:17}:")
+                lines.append(f"{indent}{label:17}:")
                 for sub_key, sub_value in value.items():
-                    lines.append(f"     {split_camel_case(sub_key):15}: {sub_value}")
+                    lines.append(f"{indent}  {split_camel_case(sub_key):15}: {sub_value}")
             else:
-                lines.append(f"   {label:17}: {value}")
+                lines.append(f"{indent}{label:17}: {value}")
 
     return "\n".join(lines)
 
@@ -1222,7 +1244,7 @@ def render_state(
     Args:
         ctx: Click context object containing shared options
         fields: The fields option ("short" or "all")
-        output_format: The output format ("json", "pretty", "table", or "raw")
+        output_format: The output format ("json", "pretty", "raw", or "table")
         short_fields: The list of keys to keep when ``fields`` is "short"
         heading: The heading line for the table output format
     """
@@ -1271,7 +1293,7 @@ def render_payload(
     Args:
         ctx: Click context object containing shared options
         data: The JSON object to print
-        output_format: The output format ("json", "pretty", "table", or "raw")
+        output_format: The output format ("json", "pretty", "raw", or "table")
         heading: The heading line for the table output format
     """
     if ctx.obj["machine_readable"] or output_format == "raw":

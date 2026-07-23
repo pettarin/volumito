@@ -222,6 +222,14 @@ class TestFormatFunctions:
 
         assert parsed["position"] == 0
 
+    def test_format_as_pretty_duration(self):
+        """Test format_as_pretty renders duration (seconds) as HH:MM:SS."""
+        state = {"title": "Test", "duration": 3725}
+
+        parsed = json.loads(format_as_pretty(state))
+
+        assert parsed["duration"] == "01:02:05"
+
     def test_format_as_json_ignores_position_indexing(self):
         """Test format_as_json always prints the position as returned by the API."""
         state = {"title": "Test", "position": 0}
@@ -262,6 +270,14 @@ class TestFormatFunctions:
 
         assert "Volumio Status" in result
         assert "Test" in result
+
+    def test_format_as_table_duration(self):
+        """Test format_as_table renders duration (seconds) as HH:MM:SS."""
+        state = {"status": "play", "title": "Test Song", "duration": 3725}
+
+        result = format_as_table(state)
+
+        assert f"{'Duration':20}: 01:02:05" in result
 
     def test_format_as_table_position_indexing(self):
         """Test format_as_table renders position per the indexing base."""
@@ -3294,6 +3310,34 @@ class TestZonesCommands:
         assert f"     {'Status':15}: stop" in lines
         assert f"     {'Volume':15}: 43" in lines
 
+    def test_get_table_format_two_digit_numbers(self, runner: CliRunner, mocker: MockerFixture):
+        """With 10+ zones the numbers are right-aligned and the labels indented to match."""
+        zones = {
+            "zones": [
+                {
+                    "host": f"http://192.168.1.{index}",
+                    "name": f"Zone {index}",
+                    "isSelf": False,
+                    "state": {"status": "play", "volume": 10},
+                }
+                for index in range(1, 12)
+            ]
+        }
+        self._mock_client(mocker, zones=zones)
+
+        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        lines = result.output.splitlines()
+
+        assert result.exit_code == 0
+        assert " 9. Zone 9" in lines
+        assert "10. Zone 10" in lines
+        # The labels of every block start at the column of the zone name
+        assert f"    {'Host':17}: http://192.168.1.9" in lines
+        assert f"    {'Host':17}: http://192.168.1.10" in lines
+        # The nested state keeps its extra two-space offset
+        assert f"    {'State':17}:" in lines
+        assert f"      {'Status':15}: play" in lines
+
     def test_get_table_format_empty(self, runner: CliRunner, mocker: MockerFixture):
         """zones get -F table reports an empty zone list."""
         self._mock_client(mocker, zones={"zones": []})
@@ -3698,6 +3742,67 @@ class TestQueueHelperFunctions:
         assert "Test Song" in result
         assert "Test Artist" in result
         assert "Another Song" in result
+
+    def test_format_queue_as_table_optional_fields(self):
+        """The service and audio-quality fields are printed when present."""
+        tracks = [
+            {
+                "position": 1,
+                "title": "Test Song",
+                "artist": "Test Artist",
+                "duration": 180,
+                "service": "mpd",
+                "samplerate": "44.1 kHz",
+                "bitdepth": "16 bit",
+                "channels": 2,
+            }
+        ]
+
+        result = format_queue_as_table(tracks)
+
+        assert "   Duration: 00:03:00" in result
+        assert "   Service: mpd" in result
+        assert "   Sample Rate: 44.1 kHz" in result
+        assert "   Bit Depth: 16 bit" in result
+        assert "   Channels: 2" in result
+
+    def test_format_queue_as_table_two_digit_positions(self):
+        """With 10+ tracks the numbers are right-aligned and the details indented to match."""
+        tracks = [
+            {"position": index, "title": f"Song {index}", "artist": "Mango", "duration": 252}
+            for index in range(1, 12)
+        ]
+
+        lines = format_queue_as_table(tracks).splitlines()
+
+        # Single-digit numbers are padded so that they right-align with the two-digit ones
+        assert " 9. Song 9" in lines
+        assert "10. Song 10" in lines
+        # The keys of every block start at the same column as the track title
+        assert lines[lines.index(" 9. Song 9") + 1] == "    Artist : Mango"
+        assert lines[lines.index("10. Song 10") + 1] == "    Artist : Mango"
+        assert lines.count("    Artist : Mango") == 11
+        assert lines.count("    Duration: 00:04:12") == 11
+
+    def test_format_queue_as_table_single_digit_positions_unchanged(self):
+        """With fewer than 10 tracks the indentation is the usual three spaces."""
+        tracks = [{"position": 1, "title": "Test Song", "artist": "Test Artist"}]
+
+        lines = format_queue_as_table(tracks).splitlines()
+
+        assert "1. Test Song" in lines
+        assert "   Artist : Test Artist" in lines
+
+    def test_format_queue_as_table_missing_position(self):
+        """A track without a position falls back to '?', padded like the other numbers."""
+        tracks = [{"title": "Song 1"}] + [
+            {"position": index, "title": f"Song {index}"} for index in range(2, 11)
+        ]
+
+        lines = format_queue_as_table(tracks).splitlines()
+
+        assert " ?. Song 1" in lines
+        assert "10. Song 10" in lines
 
 
 class TestPositionIndexing:
