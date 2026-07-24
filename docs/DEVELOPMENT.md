@@ -67,6 +67,8 @@ volumito/
 │       ├── __init__.py                 # public API re-exports and version
 │       ├── cli/
 │       │   ├── configuration.py        # YAML configuration file loading
+│       │   ├── helpers.py              # Click-independent formatting/parsing helpers
+│       │   ├── metadata.py             # audio metadata and cover-art embedding (mutagen)
 │       │   └── volumito.py             # Click-based CLI
 │       └── clients/
 │           ├── errors.py               # VolumioError and its subclasses
