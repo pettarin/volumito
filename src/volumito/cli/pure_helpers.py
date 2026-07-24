@@ -18,6 +18,48 @@ from volumito.cli.constants import (
 from volumito.clients import VolumioHostConfiguration
 
 
+def display_position(api_position: int, starting_at_one: bool) -> int:
+    """Convert a position as returned by the Volumio API to the displayed one.
+
+    The Volumio HTTP API indexes queue positions starting from zero.
+
+    Args:
+        api_position: The position as returned by the API (starting from zero)
+        starting_at_one: Whether the displayed positions start at one
+
+    Returns:
+        The position to display
+    """
+    return api_position + 1 if starting_at_one else api_position
+
+
+def extract_filename_from_uri(uri: str) -> str:
+    """Extract the file-name component of a URI.
+
+    Returns the basename of the URI's ``path`` query parameter if present
+    (e.g. ``/albumart?path=/mnt/x/cover.jpg`` -> ``cover.jpg``), otherwise the
+    basename of the URI path (e.g. ``.../music/song.flac`` -> ``song.flac``).
+
+    Args:
+        uri: The URI to extract the file name from
+
+    Returns:
+        The file name, or an empty string if none can be determined
+    """
+    from urllib.parse import parse_qs, urlparse
+
+    parsed = urlparse(uri)
+
+    # Prefer the basename of the 'path' query parameter when present
+    if parsed.query:
+        qs = parse_qs(parsed.query)
+        if "path" in qs:
+            return os.path.basename(qs["path"][0])
+
+    # Otherwise use the basename of the URI path
+    return os.path.basename(parsed.path)
+
+
 def filter_fields(
     state: dict[str, Any],
     fields: Literal["short", "all"],
@@ -37,6 +79,67 @@ def filter_fields(
         return state
     else:  # short
         return {key: state[key] for key in short_fields if key in state}
+
+
+def filter_queue_fields(
+    queue_data: dict[str, Any], fields: Literal["short", "all"]
+) -> list[dict[str, Any]]:
+    """Filter queue items based on the fields option.
+
+    Args:
+        queue_data: The queue data dictionary from the Volumio API (contains "queue" key)
+        fields: The fields option ("short" or "all")
+
+    Returns:
+        A list of filtered queue item dictionaries with a synthetic "position" field
+        added, always starting at one (see ``rebase_queue_positions`` for the
+        display rebasing)
+    """
+    queue = queue_data.get("queue", [])
+    filtered_queue = []
+
+    for index, item in enumerate(queue):
+        if fields == "all":
+            filtered_item = item.copy()
+        else:  # short
+            filtered_item = {key: item[key] for key in QUEUE_LIST_SHORT_FIELDS if key in item}
+
+        # Add synthetic position, always 1-indexed here
+        filtered_item["position"] = index + 1
+        filtered_queue.append(filtered_item)
+
+    return filtered_queue
+
+
+def filter_zones_fields(
+    zones_data: dict[str, Any], fields: Literal["short", "all"]
+) -> list[dict[str, Any]]:
+    """Filter the zones based on the fields option.
+
+    Args:
+        zones_data: The zones data dictionary from the Volumio API (contains "zones" key)
+        fields: The fields option ("short" or "all")
+
+    Returns:
+        A list of filtered zone dictionaries; in short mode the "state" subdictionary
+        is filtered too
+    """
+    zones = zones_data.get("zones", [])
+    if fields == "all":
+        return [zone.copy() for zone in zones]
+
+    filtered_zones = []
+    for zone in zones:
+        filtered_zone = {key: zone[key] for key in ZONES_GET_SHORT_FIELDS if key in zone}
+        state = filtered_zone.get("state")
+        if isinstance(state, dict):
+            filtered_zone["state"] = {
+                key: value
+                for key, value in state.items()
+                if key not in ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS
+            }
+        filtered_zones.append(filtered_zone)
+    return filtered_zones
 
 
 def format_as_json(state: dict[str, Any]) -> str:
@@ -80,129 +183,6 @@ def format_as_pretty(state: dict[str, Any], position_starting_at_one: bool = Tru
             cleaned_state[key] = value
 
     return json.dumps(cleaned_state, indent=4, sort_keys=True, ensure_ascii=False)
-
-
-def format_duration(seconds: int) -> str:
-    """Convert duration in seconds to HH:MM:SS format.
-
-    Args:
-        seconds: Duration in seconds
-
-    Returns:
-        A formatted string in HH:MM:SS format
-    """
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    secs = seconds % 60
-    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
-
-
-def display_position(api_position: int, starting_at_one: bool) -> int:
-    """Convert a position as returned by the Volumio API to the displayed one.
-
-    The Volumio HTTP API indexes queue positions starting from zero.
-
-    Args:
-        api_position: The position as returned by the API (starting from zero)
-        starting_at_one: Whether the displayed positions start at one
-
-    Returns:
-        The position to display
-    """
-    return api_position + 1 if starting_at_one else api_position
-
-
-def format_seek(milliseconds: int) -> str:
-    """Convert a seek position in milliseconds to HH:MM:SS.mmm format.
-
-    Args:
-        milliseconds: Seek position in milliseconds
-
-    Returns:
-        A formatted string in HH:MM:SS.mmm format
-    """
-    seconds, millis = divmod(milliseconds, 1000)
-    hours = seconds // 3600
-    minutes = (seconds % 3600) // 60
-    secs = seconds % 60
-    return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
-
-
-def parse_time_to_seconds(text: str) -> int | None:
-    """Convert a colon time to the corresponding number of seconds.
-
-    Accepts HH:MM:SS and MM:SS, where the minutes and seconds components are
-    below 60 and the hours component is unbounded.
-
-    Args:
-        text: The colon time to convert
-
-    Returns:
-        The number of seconds, or None if ``text`` is not a colon time
-    """
-    components = text.split(":")
-    if len(components) not in (2, 3):
-        return None
-    if not all(component.isdigit() for component in components):
-        return None
-
-    values = [int(component) for component in components]
-    if any(value > 59 for value in values[1:]):
-        return None
-
-    seconds = 0
-    for value in values:
-        seconds = seconds * 60 + value
-    return seconds
-
-
-def extract_filename_from_uri(uri: str) -> str:
-    """Extract the file-name component of a URI.
-
-    Returns the basename of the URI's ``path`` query parameter if present
-    (e.g. ``/albumart?path=/mnt/x/cover.jpg`` -> ``cover.jpg``), otherwise the
-    basename of the URI path (e.g. ``.../music/song.flac`` -> ``song.flac``).
-
-    Args:
-        uri: The URI to extract the file name from
-
-    Returns:
-        The file name, or an empty string if none can be determined
-    """
-    from urllib.parse import parse_qs, urlparse
-
-    parsed = urlparse(uri)
-
-    # Prefer the basename of the 'path' query parameter when present
-    if parsed.query:
-        qs = parse_qs(parsed.query)
-        if "path" in qs:
-            return os.path.basename(qs["path"][0])
-
-    # Otherwise use the basename of the URI path
-    return os.path.basename(parsed.path)
-
-
-def resolve_albumart_uri(
-    state: dict[str, Any], host_configuration: VolumioHostConfiguration
-) -> str | None:
-    """Return the absolute album-art URI for the current state, or None if absent.
-
-    A relative URI (starting with "/") is made absolute by prepending the REST base URL.
-
-    Args:
-        state: The current player state dictionary
-        host_configuration: The Volumio host configuration
-
-    Returns:
-        The absolute album-art URI, or None when the state has no album art
-    """
-    albumart: str | None = state.get("albumart")
-    if not albumart:
-        return None
-    if albumart.startswith("/"):
-        return f"{host_configuration.rest_base_url}{albumart}"
-    return albumart
 
 
 def format_as_table(
@@ -272,74 +252,44 @@ def format_as_table(
     return "\n".join(lines)
 
 
-def filter_queue_fields(
-    queue_data: dict[str, Any], fields: Literal["short", "all"]
-) -> list[dict[str, Any]]:
-    """Filter queue items based on the fields option.
+def format_duration(seconds: int) -> str:
+    """Convert duration in seconds to HH:MM:SS format.
 
     Args:
-        queue_data: The queue data dictionary from the Volumio API (contains "queue" key)
-        fields: The fields option ("short" or "all")
+        seconds: Duration in seconds
 
     Returns:
-        A list of filtered queue item dictionaries with a synthetic "position" field
-        added, always starting at one (see ``rebase_queue_positions`` for the
-        display rebasing)
+        A formatted string in HH:MM:SS format
     """
-    queue = queue_data.get("queue", [])
-    filtered_queue = []
-
-    for index, item in enumerate(queue):
-        if fields == "all":
-            filtered_item = item.copy()
-        else:  # short
-            filtered_item = {key: item[key] for key in QUEUE_LIST_SHORT_FIELDS if key in item}
-
-        # Add synthetic position, always 1-indexed here
-        filtered_item["position"] = index + 1
-        filtered_queue.append(filtered_item)
-
-    return filtered_queue
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
-def rebase_queue_positions(
-    tracks: list[dict[str, Any]], starting_at_one: bool
-) -> list[dict[str, Any]]:
-    """Return copies of the queue items with "position" rebased for display.
-
-    The items produced by ``filter_queue_fields`` carry a 1-indexed position;
-    this shifts it when the displayed positions start at zero.
+def format_playlists_as_table(names: list[Any]) -> str:
+    """Format the playlists as a readable table.
 
     Args:
-        tracks: List of (potentially filtered) queue item dictionaries
-        starting_at_one: Whether the displayed positions start at one
+        names: List of playlist names
 
     Returns:
-        A list of copies of the queue items, with the position rebased
+        A formatted string representation of the playlists
     """
-    rebased = []
-    for track in tracks:
-        item = track.copy()
-        if isinstance(item.get("position"), int):
-            item["position"] = display_position(item["position"] - 1, starting_at_one)
-        rebased.append(item)
-    return rebased
+    lines = []
+    lines.append("Volumio Playlists")
+    lines.append("=" * 50)
 
+    if not names:
+        lines.append("(empty)")
+        return "\n".join(lines)
 
-def number_prefix_width(numbers: list[str]) -> int:
-    """Return the width of the widest entry number of a numbered table block.
+    width = number_prefix_width([str(index) for index in range(1, len(names) + 1)])
 
-    The numbers are right-aligned to this width, so that the detail lines of every
-    block, indented by this width plus two (the dot and the following space), start
-    at the same column as the entry name.
+    for index, name in enumerate(names, start=1):
+        lines.append(f"{index:>{width}}. {name}")
 
-    Args:
-        numbers: The entry numbers, as rendered
-
-    Returns:
-        The width of the widest entry number
-    """
-    return max(len(number) for number in numbers)
+    return "\n".join(lines)
 
 
 def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
@@ -395,50 +345,20 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def filter_zones_fields(
-    zones_data: dict[str, Any], fields: Literal["short", "all"]
-) -> list[dict[str, Any]]:
-    """Filter the zones based on the fields option.
+def format_seek(milliseconds: int) -> str:
+    """Convert a seek position in milliseconds to HH:MM:SS.mmm format.
 
     Args:
-        zones_data: The zones data dictionary from the Volumio API (contains "zones" key)
-        fields: The fields option ("short" or "all")
+        milliseconds: Seek position in milliseconds
 
     Returns:
-        A list of filtered zone dictionaries; in short mode the "state" subdictionary
-        is filtered too
+        A formatted string in HH:MM:SS.mmm format
     """
-    zones = zones_data.get("zones", [])
-    if fields == "all":
-        return [zone.copy() for zone in zones]
-
-    filtered_zones = []
-    for zone in zones:
-        filtered_zone = {key: zone[key] for key in ZONES_GET_SHORT_FIELDS if key in zone}
-        state = filtered_zone.get("state")
-        if isinstance(state, dict):
-            filtered_zone["state"] = {
-                key: value
-                for key, value in state.items()
-                if key not in ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS
-            }
-        filtered_zones.append(filtered_zone)
-    return filtered_zones
-
-
-def split_camel_case(key: str) -> str:
-    """Turn a key into a readable label, splitting underscores and camel case.
-
-    For example, ``isSelf`` becomes ``Is Self`` and ``output_file`` becomes ``Output File``.
-
-    Args:
-        key: The key to turn into a label
-
-    Returns:
-        The label for the key
-    """
-    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", key.replace("_", " "))
-    return spaced.title()
+    seconds, millis = divmod(milliseconds, 1000)
+    hours = seconds // 3600
+    minutes = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
 def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
@@ -481,26 +401,106 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def format_playlists_as_table(names: list[Any]) -> str:
-    """Format the playlists as a readable table.
+def number_prefix_width(numbers: list[str]) -> int:
+    """Return the width of the widest entry number of a numbered table block.
+
+    The numbers are right-aligned to this width, so that the detail lines of every
+    block, indented by this width plus two (the dot and the following space), start
+    at the same column as the entry name.
 
     Args:
-        names: List of playlist names
+        numbers: The entry numbers, as rendered
 
     Returns:
-        A formatted string representation of the playlists
+        The width of the widest entry number
     """
-    lines = []
-    lines.append("Volumio Playlists")
-    lines.append("=" * 50)
+    return max(len(number) for number in numbers)
 
-    if not names:
-        lines.append("(empty)")
-        return "\n".join(lines)
 
-    width = number_prefix_width([str(index) for index in range(1, len(names) + 1)])
+def parse_time_to_seconds(text: str) -> int | None:
+    """Convert a colon time to the corresponding number of seconds.
 
-    for index, name in enumerate(names, start=1):
-        lines.append(f"{index:>{width}}. {name}")
+    Accepts HH:MM:SS and MM:SS, where the minutes and seconds components are
+    below 60 and the hours component is unbounded.
 
-    return "\n".join(lines)
+    Args:
+        text: The colon time to convert
+
+    Returns:
+        The number of seconds, or None if ``text`` is not a colon time
+    """
+    components = text.split(":")
+    if len(components) not in (2, 3):
+        return None
+    if not all(component.isdigit() for component in components):
+        return None
+
+    values = [int(component) for component in components]
+    if any(value > 59 for value in values[1:]):
+        return None
+
+    seconds = 0
+    for value in values:
+        seconds = seconds * 60 + value
+    return seconds
+
+
+def rebase_queue_positions(
+    tracks: list[dict[str, Any]], starting_at_one: bool
+) -> list[dict[str, Any]]:
+    """Return copies of the queue items with "position" rebased for display.
+
+    The items produced by ``filter_queue_fields`` carry a 1-indexed position;
+    this shifts it when the displayed positions start at zero.
+
+    Args:
+        tracks: List of (potentially filtered) queue item dictionaries
+        starting_at_one: Whether the displayed positions start at one
+
+    Returns:
+        A list of copies of the queue items, with the position rebased
+    """
+    rebased = []
+    for track in tracks:
+        item = track.copy()
+        if isinstance(item.get("position"), int):
+            item["position"] = display_position(item["position"] - 1, starting_at_one)
+        rebased.append(item)
+    return rebased
+
+
+def resolve_albumart_uri(
+    state: dict[str, Any], host_configuration: VolumioHostConfiguration
+) -> str | None:
+    """Return the absolute album-art URI for the current state, or None if absent.
+
+    A relative URI (starting with "/") is made absolute by prepending the REST base URL.
+
+    Args:
+        state: The current player state dictionary
+        host_configuration: The Volumio host configuration
+
+    Returns:
+        The absolute album-art URI, or None when the state has no album art
+    """
+    albumart: str | None = state.get("albumart")
+    if not albumart:
+        return None
+    if albumart.startswith("/"):
+        return f"{host_configuration.rest_base_url}{albumart}"
+    return albumart
+
+
+def split_camel_case(key: str) -> str:
+    """Turn a key into a readable label, splitting underscores and camel case.
+
+    For example, ``isSelf`` becomes ``Is Self`` and ``output_file`` becomes ``Output File``.
+
+    Args:
+        key: The key to turn into a label
+
+    Returns:
+        The label for the key
+    """
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", key.replace("_", " "))
+    return spaced.title()

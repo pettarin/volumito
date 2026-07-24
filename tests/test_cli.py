@@ -15,12 +15,18 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from volumito import __version__
+from volumito.cli.click_helpers import (
+    OnOffParamType,
+    SeekParamType,
+    VolumeParamType,
+    render_output_filename,
+)
 from volumito.cli.constants import (
     PLAYER_STATE_SHORT_FIELDS,
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
 )
-from volumito.cli.helpers import (
+from volumito.cli.pure_helpers import (
     display_position,
     extract_filename_from_uri,
     filter_fields,
@@ -32,13 +38,7 @@ from volumito.cli.helpers import (
     parse_time_to_seconds,
     rebase_queue_positions,
 )
-from volumito.cli.volumito import (
-    OnOffParamType,
-    SeekParamType,
-    VolumeParamType,
-    main,
-    render_output_filename,
-)
+from volumito.cli.volumito import main
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -644,7 +644,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -685,7 +685,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -700,7 +700,7 @@ class TestCLICommands:
         mock_client.get_system_info.return_value = {"name": "Test"}
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -717,7 +717,7 @@ class TestCLICommands:
         mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -736,7 +736,7 @@ class TestCLICommands:
         mock_client.get_system_info.return_value = {"name": "Test"}
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -752,7 +752,7 @@ class TestCLICommands:
         mock_client.get_system_info.return_value = {"name": "Test"}
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -769,7 +769,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -789,7 +789,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -805,7 +805,7 @@ class TestCLICommands:
         mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -822,7 +822,7 @@ class TestCLICommands:
         mock_client.play.return_value = {"response": "play"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -838,7 +838,7 @@ class TestCLICommands:
         mock_client.get_system_info.return_value = {"name": "Test"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -854,7 +854,7 @@ class TestCLICommands:
         mock_client.get_system_info.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -869,7 +869,7 @@ class TestCLICommands:
         mock_client.get_system_info.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -886,7 +886,7 @@ class TestCLICommands:
         mock_client.get_system_info.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -934,7 +934,7 @@ class TestCLICommands:
         mock_client.toggle.return_value = {"response": "toggle"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -949,7 +949,7 @@ class TestCLICommands:
         mock_client.toggle.return_value = {"response": "toggle"}
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -965,7 +965,7 @@ class TestCLICommands:
         mock_client.toggle.return_value = {"response": "toggle"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -980,7 +980,7 @@ class TestCLICommands:
         mock_client.toggle.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -995,7 +995,7 @@ class TestCLICommands:
         mock_client.toggle.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1010,7 +1010,7 @@ class TestCLICommands:
         mock_client.play.return_value = {"response": "play"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1025,7 +1025,7 @@ class TestCLICommands:
         mock_client.play.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1040,7 +1040,7 @@ class TestCLICommands:
         mock_client.play.return_value = {"response": "play"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1055,7 +1055,7 @@ class TestCLICommands:
         mock_client.pause.return_value = {"response": "pause"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1070,7 +1070,7 @@ class TestCLICommands:
         mock_client.pause.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1085,7 +1085,7 @@ class TestCLICommands:
         mock_client.pause.return_value = {"response": "pause"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1100,7 +1100,7 @@ class TestCLICommands:
         mock_client.stop.return_value = {"response": "stop"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1115,7 +1115,7 @@ class TestCLICommands:
         mock_client.stop.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1130,7 +1130,7 @@ class TestCLICommands:
         mock_client.next.return_value = {"response": "next"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1145,7 +1145,7 @@ class TestCLICommands:
         mock_client.next.return_value = {"response": "next"}
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1172,7 +1172,7 @@ class TestCLICommands:
         mock_client.previous.return_value = {"response": "prev"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1187,7 +1187,7 @@ class TestCLICommands:
         mock_client.previous.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1204,7 +1204,7 @@ class TestCLICommands:
         mock_client.play.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1219,7 +1219,7 @@ class TestCLICommands:
         mock_client.stop.return_value = {"response": "stop"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1234,7 +1234,7 @@ class TestCLICommands:
         mock_client.next.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1249,7 +1249,7 @@ class TestCLICommands:
         mock_client.previous.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1264,7 +1264,7 @@ class TestCLICommands:
         mock_client.toggle.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1279,7 +1279,7 @@ class TestCLICommands:
         mock_client.play.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1294,7 +1294,7 @@ class TestCLICommands:
         mock_client.pause.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1309,7 +1309,7 @@ class TestCLICommands:
         mock_client.stop.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1324,7 +1324,7 @@ class TestCLICommands:
         mock_client.next.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1339,7 +1339,7 @@ class TestCLICommands:
         mock_client.pause.return_value = {"response": "pause"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1355,7 +1355,7 @@ class TestCLICommands:
         mock_client.next.return_value = {"response": "next"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1371,7 +1371,7 @@ class TestCLICommands:
         mock_client.previous.return_value = {"response": "prev"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1394,7 +1394,7 @@ class TestCLICommands:
         mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1411,7 +1411,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"volume": 42, "title": "Test"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1439,7 +1439,7 @@ class TestCLICommands:
         mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1457,7 +1457,7 @@ class TestCLICommands:
         mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1473,7 +1473,7 @@ class TestCLICommands:
         mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1488,7 +1488,7 @@ class TestCLICommands:
         mock_client = mocker.Mock()
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1504,7 +1504,7 @@ class TestCLICommands:
         mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1520,7 +1520,7 @@ class TestCLICommands:
         mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1553,7 +1553,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1577,7 +1577,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1604,7 +1604,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1628,7 +1628,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1655,7 +1655,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test", "extra": "data"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1706,7 +1706,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1728,7 +1728,7 @@ class TestCLICommands:
         }
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1750,7 +1750,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1767,7 +1767,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test"}
 
         mock_rest_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1796,7 +1796,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1815,7 +1815,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1834,7 +1834,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1854,7 +1854,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1875,7 +1875,7 @@ class TestCLICommands:
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1890,7 +1890,7 @@ class TestCLICommands:
         mock_client.get_state.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1905,7 +1905,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1929,7 +1929,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1953,7 +1953,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1975,7 +1975,7 @@ class TestCLICommands:
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -1992,7 +1992,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"status": "play"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2011,7 +2011,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2033,7 +2033,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2054,7 +2054,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2062,7 +2062,9 @@ class TestCLICommands:
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"audio", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2089,14 +2091,14 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"position": 0, "title": "La rondine"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2122,7 +2124,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
@@ -2147,17 +2149,17 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
         # Only the destination path "exists" (a blanket True would corrupt gettext lookups)
         mocker.patch(
-            "volumito.cli.volumito.os.path.exists",
+            "volumito.cli.click_helpers.os.path.exists",
             side_effect=lambda p: p == "/tmp/track.flac",
         )
 
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get")
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
@@ -2174,18 +2176,18 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"title": "Test Song"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
         mocker.patch(
-            "volumito.cli.volumito.os.path.exists",
+            "volumito.cli.click_helpers.os.path.exists",
             side_effect=lambda p: p == "/tmp/track.flac",
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"audio", b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2216,7 +2218,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2225,7 +2227,9 @@ class TestCLICommands:
         # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"audio", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
 
         # Mock file operations
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
@@ -2258,7 +2262,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2267,7 +2271,7 @@ class TestCLICommands:
         # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"audio", b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         # Mock file operations
         mocker.patch("builtins.open", mocker.mock_open())
@@ -2287,7 +2291,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2296,7 +2300,7 @@ class TestCLICommands:
         # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         # Mock open to raise OSError
         mocker.patch("builtins.open", side_effect=OSError("Permission denied"))
@@ -2314,7 +2318,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2322,7 +2326,7 @@ class TestCLICommands:
 
         # Mock requests.get to raise an exception
         mocker.patch(
-            "volumito.cli.volumito.requests.get",
+            "volumito.cli.click_helpers.requests.get",
             side_effect=requests.exceptions.RequestException("Download failed"),
         )
 
@@ -2347,7 +2351,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2366,7 +2370,7 @@ class TestCLICommands:
         }
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2385,7 +2389,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2402,7 +2406,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2420,14 +2424,16 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
 
         # Mock file operations
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
@@ -2450,7 +2456,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2467,7 +2473,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2486,7 +2492,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2503,7 +2509,7 @@ class TestCLICommands:
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2518,7 +2524,7 @@ class TestCLICommands:
         mock_client.get_state.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2535,13 +2541,13 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         # Mock requests.get to raise an exception
         mocker.patch(
-            "volumito.cli.volumito.requests.get",
+            "volumito.cli.click_helpers.requests.get",
             side_effect=requests.exceptions.RequestException("Download failed"),
         )
 
@@ -2558,14 +2564,14 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         # Mock requests.get
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         # Mock open to raise OSError
         mocker.patch("builtins.open", side_effect=OSError("Permission denied"))
@@ -2583,7 +2589,7 @@ class TestCLICommands:
         mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2603,13 +2609,15 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mock_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2631,13 +2639,13 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2659,13 +2667,13 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2696,13 +2704,13 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2727,7 +2735,7 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2746,7 +2754,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -2770,16 +2778,16 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         # Only the destination path "exists" (a blanket True would corrupt gettext lookups)
         mocker.patch(
-            "volumito.cli.volumito.os.path.exists",
+            "volumito.cli.click_helpers.os.path.exists",
             side_effect=lambda p: p == "/tmp/cover.jpg",
         )
 
-        mock_get = mocker.patch("volumito.cli.volumito.requests.get")
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/cover.jpg"])
@@ -2796,17 +2804,17 @@ class TestCLICommands:
         mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         mocker.patch(
-            "volumito.cli.volumito.os.path.exists",
+            "volumito.cli.click_helpers.os.path.exists",
             side_effect=lambda p: p == "/tmp/cover.jpg",
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -2832,12 +2840,12 @@ class TestCLICommands:
         state = {"title": "Test Song", "artist": "X", "status": "play"}
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = state
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fake", b"audio"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         out = tmp_path / "song.flac"
         # --verbose exercises the "Manifest written to ..." message branch
@@ -2882,11 +2890,11 @@ class TestCLICommands:
         state = {"albumart": "http://example.com/images/cover.jpg", "status": "play"}
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = state
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"img"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         out = tmp_path / "cover.jpg"
         # No explicit flag: the manifest is created because the default is on
@@ -2913,12 +2921,12 @@ class TestCLICommands:
         """--no-create-download-manifest suppresses the sidecar JSON file."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"fakeaudio"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -2941,11 +2949,11 @@ class TestCLICommands:
         """Mock the REST client (state), MPD (URI), and requests.get for an audio download."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = state
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = list(chunks)
-        return mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        return mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
     def test_audio_embeds_metadata_and_cover(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -2961,7 +2969,7 @@ class TestCLICommands:
             "status": "play",
         }
         self._mock_audio_download(mocker, state, chunks=(b"cover-bytes",))
-        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -2986,7 +2994,7 @@ class TestCLICommands:
     ):
         """--no-add-cover-and-metadata leaves the downloaded file untagged."""
         self._mock_audio_download(mocker, {"title": "T"})
-        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3009,7 +3017,7 @@ class TestCLICommands:
     ):
         """With no album art in the state, the metadata is embedded without a cover."""
         self._mock_audio_download(mocker, {"title": "T", "position": 0})
-        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3034,16 +3042,16 @@ class TestCLICommands:
         state = {"title": "T", "albumart": "http://example.com/cover.jpg"}
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = state
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
         download_response = mocker.Mock()
         download_response.iter_content.return_value = [b"data"]
         mocker.patch(
-            "volumito.cli.volumito.requests.get",
+            "volumito.cli.click_helpers.requests.get",
             side_effect=[download_response, requests.exceptions.ConnectionError("boom")],
         )
-        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3075,7 +3083,7 @@ class TestCLICommands:
         """A tagging error warns but still exits 0."""
         self._mock_audio_download(mocker, {"title": "T"})
         mocker.patch(
-            "volumito.cli.volumito.embed_metadata_and_cover",
+            "volumito.cli.click_helpers.embed_metadata_and_cover",
             side_effect=ValueError("boom"),
         )
 
@@ -3093,7 +3101,7 @@ class TestCLICommands:
     ):
         """The embedded track number honours --position-starting-at-zero."""
         self._mock_audio_download(mocker, {"title": "T", "position": 1})
-        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3161,7 +3169,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3181,7 +3189,7 @@ class TestCLICommands:
         }
 
         mock_client_class = mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3201,7 +3209,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3225,7 +3233,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3249,7 +3257,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3273,7 +3281,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3295,7 +3303,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3317,7 +3325,7 @@ class TestCLICommands:
         }
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3332,7 +3340,7 @@ class TestCLICommands:
         mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3347,7 +3355,7 @@ class TestCLICommands:
         mock_client.get_queue.side_effect = VolumioAPIError("API error")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3364,7 +3372,7 @@ class TestCLICommands:
         mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3380,7 +3388,7 @@ class TestCLICommands:
         mock_client.get_queue.return_value = {"queue": []}
 
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -3412,7 +3420,7 @@ class TestSystemCommands:
             "systemversion": "3.601",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         return mock_client
@@ -3583,7 +3591,7 @@ class TestCollectionCommands:
             "playtime": "7:11:15",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         return mock_client
@@ -3673,7 +3681,7 @@ class TestZonesCommands:
         mock_client = mocker.Mock()
         mock_client.get_zones.return_value = self.ZONES if zones is None else zones
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         return mock_client
@@ -3840,10 +3848,10 @@ class TestPlaylistCommands:
             "artist": "StatusMarkerArtist",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
-        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client, mock_sleep
 
     def test_group_help(self, runner: CliRunner):
@@ -4112,10 +4120,10 @@ class TestQueueActions:
             "artist": "StatusMarkerArtist",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
-        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client, mock_sleep
 
     def test_clear_default_prints_resulting_status(
@@ -4273,10 +4281,10 @@ class TestSeekCommand:
             else state
         )
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
-        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client, mock_sleep
 
     def test_help(self, runner: CliRunner):
@@ -4547,10 +4555,10 @@ class TestPrintResultingState:
             "artist": "Test Artist",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
-        mock_sleep = mocker.patch("volumito.cli.volumito.time.sleep")
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client, mock_sleep
 
     def test_default_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
@@ -4808,7 +4816,7 @@ class TestPositionIndexing:
             "title": "Test Song",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         return mock_client
@@ -4823,7 +4831,7 @@ class TestPositionIndexing:
             ]
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
         return mock_client
@@ -4925,7 +4933,7 @@ class TestPositionIndexing:
         mock_client = mocker.Mock()
         mock_client.play.return_value = {"response": "play"}
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -4939,7 +4947,7 @@ class TestPositionIndexing:
         mock_client = mocker.Mock()
         mock_client.play.return_value = {"response": "play"}
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -4962,7 +4970,7 @@ class TestPositionIndexing:
         """A position below the minimum of the current base is a usage error."""
         mock_client = mocker.Mock()
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -4982,7 +4990,7 @@ class TestPositionIndexing:
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"position": 1, "title": "La rondine"}
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
@@ -4995,7 +5003,7 @@ class TestPositionIndexing:
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -5025,13 +5033,13 @@ class TestPositionIndexing:
             "albumart": "http://volumio.local:3000/albumart?path=/mnt/x/cover.jpg",
         }
         mocker.patch(
-            "volumito.cli.volumito.VolumioRESTAPIClient",
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
         )
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
@@ -5064,7 +5072,7 @@ class TestConfigurationFile:
         """Patch VolumioRESTAPIClient so `playback status` succeeds with a minimal state."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         return mock_client
 
     def _write_config(self, tmp_path, text: str) -> str:
@@ -5287,7 +5295,7 @@ class TestConfigurationFile:
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
         """The output section can disable the resulting-status print for playback actions."""
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mocker.Mock())
         mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
         config = self._write_config(tmp_path, "output:\n  print-resulting-status: false\n")
 
@@ -5301,7 +5309,7 @@ class TestConfigurationFile:
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """With no config, the resulting-status print keeps its True default."""
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mocker.Mock())
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mocker.Mock())
         mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
 
         result = runner.invoke(main, ["playback", "toggle"])
@@ -5316,7 +5324,7 @@ class TestConfigurationFile:
         """A per-command downloads.audio.output-directory sets the track audio download dir."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "Test Song"}
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mpd = mocker.Mock()
         mpd.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
@@ -5327,10 +5335,10 @@ class TestConfigurationFile:
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         # Patch open only in the volumito module so the config file (read via the
         # configuration module) is still read for real.
-        mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
+        mock_open = mocker.patch("volumito.cli.click_helpers.open", mocker.mock_open())
 
         config = self._write_config(
             tmp_path, "downloads:\n  track-audio:\n    output-directory: /music\n"
@@ -5357,12 +5365,12 @@ class TestConfigurationFile:
         """A shared downloads.output-directory applies to the track albumart download dir."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-        mock_open = mocker.patch("volumito.cli.volumito.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("volumito.cli.click_helpers.open", mocker.mock_open())
 
         config = self._write_config(tmp_path, "downloads:\n  output-directory: /covers\n")
 
@@ -5379,11 +5387,11 @@ class TestConfigurationFile:
         """A shared downloads.create-download-manifest: false reaches the track commands."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
 
         config = self._write_config(tmp_path, "downloads:\n  create-download-manifest: false\n")
 
@@ -5401,7 +5409,7 @@ class TestConfigurationFile:
         """A miscellaneous.add-cover-and-metadata: false disables embedding for track audio."""
         mock_client = mocker.Mock()
         mock_client.get_state.return_value = {"title": "T"}
-        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mpd = mocker.Mock()
         mpd.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
@@ -5412,8 +5420,8 @@ class TestConfigurationFile:
 
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
-        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
 
         config = self._write_config(tmp_path, "miscellaneous:\n  add-cover-and-metadata: false\n")
 
