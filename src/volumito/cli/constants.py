@@ -58,9 +58,6 @@ TRACK_INFO_SHORT_FIELDS = [
     "channels",
 ]
 
-# Version of the CLI (and of the underlying library)
-VERSION = "0.0.14"
-
 # Short fields list for the "zones get" command
 ZONES_GET_SHORT_FIELDS = [
     "host",

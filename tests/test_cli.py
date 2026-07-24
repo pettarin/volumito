@@ -14,11 +14,11 @@ import yaml
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
+from volumito import __version__
 from volumito.cli.constants import (
     PLAYER_STATE_SHORT_FIELDS,
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
-    VERSION,
 )
 from volumito.cli.helpers import (
     display_position,
@@ -2868,7 +2868,7 @@ class TestCLICommands:
         assert manifest["source_uri"] == "http://volumio.local:8000/music/test.flac"
         assert manifest["state"] == state
         assert manifest["volumio_host"] == "http://volumio.local:3000"
-        assert manifest["volumito_version"] == VERSION
+        assert manifest["volumito_version"] == __version__
         assert manifest["download_date"]
         # The audio manifest records the add-cover-and-metadata choice (here disabled)
         assert manifest["add_cover_and_metadata"] is False

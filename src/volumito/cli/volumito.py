@@ -15,6 +15,7 @@ from typing import Any, Literal
 import click
 import requests
 
+from volumito import __version__
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     build_click_default_map,
@@ -31,7 +32,6 @@ from volumito.cli.constants import (
     OUTPUT_FORMATS,
     PLAYER_STATE_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
-    VERSION,
 )
 from volumito.cli.helpers import (
     display_position,
@@ -226,7 +226,7 @@ def download_uri_to(
                 "source_uri": uri,
                 "state": state,
                 "volumio_host": host_configuration.rest_base_url,
-                "volumito_version": VERSION,
+                "volumito_version": __version__,
             }
             if add_cover_and_metadata is not None:
                 manifest["add_cover_and_metadata"] = add_cover_and_metadata
@@ -839,9 +839,9 @@ def version(ctx: click.Context) -> None:
     so it can be consumed by jq/yq; otherwise the program name is included.
     """
     if ctx.obj["machine_readable"]:
-        msg = f'"{VERSION}"'
+        msg = f'"{__version__}"'
     else:
-        msg = f"volumito, version {VERSION}"
+        msg = f"volumito, version {__version__}"
     click.echo(msg)
 
 
@@ -943,7 +943,7 @@ def configuration_create(
         sys.exit(1)
 
     defaults = {**root_option_defaults(ctx), **command_scoped_option_defaults()}
-    content = render_default_configuration(defaults, VERSION)
+    content = render_default_configuration(defaults, __version__)
     try:
         parent = os.path.dirname(destination)
         if parent:
