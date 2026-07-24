@@ -13,6 +13,7 @@ import yaml
 # The "miscellaneous" section holds the keys of options living on a specific command:
 # key -> the default_map path(s) of the command(s) it targets.
 MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
+    "add-cover-and-metadata": [["track", "audio"]],
     "check-playlist-name": [["playlist", "play"]],
     "check-seek-position": [["playback", "seek"]],
 }
@@ -73,6 +74,9 @@ RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads", "output"]
 
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
+    "add-cover-and-metadata": (
+        "Embed track metadata and cover art into the downloaded audio file"
+    ),
     "check-playlist-name": "Check that the playlist name exists before playing it",
     "check-seek-position": (
         "Check that the seek position is within the duration of the current track"

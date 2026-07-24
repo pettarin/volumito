@@ -201,8 +201,8 @@ The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the d
 corresponding global options and cannot be overridden per command.
 
 The `miscellaneous` section holds the defaults of options belonging to a single command: its
-`check-playlist-name` and `check-seek-position` keys set the defaults for the corresponding
-options of `playlist play` and `playback seek`.
+`add-cover-and-metadata`, `check-playlist-name`, and `check-seek-position` keys set the defaults
+for the corresponding options of `track audio`, `playlist play`, and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, `--overwrite-existing-files`, and `--create-download-manifest` options of
@@ -519,6 +519,7 @@ The manifest is a JSON object with its keys in lexicographic order, for example:
 
 ```json
 {
+  "add_cover_and_metadata": true,
   "download_date": "2026-07-24T10:22:31.123456+00:00",
   "entity": "track",
   "kind": "audio",
@@ -529,6 +530,22 @@ The manifest is a JSON object with its keys in lexicographic order, for example:
   "volumio_host": "http://volumio.local:3000",
   "volumito_version": "0.0.14"
 }
+```
+
+The `add_cover_and_metadata` field records whether the download embedded metadata and cover art;
+it is present only in the `track audio` manifest.
+
+For `track audio`, the current track's metadata (title, artist, album, album artist, and track
+number) and cover art are, by default, embedded into the downloaded file. FLAC, MP3, and MP4/M4A
+files are supported; for any other format the download is kept untouched and a warning is printed.
+Pass `--no-add-cover-and-metadata` to skip embedding:
+
+```bash
+# Downloads and tags the file with metadata and cover art
+volumito track audio -o /path/to/song.flac
+
+# Downloads the raw audio without touching its tags
+volumito track audio -o /path/to/song.flac --no-add-cover-and-metadata
 ```
 
 When downloading into a directory with `-d`, the file name is built from

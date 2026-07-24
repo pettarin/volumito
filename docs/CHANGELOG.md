@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Option `--create-download-manifest`/`--no-create-download-manifest` (default on) for `track audio`
   and `track albumart`, writing a JSON manifest next to the downloaded file
 - The download-manifest default can be set in the `downloads` section of the configuration file
+- Option `--add-cover-and-metadata`/`--no-add-cover-and-metadata` (default on) for `track audio`,
+  embedding the track metadata and cover art into the downloaded FLAC, MP3, or MP4/M4A file
+- The cover-and-metadata default can be set in the `miscellaneous` section of the configuration file
 
 ### Changed
 

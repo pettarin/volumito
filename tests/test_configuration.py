@@ -49,6 +49,7 @@ _DEFAULTS = {
     "rest_api_timeout": 5.0,
     "mpd_timeout": 5.0,
     "rest_api_sleep_before_next_call": 1.0,
+    "add_cover_and_metadata": True,
     "check_playlist_name": True,
     "check_seek_position": True,
     "verbose": False,
@@ -454,6 +455,7 @@ class TestRenderDefaultConfiguration:
                 "rest-api-sleep-before-next-call": 1.0,
             },
             "miscellaneous": {
+                "add-cover-and-metadata": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
             },
@@ -494,6 +496,7 @@ class TestRenderDefaultConfiguration:
                 "rest-api-sleep-before-next-call": 1.0,
             },
             "miscellaneous": {
+                "add-cover-and-metadata": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
             },

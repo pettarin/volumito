@@ -2062,7 +2062,15 @@ class TestCLICommands:
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
-            main, ["track", "audio", "-d", "/tmp/music", "--no-create-download-manifest"]
+            main,
+            [
+                "track",
+                "audio",
+                "-d",
+                "/tmp/music",
+                "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2097,6 +2105,7 @@ class TestCLICommands:
                 "-f",
                 "{position:03d}_{title}.{extension}",
                 "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
             ],
         )
 
@@ -2184,6 +2193,7 @@ class TestCLICommands:
                 "/tmp/track.flac",
                 "--overwrite-existing-files",
                 "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
             ],
         )
 
@@ -2217,7 +2227,15 @@ class TestCLICommands:
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
-            main, ["track", "audio", "-o", "/tmp/my_track.flac", "--no-create-download-manifest"]
+            main,
+            [
+                "track",
+                "audio",
+                "-o",
+                "/tmp/my_track.flac",
+                "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2820,7 +2838,16 @@ class TestCLICommands:
         out = tmp_path / "song.flac"
         # --verbose exercises the "Manifest written to ..." message branch
         result = runner.invoke(
-            main, ["--verbose", "track", "audio", "-o", str(out), "--create-download-manifest"]
+            main,
+            [
+                "--verbose",
+                "track",
+                "audio",
+                "-o",
+                str(out),
+                "--create-download-manifest",
+                "--no-add-cover-and-metadata",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2839,6 +2866,8 @@ class TestCLICommands:
         assert manifest["volumio_host"] == "http://volumio.local:3000"
         assert manifest["volumito_version"] == VERSION
         assert manifest["download_date"]
+        # The audio manifest records the add-cover-and-metadata choice (here disabled)
+        assert manifest["add_cover_and_metadata"] is False
         # Keys are serialized in lexicographic order
         assert list(manifest.keys()) == sorted(manifest.keys())
 
@@ -2871,6 +2900,8 @@ class TestCLICommands:
         assert manifest["output_file_path"] == str(out)
         assert manifest["source_uri"] == "http://example.com/images/cover.jpg"
         assert manifest["state"] == state
+        # The albumart command has no such option, so the key is absent
+        assert "add_cover_and_metadata" not in manifest
 
     def test_audio_no_create_download_manifest(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -2887,12 +2918,194 @@ class TestCLICommands:
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
-            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+            main,
+            [
+                "track",
+                "audio",
+                "-o",
+                str(out),
+                "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
+            ],
         )
 
         assert result.exit_code == 0
         assert out.exists()
         assert not (tmp_path / "song.flac.json").exists()
+
+    def _mock_audio_download(self, mocker: MockerFixture, state: dict, chunks=(b"data",)):
+        """Mock the REST client (state), MPD (URI), and requests.get for an audio download."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = state
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = list(chunks)
+        return mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+
+    def test_audio_embeds_metadata_and_cover(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """By default, track audio embeds the metadata and cover into the download."""
+        state = {
+            "title": "T",
+            "artist": "A",
+            "album": "Al",
+            "albumartist": "AA",
+            "position": 1,
+            "albumart": "http://example.com/cover.jpg",
+            "status": "play",
+        }
+        self._mock_audio_download(mocker, state, chunks=(b"cover-bytes",))
+        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main,
+            ["--verbose", "track", "audio", "-o", str(out), "--no-create-download-manifest"],
+        )
+
+        assert result.exit_code == 0
+        assert "Embedded metadata and cover" in result.output
+        embed.assert_called_once_with(
+            str(out),
+            title="T",
+            artist="A",
+            album="Al",
+            albumartist="AA",
+            track_number=2,
+            cover=b"cover-bytes",
+        )
+
+    def test_audio_no_add_cover_and_metadata_skips_embedding(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--no-add-cover-and-metadata leaves the downloaded file untagged."""
+        self._mock_audio_download(mocker, {"title": "T"})
+        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main,
+            [
+                "track",
+                "audio",
+                "-o",
+                str(out),
+                "--no-add-cover-and-metadata",
+                "--no-create-download-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        embed.assert_not_called()
+
+    def test_audio_embed_without_albumart_has_no_cover(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With no album art in the state, the metadata is embedded without a cover."""
+        self._mock_audio_download(mocker, {"title": "T", "position": 0})
+        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        embed.assert_called_once_with(
+            str(out),
+            title="T",
+            artist=None,
+            album=None,
+            albumartist=None,
+            track_number=1,
+            cover=None,
+        )
+
+    def test_audio_embed_cover_fetch_failure_warns(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A failure fetching the cover warns and embeds the metadata without a cover."""
+        state = {"title": "T", "albumart": "http://example.com/cover.jpg"}
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = state
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+
+        download_response = mocker.Mock()
+        download_response.iter_content.return_value = [b"data"]
+        mocker.patch(
+            "volumito.cli.volumito.requests.get",
+            side_effect=[download_response, requests.exceptions.ConnectionError("boom")],
+        )
+        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        assert "cannot fetch cover art" in result.output
+        assert embed.call_args.kwargs["cover"] is None
+
+    def test_audio_embed_unsupported_format_warns(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An unsupported audio format warns but still exits 0 with the file downloaded."""
+        self._mock_audio_download(mocker, {"title": "T"})
+
+        out = tmp_path / "song.ogg"
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        assert "unsupported format" in result.output
+        assert out.exists()
+
+    def test_audio_embed_generic_error_warns(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A tagging error warns but still exits 0."""
+        self._mock_audio_download(mocker, {"title": "T"})
+        mocker.patch(
+            "volumito.cli.metadata.embed_metadata_and_cover",
+            side_effect=ValueError("boom"),
+        )
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        assert "cannot embed metadata into" in result.output
+        assert "boom" in result.output
+
+    def test_audio_embed_track_number_follows_indexing(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The embedded track number honours --position-starting-at-zero."""
+        self._mock_audio_download(mocker, {"title": "T", "position": 1})
+        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                "track",
+                "audio",
+                "-o",
+                str(out),
+                "--no-create-download-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert embed.call_args.kwargs["track_number"] == 1
 
     def test_queue_help(self, runner: CliRunner):
         """Test queue group with --help."""
@@ -4792,6 +5005,7 @@ class TestPositionIndexing:
                 "-f",
                 "{position:03d}_{title}.{extension}",
                 "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
             ],
         )
 
@@ -5119,7 +5333,15 @@ class TestConfigurationFile:
         )
 
         result = runner.invoke(
-            main, ["-c", config, "track", "audio", "--no-create-download-manifest"]
+            main,
+            [
+                "-c",
+                config,
+                "track",
+                "audio",
+                "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
+            ],
         )
 
         assert result.exit_code == 0
@@ -5168,6 +5390,37 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         assert out.exists()
         assert not (tmp_path / "cover.jpg.json").exists()
+
+    def test_miscellaneous_add_cover_and_metadata_false(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A miscellaneous.add-cover-and-metadata: false disables embedding for track audio."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "T"}
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+
+        mpd = mocker.Mock()
+        mpd.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
+        mpd_class = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__enter__ = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mpd_class)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+
+        config = self._write_config(tmp_path, "miscellaneous:\n  add-cover-and-metadata: false\n")
+
+        out = tmp_path / "song.flac"
+        # The default is on, but the config turns it off, so no embedding happens
+        result = runner.invoke(
+            main, ["-c", config, "track", "audio", "-o", str(out), "--no-create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        embed.assert_not_called()
 
     def test_no_config_uses_hardcoded_defaults(
         self, runner: CliRunner, mocker: MockerFixture
@@ -5259,6 +5512,7 @@ class TestConfigurationCommands:
                     "rest-api-sleep-before-next-call": 1.0,
                 },
                 "miscellaneous": {
+                    "add-cover-and-metadata": True,
                     "check-playlist-name": True,
                     "check-seek-position": True,
                 },

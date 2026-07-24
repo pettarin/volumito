@@ -16,6 +16,7 @@ from typing import Any, Literal
 import click
 import requests
 
+from volumito.cli import metadata
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     build_click_default_map,
@@ -350,7 +351,8 @@ def download_uri_to(
     entity: str,
     kind: str,
     position_starting_at_one: bool = True,
-) -> None:
+    add_cover_and_metadata: bool | None = None,
+) -> str:
     """Download ``uri`` to a file, printing errors and exiting (1) on failure.
 
     Exactly one of ``output_file`` / ``output_directory`` is expected to be set. With
@@ -379,6 +381,10 @@ def download_uri_to(
         entity: The manifest ``entity`` value (e.g. "track")
         kind: The manifest ``kind`` value (e.g. "audio" or "albumart")
         position_starting_at_one: Whether the template ``position`` key starts at one
+        add_cover_and_metadata: Recorded in the manifest when not None (audio downloads only)
+
+    Returns:
+        The path the URI was downloaded to
     """
     if output_file is not None:
         destination = output_file
@@ -417,7 +423,7 @@ def download_uri_to(
 
         if create_manifest:
             manifest_path = f"{destination}.json"
-            manifest = {
+            manifest: dict[str, Any] = {
                 "download_date": datetime.now(UTC).isoformat(),
                 "entity": entity,
                 "kind": kind,
@@ -428,6 +434,8 @@ def download_uri_to(
                 "volumio_host": host_configuration.rest_base_url,
                 "volumito_version": VERSION,
             }
+            if add_cover_and_metadata is not None:
+                manifest["add_cover_and_metadata"] = add_cover_and_metadata
             with open(manifest_path, "w", encoding="utf-8") as f:
                 json.dump(manifest, f, indent=2, sort_keys=True, ensure_ascii=False)
             if verbose and not machine_readable:
@@ -441,6 +449,109 @@ def download_uri_to(
         if not machine_readable:
             click.echo(f"\nFile write error: {e}", err=True)
         sys.exit(1)
+
+    return destination
+
+
+def resolve_albumart_uri(
+    state: dict[str, Any], host_configuration: VolumioHostConfiguration
+) -> str | None:
+    """Return the absolute album-art URI for the current state, or None if absent.
+
+    A relative URI (starting with "/") is made absolute by prepending the REST base URL.
+
+    Args:
+        state: The current player state dictionary
+        host_configuration: The Volumio host configuration
+
+    Returns:
+        The absolute album-art URI, or None when the state has no album art
+    """
+    albumart: str | None = state.get("albumart")
+    if not albumart:
+        return None
+    if albumart.startswith("/"):
+        return f"{host_configuration.rest_base_url}{albumart}"
+    return albumart
+
+
+def _fetch_cover(
+    state: dict[str, Any],
+    host_configuration: VolumioHostConfiguration,
+    timeout: float,
+    machine_readable: bool,
+) -> bytes | None:
+    """Fetch the album-art image bytes for the current state, or None on absence/failure."""
+    albumart_uri = resolve_albumart_uri(state, host_configuration)
+    if albumart_uri is None:
+        return None
+    try:
+        response = requests.get(albumart_uri, timeout=timeout, stream=True)
+        response.raise_for_status()
+        return b"".join(response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE))
+    except requests.exceptions.RequestException as e:
+        if not machine_readable:
+            click.echo(f"\nWarning: cannot fetch cover art ({e})", err=True)
+        return None
+
+
+def embed_track_tags(
+    destination: str,
+    state: dict[str, Any],
+    host_configuration: VolumioHostConfiguration,
+    timeout: float,
+    position_starting_at_one: bool,
+    verbose: bool,
+    machine_readable: bool,
+) -> None:
+    """Embed the current track metadata and cover art into a downloaded audio file.
+
+    The metadata and cover come from ``state``. Any problem (an unsupported format, a
+    cover-download failure, or a tagging error) is reported as a warning and otherwise
+    ignored: the already-downloaded file is left in place.
+
+    Args:
+        destination: The downloaded audio file to tag, modified in place
+        state: The current player state dictionary (source of the metadata)
+        host_configuration: The Volumio host configuration (to resolve the cover URI)
+        timeout: Request timeout for fetching the cover image, in seconds
+        position_starting_at_one: Whether the embedded track number starts at one
+        verbose: Whether to print progress messages
+        machine_readable: Whether machine-readable mode is active (suppresses messages)
+    """
+    position = state.get("position")
+    track_number = (
+        display_position(int(position), position_starting_at_one)
+        if position is not None
+        else None
+    )
+
+    cover = _fetch_cover(state, host_configuration, timeout, machine_readable)
+
+    try:
+        metadata.embed_metadata_and_cover(
+            destination,
+            title=state.get("title"),
+            artist=state.get("artist"),
+            album=state.get("album"),
+            albumartist=state.get("albumartist"),
+            track_number=track_number,
+            cover=cover,
+        )
+    except metadata.UnsupportedAudioFormatError:
+        if not machine_readable:
+            click.echo(
+                f"\nWarning: cannot embed metadata into {destination} (unsupported format)",
+                err=True,
+            )
+        return
+    except Exception as e:
+        if not machine_readable:
+            click.echo(f"\nWarning: cannot embed metadata into {destination} ({e})", err=True)
+        return
+
+    if verbose and not machine_readable:
+        click.echo(f"\nEmbedded metadata and cover into {destination}...", err=True)
 
 
 def format_as_table(
@@ -875,6 +986,17 @@ def create_download_manifest_option(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def add_cover_and_metadata_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--add-cover-and-metadata`` option to the ``track audio`` subcommand."""
+    return click.option(
+        "--add-cover-and-metadata/--no-add-cover-and-metadata",
+        default=True,
+        show_default=True,
+        help="Embed track metadata and cover art into the downloaded file "
+        "(FLAC, MP3, MP4/M4A)",
+    )(func)
+
+
 def format_option(help_text: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
     """Return the ``-F``/``--format`` option decorator with the given help text.
 
@@ -1225,6 +1347,7 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     generated configuration mirrors the real defaults without duplication.
     """
     wanted = {
+        "add_cover_and_metadata",
         "check_playlist_name",
         "check_seek_position",
         "create_download_manifest",
@@ -1714,6 +1837,7 @@ def track_info(
     help="Overwrite the destination file if it already exists",
 )
 @create_download_manifest_option
+@add_cover_and_metadata_option
 def audio(
     ctx: click.Context,
     file_name_template: str,
@@ -1721,6 +1845,7 @@ def audio(
     output_file: str | None,
     overwrite_existing_files: bool,
     create_download_manifest: bool,
+    add_cover_and_metadata: bool,
 ) -> None:
     """Print the URI of the audio of the current track.
 
@@ -1770,7 +1895,7 @@ def audio(
 
             # Download the file if -o/--output-file or -d/--output-directory is specified
             if output_file is not None or output_directory is not None:
-                download_uri_to(
+                destination = download_uri_to(
                     uri,
                     output_file,
                     output_directory,
@@ -1787,7 +1912,20 @@ def audio(
                     "track",
                     "audio",
                     ctx.obj["position_starting_at_one"],
+                    add_cover_and_metadata,
                 )
+
+                # Embed track metadata and cover art into the downloaded file
+                if add_cover_and_metadata:
+                    embed_track_tags(
+                        destination,
+                        state,
+                        host_configuration,
+                        rest_api_timeout,
+                        ctx.obj["position_starting_at_one"],
+                        verbose,
+                        machine_readable,
+                    )
 
     except click.UsageError:
         # A bad --file-name-template should surface as a usage error, not be
@@ -1874,18 +2012,12 @@ def albumart(
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
 
-        # Extract albumart URI
-        albumart = state.get("albumart")
-        if not albumart:
+        # Extract albumart URI (relative URIs are made absolute against the base URL)
+        albumart_uri = resolve_albumart_uri(state, host_configuration)
+        if albumart_uri is None:
             if not machine_readable:
                 click.echo("Error: No album art URI found in current state", err=True)
             sys.exit(1)
-
-        # Handle relative URIs by prepending the base URL
-        if albumart.startswith("/"):
-            albumart_uri = f"{host_configuration.rest_base_url}{albumart}"
-        else:
-            albumart_uri = albumart
 
         if verbose and not machine_readable:
             click.echo(f"Album art URI: {albumart_uri}", err=True)
