@@ -25,8 +25,9 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 
-# The four download keys with their default values, as generated per subsection.
+# The download keys with their default values, as generated per subsection.
 _DOWNLOAD_DEFAULTS = {
+    "create-download-manifest": True,
     "file-name-template": "{file_name_from_uri}",
     "output-directory": None,
     "output-file": None,
@@ -56,6 +57,7 @@ _DEFAULTS = {
     "fields": "short",
     "output_format": "pretty",
     "print_resulting_status": True,
+    "create_download_manifest": True,
     "file_name_template": "{file_name_from_uri}",
     "output_directory": None,
     "output_file": None,

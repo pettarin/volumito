@@ -60,6 +60,7 @@ DISPLAY_SUBSECTIONS = list(DISPLAY_SUBSECTION_KEYS)
 # download commands, and optional "audio"/"albumart" subsections (mapping to the
 # "track audio"/"track albumart" commands) override the shared values per command.
 DOWNLOAD_KEYS = [
+    "create-download-manifest",
     "file-name-template",
     "output-directory",
     "output-file",
@@ -75,6 +76,9 @@ KEY_COMMENTS: dict[str, str] = {
     "check-playlist-name": "Check that the playlist name exists before playing it",
     "check-seek-position": (
         "Check that the seek position is within the duration of the current track"
+    ),
+    "create-download-manifest": (
+        "Write a JSON manifest next to the downloaded file (e.g. out.flac.json)"
     ),
     "fields": "Fields to display: short or all",
     "file-name-template": "Template (Python str.format) for the -d output file name",

@@ -18,6 +18,7 @@ from volumito.cli.volumito import (
     PLAYER_STATE_SHORT_FIELDS,
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
+    VERSION,
     OnOffParamType,
     SeekParamType,
     VolumeParamType,
@@ -39,8 +40,9 @@ from volumito.clients.rest import (
     VolumioConnectionError,
 )
 
-# The four download keys with their default values, as generated per subsection.
+# The download keys with their default values, as generated per subsection.
 _DOWNLOAD_DEFAULTS = {
+    "create-download-manifest": True,
     "file-name-template": "{file_name_from_uri}",
     "output-directory": None,
     "output-file": None,
@@ -2059,7 +2061,9 @@ class TestCLICommands:
         mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "audio", "-d", "/tmp/music"])
+        result = runner.invoke(
+            main, ["track", "audio", "-d", "/tmp/music", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         assert "successfully downloaded" in result.output
@@ -2085,7 +2089,15 @@ class TestCLICommands:
 
         result = runner.invoke(
             main,
-            ["track", "audio", "-d", "/tmp/music", "-f", "{position:03d}_{title}.{extension}"],
+            [
+                "track",
+                "audio",
+                "-d",
+                "/tmp/music",
+                "-f",
+                "{position:03d}_{title}.{extension}",
+                "--no-create-download-manifest",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2164,7 +2176,15 @@ class TestCLICommands:
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
-            main, ["track", "audio", "-o", "/tmp/track.flac", "--overwrite-existing-files"]
+            main,
+            [
+                "track",
+                "audio",
+                "-o",
+                "/tmp/track.flac",
+                "--overwrite-existing-files",
+                "--no-create-download-manifest",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2196,7 +2216,9 @@ class TestCLICommands:
         # Mock file operations
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/my_track.flac"])
+        result = runner.invoke(
+            main, ["track", "audio", "-o", "/tmp/my_track.flac", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         assert "http://volumio.local:8000/music/test.flac" in result.output
@@ -2388,7 +2410,9 @@ class TestCLICommands:
         # Mock file operations
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/albumart.jpg"])
+        result = runner.invoke(
+            main, ["track", "albumart", "-o", "/tmp/albumart.jpg", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         assert "http://example.com/albumart.jpg" in result.output
@@ -2566,7 +2590,9 @@ class TestCLICommands:
         mock_get = mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
+        result = runner.invoke(
+            main, ["track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         assert "successfully downloaded" in result.output
@@ -2592,7 +2618,9 @@ class TestCLICommands:
         mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
+        result = runner.invoke(
+            main, ["track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.jpg"), "wb")
@@ -2620,7 +2648,15 @@ class TestCLICommands:
 
         result = runner.invoke(
             main,
-            ["track", "albumart", "-d", "/tmp/covers", "-f", "{position:03d}_{title}.{extension}"],
+            [
+                "track",
+                "albumart",
+                "-d",
+                "/tmp/covers",
+                "-f",
+                "{position:03d}_{title}.{extension}",
+                "--no-create-download-manifest",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2648,7 +2684,16 @@ class TestCLICommands:
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
-            main, ["track", "albumart", "-d", "/tmp/covers", "-f", "{title}.{extension}"]
+            main,
+            [
+                "track",
+                "albumart",
+                "-d",
+                "/tmp/covers",
+                "-f",
+                "{title}.{extension}",
+                "--no-create-download-manifest",
+            ],
         )
 
         assert result.exit_code == 0
@@ -2743,12 +2788,111 @@ class TestCLICommands:
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
-            main, ["track", "albumart", "-o", "/tmp/cover.jpg", "--overwrite-existing-files"]
+            main,
+            [
+                "track",
+                "albumart",
+                "-o",
+                "/tmp/cover.jpg",
+                "--overwrite-existing-files",
+                "--no-create-download-manifest",
+            ],
         )
 
         assert result.exit_code == 0
         assert "successfully downloaded" in result.output
         mock_open.assert_called_once_with("/tmp/cover.jpg", "wb")
+
+    def test_audio_create_download_manifest(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """track audio writes a sidecar JSON manifest next to the downloaded file."""
+        state = {"title": "Test Song", "artist": "X", "status": "play"}
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = state
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"fake", b"audio"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+
+        out = tmp_path / "song.flac"
+        # --verbose exercises the "Manifest written to ..." message branch
+        result = runner.invoke(
+            main, ["--verbose", "track", "audio", "-o", str(out), "--create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        assert out.read_bytes() == b"fakeaudio"
+        assert "Manifest written to" in result.output
+
+        manifest_path = tmp_path / "song.flac.json"
+        assert manifest_path.exists()
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert manifest["entity"] == "track"
+        assert manifest["kind"] == "audio"
+        assert manifest["output_file_name"] == "song.flac"
+        assert manifest["output_file_path"] == str(out)
+        assert manifest["source_uri"] == "http://volumio.local:8000/music/test.flac"
+        assert manifest["state"] == state
+        assert manifest["volumio_host"] == "http://volumio.local:3000"
+        assert manifest["volumito_version"] == VERSION
+        assert manifest["download_date"]
+        # Keys are serialized in lexicographic order
+        assert list(manifest.keys()) == sorted(manifest.keys())
+
+    def test_albumart_create_download_manifest(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """track albumart writes a manifest with kind 'albumart' (default on, non-verbose)."""
+        state = {"albumart": "http://example.com/images/cover.jpg", "status": "play"}
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = state
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"img"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+
+        out = tmp_path / "cover.jpg"
+        # No explicit flag: the manifest is created because the default is on
+        result = runner.invoke(main, ["track", "albumart", "-o", str(out)])
+
+        assert result.exit_code == 0
+        assert "Manifest written to" not in result.output
+
+        manifest_path = tmp_path / "cover.jpg.json"
+        assert manifest_path.exists()
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert manifest["entity"] == "track"
+        assert manifest["kind"] == "albumart"
+        assert manifest["output_file_name"] == "cover.jpg"
+        assert manifest["output_file_path"] == str(out)
+        assert manifest["source_uri"] == "http://example.com/images/cover.jpg"
+        assert manifest["state"] == state
+
+    def test_audio_no_create_download_manifest(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--no-create-download-manifest suppresses the sidecar JSON file."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"title": "Test Song"}
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"fakeaudio"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+
+        out = tmp_path / "song.flac"
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+        )
+
+        assert result.exit_code == 0
+        assert out.exists()
+        assert not (tmp_path / "song.flac.json").exists()
 
     def test_queue_help(self, runner: CliRunner):
         """Test queue group with --help."""
@@ -4647,6 +4791,7 @@ class TestPositionIndexing:
                 "/tmp/music",
                 "-f",
                 "{position:03d}_{title}.{extension}",
+                "--no-create-download-manifest",
             ],
         )
 
@@ -4681,6 +4826,7 @@ class TestPositionIndexing:
                 "/tmp/covers",
                 "-f",
                 "{position:03d}_{title}.{extension}",
+                "--no-create-download-manifest",
             ],
         )
 
@@ -4972,7 +5118,9 @@ class TestConfigurationFile:
             tmp_path, "downloads:\n  track-audio:\n    output-directory: /music\n"
         )
 
-        result = runner.invoke(main, ["-c", config, "track", "audio"])
+        result = runner.invoke(
+            main, ["-c", config, "track", "audio", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/music", "test.flac"), "wb")
@@ -4992,10 +5140,34 @@ class TestConfigurationFile:
 
         config = self._write_config(tmp_path, "downloads:\n  output-directory: /covers\n")
 
-        result = runner.invoke(main, ["-c", config, "track", "albumart"])
+        result = runner.invoke(
+            main, ["-c", config, "track", "albumart", "--no-create-download-manifest"]
+        )
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/covers", "cover.jpg"), "wb")
+
+    def test_downloads_shared_create_download_manifest_false(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A shared downloads.create-download-manifest: false reaches the track commands."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
+        mocker.patch("volumito.cli.volumito.VolumioRESTAPIClient", return_value=mock_client)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
+
+        config = self._write_config(tmp_path, "downloads:\n  create-download-manifest: false\n")
+
+        out = tmp_path / "cover.jpg"
+        # The default is on, but the config turns it off, so no manifest is written
+        result = runner.invoke(main, ["-c", config, "track", "albumart", "-o", str(out)])
+
+        assert result.exit_code == 0
+        assert out.exists()
+        assert not (tmp_path / "cover.jpg.json").exists()
 
     def test_no_config_uses_hardcoded_defaults(
         self, runner: CliRunner, mocker: MockerFixture

@@ -10,6 +10,7 @@ import re
 import sys
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 import click
@@ -344,6 +345,10 @@ def download_uri_to(
     timeout: float,
     verbose: bool,
     machine_readable: bool,
+    create_manifest: bool,
+    host_configuration: VolumioHostConfiguration,
+    entity: str,
+    kind: str,
     position_starting_at_one: bool = True,
 ) -> None:
     """Download ``uri`` to a file, printing errors and exiting (1) on failure.
@@ -353,6 +358,9 @@ def download_uri_to(
     saved into that directory under the file name produced by rendering
     ``file_name_template`` against ``state`` (see ``render_output_filename``).
     Unless ``overwrite`` is true, an existing destination file is left untouched.
+
+    When ``create_manifest`` is true, a JSON manifest describing the download is written
+    next to the downloaded file (``<destination>.json``) after a successful download.
 
     Args:
         uri: The URI to download
@@ -366,6 +374,10 @@ def download_uri_to(
         timeout: Request timeout in seconds
         verbose: Whether to print progress messages
         machine_readable: Whether machine-readable mode is active (suppresses messages)
+        create_manifest: Whether to write a ``<destination>.json`` download manifest
+        host_configuration: The Volumio host configuration (recorded in the manifest)
+        entity: The manifest ``entity`` value (e.g. "track")
+        kind: The manifest ``kind`` value (e.g. "audio" or "albumart")
         position_starting_at_one: Whether the template ``position`` key starts at one
     """
     if output_file is not None:
@@ -402,6 +414,24 @@ def download_uri_to(
 
         if not machine_readable:
             click.echo(f"\n{label.capitalize()} successfully downloaded to {destination}")
+
+        if create_manifest:
+            manifest_path = f"{destination}.json"
+            manifest = {
+                "download_date": datetime.now(UTC).isoformat(),
+                "entity": entity,
+                "kind": kind,
+                "output_file_name": os.path.basename(destination),
+                "output_file_path": destination,
+                "source_uri": uri,
+                "state": state,
+                "volumio_host": host_configuration.rest_base_url,
+                "volumito_version": VERSION,
+            }
+            with open(manifest_path, "w", encoding="utf-8") as f:
+                json.dump(manifest, f, indent=2, sort_keys=True, ensure_ascii=False)
+            if verbose and not machine_readable:
+                click.echo(f"\nManifest written to {manifest_path}...", err=True)
 
     except requests.exceptions.RequestException as e:
         if not machine_readable:
@@ -835,6 +865,16 @@ def print_resulting_status_option(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def create_download_manifest_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--create-download-manifest`` option to a track download subcommand."""
+    return click.option(
+        "--create-download-manifest/--no-create-download-manifest",
+        default=True,
+        show_default=True,
+        help="Write a JSON manifest next to the downloaded file (e.g. out.flac.json)",
+    )(func)
+
+
 def format_option(help_text: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
     """Return the ``-F``/``--format`` option decorator with the given help text.
 
@@ -1187,6 +1227,7 @@ def command_scoped_option_defaults() -> dict[str, Any]:
     wanted = {
         "check_playlist_name",
         "check_seek_position",
+        "create_download_manifest",
         "fields",
         "output_format",
         "print_resulting_status",
@@ -1672,12 +1713,14 @@ def track_info(
     show_default=True,
     help="Overwrite the destination file if it already exists",
 )
+@create_download_manifest_option
 def audio(
     ctx: click.Context,
     file_name_template: str,
     output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
+    create_download_manifest: bool,
 ) -> None:
     """Print the URI of the audio of the current track.
 
@@ -1739,6 +1782,10 @@ def audio(
                     rest_api_timeout,
                     verbose,
                     machine_readable,
+                    create_download_manifest,
+                    host_configuration,
+                    "track",
+                    "audio",
                     ctx.obj["position_starting_at_one"],
                 )
 
@@ -1793,12 +1840,14 @@ def audio(
     show_default=True,
     help="Overwrite the destination file if it already exists",
 )
+@create_download_manifest_option
 def albumart(
     ctx: click.Context,
     file_name_template: str,
     output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
+    create_download_manifest: bool,
 ) -> None:
     """Print the URI of the album art of the current track.
 
@@ -1859,6 +1908,10 @@ def albumart(
                 rest_api_timeout,
                 verbose,
                 machine_readable,
+                create_download_manifest,
+                host_configuration,
+                "track",
+                "albumart",
                 ctx.obj["position_starting_at_one"],
             )
 

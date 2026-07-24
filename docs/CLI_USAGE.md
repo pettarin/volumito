@@ -175,6 +175,7 @@ output:
 downloads:
   # Keys here apply to both track download commands...
   overwrite-existing-files: false
+  create-download-manifest: true
   track-audio:
     # ...and can be overridden per command.
     file-name-template: "{position:03d}_{title}.{extension}"
@@ -204,7 +205,8 @@ The `miscellaneous` section holds the defaults of options belonging to a single 
 options of `playlist play` and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
-`--output-file`, and `--overwrite-existing-files` options of `track audio` and `track albumart`. A key
+`--output-file`, `--overwrite-existing-files`, and `--create-download-manifest` options of
+`track audio` and `track albumart`. A key
 placed directly under `downloads` applies to both commands; the optional `track-audio` and `track-albumart`
 subsections hold the same keys and override the shared value for that command (so each can have its own
 `file-name-template`).
@@ -498,6 +500,35 @@ out instead). Pass `--overwrite-existing-files` to allow overwriting:
 ```bash
 volumito track albumart -o /path/to/cover.jpg --overwrite-existing-files
 volumito track audio -d /path/to/music/ --overwrite-existing-files
+```
+
+By default, each download also writes a JSON manifest next to the downloaded file
+(e.g. `song.flac.json` next to `song.flac`) recording the download date, the Volumio
+host, the source URI, the output paths, and the full player state at download time.
+Pass `--no-create-download-manifest` to skip it:
+
+```bash
+# Writes /path/to/song.flac and /path/to/song.flac.json
+volumito track audio -o /path/to/song.flac
+
+# Downloads without the sidecar manifest
+volumito track audio -o /path/to/song.flac --no-create-download-manifest
+```
+
+The manifest is a JSON object with its keys in lexicographic order, for example:
+
+```json
+{
+  "download_date": "2026-07-24T10:22:31.123456+00:00",
+  "entity": "track",
+  "kind": "audio",
+  "output_file_name": "song.flac",
+  "output_file_path": "/path/to/song.flac",
+  "source_uri": "qobuz://song/2581513",
+  "state": { "...the full player state..." },
+  "volumio_host": "http://volumio.local:3000",
+  "volumito_version": "0.0.14"
+}
 ```
 
 When downloading into a directory with `-d`, the file name is built from

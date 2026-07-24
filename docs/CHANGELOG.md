@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.14] - 2026-07-24
 
+### Added
+
+- Option `--create-download-manifest`/`--no-create-download-manifest` (default on) for `track audio`
+  and `track albumart`, writing a JSON manifest next to the downloaded file
+- The download-manifest default can be set in the `downloads` section of the configuration file
+
 ### Changed
 
 - Moved the documentation to the `docs` directory, with the CLI usage and the new library usage
