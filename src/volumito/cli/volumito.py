@@ -100,7 +100,7 @@ TRACK_INFO_SHORT_FIELDS = [
 OUTPUT_FORMATS = ["json", "pretty", "raw", "table"]
 
 # Version of the CLI (and of the underlying library)
-VERSION = "0.0.13"
+VERSION = "0.0.14"
 
 
 def filter_fields(
