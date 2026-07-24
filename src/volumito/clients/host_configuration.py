@@ -7,6 +7,9 @@
 from dataclasses import dataclass
 from typing import Literal
 
+# The single source of the accepted URL schemes (used for both typing and validation)
+Scheme = Literal["http", "https"]
+
 
 @dataclass(frozen=True)
 class VolumioHostConfiguration:
@@ -22,7 +25,7 @@ class VolumioHostConfiguration:
         mpd_port: The MPD port (default: 6600)
     """
 
-    scheme: Literal["http", "https"] = "http"
+    scheme: Scheme = "http"
     host: str = "volumio.local"
     rest_api_port: int = 3000
     mpd_port: int = 6600

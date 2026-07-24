@@ -17,6 +17,7 @@ from pytest_mock import MockerFixture
 from volumito import __version__
 from volumito.cli.click_helpers import (
     OnOffParamType,
+    SchemeParamType,
     SeekParamType,
     VolumeParamType,
     render_output_filename,
@@ -573,6 +574,25 @@ class TestOnOffParamType:
         """Only the accepted lowercase spellings are valid; others are a usage error."""
         with pytest.raises(click.exceptions.BadParameter):
             OnOffParamType().convert(value, None, None)
+
+
+class TestSchemeParamType:
+    """Test cases for the SchemeParamType Click parameter type."""
+
+    @pytest.mark.parametrize("scheme", ["http", "https"])
+    def test_convert_valid(self, scheme: str):
+        """The lowercase http/https values pass through unchanged."""
+        assert SchemeParamType().convert(scheme, None, None) == scheme
+
+    @pytest.mark.parametrize("value", ["HTTP", "HTTPS", "Http", "ftp"])
+    def test_convert_invalid_rejected(self, value: str):
+        """Only the lowercase http/https are valid (case-sensitive); others are a usage error."""
+        with pytest.raises(click.exceptions.BadParameter):
+            SchemeParamType().convert(value, None, None)
+
+    def test_metavar_lists_the_schemes(self):
+        """The --help metavar lists the accepted schemes."""
+        assert SchemeParamType().get_metavar(None, None) == "[http|https]"
 
 
 class TestCLICommands:

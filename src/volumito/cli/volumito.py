@@ -7,13 +7,14 @@
 import json
 import os
 import sys
-from typing import Any, Literal
+from typing import Any
 
 import click
 
 from volumito import __version__
 from volumito.cli.click_helpers import (
     OnOffParamType,
+    SchemeParamType,
     SeekParamType,
     VolumeParamType,
     configuration_file_callback,
@@ -63,6 +64,7 @@ from volumito.cli.pure_helpers import (
     resolve_albumart_uri,
 )
 from volumito.clients import (
+    Scheme,
     VolumioAPIError,
     VolumioConnectionError,
     VolumioHostConfiguration,
@@ -148,7 +150,7 @@ from volumito.clients import (
 )
 @click.option(
     "--scheme",
-    type=click.Choice(["http", "https"], case_sensitive=False),
+    type=SchemeParamType(),
     default="http",
     show_default=True,
     help="URL scheme to use for connecting to Volumio instance",
@@ -171,7 +173,7 @@ def main(
     rest_api_port: int,
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
-    scheme: Literal["http", "https"],
+    scheme: Scheme,
     verbose: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""

@@ -10,7 +10,7 @@ import sys
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, get_args
 
 import click
 import requests
@@ -43,6 +43,7 @@ from volumito.cli.pure_helpers import (
     resolve_output_fields,
 )
 from volumito.clients import (
+    Scheme,
     VolumioAPIError,
     VolumioConnectionError,
     VolumioHostConfiguration,
@@ -81,6 +82,34 @@ class OnOffParamType(click.ParamType):
             sorted(s for spellings in self.ALIASES.values() for s in spellings)
         )
         self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+
+class SchemeParamType(click.ParamType):
+    """Click parameter type for the URL scheme.
+
+    Accepts the (lowercase) values of the ``Scheme`` alias, currently "http" and
+    "https"; anything else is a usage error.
+    """
+
+    name = "scheme"
+
+    # Accepted schemes, derived from the Scheme type alias (the single source)
+    SCHEMES = get_args(Scheme)
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> str:
+        text = str(value)
+        if text in self.SCHEMES:
+            return text
+        accepted = ", ".join(self.SCHEMES)
+        self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+    def get_metavar(self, param: click.Parameter, ctx: click.Context) -> str:
+        return f"[{'|'.join(self.SCHEMES)}]"
 
 
 class SeekParamType(click.ParamType):
