@@ -10,6 +10,7 @@ import re
 from typing import Any, Literal
 
 from volumito.cli.constants import (
+    OUTPUT_FIELDS_ALL,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_ZONES_GET,
@@ -75,7 +76,7 @@ def filter_fields(
     Returns:
         A filtered dictionary containing only the requested fields
     """
-    if fields == "all":
+    if fields == OUTPUT_FIELDS_ALL:
         return state
     else:  # short
         return {key: state[key] for key in short_fields if key in state}
@@ -99,7 +100,7 @@ def filter_queue_fields(
     filtered_queue = []
 
     for index, item in enumerate(queue):
-        if fields == "all":
+        if fields == OUTPUT_FIELDS_ALL:
             filtered_item = item.copy()
         else:  # short
             filtered_item = {
@@ -127,7 +128,7 @@ def filter_zones_fields(
         is filtered too
     """
     zones = zones_data.get("zones", [])
-    if fields == "all":
+    if fields == OUTPUT_FIELDS_ALL:
         return [zone.copy() for zone in zones]
 
     filtered_zones = []

@@ -23,6 +23,8 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.constants import (
     FILE_WRITE_CHUNK_SIZE,
+    OUTPUT_FIELDS_ALL,
+    OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
 )
 from volumito.cli.metadata import (
@@ -542,8 +544,8 @@ def option_fields(func: Callable[..., None]) -> Callable[..., None]:
     return click.option(
         "--fields",
         "-L",
-        type=click.Choice(["short", "all"], case_sensitive=False),
-        default="short",
+        type=click.Choice([OUTPUT_FIELDS_SHORT, OUTPUT_FIELDS_ALL], case_sensitive=True),
+        default=OUTPUT_FIELDS_SHORT,
         show_default=True,
         help="Fields to display (applies to json, pretty, and table formats)",
     )(func)
@@ -569,7 +571,7 @@ def option_format(func: Callable[..., None]) -> Callable[..., None]:
         "--format",
         "-F",
         "output_format",
-        type=click.Choice(OUTPUT_FORMATS, case_sensitive=False),
+        type=click.Choice(OUTPUT_FORMATS, case_sensitive=True),
         default="pretty",
         show_default=True,
         help="Output format",
@@ -749,7 +751,7 @@ def render_state(
 
         if output_format == "table":
             # Preserve the short_fields order (and their labels) in the table
-            field_order = short_fields if fields == "short" else None
+            field_order = short_fields if fields == OUTPUT_FIELDS_SHORT else None
             output = format_as_table(
                 filtered_state,
                 heading=heading,

@@ -17,6 +17,10 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
     "Options -o/--output-file and -d/--output-directory are mutually exclusive."
 )
 
+# Accepted values of the -L/--fields option
+OUTPUT_FIELDS_ALL = "all"
+OUTPUT_FIELDS_SHORT = "short"
+
 # Accepted values of the -F/--format option
 OUTPUT_FORMATS = [
     "json",
