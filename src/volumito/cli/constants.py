@@ -18,10 +18,15 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 )
 
 # Accepted values of the -F/--format option
-OUTPUT_FORMATS = ["json", "pretty", "raw", "table"]
+OUTPUT_FORMATS = [
+    "json",
+    "pretty",
+    "raw",
+    "table",
+]
 
 # Short fields list for the "playback status" command
-PLAYER_STATE_SHORT_FIELDS = [
+SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
     "position",
     "title",
@@ -38,7 +43,7 @@ PLAYER_STATE_SHORT_FIELDS = [
 ]
 
 # Short fields list for the "queue list" command
-QUEUE_LIST_SHORT_FIELDS = [
+SHORT_FORMAT_FIELDS_QUEUE_LIST = [
     "title",
     "artist",
     "album",
@@ -46,7 +51,7 @@ QUEUE_LIST_SHORT_FIELDS = [
 ]
 
 # Short fields list for the "track info" command
-TRACK_INFO_SHORT_FIELDS = [
+SHORT_FORMAT_FIELDS_TRACK_INFO = [
     "position",
     "title",
     "artist",
@@ -59,7 +64,7 @@ TRACK_INFO_SHORT_FIELDS = [
 ]
 
 # Short fields list for the "zones get" command
-ZONES_GET_SHORT_FIELDS = [
+SHORT_FORMAT_FIELDS_ZONES_GET = [
     "host",
     "name",
     "isSelf",
@@ -67,6 +72,6 @@ ZONES_GET_SHORT_FIELDS = [
 ]
 
 # Keys of the "state" subdictionary omitted by the short fields of "zones get"
-ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS = [
+SHORT_FORMAT_FIELDS_ZONES_GET_STATE_EXCLUDED = [
     "albumart",
 ]

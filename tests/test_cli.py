@@ -22,9 +22,9 @@ from volumito.cli.click_helpers import (
     render_output_filename,
 )
 from volumito.cli.constants import (
-    PLAYER_STATE_SHORT_FIELDS,
-    QUEUE_LIST_SHORT_FIELDS,
-    TRACK_INFO_SHORT_FIELDS,
+    SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_QUEUE_LIST,
+    SHORT_FORMAT_FIELDS_TRACK_INFO,
 )
 from volumito.cli.pure_helpers import (
     display_position,
@@ -111,8 +111,8 @@ class TestFilterFields:
 
         result = filter_fields(state, "short")
 
-        # Should only include PLAYER_STATE_SHORT_FIELDS
-        for field in PLAYER_STATE_SHORT_FIELDS:
+        # Should only include SHORT_FORMAT_FIELDS_PLAYER_STATE
+        for field in SHORT_FORMAT_FIELDS_PLAYER_STATE:
             if field in state:
                 assert field in result
 
@@ -142,7 +142,7 @@ class TestFilterFields:
         assert len(result) == 2
 
     def test_filter_fields_short_track(self):
-        """Test filter_fields with a custom short-field list (TRACK_INFO_SHORT_FIELDS)."""
+        """Test filter_fields with a custom short-field list (SHORT_FORMAT_FIELDS_TRACK_INFO)."""
         state = {
             "position": 0,
             "title": "Test Song",
@@ -158,10 +158,10 @@ class TestFilterFields:
             "extra": "data",
         }
 
-        result = filter_fields(state, "short", TRACK_INFO_SHORT_FIELDS)
+        result = filter_fields(state, "short", SHORT_FORMAT_FIELDS_TRACK_INFO)
 
         # Track-oriented fields are kept
-        for field in TRACK_INFO_SHORT_FIELDS:
+        for field in SHORT_FORMAT_FIELDS_TRACK_INFO:
             assert field in result
 
         # Player-only and unknown fields are dropped
@@ -1640,7 +1640,7 @@ class TestCLICommands:
         assert "Volumio Status" not in result.output
         assert "Test Song" in result.output
         assert "Samplerate" in result.output
-        # Fields appear in TRACK_INFO_SHORT_FIELDS order, not sorted alphabetically
+        # Fields appear in SHORT_FORMAT_FIELDS_TRACK_INFO order, not sorted alphabetically
         assert (
             result.output.index("Title")
             < result.output.index("Artist")
@@ -4673,8 +4673,8 @@ class TestQueueHelperFunctions:
 
         assert len(result) == 1
         assert result[0]["position"] == 1
-        # Should include only QUEUE_LIST_SHORT_FIELDS
-        for field in QUEUE_LIST_SHORT_FIELDS:
+        # Should include only SHORT_FORMAT_FIELDS_QUEUE_LIST
+        for field in SHORT_FORMAT_FIELDS_QUEUE_LIST:
             if field in queue_data["queue"][0]:
                 assert field in result[0]
         # Audio-quality fields are no longer part of the queue short field set

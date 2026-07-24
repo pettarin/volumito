@@ -10,10 +10,10 @@ import re
 from typing import Any, Literal
 
 from volumito.cli.constants import (
-    PLAYER_STATE_SHORT_FIELDS,
-    QUEUE_LIST_SHORT_FIELDS,
-    ZONES_GET_SHORT_FIELDS,
-    ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS,
+    SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_QUEUE_LIST,
+    SHORT_FORMAT_FIELDS_ZONES_GET,
+    SHORT_FORMAT_FIELDS_ZONES_GET_STATE_EXCLUDED,
 )
 from volumito.clients import VolumioHostConfiguration
 
@@ -63,7 +63,7 @@ def extract_filename_from_uri(uri: str) -> str:
 def filter_fields(
     state: dict[str, Any],
     fields: Literal["short", "all"],
-    short_fields: list[str] = PLAYER_STATE_SHORT_FIELDS,
+    short_fields: list[str] = SHORT_FORMAT_FIELDS_PLAYER_STATE,
 ) -> dict[str, Any]:
     """Filter the state dictionary based on the fields option.
 
@@ -102,7 +102,9 @@ def filter_queue_fields(
         if fields == "all":
             filtered_item = item.copy()
         else:  # short
-            filtered_item = {key: item[key] for key in QUEUE_LIST_SHORT_FIELDS if key in item}
+            filtered_item = {
+                key: item[key] for key in SHORT_FORMAT_FIELDS_QUEUE_LIST if key in item
+            }
 
         # Add synthetic position, always 1-indexed here
         filtered_item["position"] = index + 1
@@ -130,13 +132,13 @@ def filter_zones_fields(
 
     filtered_zones = []
     for zone in zones:
-        filtered_zone = {key: zone[key] for key in ZONES_GET_SHORT_FIELDS if key in zone}
+        filtered_zone = {key: zone[key] for key in SHORT_FORMAT_FIELDS_ZONES_GET if key in zone}
         state = filtered_zone.get("state")
         if isinstance(state, dict):
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
-                if key not in ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS
+                if key not in SHORT_FORMAT_FIELDS_ZONES_GET_STATE_EXCLUDED
             }
         filtered_zones.append(filtered_zone)
     return filtered_zones
@@ -211,7 +213,7 @@ def format_as_table(
     if field_order is not None:
         # Display the requested fields in the given order, with title-cased labels
         field_list = [(key.replace("_", " ").title(), key) for key in field_order]
-    elif set(state.keys()).issubset(set(PLAYER_STATE_SHORT_FIELDS)):
+    elif set(state.keys()).issubset(set(SHORT_FORMAT_FIELDS_PLAYER_STATE)):
         # Use predefined labels for the player short field set
         field_list = [
             ("Status", "status"),

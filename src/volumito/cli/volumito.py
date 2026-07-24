@@ -48,8 +48,8 @@ from volumito.cli.configuration import (
 from volumito.cli.constants import (
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
-    PLAYER_STATE_SHORT_FIELDS,
-    TRACK_INFO_SHORT_FIELDS,
+    SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_TRACK_INFO,
 )
 from volumito.cli.pure_helpers import (
     filter_queue_fields,
@@ -389,7 +389,7 @@ def playback_status(
     Retrieves and displays the current state of a Volumio music player instance,
     including playback status, volume, track information, and more.
     """
-    render_state(ctx, fields, output_format, PLAYER_STATE_SHORT_FIELDS)
+    render_state(ctx, fields, output_format, SHORT_FORMAT_FIELDS_PLAYER_STATE)
 
 
 @playback.command()
@@ -575,7 +575,7 @@ def track_info(
     output_format: str,
 ) -> None:
     """Print the information of the current track."""
-    render_state(ctx, fields, output_format, TRACK_INFO_SHORT_FIELDS, heading="Track Info")
+    render_state(ctx, fields, output_format, SHORT_FORMAT_FIELDS_TRACK_INFO, heading="Track Info")
 
 
 @track.command()
