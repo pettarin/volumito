@@ -17,9 +17,9 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
     "Options -o/--output-file and -d/--output-directory are mutually exclusive."
 )
 
-# Accepted values of the -L/--fields option
-OUTPUT_FIELDS_ALL = "all"
-OUTPUT_FIELDS_SHORT = "short"
+# Keywords of the -L/--fields option (any other value is a comma-separated field list)
+OUTPUT_FIELDS_ALL = "ALL"
+OUTPUT_FIELDS_SHORT = "SHORT"
 
 # Accepted values of the -F/--format option
 OUTPUT_FORMATS = [
@@ -52,6 +52,7 @@ SHORT_FORMAT_FIELDS_QUEUE_LIST = [
     "artist",
     "album",
     "duration",
+    "position",
 ]
 
 # Short fields list for the "track info" command

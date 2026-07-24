@@ -31,6 +31,7 @@ from volumito.cli.pure_helpers import (
     extract_filename_from_uri,
     filter_fields,
     filter_queue_fields,
+    filter_zones_fields,
     format_as_json,
     format_as_pretty,
     format_as_table,
@@ -54,7 +55,7 @@ _DOWNLOAD_DEFAULTS = {
 }
 
 # The display keys with their default values, as generated per subsection.
-_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty"}
+_DISPLAY_DEFAULTS = {"fields": "SHORT", "format": "pretty"}
 
 # The keys generated for the subsections of the commands that accept only --format.
 _FORMAT_DEFAULTS = {"format": "pretty"}
@@ -87,7 +88,7 @@ class TestFilterFields:
             "extra": "data",
         }
 
-        result = filter_fields(state, "all")
+        result = filter_fields(state, "ALL")
 
         assert result == state
         assert "extra" in result
@@ -109,7 +110,7 @@ class TestFilterFields:
             "extra": "data",
         }
 
-        result = filter_fields(state, "short")
+        result = filter_fields(state, "SHORT")
 
         # Should only include SHORT_FORMAT_FIELDS_PLAYER_STATE
         for field in SHORT_FORMAT_FIELDS_PLAYER_STATE:
@@ -135,7 +136,7 @@ class TestFilterFields:
         """Test filter_fields with 'short' when some fields are missing."""
         state = {"title": "Test", "artist": "Test Artist"}
 
-        result = filter_fields(state, "short")
+        result = filter_fields(state, "SHORT")
 
         assert "title" in result
         assert "artist" in result
@@ -158,7 +159,7 @@ class TestFilterFields:
             "extra": "data",
         }
 
-        result = filter_fields(state, "short", SHORT_FORMAT_FIELDS_TRACK_INFO)
+        result = filter_fields(state, "SHORT", SHORT_FORMAT_FIELDS_TRACK_INFO)
 
         # Track-oriented fields are kept
         for field in SHORT_FORMAT_FIELDS_TRACK_INFO:
@@ -168,6 +169,33 @@ class TestFilterFields:
         assert "status" not in result
         assert "volume" not in result
         assert "extra" not in result
+
+    def test_filter_fields_custom_list(self):
+        """A comma-separated list keeps exactly those fields, in order, omitting unknowns."""
+        state = {
+            "status": "play",
+            "title": "Test Song",
+            "artist": "Test Artist",
+            "album": "Test Album",
+            "volume": 100,
+        }
+
+        result = filter_fields(state, "artist,album,foobar")
+
+        # Only the requested, present fields, in the requested order
+        assert list(result.keys()) == ["artist", "album"]
+        # Unknown field silently omitted
+        assert "foobar" not in result
+        # Non-requested fields dropped
+        assert "status" not in result
+
+    def test_filter_fields_custom_list_strips_whitespace_and_empties(self):
+        """Whitespace around names is trimmed and empty entries are dropped."""
+        state = {"artist": "A", "album": "B", "title": "C"}
+
+        result = filter_fields(state, " artist , , album ")
+
+        assert list(result.keys()) == ["artist", "album"]
 
 
 class TestFormatFunctions:
@@ -793,7 +821,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["playback", "status", "-L", "all"])
+        result = runner.invoke(main, ["playback", "status", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -1608,7 +1636,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info", "-L", "all"])
+        result = runner.invoke(main, ["track", "info", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3261,7 +3289,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--fields", "all"])
+        result = runner.invoke(main, ["queue", "get", "--fields", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3285,7 +3313,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--fields", "short"])
+        result = runner.invoke(main, ["queue", "get", "--fields", "SHORT"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3707,7 +3735,7 @@ class TestZonesCommands:
         """zones get -L all keeps every field of each zone."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get", "-L", "all"])
+        result = runner.invoke(main, ["zones", "get", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -4642,7 +4670,7 @@ class TestQueueHelperFunctions:
             ]
         }
 
-        result = filter_queue_fields(queue_data, "all")
+        result = filter_queue_fields(queue_data, "ALL")
 
         assert len(result) == 2
         assert result[0]["position"] == 1
@@ -4669,7 +4697,7 @@ class TestQueueHelperFunctions:
             ]
         }
 
-        result = filter_queue_fields(queue_data, "short")
+        result = filter_queue_fields(queue_data, "SHORT")
 
         assert len(result) == 1
         assert result[0]["position"] == 1
@@ -4686,6 +4714,37 @@ class TestQueueHelperFunctions:
         # Should not include non-short fields
         assert "extra_field" not in result[0]
         assert "another_field" not in result[0]
+
+    def test_filter_queue_fields_custom_omits_position(self):
+        """A custom list without 'position' drops the synthetic position field."""
+        queue_data = {"queue": [{"title": "Song", "artist": "A", "album": "B"}]}
+
+        result = filter_queue_fields(queue_data, "artist,album")
+
+        assert list(result[0].keys()) == ["artist", "album"]
+        assert "position" not in result[0]
+
+    def test_filter_queue_fields_custom_keeps_position(self):
+        """A custom list that includes 'position' keeps the synthetic position."""
+        queue_data = {"queue": [{"title": "Song", "artist": "A"}]}
+
+        result = filter_queue_fields(queue_data, "artist,position")
+
+        assert result[0] == {"artist": "A", "position": 1}
+
+    def test_filter_zones_fields_short_trims_state_but_custom_keeps_it(self):
+        """SHORT drops albumart from the state sub-dict; a custom 'state' keeps it whole."""
+        zones_data = {
+            "zones": [
+                {"name": "Living", "host": "http://x", "state": {"title": "S", "albumart": "a"}}
+            ]
+        }
+
+        short = filter_zones_fields(zones_data, "SHORT")
+        assert short[0]["state"] == {"title": "S"}  # albumart excluded
+
+        custom = filter_zones_fields(zones_data, "name,state")
+        assert custom[0] == {"name": "Living", "state": {"title": "S", "albumart": "a"}}
 
     def test_rebase_queue_positions_starting_at_one(self):
         """The 1-indexed positions are left untouched when displaying from one."""

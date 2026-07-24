@@ -829,7 +829,7 @@ def queue_get(
             output = json.dumps(queue_data)
         else:
             # Apply fields filter for all formatted outputs
-            tracks = filter_queue_fields(queue_data, fields)  # type: ignore[arg-type]
+            tracks = filter_queue_fields(queue_data, fields)
 
             # Map output format to formatting function
             if output_format == "json":
@@ -976,7 +976,7 @@ def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
         # Raw JSON without formatting (ignores fields filter)
         output = json.dumps(data)
     else:
-        filtered_zones = filter_zones_fields(data, fields)  # type: ignore[arg-type]
+        filtered_zones = filter_zones_fields(data, fields)
         if output_format == "json":
             output = json.dumps(filtered_zones, indent=2)
         elif output_format == "table":

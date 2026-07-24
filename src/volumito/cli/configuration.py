@@ -84,7 +84,7 @@ KEY_COMMENTS: dict[str, str] = {
     "create-download-manifest": (
         "Write a JSON manifest next to the downloaded file (e.g. out.flac.json)"
     ),
-    "fields": "Fields to display: short or all",
+    "fields": "Fields to display: ALL, SHORT, or a comma-separated field list",
     "file-name-template": "Template (Python str.format) for the -d output file name",
     "format": "Output format: json, pretty, raw, or table",
     "host": "Hostname or IP address of the Volumio instance",

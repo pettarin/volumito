@@ -64,7 +64,7 @@ volumito zones get
 volumito zones get --format table
 
 # All available fields
-volumito zones get --fields all
+volumito zones get --fields ALL
 ```
 
 ## Playlists
@@ -269,18 +269,23 @@ The `json` and `raw` formats are unaffected: they always print the position as r
 
 ## Field Filtering
 
-Control which fields are displayed:
+Control which fields are displayed. The `-L`/`--fields` value is one of the uppercase keywords
+`SHORT` or `ALL`, or a comma-separated list of field names to show exactly those fields (in the
+given order; unknown or absent names are silently skipped):
 
 ```bash
-# Show only key playback information (default)
-volumito playback status --fields short
+# Show only key playback information (the default, SHORT)
+volumito playback status --fields SHORT
 
 # Show all available fields (-L is a shorthand for --fields)
-volumito playback status --fields all
-volumito playback status -L all
+volumito playback status --fields ALL
+volumito playback status -L ALL
+
+# Show only the given fields, in order
+volumito playback status -L artist,album,title
 ```
 
-Short fields include:
+The `SHORT` fields include:
 - status
 - position
 - title
@@ -420,7 +425,7 @@ Combine options for specific use cases:
 
 ```bash
 # Table format with all fields
-volumito playback status --format table --fields all
+volumito playback status --format table --fields ALL
 
 # Pipe to jq for advanced JSON processing
 volumito playback status --format raw | jq '.title, .artist'
@@ -447,7 +452,7 @@ but its default `short` field set is track-oriented:
 volumito track info
 
 # All available fields, as compact JSON
-volumito track info -L all -F json
+volumito track info -L ALL -F json
 
 # Raw unfiltered JSON
 volumito track info -F raw

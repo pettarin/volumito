@@ -23,7 +23,6 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.constants import (
     FILE_WRITE_CHUNK_SIZE,
-    OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
 )
@@ -41,6 +40,7 @@ from volumito.cli.pure_helpers import (
     format_duration,
     parse_time_to_seconds,
     resolve_albumart_uri,
+    resolve_output_fields,
 )
 from volumito.clients import (
     VolumioAPIError,
@@ -544,10 +544,10 @@ def option_fields(func: Callable[..., None]) -> Callable[..., None]:
     return click.option(
         "--fields",
         "-L",
-        type=click.Choice([OUTPUT_FIELDS_SHORT, OUTPUT_FIELDS_ALL], case_sensitive=True),
+        type=str,
         default=OUTPUT_FIELDS_SHORT,
         show_default=True,
-        help="Fields to display (applies to json, pretty, and table formats)",
+        help="Fields to display: ALL, SHORT, or a comma-separated list of field names",
     )(func)
 
 
@@ -747,11 +747,11 @@ def render_state(
         output = json.dumps(state)
     else:
         # Apply fields filter for all formatted outputs
-        filtered_state = filter_fields(state, fields, short_fields)  # type: ignore[arg-type]
+        filtered_state = filter_fields(state, fields, short_fields)
 
         if output_format == "table":
-            # Preserve the short_fields order (and their labels) in the table
-            field_order = short_fields if fields == OUTPUT_FIELDS_SHORT else None
+            # Preserve the requested field order (and labels) in the table; None => all
+            field_order = resolve_output_fields(fields, short_fields)
             output = format_as_table(
                 filtered_state,
                 heading=heading,

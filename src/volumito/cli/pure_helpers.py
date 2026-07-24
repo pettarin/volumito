@@ -7,10 +7,11 @@
 import json
 import os
 import re
-from typing import Any, Literal
+from typing import Any
 
 from volumito.cli.constants import (
     OUTPUT_FIELDS_ALL,
+    OUTPUT_FIELDS_SHORT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_ZONES_GET,
@@ -63,79 +64,81 @@ def extract_filename_from_uri(uri: str) -> str:
 
 def filter_fields(
     state: dict[str, Any],
-    fields: Literal["short", "all"],
+    fields: str,
     short_fields: list[str] = SHORT_FORMAT_FIELDS_PLAYER_STATE,
 ) -> dict[str, Any]:
     """Filter the state dictionary based on the fields option.
 
     Args:
         state: The state dictionary from the Volumio API
-        fields: The fields option ("short" or "all")
-        short_fields: The list of keys to keep when ``fields`` is "short"
+        fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
+        short_fields: The list of keys to keep for the ``SHORT`` keyword
 
     Returns:
-        A filtered dictionary containing only the requested fields
+        A filtered dictionary containing only the requested fields, in the requested order
     """
-    if fields == OUTPUT_FIELDS_ALL:
+    selected = resolve_output_fields(fields, short_fields)
+    if selected is None:  # ALL
         return state
-    else:  # short
-        return {key: state[key] for key in short_fields if key in state}
+    return {key: state[key] for key in selected if key in state}
 
 
 def filter_queue_fields(
-    queue_data: dict[str, Any], fields: Literal["short", "all"]
+    queue_data: dict[str, Any], fields: str
 ) -> list[dict[str, Any]]:
     """Filter queue items based on the fields option.
 
+    Each item gets a synthetic 1-indexed "position" (see ``rebase_queue_positions``
+    for the display rebasing). ``ALL`` and ``SHORT`` keep it; a comma-separated field
+    list keeps it only when "position" is listed explicitly.
+
     Args:
         queue_data: The queue data dictionary from the Volumio API (contains "queue" key)
-        fields: The fields option ("short" or "all")
+        fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
 
     Returns:
-        A list of filtered queue item dictionaries with a synthetic "position" field
-        added, always starting at one (see ``rebase_queue_positions`` for the
-        display rebasing)
+        A list of filtered queue item dictionaries, in the requested order
     """
     queue = queue_data.get("queue", [])
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_LIST)
     filtered_queue = []
 
     for index, item in enumerate(queue):
-        if fields == OUTPUT_FIELDS_ALL:
-            filtered_item = item.copy()
-        else:  # short
-            filtered_item = {
-                key: item[key] for key in SHORT_FORMAT_FIELDS_QUEUE_LIST if key in item
-            }
-
-        # Add synthetic position, always 1-indexed here
-        filtered_item["position"] = index + 1
+        full = item.copy()
+        full["position"] = index + 1  # synthetic, 1-indexed
+        if selected is None:  # ALL
+            filtered_item = full
+        else:
+            filtered_item = {key: full[key] for key in selected if key in full}
         filtered_queue.append(filtered_item)
 
     return filtered_queue
 
 
 def filter_zones_fields(
-    zones_data: dict[str, Any], fields: Literal["short", "all"]
+    zones_data: dict[str, Any], fields: str
 ) -> list[dict[str, Any]]:
     """Filter the zones based on the fields option.
 
     Args:
         zones_data: The zones data dictionary from the Volumio API (contains "zones" key)
-        fields: The fields option ("short" or "all")
+        fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
 
     Returns:
-        A list of filtered zone dictionaries; in short mode the "state" subdictionary
-        is filtered too
+        A list of filtered zone dictionaries, in the requested order; for the ``SHORT``
+        keyword the "state" subdictionary is trimmed too
     """
     zones = zones_data.get("zones", [])
-    if fields == OUTPUT_FIELDS_ALL:
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_ZONES_GET)
+    if selected is None:  # ALL
         return [zone.copy() for zone in zones]
 
     filtered_zones = []
     for zone in zones:
-        filtered_zone = {key: zone[key] for key in SHORT_FORMAT_FIELDS_ZONES_GET if key in zone}
+        filtered_zone = {key: zone[key] for key in selected if key in zone}
+        # The SHORT keyword also trims the state subdictionary (e.g. drops albumart)
         state = filtered_zone.get("state")
-        if isinstance(state, dict):
+        if fields == OUTPUT_FIELDS_SHORT and isinstance(state, dict):
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
@@ -492,6 +495,27 @@ def resolve_albumart_uri(
     if albumart.startswith("/"):
         return f"{host_configuration.rest_base_url}{albumart}"
     return albumart
+
+
+def resolve_output_fields(fields: str, short_fields: list[str]) -> list[str] | None:
+    """Resolve the ``--fields`` value into the ordered list of fields to show.
+
+    Returns ``None`` for the ``ALL`` keyword (meaning "show every field"), the given
+    ``short_fields`` for the ``SHORT`` keyword, or the parsed comma-separated field list
+    otherwise (whitespace trimmed, empty entries dropped, order preserved).
+
+    Args:
+        fields: The raw ``--fields`` value
+        short_fields: The field list to use for the ``SHORT`` keyword
+
+    Returns:
+        The ordered list of field names to keep, or None to keep every field
+    """
+    if fields == OUTPUT_FIELDS_ALL:
+        return None
+    if fields == OUTPUT_FIELDS_SHORT:
+        return short_fields
+    return [name.strip() for name in fields.split(",") if name.strip()]
 
 
 def split_camel_case(key: str) -> str:

@@ -35,7 +35,7 @@ _DOWNLOAD_DEFAULTS = {
 }
 
 # The display keys with their default values, as generated per subsection.
-_DISPLAY_DEFAULTS = {"fields": "short", "format": "pretty"}
+_DISPLAY_DEFAULTS = {"fields": "SHORT", "format": "pretty"}
 
 # The keys generated for the subsections of the commands that accept only --format.
 _FORMAT_DEFAULTS = {"format": "pretty"}
@@ -55,7 +55,7 @@ _DEFAULTS = {
     "verbose": False,
     "machine_readable": False,
     "position_starting_at_one": True,
-    "fields": "short",
+    "fields": "SHORT",
     "output_format": "pretty",
     "print_resulting_status": True,
     "create_download_manifest": True,
@@ -384,7 +384,7 @@ class TestRenderDefaultConfiguration:
         assert "# Hostname or IP address of the Volumio instance" in result
         assert "# REST API request timeout, in seconds" in result
         assert "in seconds" in result
-        assert "# Fields to display: short or all" in result
+        assert "# Fields to display: ALL, SHORT, or a comma-separated field list" in result
         assert "# Output format: json, pretty, raw, or table" in result
 
     def test_comments_cover_all_keys(self):
@@ -428,7 +428,7 @@ class TestRenderDefaultConfiguration:
         # Pairs valid under lexicographic ordering.
         assert "  host: volumio.local\n\n  # MPD port of the Volumio instance" in result
         # Within a subsection, keys are indented four spaces.
-        assert "    fields: short\n\n    # Output format" in result
+        assert "    fields: SHORT\n\n    # Output format" in result
 
     def test_two_blank_lines_between_sections(self):
         """Two blank lines separate each section from the next."""

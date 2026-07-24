@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved the documentation to the `docs` directory, with the CLI usage and the new library usage
   in their own files
 - Cleaned `volumito.py` module up, breaking it into several modules
+- The `-L`/`--fields` option now takes the uppercase keywords `ALL` or `SHORT`, or a comma-separated
+  list of field names to display exactly those fields
 
 
 ## [0.0.13] - 2026-07-23
