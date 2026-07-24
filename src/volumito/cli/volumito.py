@@ -21,6 +21,7 @@ from volumito.cli.click_helpers import (
     download_uri_to,
     embed_track_tags,
     execute_command,
+    execute_conditionally,
     fetch_or_exit,
     fetch_state_or_exit,
     option_add_cover_and_metadata,
@@ -34,7 +35,6 @@ from volumito.cli.click_helpers import (
     option_print_resulting_status,
     render_payload,
     render_state,
-    rest_api_sleep,
     root_option_defaults,
 )
 from volumito.cli.configuration import (
@@ -68,18 +68,6 @@ from volumito.clients import (
     VolumioHostConfiguration,
     VolumioMPDClient,
 )
-
-
-def maybe_print_resulting_status(ctx: click.Context, enabled: bool) -> None:
-    """When enabled, wait the configured number of seconds and invoke "playback status".
-
-    Args:
-        ctx: Click context object (its ``obj`` is inherited by the invoked command)
-        enabled: Whether to print the resulting status
-    """
-    if enabled:
-        rest_api_sleep(ctx)
-        ctx.invoke(playback_status)
 
 
 @click.group()
@@ -410,7 +398,7 @@ def playback_status(
 def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     """Toggle between play and pause states of the Volumio instance."""
     execute_command(ctx, "toggle", lambda c: c.toggle())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -441,7 +429,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
         execute_command(ctx, "play", lambda c: c.play(position))
     else:
         execute_command(ctx, "play", lambda c: c.play())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -450,7 +438,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
 def pause(ctx: click.Context, print_resulting_status: bool) -> None:
     """Pause playback of the Volumio instance."""
     execute_command(ctx, "pause", lambda c: c.pause())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -459,7 +447,7 @@ def pause(ctx: click.Context, print_resulting_status: bool) -> None:
 def stop(ctx: click.Context, print_resulting_status: bool) -> None:
     """Stop playback of the Volumio instance."""
     execute_command(ctx, "stop", lambda c: c.stop())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -468,7 +456,7 @@ def stop(ctx: click.Context, print_resulting_status: bool) -> None:
 def next(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the next track of the Volumio instance."""
     execute_command(ctx, "next", lambda c: c.next())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -477,7 +465,7 @@ def next(ctx: click.Context, print_resulting_status: bool) -> None:
 def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the previous track of the Volumio instance."""
     execute_command(ctx, "previous", lambda c: c.previous())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -530,7 +518,7 @@ def seek(
             sys.exit(1)
 
     execute_command(ctx, f"seek {value}", lambda c: c.seek(value))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -549,7 +537,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
         click.echo(state.get("volume"))
         return
     execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -558,7 +546,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
 def mute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
     execute_command(ctx, "volume mute", lambda c: c.volume("mute"))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playback.command()
@@ -567,7 +555,7 @@ def mute(ctx: click.Context, print_resulting_status: bool) -> None:
 def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
     execute_command(ctx, "volume unmute", lambda c: c.volume("unmute"))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @main.group()
@@ -884,7 +872,7 @@ def queue_get(
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue of the Volumio instance."""
     execute_command(ctx, "clear", lambda c: c.clear())
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @queue.command()
@@ -899,7 +887,7 @@ def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool)
     """
     label = "repeat" if value is None else f"repeat {'on' if value else 'off'}"
     execute_command(ctx, label, lambda c: c.repeat(value))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @queue.command()
@@ -914,7 +902,7 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
     """
     label = "randomize" if value is None else f"randomize {'on' if value else 'off'}"
     execute_command(ctx, label, lambda c: c.randomize(value))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @main.group()
@@ -1057,7 +1045,7 @@ def playlist_play(
             sys.exit(1)
 
     execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name))
-    maybe_print_resulting_status(ctx, print_resulting_status)
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 # "info" is a top-level synonym for "system info"

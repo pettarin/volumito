@@ -449,6 +449,19 @@ def execute_command(
         sys.exit(1)
 
 
+def execute_conditionally(ctx: click.Context, enabled: bool, command: click.Command) -> None:
+    """When enabled, wait the configured delay and invoke the given command.
+
+    Args:
+        ctx: Click context object (its ``obj`` is inherited by the invoked command)
+        enabled: Whether to invoke the command
+        command: The Click command to invoke
+    """
+    if enabled:
+        rest_api_sleep(ctx)
+        ctx.invoke(command)
+
+
 def fetch_or_exit[T](
     ctx: click.Context,
     fetch: Callable[[VolumioRESTAPIClient], T],

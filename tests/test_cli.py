@@ -563,7 +563,7 @@ class TestCLICommands:
         no-op the helper here so these tests stay focused (and fast). The feature
         itself is covered by TestPrintResultingState.
         """
-        mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
+        mocker.patch("volumito.cli.volumito.execute_conditionally")
 
     def _mock_mpd_client(
         self,
@@ -5296,7 +5296,7 @@ class TestConfigurationFile:
     ):
         """The output section can disable the resulting-status print for playback actions."""
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mocker.Mock())
-        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
+        mock_maybe = mocker.patch("volumito.cli.volumito.execute_conditionally")
         config = self._write_config(tmp_path, "output:\n  print-resulting-status: false\n")
 
         result = runner.invoke(main, ["-c", config, "playback", "toggle"])
@@ -5310,7 +5310,7 @@ class TestConfigurationFile:
     ):
         """With no config, the resulting-status print keeps its True default."""
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mocker.Mock())
-        mock_maybe = mocker.patch("volumito.cli.volumito.maybe_print_resulting_status")
+        mock_maybe = mocker.patch("volumito.cli.volumito.execute_conditionally")
 
         result = runner.invoke(main, ["playback", "toggle"])
 
