@@ -58,7 +58,10 @@ class OnOffParamType(click.ParamType):
     name = "on/off"
 
     # Boolean value -> accepted spellings (lowercase only)
-    ALIASES = {True: ["on", "true", "yes", "1"], False: ["off", "false", "no", "0"]}
+    ALIASES = {
+        True: ["on", "true", "yes", "1"],
+        False: ["off", "false", "no", "0"],
+    }
 
     def convert(
         self,
