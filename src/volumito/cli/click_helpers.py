@@ -209,26 +209,6 @@ class VolumeParamType(click.ParamType):
         return level
 
 
-def _fetch_cover(
-    state: dict[str, Any],
-    host_configuration: VolumioHostConfiguration,
-    timeout: float,
-    machine_readable: bool,
-) -> bytes | None:
-    """Fetch the album-art image bytes for the current state, or None on absence/failure."""
-    albumart_uri = resolve_albumart_uri(state, host_configuration)
-    if albumart_uri is None:
-        return None
-    try:
-        response = requests.get(albumart_uri, timeout=timeout, stream=True)
-        response.raise_for_status()
-        return b"".join(response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE))
-    except requests.exceptions.RequestException as e:
-        if not machine_readable:
-            click.echo(f"\nWarning: cannot fetch cover art ({e})", err=True)
-        return None
-
-
 def configuration_file_callback(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:
@@ -411,7 +391,7 @@ def embed_track_tags(
         else None
     )
 
-    cover = _fetch_cover(state, host_configuration, timeout, machine_readable)
+    cover = fetch_cover(state, host_configuration, timeout, machine_readable)
 
     try:
         embed_metadata_and_cover(
@@ -494,6 +474,26 @@ def execute_conditionally(ctx: click.Context, enabled: bool, command: click.Comm
     if enabled:
         rest_api_sleep(ctx)
         ctx.invoke(command)
+
+
+def fetch_cover(
+    state: dict[str, Any],
+    host_configuration: VolumioHostConfiguration,
+    timeout: float,
+    machine_readable: bool,
+) -> bytes | None:
+    """Fetch the album-art image bytes for the current state, or None on absence/failure."""
+    albumart_uri = resolve_albumart_uri(state, host_configuration)
+    if albumart_uri is None:
+        return None
+    try:
+        response = requests.get(albumart_uri, timeout=timeout, stream=True)
+        response.raise_for_status()
+        return b"".join(response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE))
+    except requests.exceptions.RequestException as e:
+        if not machine_readable:
+            click.echo(f"\nWarning: cannot fetch cover art ({e})", err=True)
+        return None
 
 
 def fetch_or_exit[T](

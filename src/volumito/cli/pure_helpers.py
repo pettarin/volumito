@@ -15,7 +15,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_ZONES_GET,
-    SHORT_FORMAT_FIELDS_ZONES_GET_STATE_EXCLUDED,
+    SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE,
 )
 from volumito.clients import VolumioHostConfiguration
 
@@ -142,7 +142,7 @@ def filter_zones_fields(
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
-                if key not in SHORT_FORMAT_FIELDS_ZONES_GET_STATE_EXCLUDED
+                if key not in SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE
             }
         filtered_zones.append(filtered_zone)
     return filtered_zones
