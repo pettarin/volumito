@@ -15,7 +15,6 @@ from typing import Any, Literal
 import click
 import requests
 
-from volumito.cli import metadata
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     build_click_default_map,
@@ -25,9 +24,16 @@ from volumito.cli.configuration import (
     render_default_configuration,
     resolve_configuration_path,
 )
-from volumito.cli.helpers import (
+from volumito.cli.constants import (
+    FILE_WRITE_CHUNK_SIZE,
+    MUTUALLY_EXCLUSIVE_CREATE_ERROR,
+    MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
+    OUTPUT_FORMATS,
     PLAYER_STATE_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
+    VERSION,
+)
+from volumito.cli.helpers import (
     display_position,
     extract_filename_from_uri,
     filter_fields,
@@ -45,6 +51,10 @@ from volumito.cli.helpers import (
     rebase_queue_positions,
     resolve_albumart_uri,
 )
+from volumito.cli.metadata import (
+    UnsupportedAudioFormatError,
+    embed_metadata_and_cover,
+)
 from volumito.clients import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -52,25 +62,6 @@ from volumito.clients import (
     VolumioMPDClient,
     VolumioRESTAPIClient,
 )
-
-# Default chunk size when writing files
-FILE_WRITE_CHUNK_SIZE = 8192
-
-# Error message when the download destination options are combined
-MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
-    "Options -o/--output-file and -d/--output-directory are mutually exclusive."
-)
-
-# Error message when the "configuration create" destination options are combined
-MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
-    "Options -d/--output-directory and -f/--output-file are mutually exclusive."
-)
-
-# Accepted values of the -F/--format option
-OUTPUT_FORMATS = ["json", "pretty", "raw", "table"]
-
-# Version of the CLI (and of the underlying library)
-VERSION = "0.0.14"
 
 
 def render_output_filename(
@@ -310,7 +301,7 @@ def embed_track_tags(
     cover = _fetch_cover(state, host_configuration, timeout, machine_readable)
 
     try:
-        metadata.embed_metadata_and_cover(
+        embed_metadata_and_cover(
             destination,
             title=state.get("title"),
             artist=state.get("artist"),
@@ -319,7 +310,7 @@ def embed_track_tags(
             track_number=track_number,
             cover=cover,
         )
-    except metadata.UnsupportedAudioFormatError:
+    except UnsupportedAudioFormatError:
         if not machine_readable:
             click.echo(
                 f"\nWarning: cannot embed metadata into {destination} (unsupported format)",

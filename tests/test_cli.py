@@ -14,10 +14,13 @@ import yaml
 from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
-from volumito.cli.helpers import (
+from volumito.cli.constants import (
     PLAYER_STATE_SHORT_FIELDS,
     QUEUE_LIST_SHORT_FIELDS,
     TRACK_INFO_SHORT_FIELDS,
+    VERSION,
+)
+from volumito.cli.helpers import (
     display_position,
     extract_filename_from_uri,
     filter_fields,
@@ -30,7 +33,6 @@ from volumito.cli.helpers import (
     rebase_queue_positions,
 )
 from volumito.cli.volumito import (
-    VERSION,
     OnOffParamType,
     SeekParamType,
     VolumeParamType,
@@ -2959,7 +2961,7 @@ class TestCLICommands:
             "status": "play",
         }
         self._mock_audio_download(mocker, state, chunks=(b"cover-bytes",))
-        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -2984,7 +2986,7 @@ class TestCLICommands:
     ):
         """--no-add-cover-and-metadata leaves the downloaded file untagged."""
         self._mock_audio_download(mocker, {"title": "T"})
-        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3007,7 +3009,7 @@ class TestCLICommands:
     ):
         """With no album art in the state, the metadata is embedded without a cover."""
         self._mock_audio_download(mocker, {"title": "T", "position": 0})
-        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3041,7 +3043,7 @@ class TestCLICommands:
             "volumito.cli.volumito.requests.get",
             side_effect=[download_response, requests.exceptions.ConnectionError("boom")],
         )
-        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -3073,7 +3075,7 @@ class TestCLICommands:
         """A tagging error warns but still exits 0."""
         self._mock_audio_download(mocker, {"title": "T"})
         mocker.patch(
-            "volumito.cli.metadata.embed_metadata_and_cover",
+            "volumito.cli.volumito.embed_metadata_and_cover",
             side_effect=ValueError("boom"),
         )
 
@@ -3091,7 +3093,7 @@ class TestCLICommands:
     ):
         """The embedded track number honours --position-starting-at-zero."""
         self._mock_audio_download(mocker, {"title": "T", "position": 1})
-        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
@@ -5411,7 +5413,7 @@ class TestConfigurationFile:
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.volumito.requests.get", return_value=mock_response)
-        embed = mocker.patch("volumito.cli.metadata.embed_metadata_and_cover")
+        embed = mocker.patch("volumito.cli.volumito.embed_metadata_and_cover")
 
         config = self._write_config(tmp_path, "miscellaneous:\n  add-cover-and-metadata: false\n")
 

@@ -9,58 +9,13 @@ import os
 import re
 from typing import Any, Literal
 
+from volumito.cli.constants import (
+    PLAYER_STATE_SHORT_FIELDS,
+    QUEUE_LIST_SHORT_FIELDS,
+    ZONES_GET_SHORT_FIELDS,
+    ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS,
+)
 from volumito.clients import VolumioHostConfiguration
-
-# Short fields list for the "playback status" command
-PLAYER_STATE_SHORT_FIELDS = [
-    "status",
-    "position",
-    "title",
-    "artist",
-    "album",
-    "duration",
-    "seek",
-    "volume",
-    "mute",
-    "trackType",
-    "samplerate",
-    "bitdepth",
-    "channels",
-]
-
-# Short fields list for the "queue list" command
-QUEUE_LIST_SHORT_FIELDS = [
-    "title",
-    "artist",
-    "album",
-    "duration",
-]
-
-# Short fields list for the "zones get" command
-ZONES_GET_SHORT_FIELDS = [
-    "host",
-    "name",
-    "isSelf",
-    "state",
-]
-
-# Keys of the "state" subdictionary omitted by the short fields of "zones get"
-ZONES_GET_SHORT_STATE_EXCLUDED_FIELDS = [
-    "albumart",
-]
-
-# Short fields list for the "track info" command
-TRACK_INFO_SHORT_FIELDS = [
-    "position",
-    "title",
-    "artist",
-    "album",
-    "duration",
-    "trackType",
-    "samplerate",
-    "bitdepth",
-    "channels",
-]
 
 
 def filter_fields(
