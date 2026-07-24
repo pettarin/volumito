@@ -997,6 +997,65 @@ def add_cover_and_metadata_option(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def fields_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-L``/``--fields`` option to a display subcommand."""
+    return click.option(
+        "--fields",
+        "-L",
+        type=click.Choice(["short", "all"], case_sensitive=False),
+        default="short",
+        show_default=True,
+        help="Fields to display (applies to json, pretty, and table formats)",
+    )(func)
+
+
+def file_name_template_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-f``/``--file-name-template`` option to a track download subcommand."""
+    return click.option(
+        "-f",
+        "--file-name-template",
+        type=str,
+        default="{file_name_from_uri}",
+        show_default=True,
+        help="Template (Python str.format syntax) for the -d output file name. Keys: "
+        "file_name_from_uri, position, title, album, artist, trackType, duration, "
+        "bitdepth, samplerate, channels, extension. Spaces become underscores.",
+    )(func)
+
+
+def output_directory_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-d``/``--output-directory`` option to a track download subcommand."""
+    return click.option(
+        "-d",
+        "--output-directory",
+        type=str,
+        default=None,
+        help="Download into this directory, using the file name from the template "
+        "(mutually exclusive with -o)",
+    )(func)
+
+
+def output_file_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-o``/``--output-file`` option to a track download subcommand."""
+    return click.option(
+        "-o",
+        "--output-file",
+        type=str,
+        default=None,
+        help="Download to this exact file path (mutually exclusive with -d)",
+    )(func)
+
+
+def overwrite_existing_files_option(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--overwrite-existing-files`` option to a download or create subcommand."""
+    return click.option(
+        "--overwrite-existing-files/--no-overwrite-existing-files",
+        default=False,
+        show_default=True,
+        help="Overwrite the destination file if it already exists",
+    )(func)
+
+
 def format_option(help_text: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
     """Return the ``-F``/``--format`` option decorator with the given help text.
 
@@ -1390,12 +1449,7 @@ def configuration(ctx: click.Context) -> None:
     default=None,
     help="Exact path of the configuration file to create",
 )
-@click.option(
-    "--overwrite-existing-files/--no-overwrite-existing-files",
-    default=False,
-    show_default=True,
-    help="Overwrite the destination file if it already exists",
-)
+@overwrite_existing_files_option
 def configuration_create(
     ctx: click.Context,
     output_directory: str | None,
@@ -1588,14 +1642,7 @@ def playback(ctx: click.Context) -> None:
 
 @playback.command("status")
 @click.pass_context
-@click.option(
-    "--fields",
-    "-L",
-    type=click.Choice(["short", "all"], case_sensitive=False),
-    default="short",
-    show_default=True,
-    help="Fields to display (applies to json and pretty formats)",
-)
+@fields_option
 @format_option("Output format for the state information")
 def playback_status(
     ctx: click.Context,
@@ -1785,14 +1832,7 @@ def track(ctx: click.Context) -> None:
 
 @track.command("info")
 @click.pass_context
-@click.option(
-    "--fields",
-    "-L",
-    type=click.Choice(["short", "all"], case_sensitive=False),
-    default="short",
-    show_default=True,
-    help="Fields to display (applies to json and pretty formats)",
-)
+@fields_option
 @format_option("Output format for the track information")
 def track_info(
     ctx: click.Context,
@@ -1805,37 +1845,10 @@ def track_info(
 
 @track.command()
 @click.pass_context
-@click.option(
-    "-f",
-    "--file-name-template",
-    type=str,
-    default="{file_name_from_uri}",
-    show_default=True,
-    help="Template (Python str.format syntax) for the -d output file name. Keys: "
-    "file_name_from_uri, position, title, album, artist, trackType, duration, "
-    "bitdepth, samplerate, channels, extension. Spaces become underscores.",
-)
-@click.option(
-    "-d",
-    "--output-directory",
-    type=str,
-    default=None,
-    help="Download the track into this directory, using the file name from the template "
-    "(mutually exclusive with -o)",
-)
-@click.option(
-    "-o",
-    "--output-file",
-    type=str,
-    default=None,
-    help="Download the track to this exact file path (mutually exclusive with -d)",
-)
-@click.option(
-    "--overwrite-existing-files/--no-overwrite-existing-files",
-    default=False,
-    show_default=True,
-    help="Overwrite the destination file if it already exists",
-)
+@file_name_template_option
+@output_directory_option
+@output_file_option
+@overwrite_existing_files_option
 @create_download_manifest_option
 @add_cover_and_metadata_option
 def audio(
@@ -1947,37 +1960,10 @@ def audio(
 
 @track.command()
 @click.pass_context
-@click.option(
-    "-f",
-    "--file-name-template",
-    type=str,
-    default="{file_name_from_uri}",
-    show_default=True,
-    help="Template (Python str.format syntax) for the -d output file name. Keys: "
-    "file_name_from_uri, position, title, album, artist, trackType, duration, "
-    "bitdepth, samplerate, channels, extension. Spaces become underscores.",
-)
-@click.option(
-    "-d",
-    "--output-directory",
-    type=str,
-    default=None,
-    help="Download the album art into this directory, using the file name from the template "
-    "(mutually exclusive with -o)",
-)
-@click.option(
-    "-o",
-    "--output-file",
-    type=str,
-    default=None,
-    help="Download the album art to this exact file path (mutually exclusive with -d)",
-)
-@click.option(
-    "--overwrite-existing-files/--no-overwrite-existing-files",
-    default=False,
-    show_default=True,
-    help="Overwrite the destination file if it already exists",
-)
+@file_name_template_option
+@output_directory_option
+@output_file_option
+@overwrite_existing_files_option
 @create_download_manifest_option
 def albumart(
     ctx: click.Context,
@@ -2074,14 +2060,7 @@ def queue(ctx: click.Context) -> None:
 
 @queue.command("get")
 @click.pass_context
-@click.option(
-    "--fields",
-    "-L",
-    type=click.Choice(["short", "all"], case_sensitive=False),
-    default="short",
-    show_default=True,
-    help="Fields to display (applies to json and pretty formats)",
-)
+@fields_option
 @format_option("Output format for the queue information")
 def queue_get(
     ctx: click.Context,
@@ -2252,14 +2231,7 @@ def zones(ctx: click.Context) -> None:
 
 @zones.command("get")
 @click.pass_context
-@click.option(
-    "--fields",
-    "-L",
-    type=click.Choice(["short", "all"], case_sensitive=False),
-    default="short",
-    show_default=True,
-    help="Fields to display (applies to json, pretty, and table formats)",
-)
+@fields_option
 @format_option("Output format for the zones information")
 def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
     """Get the multiroom zones seen by the Volumio instance."""
