@@ -965,28 +965,7 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
     return state
 
 
-def print_resulting_status_option(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-r``/``--print-resulting-status`` option to a playback subcommand."""
-    return click.option(
-        "--print-resulting-status/--no-print-resulting-status",
-        "-r",
-        default=True,
-        show_default=True,
-        help="After the command, wait 1 second and print the resulting playback status",
-    )(func)
-
-
-def create_download_manifest_option(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--create-download-manifest`` option to a track download subcommand."""
-    return click.option(
-        "--create-download-manifest/--no-create-download-manifest",
-        default=True,
-        show_default=True,
-        help="Write a JSON manifest next to the downloaded file (e.g. out.flac.json)",
-    )(func)
-
-
-def add_cover_and_metadata_option(func: Callable[..., None]) -> Callable[..., None]:
+def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--add-cover-and-metadata`` option to the ``track audio`` subcommand."""
     return click.option(
         "--add-cover-and-metadata/--no-add-cover-and-metadata",
@@ -997,7 +976,17 @@ def add_cover_and_metadata_option(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
-def fields_option(func: Callable[..., None]) -> Callable[..., None]:
+def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--create-download-manifest`` option to a track download subcommand."""
+    return click.option(
+        "--create-download-manifest/--no-create-download-manifest",
+        default=True,
+        show_default=True,
+        help="Write a JSON manifest next to the downloaded file (e.g. out.flac.json)",
+    )(func)
+
+
+def option_fields(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-L``/``--fields`` option to a display subcommand."""
     return click.option(
         "--fields",
@@ -1009,7 +998,7 @@ def fields_option(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def file_name_template_option(func: Callable[..., None]) -> Callable[..., None]:
+def option_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-f``/``--file-name-template`` option to a track download subcommand."""
     return click.option(
         "-f",
@@ -1023,7 +1012,20 @@ def file_name_template_option(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def output_directory_option(func: Callable[..., None]) -> Callable[..., None]:
+def option_format(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-F``/``--format`` option to a display subcommand."""
+    return click.option(
+        "--format",
+        "-F",
+        "output_format",
+        type=click.Choice(OUTPUT_FORMATS, case_sensitive=False),
+        default="pretty",
+        show_default=True,
+        help="Output format",
+    )(func)
+
+
+def option_output_directory(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-d``/``--output-directory`` option to a track download subcommand."""
     return click.option(
         "-d",
@@ -1035,7 +1037,7 @@ def output_directory_option(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def output_file_option(func: Callable[..., None]) -> Callable[..., None]:
+def option_output_file(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-o``/``--output-file`` option to a track download subcommand."""
     return click.option(
         "-o",
@@ -1046,7 +1048,7 @@ def output_file_option(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def overwrite_existing_files_option(func: Callable[..., None]) -> Callable[..., None]:
+def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--overwrite-existing-files`` option to a download or create subcommand."""
     return click.option(
         "--overwrite-existing-files/--no-overwrite-existing-files",
@@ -1056,24 +1058,15 @@ def overwrite_existing_files_option(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
-def format_option(help_text: str) -> Callable[[Callable[..., None]], Callable[..., None]]:
-    """Return the ``-F``/``--format`` option decorator with the given help text.
-
-    Args:
-        help_text: The help text shown for the option
-
-    Returns:
-        A Click option decorator adding ``-F``/``--format``
-    """
+def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--print-resulting-status`` option to a playback subcommand."""
     return click.option(
-        "--format",
-        "-F",
-        "output_format",
-        type=click.Choice(OUTPUT_FORMATS, case_sensitive=False),
-        default="pretty",
+        "--print-resulting-status/--no-print-resulting-status",
+        "-r",
+        default=True,
         show_default=True,
-        help=help_text,
-    )
+        help="After the command, wait 1 second and print the resulting playback status",
+    )(func)
 
 
 def rest_api_sleep(ctx: click.Context) -> None:
@@ -1449,7 +1442,7 @@ def configuration(ctx: click.Context) -> None:
     default=None,
     help="Exact path of the configuration file to create",
 )
-@overwrite_existing_files_option
+@option_overwrite_existing_files
 def configuration_create(
     ctx: click.Context,
     output_directory: str | None,
@@ -1642,8 +1635,8 @@ def playback(ctx: click.Context) -> None:
 
 @playback.command("status")
 @click.pass_context
-@fields_option
-@format_option("Output format for the state information")
+@option_fields
+@option_format
 def playback_status(
     ctx: click.Context,
     fields: str,
@@ -1659,7 +1652,7 @@ def playback_status(
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     """Toggle between play and pause states of the Volumio instance."""
     execute_command(ctx, "toggle", lambda c: c.toggle())
@@ -1678,7 +1671,7 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
         "--position-starting-at-one/--position-starting-at-zero)"
     ),
 )
-@print_resulting_status_option
+@option_print_resulting_status
 def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
     """Start playback of the Volumio instance.
 
@@ -1699,7 +1692,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def pause(ctx: click.Context, print_resulting_status: bool) -> None:
     """Pause playback of the Volumio instance."""
     execute_command(ctx, "pause", lambda c: c.pause())
@@ -1708,7 +1701,7 @@ def pause(ctx: click.Context, print_resulting_status: bool) -> None:
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def stop(ctx: click.Context, print_resulting_status: bool) -> None:
     """Stop playback of the Volumio instance."""
     execute_command(ctx, "stop", lambda c: c.stop())
@@ -1717,7 +1710,7 @@ def stop(ctx: click.Context, print_resulting_status: bool) -> None:
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def next(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the next track of the Volumio instance."""
     execute_command(ctx, "next", lambda c: c.next())
@@ -1726,7 +1719,7 @@ def next(ctx: click.Context, print_resulting_status: bool) -> None:
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     """Skip to the previous track of the Volumio instance."""
     execute_command(ctx, "previous", lambda c: c.previous())
@@ -1742,7 +1735,7 @@ def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     show_default=True,
     help="Check that the seek position is within the duration of the current track",
 )
-@print_resulting_status_option
+@option_print_resulting_status
 def seek(
     ctx: click.Context,
     value: int | str | None,
@@ -1789,7 +1782,7 @@ def seek(
 @playback.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=VolumeParamType())
-@print_resulting_status_option
+@option_print_resulting_status
 def volume(ctx: click.Context, value: int | str | None, print_resulting_status: bool) -> None:
     """Set, adjust, or show the volume of the Volumio instance.
 
@@ -1807,7 +1800,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def mute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
     execute_command(ctx, "volume mute", lambda c: c.volume("mute"))
@@ -1816,7 +1809,7 @@ def mute(ctx: click.Context, print_resulting_status: bool) -> None:
 
 @playback.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
     execute_command(ctx, "volume unmute", lambda c: c.volume("unmute"))
@@ -1832,8 +1825,8 @@ def track(ctx: click.Context) -> None:
 
 @track.command("info")
 @click.pass_context
-@fields_option
-@format_option("Output format for the track information")
+@option_fields
+@option_format
 def track_info(
     ctx: click.Context,
     fields: str,
@@ -1845,12 +1838,12 @@ def track_info(
 
 @track.command()
 @click.pass_context
-@file_name_template_option
-@output_directory_option
-@output_file_option
-@overwrite_existing_files_option
-@create_download_manifest_option
-@add_cover_and_metadata_option
+@option_file_name_template
+@option_output_directory
+@option_output_file
+@option_overwrite_existing_files
+@option_create_download_manifest
+@option_add_cover_and_metadata
 def audio(
     ctx: click.Context,
     file_name_template: str,
@@ -1960,11 +1953,11 @@ def audio(
 
 @track.command()
 @click.pass_context
-@file_name_template_option
-@output_directory_option
-@output_file_option
-@overwrite_existing_files_option
-@create_download_manifest_option
+@option_file_name_template
+@option_output_directory
+@option_output_file
+@option_overwrite_existing_files
+@option_create_download_manifest
 def albumart(
     ctx: click.Context,
     file_name_template: str,
@@ -2060,8 +2053,8 @@ def queue(ctx: click.Context) -> None:
 
 @queue.command("get")
 @click.pass_context
-@fields_option
-@format_option("Output format for the queue information")
+@option_fields
+@option_format
 def queue_get(
     ctx: click.Context,
     fields: str,
@@ -2133,7 +2126,7 @@ def queue_get(
 
 @queue.command()
 @click.pass_context
-@print_resulting_status_option
+@option_print_resulting_status
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue of the Volumio instance."""
     execute_command(ctx, "clear", lambda c: c.clear())
@@ -2143,7 +2136,7 @@ def clear(ctx: click.Context, print_resulting_status: bool) -> None:
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@print_resulting_status_option
+@option_print_resulting_status
 def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
     """Set or toggle the repeat mode of the Volumio instance.
 
@@ -2158,7 +2151,7 @@ def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool)
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@print_resulting_status_option
+@option_print_resulting_status
 def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
     """Set or toggle the random (shuffle) mode of the Volumio instance.
 
@@ -2190,7 +2183,7 @@ def system_ping(ctx: click.Context) -> None:
 
 @system.command("version")
 @click.pass_context
-@format_option("Output format for the system version")
+@option_format
 def system_version(ctx: click.Context, output_format: str) -> None:
     """Get the system version of the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.get_system_version())
@@ -2199,7 +2192,7 @@ def system_version(ctx: click.Context, output_format: str) -> None:
 
 @system.command("info")
 @click.pass_context
-@format_option("Output format for the system information")
+@option_format
 def system_info(ctx: click.Context, output_format: str) -> None:
     """Get the system information of the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.get_system_info())
@@ -2215,7 +2208,7 @@ def collection(ctx: click.Context) -> None:
 
 @collection.command("statistics")
 @click.pass_context
-@format_option("Output format for the collection statistics")
+@option_format
 def collection_statistics(ctx: click.Context, output_format: str) -> None:
     """Get the statistics of the music collection of the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.collectionstats())
@@ -2231,8 +2224,8 @@ def zones(ctx: click.Context) -> None:
 
 @zones.command("get")
 @click.pass_context
-@fields_option
-@format_option("Output format for the zones information")
+@option_fields
+@option_format
 def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
     """Get the multiroom zones seen by the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.get_zones())
@@ -2261,7 +2254,7 @@ def playlist(ctx: click.Context) -> None:
 
 @playlist.command("list")
 @click.pass_context
-@format_option("Output format for the playlists")
+@option_format
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the playlists saved on the Volumio instance."""
     names = fetch_or_exit(ctx, lambda c: c.list_playlists())
@@ -2287,7 +2280,7 @@ def playlist_list(ctx: click.Context, output_format: str) -> None:
     show_default=True,
     help="Check that the playlist name exists before playing it",
 )
-@print_resulting_status_option
+@option_print_resulting_status
 def playlist_play(
     ctx: click.Context,
     name: str,
