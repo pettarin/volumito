@@ -818,14 +818,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.18" in result.output
+        assert "volumito, version 0.0.19" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.18"'
+        assert result.output.strip() == '"0.0.19"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -834,7 +834,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.18"'
+        assert result.output.strip() == '"0.0.19"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5116,10 +5116,10 @@ class TestQueueDownload:
     def test_download_config_with_albumart_disabled(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """miscellaneous.with-albumart: false disables the cover downloads."""
+        """A shared downloads.with-albumart: false disables the cover downloads."""
         out = tmp_path / "out"
         config = tmp_path / "volumito.yaml"
-        config.write_text("miscellaneous:\n  with-albumart: false\n")
+        config.write_text("downloads:\n  with-albumart: false\n")
         states = [
             {
                 "title": "Song A",
@@ -5135,6 +5135,26 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         assert not (self._run_directory(out) / "c.jpg").exists()
+
+    def test_download_config_number_retries(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """downloads.queue-download.number-retries-next-track is respected."""
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  queue-download:\n    number-retries-next-track: 0\n")
+        stale = {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0}
+        states = [dict(stale), dict(stale)]
+        uris = ["http://h/a.flac", "http://h/a.flac"]
+        client = self._mock_services(mocker, self._queue_tracks(), uris, states=states)
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
+
+        assert result.exit_code == 1
+        _, log = self._read_log(out)
+        assert "after 0 retries" in log["tracks"][1]["error"]
+        # No retry: one play per track plus the final reposition
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
 
     def test_download_albumart_custom_template(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6806,8 +6826,6 @@ class TestConfigurationCommands:
                     "check-next-track": True,
                     "check-playlist-name": True,
                     "check-seek-position": True,
-                    "number-retries-next-track": 5,
-                    "with-albumart": True,
                 },
                 "output": {
                     "fields": "SHORT",
@@ -6836,6 +6854,8 @@ class TestConfigurationCommands:
                     "queue-download": {
                         "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                         "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
+                        "number-retries-next-track": 5,
+                        "with-albumart": True,
                     },
                     "track-albumart": {
                         "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,

@@ -338,6 +338,14 @@ class TestLoadDefaultMap:
         with pytest.raises(click.BadParameter, match="unknown key 'file-name-template'"):
             load_configuration(str(config))
 
+    def test_miscellaneous_rejects_moved_download_keys(self, tmp_path):
+        """The keys moved to the downloads section are unknown under miscellaneous."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  with-albumart: true\n")
+
+        with pytest.raises(click.BadParameter, match="unknown key 'with-albumart'"):
+            load_configuration(str(config))
+
     def test_malformed_yaml_raises(self, tmp_path):
         """Invalid YAML raises BadParameter."""
         config = tmp_path / "volumito.yaml"
@@ -391,8 +399,6 @@ class TestDefaultConfigurationTemplate:
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
-                "number-retries-next-track": 5,
-                "with-albumart": True,
             },
             "output": {
                 "fields": "SHORT",
@@ -412,6 +418,8 @@ class TestDefaultConfigurationTemplate:
                 "queue-download": {
                     "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                     "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
+                    "number-retries-next-track": 5,
+                    "with-albumart": True,
                 },
                 "track-albumart": {
                     "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,

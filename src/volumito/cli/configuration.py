@@ -125,14 +125,21 @@ QUEUE_DOWNLOAD_KEYS: list[str] = [
     "albumart-file-name-template",
     "audio-file-name-template",
     "create-download-manifest",
+    "number-retries-next-track",
     "output-directory",
     "overwrite-existing-files",
     "replace-characters-in-file-names",
     "replace-characters-in-file-names-with",
+    "with-albumart",
 ]
-"""The keys accepted by the "queue-download" subsection (kept before the subsection
-maps that reference it): the audio template has its own name, and there is no
-output-file since the command has no -o option.
+"""The keys accepted by the "queue-download" subsection (kept before the shared-keys
+and subsection maps that reference it): the audio template has its own name, and
+there is no output-file since the command has no -o option.
+"""
+
+DOWNLOAD_SHARED_KEYS: list[str] = sorted({*DOWNLOAD_KEYS, *QUEUE_DOWNLOAD_KEYS})
+"""The keys accepted directly under "downloads": a shared value flows only into the
+subsections (commands) that accept the key.
 """
 
 DOWNLOAD_SUBSECTIONS: list[str] = [
@@ -184,7 +191,7 @@ applies to the playback and queue action commands.
 """
 
 HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
-    "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTION_KEYS),
+    "downloads": (DOWNLOAD_SHARED_KEYS, DOWNLOAD_SUBSECTION_KEYS),
     "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
 }
 """Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
@@ -209,12 +216,6 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     ],
     "check-seek-position": [
         ["playback", "seek"],
-    ],
-    "number-retries-next-track": [
-        ["queue", "download"],
-    ],
-    "with-albumart": [
-        ["queue", "download"],
     ],
 }
 """The "miscellaneous" section holds the keys of options living on a specific command:
@@ -360,7 +361,7 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
     )
 
     downloads = config.get("downloads", {})
-    shared_download = {k: v for k, v in downloads.items() if k in DOWNLOAD_KEYS}
+    shared_download = {k: v for k, v in downloads.items() if k in DOWNLOAD_SHARED_KEYS}
     _apply_hierarchical(
         result, shared_download, downloads, DOWNLOAD_SUBSECTION_PATHS, DOWNLOAD_SUBSECTION_KEYS
     )
@@ -439,7 +440,9 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
             if key in subvalues
         )
     downloads = config.get("downloads", {})
-    pairs.extend((f"downloads.{key}", downloads[key]) for key in DOWNLOAD_KEYS if key in downloads)
+    pairs.extend(
+        (f"downloads.{key}", downloads[key]) for key in DOWNLOAD_SHARED_KEYS if key in downloads
+    )
     for subsection in DOWNLOAD_SUBSECTIONS:
         subvalues = downloads.get(subsection, {})
         pairs.extend(

@@ -214,8 +214,8 @@ corresponding global options and cannot be overridden per command.
 
 The `miscellaneous` section holds the defaults of options belonging to specific commands: its
 `add-cover-and-metadata` key sets the default for `track audio` and `queue download`;
-`with-albumart`, `check-next-track`, and `number-retries-next-track` set the defaults for the
-corresponding `queue download` options; and `check-playlist-name` and `check-seek-position`
+`check-next-track` sets the default for the corresponding `queue download` option; and
+`check-playlist-name` and `check-seek-position`
 set the defaults for the corresponding options of `playlist play` and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
@@ -228,7 +228,8 @@ subsections hold the same keys and override the shared value for that command (s
 `file-name-template`). The `queue-download` subsection takes `audio-file-name-template` and
 `albumart-file-name-template` instead of
 `file-name-template` (matching its `--audio-file-name-template` and
-`--albumart-file-name-template` options) and has no `output-file`.
+`--albumart-file-name-template` options), also accepts `number-retries-next-track` and
+`with-albumart`, and has no `output-file`.
 
 The `configuration` command group helps manage these files:
 

@@ -39,6 +39,12 @@ downloads:
     # {tracknumber} is the track number within its album)
     audio-file-name-template: '{artist}/{album}/{tracknumber:03d}___{title}.{extension}'
 
+    # Number of retries waiting for the next track's metadata to become current
+    number-retries-next-track: 5
+
+    # Download each album's cover (once per cover)
+    with-albumart: true
+
     # Add your own overrides here
     # output-directory: .                     # use the current working directory
     # output-directory: /tmp/volumito/queue   # use a fixed directory
@@ -72,12 +78,6 @@ miscellaneous:
 
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
-
-  # Number of retries waiting for the next track's metadata to become current
-  number-retries-next-track: 5
-
-  # Download each album's cover (once per cover)
-  with-albumart: true
 
 
 output:
