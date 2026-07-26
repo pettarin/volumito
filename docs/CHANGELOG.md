@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Global option `--ignore-configuration-file`, skipping the configuration file lookup
-  and application
+  and application (`configuration search` marks the found files as ignored, and
+  `configuration check` fails)
 
 
 ## [0.0.17] - 2026-07-26

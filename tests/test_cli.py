@@ -7106,6 +7106,76 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 0
         assert json.loads(result.output) == [
-            {"path": str(found), "found": True, "used": True},
-            {"path": str(missing), "found": False, "used": False},
+            {"path": str(found), "found": True, "used": True, "ignored": False},
+            {"path": str(missing), "found": False, "used": False, "ignored": False},
         ]
+
+    def test_search_ignoring_marks_found_ignored(
+        self, runner: CliRunner, tmp_path, mocker: MockerFixture
+    ):
+        """With --ignore-configuration-file, found files are marked ignored, none used."""
+        found = tmp_path / "volumito.yaml"
+        found.write_text("")
+        missing = tmp_path / "gone.yaml"
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=[str(found), str(missing)],
+        )
+
+        result = runner.invoke(
+            main, ["--ignore-configuration-file", "configuration", "search"]
+        )
+
+        assert result.exit_code == 0
+        assert f"{found} (found, ignored)" in result.output
+        assert "(found, used)" not in result.output
+        assert "NOT used" not in result.output
+        assert f"  {missing}\n" in result.output
+
+    def test_search_ignoring_machine_readable(
+        self, runner: CliRunner, tmp_path, mocker: MockerFixture
+    ):
+        """In machine-readable mode the ignored flag is reported per found path."""
+        found = tmp_path / "volumito.yaml"
+        found.write_text("")
+        missing = tmp_path / "gone.yaml"
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=[str(found), str(missing)],
+        )
+
+        result = runner.invoke(
+            main, ["-m", "--ignore-configuration-file", "configuration", "search"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == [
+            {"path": str(found), "found": True, "used": False, "ignored": True},
+            {"path": str(missing), "found": False, "used": False, "ignored": False},
+        ]
+
+    def test_check_fails_when_ignoring(self, runner: CliRunner, tmp_path):
+        """With --ignore-configuration-file, configuration check fails."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: x.local\n")
+
+        without_path = runner.invoke(
+            main, ["--ignore-configuration-file", "configuration", "check"]
+        )
+        with_path = runner.invoke(
+            main, ["--ignore-configuration-file", "configuration", "check", str(config)]
+        )
+
+        assert without_path.exit_code == 1
+        assert "the --ignore-configuration-file option is selected" in without_path.output
+        assert with_path.exit_code == 1
+        assert "the --ignore-configuration-file option is selected" in with_path.output
+
+    def test_check_fails_when_ignoring_machine_readable(self, runner: CliRunner):
+        """In machine-readable mode the ignoring check failure is silent."""
+        result = runner.invoke(
+            main, ["-m", "--ignore-configuration-file", "configuration", "check"]
+        )
+
+        assert result.exit_code == 1
+        assert result.output.strip() == ""

@@ -333,9 +333,15 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     """Verify that a configuration file is correct and print the values read from it.
 
     If PATH is omitted, the standard locations are probed and the file that would
-    be used is checked.
+    be used is checked. With --ignore-configuration-file the command fails, since
+    no configuration file would be applied.
     """
     machine_readable = ctx.obj["machine_readable"]
+
+    if ctx.obj.get("ignore_configuration_file"):
+        if not machine_readable:
+            click.echo("Error: the --ignore-configuration-file option is selected", err=True)
+        sys.exit(1)
 
     if path is not None:
         resolved = resolve_configuration_path(path)
@@ -359,15 +365,25 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
 @configuration.command("search")
 @click.pass_context
 def configuration_search(ctx: click.Context) -> None:
-    """List every probed configuration path, marking those found and the one used."""
+    """List every probed configuration path, marking those found and the one used.
+
+    With --ignore-configuration-file, no file is used: the found files are marked
+    as ignored instead.
+    """
     machine_readable = ctx.obj["machine_readable"]
+    ignore = ctx.obj.get("ignore_configuration_file", False)
 
     rows = probe_configuration_paths()
+    if ignore:
+        rows = [(path, found, False) for path, found, _ in rows]
 
     if machine_readable:
         click.echo(
             json.dumps(
-                [{"path": path, "found": found, "used": used} for path, found, used in rows]
+                [
+                    {"path": path, "found": found, "used": used, "ignored": ignore and found}
+                    for path, found, used in rows
+                ]
             )
         )
         return
@@ -376,6 +392,8 @@ def configuration_search(ctx: click.Context) -> None:
     for path, found, used in rows:
         if not found:
             click.echo(f"  {path}")
+        elif ignore:
+            click.echo(f"  {path} (found, ignored)")
         elif used:
             click.echo(f"  {path} (found, used)")
         else:

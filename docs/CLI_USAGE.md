@@ -146,7 +146,8 @@ YAML, or an unrecognized section/key is an error.
 
 To skip configuration files entirely — no probing, no application, just the built-in defaults —
 pass the global `--ignore-configuration-file` flag (mutually exclusive with `-c`, and, by nature,
-not settable from a configuration file):
+not settable from a configuration file). While the flag is selected, `configuration search`
+marks the found files as `(found, ignored)` instead of used, and `configuration check` fails:
 
 ```bash
 volumito --ignore-configuration-file playback status
