@@ -10,21 +10,109 @@ from typing import Any
 import click
 import yaml
 
-# The "miscellaneous" section holds the keys of options living on a specific command:
-# key -> the default_map path(s) of the command(s) it targets.
-MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
-    "add-cover-and-metadata": [["track", "audio"]],
-    "check-playlist-name": [["playlist", "play"]],
-    "check-seek-position": [["playback", "seek"]],
+# --print-resulting-status lives on the playback and queue action commands.
+ACTION_COMMAND_PATHS = (
+    [
+        ["playback", name]
+        for name in (
+            "mute",
+            "next",
+            "pause",
+            "play",
+            "previous",
+            "seek",
+            "stop",
+            "toggle",
+            "unmute",
+            "volume",
+        )
+    ] +
+    [
+        ["playlist", "play"]
+    ] +
+    [
+        ["queue", name]
+        for name in (
+            "clear",
+            "randomize",
+            "repeat",
+        )
+    ]
+)
+
+# Configuration file names tried within each directory, in this order.
+CONFIGURATION_FILENAMES = [
+    "volumito.yaml",
+    ".volumito.yaml",
+]
+
+DISPLAY_KEYS = [
+    "fields",
+    "format",
+]
+
+# Commands accepting only --format, not --fields.
+FORMAT_KEYS = [
+    "format",
+]
+
+# Display subsection name -> the keys it accepts.
+DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "playback-status": DISPLAY_KEYS,
+    "track-info": DISPLAY_KEYS,
+    "queue-get": DISPLAY_KEYS,
+    "playlist-list": FORMAT_KEYS,
+    "zones-get": DISPLAY_KEYS,
+    "system-version": FORMAT_KEYS,
+    "system-info": FORMAT_KEYS,
+    "collection-statistics": FORMAT_KEYS,
 }
 
-# Recognized flat section names and their allowed (hyphenated) keys, in display order.
-# Keys mirror the CLI long options minus the leading "--".
-SECTION_KEYS: dict[str, list[str]] = {
-    "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
-    "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
-    "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
+DISPLAY_SUBSECTIONS = list(DISPLAY_SUBSECTION_KEYS)
+
+# Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
+DISPLAY_SUBSECTION_PATHS = {
+    "collection-statistics": [["collection", "statistics"]],
+    "playback-status": [["playback", "status"]],
+    "playlist-list": [["playlist", "list"]],
+    "queue-get": [["queue", "get"]],
+    "system-info": [["system", "info"], ["info"]],
+    "system-version": [["system", "version"]],
+    "track-info": [["track", "info"]],
+    "zones-get": [["zones", "get"]],
 }
+
+# The "downloads" section is hierarchical: its scalar keys are shared by both track
+# download commands, and optional "audio"/"albumart" subsections (mapping to the
+# "track audio"/"track albumart" commands) override the shared values per command.
+DOWNLOAD_KEYS = [
+    "create-download-manifest",
+    "file-name-template",
+    "output-directory",
+    "output-file",
+    "overwrite-existing-files",
+]
+
+DOWNLOAD_SUBSECTIONS = [
+    "track-audio",
+    "track-albumart",
+]
+
+DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
+    DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
+)
+
+DOWNLOAD_SUBSECTION_PATHS = {
+    "track-albumart": [["track", "albumart"]],
+    "track-audio": [["track", "audio"]],
+}
+
+# Keys of the "output" section mapping to a global (top-level group) option.
+GLOBAL_OUTPUT_KEYS = [
+    "machine-readable",
+    "position-starting-at-one",
+    "verbose",
+]
 
 # The "output" section is hierarchical: its scalar keys are shared, and optional
 # per-command subsections override the display keys (fields/format). verbose,
@@ -39,38 +127,12 @@ OUTPUT_SCALAR_KEYS = [
     "print-resulting-status",
 ]
 
-# Keys of the "output" section mapping to a global (top-level group) option.
-GLOBAL_OUTPUT_KEYS = ["machine-readable", "position-starting-at-one", "verbose"]
-DISPLAY_KEYS = ["fields", "format"]
-# Commands accepting only --format, not --fields.
-FORMAT_KEYS = ["format"]
-# Display subsection name -> the keys it accepts.
-DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
-    "playback-status": DISPLAY_KEYS,
-    "track-info": DISPLAY_KEYS,
-    "queue-get": DISPLAY_KEYS,
-    "playlist-list": FORMAT_KEYS,
-    "zones-get": DISPLAY_KEYS,
-    "system-version": FORMAT_KEYS,
-    "system-info": FORMAT_KEYS,
-    "collection-statistics": FORMAT_KEYS,
+# Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
+# Used for validation of the "output" and "downloads" sections.
+HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
+    "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTION_KEYS),
+    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
 }
-DISPLAY_SUBSECTIONS = list(DISPLAY_SUBSECTION_KEYS)
-
-# The "downloads" section is hierarchical: its scalar keys are shared by both track
-# download commands, and optional "audio"/"albumart" subsections (mapping to the
-# "track audio"/"track albumart" commands) override the shared values per command.
-DOWNLOAD_KEYS = [
-    "create-download-manifest",
-    "file-name-template",
-    "output-directory",
-    "output-file",
-    "overwrite-existing-files",
-]
-DOWNLOAD_SUBSECTIONS = ["track-audio", "track-albumart"]
-
-# Every recognized top-level section.
-RECOGNIZED_SECTIONS = [*SECTION_KEYS, "downloads", "output"]
 
 # One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
@@ -108,122 +170,103 @@ KEY_COMMENTS: dict[str, str] = {
 }
 
 # Config keys whose CLI parameter name differs from key.replace("-", "_").
-_KEY_PARAM_OVERRIDES = {"format": "output_format"}
-
-# --print-resulting-status lives on the playback and queue action commands.
-ACTION_COMMAND_PATHS = [
-    ["playback", name]
-    for name in (
-        "mute",
-        "next",
-        "pause",
-        "play",
-        "previous",
-        "seek",
-        "stop",
-        "toggle",
-        "unmute",
-        "volume",
-    )
-] + [["playlist", "play"]] + [["queue", name] for name in ("clear", "randomize", "repeat")]
-
-# Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
-DISPLAY_SUBSECTION_PATHS = {
-    "collection-statistics": [["collection", "statistics"]],
-    "playback-status": [["playback", "status"]],
-    "playlist-list": [["playlist", "list"]],
-    "queue-get": [["queue", "get"]],
-    # "info" is the top-level synonym of "system info"
-    "system-info": [["system", "info"], ["info"]],
-    "system-version": [["system", "version"]],
-    "track-info": [["track", "info"]],
-    "zones-get": [["zones", "get"]],
+KEY_PARAM_OVERRIDES = {
+    "format": "output_format",
 }
-DOWNLOAD_SUBSECTION_PATHS = {
-    "track-albumart": [["track", "albumart"]],
-    "track-audio": [["track", "audio"]],
-}
-DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
-    DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
-)
 
-# Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
-# Used for validation of the "output" and "downloads" sections.
-_HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
-    "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTION_KEYS),
-    "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
+# The "miscellaneous" section holds the keys of options living on a specific command:
+# key -> the default_map path(s) of the command(s) it targets.
+MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
+    "add-cover-and-metadata": [["track", "audio"]],
+    "check-playlist-name": [["playlist", "play"]],
+    "check-seek-position": [["playback", "seek"]],
 }
+
+# Recognized flat section names and their allowed (hyphenated) keys, in display order.
+# Keys mirror the CLI long options minus the leading "--".
+SECTION_KEYS: dict[str, list[str]] = {
+    "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
+    "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
+    "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
+}
+
+# Every recognized top-level section.
+RECOGNIZED_SECTIONS = [
+    *SECTION_KEYS,
+    "downloads",
+    "output",
+]
+
+
+def _apply_hierarchical(
+    result: dict[str, Any],
+    shared: dict[str, Any],
+    values: dict[str, Any],
+    subsection_paths: dict[str, list[list[str]]],
+    subsection_keys: dict[str, list[str]],
+) -> None:
+    """Place ``{**shared, **subsection}`` into each subsection's command path(s).
+
+    Only the keys accepted by a subsection are taken from the shared values, so a
+    shared key is not propagated to commands that do not have the matching option.
+    """
+    for subsection, paths in subsection_paths.items():
+        allowed = subsection_keys[subsection]
+        merged = {
+            **{key: value for key, value in shared.items() if key in allowed},
+            **values.get(subsection, {}),
+        }
+        for key, value in merged.items():
+            for path in paths:
+                _assign_nested(result, path, _param_name(key), value)
+
+
+def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: object) -> None:
+    """Write ``result[path...][param] = value``, creating intermediate dicts."""
+    node = result
+    for part in path[:-1]:
+        node = node.setdefault(part, {})
+    node.setdefault(path[-1], {})[param] = value
+
+
+def _key_lines(key: str, value: object, indent: int) -> list[str]:
+    """Return the comment/value/blank lines for one config key at the given indent."""
+    pad = " " * indent
+    scalar = yaml.safe_dump({key: value}, sort_keys=False, default_flow_style=False).strip()
+    return [f"{pad}# {KEY_COMMENTS[key]}", f"{pad}{scalar}", ""]
 
 
 def _param_name(key: str) -> str:
     """Return the CLI parameter name for a configuration key."""
-    return _KEY_PARAM_OVERRIDES.get(key, key.replace("-", "_"))
-
-# Configuration file names tried within each directory, in this order.
-CONFIGURATION_FILENAMES = ["volumito.yaml", ".volumito.yaml"]
+    return KEY_PARAM_OVERRIDES.get(key, key.replace("-", "_"))
 
 
-def configuration_directories() -> list[str]:
-    """Return the directories probed for a configuration file, highest priority first.
+def _render_hierarchical(
+    defaults: dict[str, Any],
+    name: str,
+    scalar_keys: list[str],
+    subsection_keys: dict[str, list[str]],
+) -> list[str]:
+    """Render a hierarchical section (shared note + shared scalars + subsections)."""
+    lines = [f"{name}:", *_shared_note_lines(list(subsection_keys)), ""]
+    for key in sorted(scalar_keys):
+        lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
+    for sub_index, subsection in enumerate(sorted(subsection_keys)):
+        if sub_index > 0:
+            lines.append("")
+        lines.append(f"  {subsection}:")
+        for key in sorted(subsection_keys[subsection]):
+            lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
+    return lines
 
-    The order is: the current working directory, the current user's home directory,
-    ``~/.volumito``, ``~/.config/volumito``, and finally ``/etc`` (lowest priority).
-    """
-    home = os.path.expanduser("~")
+
+def _shared_note_lines(subsections: list[str]) -> list[str]:
+    """Return the shared-key comment lines listing the override subsections."""
     return [
-        os.getcwd(),
-        home,
-        os.path.join(home, ".volumito"),
-        os.path.join(home, ".config", "volumito"),
-        "/etc",
+        "  # A key here applies to all relevant commands;",
+        "  # overrides can be specified under the following sections:",
+        f"  # {', '.join(sorted(subsections))}",
     ]
-
-
-def configuration_paths() -> list[str]:
-    """Return the configuration file paths, in search order.
-
-    Each directory from :func:`configuration_directories` is probed for
-    ``volumito.yaml`` and then ``.volumito.yaml`` before moving on to the next.
-    """
-    return [
-        os.path.join(directory, filename)
-        for directory in configuration_directories()
-        for filename in CONFIGURATION_FILENAMES
-    ]
-
-
-def probe_configuration_paths() -> list[tuple[str, bool, bool]]:
-    """Return every probed path with (exists, used) flags, in probing order.
-
-    ``used`` is True only for the first existing path (the one that would be loaded).
-    """
-    rows: list[tuple[str, bool, bool]] = []
-    used_assigned = False
-    for path in configuration_paths():
-        exists = os.path.isfile(path)
-        is_used = exists and not used_assigned
-        if is_used:
-            used_assigned = True
-        rows.append((path, exists, is_used))
-    return rows
-
-
-def resolve_configuration_path(explicit: str | None) -> str | None:
-    """Resolve which configuration file to read, if any.
-
-    If ``explicit`` is given, it must point to an existing file (otherwise a
-    :class:`click.BadParameter` is raised). Otherwise the search paths are
-    tried in order and the first existing one is returned, or ``None`` if
-    none exists.
-    """
-    if explicit is not None:
-        if not os.path.isfile(explicit):
-            raise click.BadParameter(f"configuration file not found: {explicit}")
-        return explicit
-    for path in configuration_paths():
-        if os.path.isfile(path):
-            return path
-    return None
 
 
 def _validate_flat_keys(
@@ -235,55 +278,6 @@ def _validate_flat_keys(
             raise click.BadParameter(
                 f"unknown key {key!r} in section {section!r} of configuration file {path}"
             )
-
-
-def load_configuration(path: str) -> dict[str, Any]:
-    """Read and validate a configuration file into a nested, by-section mapping.
-
-    The returned dict mirrors the recognized file structure, keyed by config keys
-    (hyphenated), holding only present keys, e.g.
-    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``.
-    Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
-    :class:`click.BadParameter`. An empty file yields an empty mapping.
-    """
-    try:
-        with open(path, encoding="utf-8") as config_file:
-            data = yaml.safe_load(config_file)
-    except UnicodeDecodeError as error:
-        raise click.BadParameter(
-            f"configuration file {path} is not a valid YAML file"
-        ) from error
-    except (OSError, yaml.YAMLError) as error:
-        raise click.BadParameter(f"cannot read configuration file {path}: {error}") from error
-
-    if data is None:
-        return {}
-    if not isinstance(data, dict):
-        raise click.BadParameter(
-            f"configuration file {path} must contain a mapping at the top level"
-        )
-
-    config: dict[str, Any] = {}
-    for section, values in data.items():
-        if section not in RECOGNIZED_SECTIONS:
-            raise click.BadParameter(
-                f"unknown section {section!r} in configuration file {path}"
-            )
-        if values is None:
-            continue
-        if not isinstance(values, dict):
-            raise click.BadParameter(
-                f"section {section!r} in configuration file {path} must be a mapping"
-            )
-        if section in _HIERARCHICAL_SPECS:
-            scalar_keys, subsection_keys = _HIERARCHICAL_SPECS[section]
-            config[section] = _validate_hierarchical(
-                section, values, scalar_keys, subsection_keys, path
-            )
-        else:
-            _validate_flat_keys(section, values, SECTION_KEYS[section], path)
-            config[section] = dict(values)
-    return config
 
 
 def _validate_hierarchical(
@@ -312,37 +306,6 @@ def _validate_hierarchical(
                 f"unknown key {key!r} in section {name!r} of configuration file {path}"
             )
     return result
-
-
-def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: object) -> None:
-    """Write ``result[path...][param] = value``, creating intermediate dicts."""
-    node = result
-    for part in path[:-1]:
-        node = node.setdefault(part, {})
-    node.setdefault(path[-1], {})[param] = value
-
-
-def _apply_hierarchical(
-    result: dict[str, Any],
-    shared: dict[str, Any],
-    values: dict[str, Any],
-    subsection_paths: dict[str, list[list[str]]],
-    subsection_keys: dict[str, list[str]],
-) -> None:
-    """Place ``{**shared, **subsection}`` into each subsection's command path(s).
-
-    Only the keys accepted by a subsection are taken from the shared values, so a
-    shared key is not propagated to commands that do not have the matching option.
-    """
-    for subsection, paths in subsection_paths.items():
-        allowed = subsection_keys[subsection]
-        merged = {
-            **{key: value for key, value in shared.items() if key in allowed},
-            **values.get(subsection, {}),
-        }
-        for key, value in merged.items():
-            for path in paths:
-                _assign_nested(result, path, _param_name(key), value)
 
 
 def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
@@ -385,39 +348,129 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _key_lines(key: str, value: object, indent: int) -> list[str]:
-    """Return the comment/value/blank lines for one config key at the given indent."""
-    pad = " " * indent
-    scalar = yaml.safe_dump({key: value}, sort_keys=False, default_flow_style=False).strip()
-    return [f"{pad}# {KEY_COMMENTS[key]}", f"{pad}{scalar}", ""]
+def configuration_directories() -> list[str]:
+    """Return the directories probed for a configuration file, highest priority first.
 
-
-def _shared_note_lines(subsections: list[str]) -> list[str]:
-    """Return the shared-key comment lines listing the override subsections."""
+    The order is: the current working directory, the current user's home directory,
+    ``~/.volumito``, ``~/.config/volumito``, and finally ``/etc`` (lowest priority).
+    """
+    home = os.path.expanduser("~")
     return [
-        "  # A key here applies to all relevant commands;",
-        "  # overrides can be specified under the following sections:",
-        f"  # {', '.join(sorted(subsections))}",
+        os.getcwd(),
+        home,
+        os.path.join(home, ".volumito"),
+        os.path.join(home, ".config", "volumito"),
+        "/etc",
     ]
 
 
-def _render_hierarchical(
-    defaults: dict[str, Any],
-    name: str,
-    scalar_keys: list[str],
-    subsection_keys: dict[str, list[str]],
-) -> list[str]:
-    """Render a hierarchical section (shared note + shared scalars + subsections)."""
-    lines = [f"{name}:", *_shared_note_lines(list(subsection_keys)), ""]
-    for key in sorted(scalar_keys):
-        lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
-    for sub_index, subsection in enumerate(sorted(subsection_keys)):
-        if sub_index > 0:
-            lines.append("")
-        lines.append(f"  {subsection}:")
-        for key in sorted(subsection_keys[subsection]):
-            lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
-    return lines
+def configuration_paths() -> list[str]:
+    """Return the configuration file paths, in search order.
+
+    Each directory from :func:`configuration_directories` is probed for
+    ``volumito.yaml`` and then ``.volumito.yaml`` before moving on to the next.
+    """
+    return [
+        os.path.join(directory, filename)
+        for directory in configuration_directories()
+        for filename in CONFIGURATION_FILENAMES
+    ]
+
+
+def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
+    """Flatten a validated configuration into ordered ``(dotted-path, value)`` pairs.
+
+    Used to display the values read from a configuration file. Only present keys are
+    included, in canonical section/key order.
+    """
+    pairs: list[tuple[str, Any]] = []
+    for section, keys in SECTION_KEYS.items():
+        values = config.get(section, {})
+        pairs.extend((f"{section}.{key}", values[key]) for key in keys if key in values)
+    output = config.get("output", {})
+    pairs.extend((f"output.{key}", output[key]) for key in OUTPUT_SCALAR_KEYS if key in output)
+    for subsection in DISPLAY_SUBSECTIONS:
+        subvalues = output.get(subsection, {})
+        pairs.extend(
+            (f"output.{subsection}.{key}", subvalues[key])
+            for key in DISPLAY_KEYS
+            if key in subvalues
+        )
+    downloads = config.get("downloads", {})
+    pairs.extend((f"downloads.{key}", downloads[key]) for key in DOWNLOAD_KEYS if key in downloads)
+    for subsection in DOWNLOAD_SUBSECTIONS:
+        subvalues = downloads.get(subsection, {})
+        pairs.extend(
+            (f"downloads.{subsection}.{key}", subvalues[key])
+            for key in DOWNLOAD_KEYS
+            if key in subvalues
+        )
+    return pairs
+
+
+def load_configuration(path: str) -> dict[str, Any]:
+    """Read and validate a configuration file into a nested, by-section mapping.
+
+    The returned dict mirrors the recognized file structure, keyed by config keys
+    (hyphenated), holding only present keys, e.g.
+    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``.
+    Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
+    :class:`click.BadParameter`. An empty file yields an empty mapping.
+    """
+    try:
+        with open(path, encoding="utf-8") as config_file:
+            data = yaml.safe_load(config_file)
+    except UnicodeDecodeError as error:
+        raise click.BadParameter(
+            f"configuration file {path} is not a valid YAML file"
+        ) from error
+    except (OSError, yaml.YAMLError) as error:
+        raise click.BadParameter(f"cannot read configuration file {path}: {error}") from error
+
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise click.BadParameter(
+            f"configuration file {path} must contain a mapping at the top level"
+        )
+
+    config: dict[str, Any] = {}
+    for section, values in data.items():
+        if section not in RECOGNIZED_SECTIONS:
+            raise click.BadParameter(
+                f"unknown section {section!r} in configuration file {path}"
+            )
+        if values is None:
+            continue
+        if not isinstance(values, dict):
+            raise click.BadParameter(
+                f"section {section!r} in configuration file {path} must be a mapping"
+            )
+        if section in HIERARCHICAL_SPECS:
+            scalar_keys, subsection_keys = HIERARCHICAL_SPECS[section]
+            config[section] = _validate_hierarchical(
+                section, values, scalar_keys, subsection_keys, path
+            )
+        else:
+            _validate_flat_keys(section, values, SECTION_KEYS[section], path)
+            config[section] = dict(values)
+    return config
+
+
+def probe_configuration_paths() -> list[tuple[str, bool, bool]]:
+    """Return every probed path with (exists, used) flags, in probing order.
+
+    ``used`` is True only for the first existing path (the one that would be loaded).
+    """
+    rows: list[tuple[str, bool, bool]] = []
+    used_assigned = False
+    for path in configuration_paths():
+        exists = os.path.isfile(path)
+        is_used = exists and not used_assigned
+        if is_used:
+            used_assigned = True
+        rows.append((path, exists, is_used))
+    return rows
 
 
 def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
@@ -460,32 +513,19 @@ def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
     return "\n".join(lines)
 
 
-def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
-    """Flatten a validated configuration into ordered ``(dotted-path, value)`` pairs.
+def resolve_configuration_path(explicit: str | None) -> str | None:
+    """Resolve which configuration file to read, if any.
 
-    Used to display the values read from a configuration file. Only present keys are
-    included, in canonical section/key order.
+    If ``explicit`` is given, it must point to an existing file (otherwise a
+    :class:`click.BadParameter` is raised). Otherwise the search paths are
+    tried in order and the first existing one is returned, or ``None`` if
+    none exists.
     """
-    pairs: list[tuple[str, Any]] = []
-    for section, keys in SECTION_KEYS.items():
-        values = config.get(section, {})
-        pairs.extend((f"{section}.{key}", values[key]) for key in keys if key in values)
-    output = config.get("output", {})
-    pairs.extend((f"output.{key}", output[key]) for key in OUTPUT_SCALAR_KEYS if key in output)
-    for subsection in DISPLAY_SUBSECTIONS:
-        subvalues = output.get(subsection, {})
-        pairs.extend(
-            (f"output.{subsection}.{key}", subvalues[key])
-            for key in DISPLAY_KEYS
-            if key in subvalues
-        )
-    downloads = config.get("downloads", {})
-    pairs.extend((f"downloads.{key}", downloads[key]) for key in DOWNLOAD_KEYS if key in downloads)
-    for subsection in DOWNLOAD_SUBSECTIONS:
-        subvalues = downloads.get(subsection, {})
-        pairs.extend(
-            (f"downloads.{subsection}.{key}", subvalues[key])
-            for key in DOWNLOAD_KEYS
-            if key in subvalues
-        )
-    return pairs
+    if explicit is not None:
+        if not os.path.isfile(explicit):
+            raise click.BadParameter(f"configuration file not found: {explicit}")
+        return explicit
+    for path in configuration_paths():
+        if os.path.isfile(path):
+            return path
+    return None
