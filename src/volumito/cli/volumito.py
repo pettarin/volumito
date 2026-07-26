@@ -7,7 +7,6 @@
 import json
 import os
 import sys
-from typing import Any
 
 import click
 
@@ -36,14 +35,13 @@ from volumito.cli.click_helpers import (
     option_print_resulting_status,
     render_payload,
     render_state,
-    root_option_defaults,
 )
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
+    default_configuration_template,
     flatten_configuration,
     load_configuration,
     probe_configuration_paths,
-    render_default_configuration,
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
@@ -212,37 +210,6 @@ def version(ctx: click.Context) -> None:
     click.echo(msg)
 
 
-def command_scoped_option_defaults() -> dict[str, Any]:
-    """Return the defaults of the per-command options used in the configuration file.
-
-    These options live on subcommands, not the top-level group: fields/format on
-    ``playback status``, print-resulting-status on the playback and queue action commands,
-    the download options on ``track audio``, check-playlist-name on ``playlist play``,
-    and check-seek-position on ``playback seek``. Read them from the ``playback_status``,
-    ``toggle``, ``audio``, ``playlist_play``, and ``seek`` command objects so the
-    generated configuration mirrors the real defaults without duplication.
-    """
-    wanted = {
-        "add_cover_and_metadata",
-        "check_playlist_name",
-        "check_seek_position",
-        "create_download_manifest",
-        "fields",
-        "output_format",
-        "print_resulting_status",
-        "file_name_template",
-        "output_directory",
-        "output_file",
-        "overwrite_existing_files",
-    }
-    defaults: dict[str, Any] = {}
-    for command in (playback_status, toggle, audio, playlist_play, seek):
-        for param in command.params:
-            if isinstance(param, click.Option) and param.name in wanted:
-                defaults[param.name] = param.default
-    return defaults
-
-
 @main.group()
 @click.pass_context
 def configuration(ctx: click.Context) -> None:
@@ -295,8 +262,7 @@ def configuration_create(
             )
         sys.exit(1)
 
-    defaults = {**root_option_defaults(ctx), **command_scoped_option_defaults()}
-    content = render_default_configuration(defaults, __version__)
+    content = default_configuration_template(__version__)
     try:
         parent = os.path.dirname(destination)
         if parent:

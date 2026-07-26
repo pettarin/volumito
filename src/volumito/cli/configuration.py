@@ -5,6 +5,7 @@
 """
 
 import os
+from importlib.resources import files
 from typing import Any
 
 import click
@@ -45,6 +46,9 @@ CONFIGURATION_FILENAMES: list[str] = [
     ".volumito.yaml",
 ]
 """Configuration file names tried within each directory, in this order."""
+
+DEFAULT_CONFIGURATION_TEMPLATE: str = "volumito.yaml.template"
+"""File name of the packaged default-configuration template (in the cli "res" directory)."""
 
 DISPLAY_KEYS: list[str] = [
     "fields",
@@ -163,41 +167,6 @@ HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
 Used for validation of the "output" and "downloads" sections.
 """
 
-KEY_COMMENTS: dict[str, str] = {
-    "add-cover-and-metadata": (
-        "Embed track metadata and cover art into the downloaded audio file"
-    ),
-    "check-playlist-name": "Check that the playlist name exists before playing it",
-    "check-seek-position": (
-        "Check that the seek position is within the duration of the current track"
-    ),
-    "create-download-manifest": (
-        "Write a JSON manifest next to the downloaded file (e.g. out.flac.json)"
-    ),
-    "fields": "Fields to display: ALL, SHORT, or a comma-separated field list",
-    "file-name-template": "Template (Python str.format) for the -d output file name",
-    "format": "Output format: json, pretty, raw, or table",
-    "host": "Hostname or IP address of the Volumio instance",
-    "machine-readable": "Produce machine-readable output only",
-    "mpd-port": "MPD port of the Volumio instance",
-    "mpd-timeout": "MPD connection timeout, in seconds",
-    "output-directory": "Directory to download into (mutually exclusive with output-file)",
-    "output-file": "Exact file path to download to (mutually exclusive with output-directory)",
-    "overwrite-existing-files": "Overwrite the destination file if it already exists",
-    "position-starting-at-one": (
-        "Index queue positions and track numbers starting at one (or at zero)"
-    ),
-    "print-resulting-status": (
-        "After a playback or queue command like pause or clear, print the resulting playback status"
-    ),
-    "rest-api-port": "REST API port of the Volumio instance",
-    "rest-api-sleep-before-next-call": "Seconds to sleep before the next REST API call",
-    "rest-api-timeout": "REST API request timeout, in seconds",
-    "scheme": "URL scheme used to connect: http or https",
-    "verbose": "Enable verbose output",
-}
-"""One-line description of each key, used as a comment in the generated file."""
-
 KEY_PARAM_OVERRIDES: dict[str, str] = {
     "format": "output_format",
 }
@@ -243,6 +212,12 @@ RECOGNIZED_SECTIONS: list[str] = [
 ]
 """Every recognized top-level section."""
 
+RESOURCE_DIRECTORY: str = "res"
+"""Name of the package subdirectory holding bundled resource files."""
+
+VERSION_PLACEHOLDER: str = "{VERSION}"
+"""Sentinel in the template header replaced with the running version at emit time."""
+
 
 def _apply_hierarchical(
     result: dict[str, Any],
@@ -275,44 +250,9 @@ def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: o
     node.setdefault(path[-1], {})[param] = value
 
 
-def _key_lines(key: str, value: object, indent: int) -> list[str]:
-    """Return the comment/value/blank lines for one config key at the given indent."""
-    pad = " " * indent
-    scalar = yaml.safe_dump({key: value}, sort_keys=False, default_flow_style=False).strip()
-    return [f"{pad}# {KEY_COMMENTS[key]}", f"{pad}{scalar}", ""]
-
-
 def _param_name(key: str) -> str:
     """Return the CLI parameter name for a configuration key."""
     return KEY_PARAM_OVERRIDES.get(key, key.replace("-", "_"))
-
-
-def _render_hierarchical(
-    defaults: dict[str, Any],
-    name: str,
-    scalar_keys: list[str],
-    subsection_keys: dict[str, list[str]],
-) -> list[str]:
-    """Render a hierarchical section (shared note + shared scalars + subsections)."""
-    lines = [f"{name}:", *_shared_note_lines(list(subsection_keys)), ""]
-    for key in sorted(scalar_keys):
-        lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
-    for sub_index, subsection in enumerate(sorted(subsection_keys)):
-        if sub_index > 0:
-            lines.append("")
-        lines.append(f"  {subsection}:")
-        for key in sorted(subsection_keys[subsection]):
-            lines.extend(_key_lines(key, defaults[_param_name(key)], 4))
-    return lines
-
-
-def _shared_note_lines(subsections: list[str]) -> list[str]:
-    """Return the shared-key comment lines listing the override subsections."""
-    return [
-        "  # A key here applies to all relevant commands;",
-        "  # overrides can be specified under the following sections:",
-        f"  # {', '.join(sorted(subsections))}",
-    ]
 
 
 def _validate_flat_keys(
@@ -398,16 +338,21 @@ def configuration_directories() -> list[str]:
     """Return the directories probed for a configuration file, highest priority first.
 
     The order is: the current working directory, the current user's home directory,
-    ``~/.volumito``, ``~/.config/volumito``, and finally ``/etc`` (lowest priority).
+    ``~/.volumito``, and ``~/.config/volumito``. On POSIX systems (Linux, macOS) the
+    system directories ``/etc`` and ``/etc/volumito`` are appended as the lowest-priority
+    locations; they are omitted on non-POSIX systems (e.g. Windows) where they make no sense.
     """
     home = os.path.expanduser("~")
-    return [
+    directories = [
         os.getcwd(),
         home,
         os.path.join(home, ".volumito"),
         os.path.join(home, ".config", "volumito"),
-        "/etc",
     ]
+    if os.name == "posix":
+        directories.append("/etc")
+        directories.append(os.path.join("/etc", "volumito"))
+    return directories
 
 
 def configuration_paths() -> list[str]:
@@ -421,6 +366,20 @@ def configuration_paths() -> list[str]:
         for directory in configuration_directories()
         for filename in CONFIGURATION_FILENAMES
     ]
+
+
+def default_configuration_template(version: str) -> str:
+    """Return the bundled default-configuration template with the version substituted.
+
+    The template lives beside this package under ``res/`` and is read via
+    :mod:`importlib.resources` so it works from both the source tree and an installed
+    package. The ``{VERSION}`` sentinel in its header is replaced with ``version``
+    (via a literal :meth:`str.replace`, not :meth:`str.format`, since the body contains
+    other ``{...}`` placeholders such as ``{position:03d}``).
+    """
+    template_path = files(__package__) / RESOURCE_DIRECTORY / DEFAULT_CONFIGURATION_TEMPLATE
+    text = template_path.read_text(encoding="utf-8")
+    return text.replace(VERSION_PLACEHOLDER, version)
 
 
 def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
@@ -517,46 +476,6 @@ def probe_configuration_paths() -> list[tuple[str, bool, bool]]:
             used_assigned = True
         rows.append((path, exists, is_used))
     return rows
-
-
-def render_default_configuration(defaults: dict[str, Any], version: str) -> str:
-    """Render a configuration file holding every known key and its default value.
-
-    ``defaults`` is a flat mapping keyed by CLI parameter names (with underscores),
-    as produced from the CLI option defaults; ``version`` is recorded in the header.
-    The result is a YAML document with the recognized sections and hyphenated keys,
-    sorted lexicographically at every level, annotated with a header (followed by a
-    blank line) and an explanatory comment above each key, a blank line after each key,
-    and two blank lines between sections. The hierarchical ``output`` and ``downloads``
-    sections are generated with per-command subsections.
-    """
-    header_third = (
-        f"# Generated with default values for version {version}: "
-        "edit as needed (and remove this comment)"
-    )
-    lines = [
-        "# volumito CLI configuration file",
-        "#",
-        header_third,
-        "",
-    ]
-    for index, section in enumerate(sorted(RECOGNIZED_SECTIONS)):
-        if index > 0:
-            lines.append("")
-        if section == "output":
-            non_display = [key for key in OUTPUT_SCALAR_KEYS if key not in DISPLAY_KEYS]
-            lines.extend(
-                _render_hierarchical(defaults, "output", non_display, DISPLAY_SUBSECTION_KEYS)
-            )
-        elif section == "downloads":
-            lines.extend(
-                _render_hierarchical(defaults, "downloads", [], DOWNLOAD_SUBSECTION_KEYS)
-            )
-        else:
-            lines.append(f"{section}:")
-            for key in sorted(SECTION_KEYS[section]):
-                lines.extend(_key_lines(key, defaults[_param_name(key)], 2))
-    return "\n".join(lines)
 
 
 def resolve_configuration_path(explicit: str | None) -> str | None:

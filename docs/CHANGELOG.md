@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.15] - 2026-07-26
 
+### Added
+
+- Probe `/etc` and `/etc/volumito` for a configuration file on POSIX systems
+
+### Changed
+
+- The `configuration create` command now writes a bundled, curated configuration template
+
 
 ## [0.0.14] - 2026-07-24
 

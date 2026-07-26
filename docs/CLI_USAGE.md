@@ -136,7 +136,10 @@ each directory `volumito.yaml` is tried before `.volumito.yaml`. The first file 
 2. the home directory (`~`)
 3. `~/.volumito`
 4. `~/.config/volumito`
-5. `/etc` (lowest priority)
+5. `/etc` (POSIX only)
+6. `/etc/volumito` (POSIX only, lowest priority)
+
+The `/etc` locations are probed only on POSIX systems (Linux, macOS); they are skipped on Windows.
 
 If none exists, the built-in defaults are used. A file named with `-c` that does not exist, invalid
 YAML, or an unrecognized section/key is an error.
@@ -214,7 +217,7 @@ subsections hold the same keys and override the shared value for that command (s
 The `configuration` command group helps manage these files:
 
 ```bash
-# Create a volumito.yaml with all keys set to their default values
+# Create a volumito.yaml pre-filled with the default configuration
 volumito configuration create                       # in the current directory
 volumito configuration create -d ~/.config/volumito # in a directory (created if needed)
 volumito configuration create -f ./my-config.yaml   # at an exact path

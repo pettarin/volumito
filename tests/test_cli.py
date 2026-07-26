@@ -46,20 +46,9 @@ from volumito.clients.rest import (
     VolumioConnectionError,
 )
 
-# The download keys with their default values, as generated per subsection.
-_DOWNLOAD_DEFAULTS = {
-    "create-download-manifest": True,
-    "file-name-template": "{file_name_from_uri}",
-    "output-directory": None,
-    "output-file": None,
-    "overwrite-existing-files": False,
-}
-
-# The display keys with their default values, as generated per subsection.
-_DISPLAY_DEFAULTS = {"fields": "SHORT", "format": "pretty"}
-
-# The keys generated for the subsections of the commands that accept only --format.
-_FORMAT_DEFAULTS = {"format": "pretty"}
+# The per-command file-name-template defaults emitted in the bundled template.
+_ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
+_AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
 
 
 @pytest.fixture(autouse=True)
@@ -5608,22 +5597,33 @@ class TestConfigurationCommands:
                     "check-seek-position": True,
                 },
                 "output": {
-                    "verbose": False,
+                    "fields": "SHORT",
+                    "format": "pretty",
                     "machine-readable": False,
                     "position-starting-at-one": True,
                     "print-resulting-status": True,
-                    "playback-status": _DISPLAY_DEFAULTS,
-                    "track-info": _DISPLAY_DEFAULTS,
-                    "queue-get": _DISPLAY_DEFAULTS,
-                    "playlist-list": _FORMAT_DEFAULTS,
-                    "zones-get": _DISPLAY_DEFAULTS,
-                    "system-version": _FORMAT_DEFAULTS,
-                    "system-info": _FORMAT_DEFAULTS,
-                    "collection-statistics": _FORMAT_DEFAULTS,
+                    "verbose": False,
+                    # Subsections are present but empty (null) override placeholders.
+                    "collection-statistics": None,
+                    "playback-status": None,
+                    "playlist-list": None,
+                    "queue-get": None,
+                    "system-info": None,
+                    "system-version": None,
+                    "track-info": None,
+                    "zones-get": None,
                 },
                 "downloads": {
-                    "track-audio": _DOWNLOAD_DEFAULTS,
-                    "track-albumart": _DOWNLOAD_DEFAULTS,
+                    "create-download-manifest": True,
+                    "output-directory": None,
+                    "output-file": None,
+                    "overwrite-existing-files": False,
+                    "track-albumart": {
+                        "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
+                    },
+                    "track-audio": {
+                        "file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
+                    },
                 },
             }
 

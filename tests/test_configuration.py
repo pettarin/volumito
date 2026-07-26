@@ -8,71 +8,31 @@ import os
 
 import click
 import pytest
-import yaml
 from pytest_mock import MockerFixture
 
 from volumito.cli.configuration import (
-    DOWNLOAD_KEYS,
-    KEY_COMMENTS,
-    OUTPUT_SCALAR_KEYS,
-    SECTION_KEYS,
     build_click_default_map,
     configuration_paths,
+    default_configuration_template,
     flatten_configuration,
     load_configuration,
     probe_configuration_paths,
-    render_default_configuration,
     resolve_configuration_path,
 )
 
-# The download keys with their default values, as generated per subsection.
-_DOWNLOAD_DEFAULTS = {
-    "create-download-manifest": True,
-    "file-name-template": "{file_name_from_uri}",
-    "output-directory": None,
-    "output-file": None,
-    "overwrite-existing-files": False,
-}
-
-# The display keys with their default values, as generated per subsection.
-_DISPLAY_DEFAULTS = {"fields": "SHORT", "format": "pretty"}
-
-# The keys generated for the subsections of the commands that accept only --format.
-_FORMAT_DEFAULTS = {"format": "pretty"}
-
-# Flat param-name -> default value map, as produced from the CLI option defaults.
-_DEFAULTS = {
-    "host": "volumio.local",
-    "scheme": "http",
-    "rest_api_port": 3000,
-    "mpd_port": 6600,
-    "rest_api_timeout": 5.0,
-    "mpd_timeout": 5.0,
-    "rest_api_sleep_before_next_call": 1.0,
-    "add_cover_and_metadata": True,
-    "check_playlist_name": True,
-    "check_seek_position": True,
-    "verbose": False,
-    "machine_readable": False,
-    "position_starting_at_one": True,
-    "fields": "SHORT",
-    "output_format": "pretty",
-    "print_resulting_status": True,
-    "create_download_manifest": True,
-    "file_name_template": "{file_name_from_uri}",
-    "output_directory": None,
-    "output_file": None,
-    "overwrite_existing_files": False,
-}
+# The per-command file-name-template defaults emitted in the bundled template.
+_ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
+_AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
 
 
 class TestConfigurationPaths:
     """Test cases for configuration_paths."""
 
     def test_order_and_locations(self, mocker: MockerFixture):
-        """Each directory is probed for volumito.yaml then .volumito.yaml, in order."""
+        """On POSIX each directory is probed for volumito.yaml then .volumito.yaml, in order."""
         mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/work")
         mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.name", "posix")
 
         paths = configuration_paths()
 
@@ -87,7 +47,29 @@ class TestConfigurationPaths:
             os.path.join("/home/user", ".config", "volumito", ".volumito.yaml"),
             os.path.join("/etc", "volumito.yaml"),
             os.path.join("/etc", ".volumito.yaml"),
+            os.path.join("/etc", "volumito", "volumito.yaml"),
+            os.path.join("/etc", "volumito", ".volumito.yaml"),
         ]
+
+    def test_etc_omitted_on_non_posix(self, mocker: MockerFixture):
+        """On non-POSIX systems (e.g. Windows) the /etc directories are not probed."""
+        mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/work")
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.name", "nt")
+
+        paths = configuration_paths()
+
+        assert paths == [
+            os.path.join("/work", "volumito.yaml"),
+            os.path.join("/work", ".volumito.yaml"),
+            os.path.join("/home/user", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito.yaml"),
+            os.path.join("/home/user", ".volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito", ".volumito.yaml"),
+            os.path.join("/home/user", ".config", "volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".config", "volumito", ".volumito.yaml"),
+        ]
+        assert not any("etc" in path for path in paths)
 
 
 class TestProbeConfigurationPaths:
@@ -362,85 +344,24 @@ class TestLoadDefaultMap:
             load_configuration(str(config))
 
 
-class TestRenderDefaultConfiguration:
-    """Test cases for render_default_configuration."""
+class TestDefaultConfigurationTemplate:
+    """Test cases for default_configuration_template."""
 
-    def test_header_present(self):
-        """The header has the title, an empty comment line, then the versioned comment."""
-        result = render_default_configuration(_DEFAULTS, "1.2.3")
+    def test_header_version_substituted(self):
+        """The {VERSION} sentinel in the header is replaced with the given version."""
+        result = default_configuration_template("1.2.3")
 
         assert result.startswith("# volumito CLI configuration file\n#\n")
         assert (
             "# Generated with default values for version 1.2.3: "
             "edit as needed (and remove this comment)"
         ) in result
-        # A blank line separates the header from the first (lexicographically) section.
-        assert "(and remove this comment)\n\ndownloads:\n" in result
-
-    def test_key_comments_present(self):
-        """Each key is preceded by its explanatory comment, with units where relevant."""
-        result = render_default_configuration(_DEFAULTS, "1.2.3")
-
-        assert "# Hostname or IP address of the Volumio instance" in result
-        assert "# REST API request timeout, in seconds" in result
-        assert "in seconds" in result
-        assert "# Fields to display: ALL, SHORT, or a comma-separated field list" in result
-        assert "# Output format: json, pretty, raw, or table" in result
-
-    def test_comments_cover_all_keys(self):
-        """KEY_COMMENTS covers exactly the flat, output, and download keys, all non-empty."""
-        all_keys = (
-            {key for keys in SECTION_KEYS.values() for key in keys}
-            | set(OUTPUT_SCALAR_KEYS)
-            | set(DOWNLOAD_KEYS)
-        )
-
-        assert set(KEY_COMMENTS) == all_keys
-        assert all(comment.strip() for comment in KEY_COMMENTS.values())
-
-    def test_downloads_subsections_rendered(self):
-        """The downloads section is generated with sorted audio/albumart subsections."""
-        result = render_default_configuration(_DEFAULTS, "1.2.3")
-        document = yaml.safe_load(result)
-
-        assert document["downloads"]["track-audio"] == _DOWNLOAD_DEFAULTS
-        assert document["downloads"]["track-albumart"] == _DOWNLOAD_DEFAULTS
-        # downloads sorts first; track-albumart before track-audio within it.
-        assert "(and remove this comment)\n\ndownloads:\n" in result
-        assert result.index("  track-albumart:") < result.index("  track-audio:")
-
-    def test_output_subsections_rendered(self):
-        """The output section is generated with shared scalars and display subsections."""
-        result = render_default_configuration(_DEFAULTS, "1.2.3")
-        document = yaml.safe_load(result)
-
-        assert document["output"]["playback-status"] == _DISPLAY_DEFAULTS
-        assert document["output"]["track-info"] == _DISPLAY_DEFAULTS
-        assert document["output"]["queue-get"] == _DISPLAY_DEFAULTS
-        # Shared scalars stay at the top level; fields/format only in subsections.
-        assert document["output"]["verbose"] is False
-        assert "fields" not in document["output"]
-
-    def test_blank_line_after_each_key(self):
-        """A single blank line follows every key within a section."""
-        result = render_default_configuration(_DEFAULTS, "1.2.3")
-
-        # Pairs valid under lexicographic ordering.
-        assert "  host: volumio.local\n\n  # MPD port of the Volumio instance" in result
-        # Within a subsection, keys are indented four spaces.
-        assert "    fields: SHORT\n\n    # Output format" in result
-
-    def test_two_blank_lines_between_sections(self):
-        """Two blank lines separate each section from the next."""
-        result = render_default_configuration(_DEFAULTS, "1.2.3")
-
-        assert "\n\n\ntimeouts:\n" in result
-        assert "\n\n\nvolumio:\n" in result
+        assert "{VERSION}" not in result
 
     def test_round_trips_through_load(self, tmp_path):
-        """A rendered file loaded back yields the nested config of the input defaults."""
+        """The emitted template loads back to the curated default values."""
         config = tmp_path / "volumito.yaml"
-        config.write_text(render_default_configuration(_DEFAULTS, "1.2.3"))
+        config.write_text(default_configuration_template("1.2.3"))
 
         assert load_configuration(str(config)) == {
             "volumio": {
@@ -460,63 +381,24 @@ class TestRenderDefaultConfiguration:
                 "check-seek-position": True,
             },
             "output": {
-                "verbose": False,
+                "fields": "SHORT",
+                "format": "pretty",
                 "machine-readable": False,
                 "position-starting-at-one": True,
                 "print-resulting-status": True,
-                "playback-status": _DISPLAY_DEFAULTS,
-                "track-info": _DISPLAY_DEFAULTS,
-                "queue-get": _DISPLAY_DEFAULTS,
-                "playlist-list": _FORMAT_DEFAULTS,
-                "zones-get": _DISPLAY_DEFAULTS,
-                "system-version": _FORMAT_DEFAULTS,
-                "system-info": _FORMAT_DEFAULTS,
-                "collection-statistics": _FORMAT_DEFAULTS,
-            },
-            "downloads": {
-                "track-audio": _DOWNLOAD_DEFAULTS,
-                "track-albumart": _DOWNLOAD_DEFAULTS,
-            },
-        }
-
-    def test_all_sections_and_keys_present(self):
-        """Every recognized section and key appears in the rendered document."""
-        document = yaml.safe_load(render_default_configuration(_DEFAULTS, "1.2.3"))
-
-        assert document == {
-            "volumio": {
-                "host": "volumio.local",
-                "scheme": "http",
-                "rest-api-port": 3000,
-                "mpd-port": 6600,
-            },
-            "timeouts": {
-                "rest-api-timeout": 5.0,
-                "mpd-timeout": 5.0,
-                "rest-api-sleep-before-next-call": 1.0,
-            },
-            "miscellaneous": {
-                "add-cover-and-metadata": True,
-                "check-playlist-name": True,
-                "check-seek-position": True,
-            },
-            "output": {
                 "verbose": False,
-                "machine-readable": False,
-                "position-starting-at-one": True,
-                "print-resulting-status": True,
-                "playback-status": _DISPLAY_DEFAULTS,
-                "track-info": _DISPLAY_DEFAULTS,
-                "queue-get": _DISPLAY_DEFAULTS,
-                "playlist-list": _FORMAT_DEFAULTS,
-                "zones-get": _DISPLAY_DEFAULTS,
-                "system-version": _FORMAT_DEFAULTS,
-                "system-info": _FORMAT_DEFAULTS,
-                "collection-statistics": _FORMAT_DEFAULTS,
             },
             "downloads": {
-                "track-audio": _DOWNLOAD_DEFAULTS,
-                "track-albumart": _DOWNLOAD_DEFAULTS,
+                "create-download-manifest": True,
+                "output-directory": None,
+                "output-file": None,
+                "overwrite-existing-files": False,
+                "track-albumart": {
+                    "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
+                },
+                "track-audio": {
+                    "file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
+                },
             },
         }
 

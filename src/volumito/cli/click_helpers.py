@@ -802,17 +802,3 @@ def rest_api_sleep(ctx: click.Context) -> None:
         ctx: Click context object holding the shared options
     """
     time.sleep(ctx.obj["rest_api_sleep_before_next_call"])
-
-
-def root_option_defaults(ctx: click.Context) -> dict[str, Any]:
-    """Return the hardcoded default of each option declared on the top-level group.
-
-    Keyed by CLI parameter name (with underscores). Used to render a configuration
-    file that mirrors the built-in defaults, avoiding any duplication of values.
-    """
-    root_command = ctx.find_root().command
-    return {
-        param.name: param.default
-        for param in root_command.params
-        if isinstance(param, click.Option) and param.name is not None
-    }
