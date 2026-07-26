@@ -5,7 +5,8 @@
 downloads:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
-  # track-albumart, track-audio
+  # - track-albumart
+  # - track-audio
 
   # Write a JSON manifest next to the downloaded file (e.g. out.flac.json)
   create-download-manifest: true
@@ -53,18 +54,34 @@ miscellaneous:
 output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
-  # collection-statistics, playback-status, playlist-list, queue-get, system-info, system-version, track-info, zones-get
+  # - collection-statistics
+  # - playback-status
+  # - playlist-list
+  # - queue-get
+  # - system-info
+  # - system-version
+  # - track-info
+  # - zones-get
 
-  # Fields to display: ALL, SHORT, or a comma-separated field list
+  # Fields to display.
+  # Specify one of: ALL, SHORT, or a comma-separated list of fields (e.g., "album,artist")
+  # - ALL: all fields returned by the host
+  # - SHORT: a subset of most-useful fields, hardcoded in volumito
+  # - comma-separated list of fields: only the specified fields
   fields: SHORT
 
-  # Output format: json, pretty, raw, or table
+  # Output format for all commands.
+  # Available values are:
+  # - json: JSON
+  # - pretty: prettified JSON
+  # - raw: as returned by the host
+  # - table: tabular
   format: pretty
 
   # Produce machine-readable output only
   machine-readable: false
 
-  # Index queue positions and track numbers starting at one (or at zero)
+  # Index queue positions and track numbers starting at one (true) or zero (false)
   position-starting-at-one: true
 
   # After a playback or queue command like pause or clear, print the resulting playback status
@@ -110,14 +127,15 @@ timeouts:
 
 
 volumio:
-  # Hostname or IP address of the Volumio instance
+  # Hostname or IP address of the Volumio host
   host: volumio.local
 
-  # MPD port of the Volumio instance
+  # MPD port of the Volumio host
+  # (defaults: 6600 for Volumio 4, 6599 for Volumio 3)
   mpd-port: 6600
 
-  # REST API port of the Volumio instance
+  # REST API port of the Volumio host
   rest-api-port: 3000
 
-  # URL scheme used to connect: http or https
+  # URL scheme used to connect, one of http or https
   scheme: http

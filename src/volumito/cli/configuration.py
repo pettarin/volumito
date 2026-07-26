@@ -11,6 +11,8 @@ from typing import Any
 import click
 import yaml
 
+from volumito.cli.constants import MPD_PORT_VOLUMIO_4
+
 ACTION_COMMAND_PATHS: list[list[str]] = (
     [
         ["playback", name]
@@ -368,18 +370,21 @@ def configuration_paths() -> list[str]:
     ]
 
 
-def default_configuration_template(version: str) -> str:
-    """Return the bundled default-configuration template with the version substituted.
+def default_configuration_template(version: str, mpd_port: int = MPD_PORT_VOLUMIO_4) -> str:
+    """Return the bundled default-configuration template, ready to write out.
 
     The template lives beside this package under ``res/`` and is read via
     :mod:`importlib.resources` so it works from both the source tree and an installed
-    package. The ``{VERSION}`` sentinel in its header is replaced with ``version``
-    (via a literal :meth:`str.replace`, not :meth:`str.format`, since the body contains
-    other ``{...}`` placeholders such as ``{position:03d}``).
+    package. The ``{VERSION}`` sentinel in its header is replaced with ``version``, and
+    the template's default MPD port (Volumio 4) is replaced with ``mpd_port``. Both use a
+    literal :meth:`str.replace`, not :meth:`str.format`, since the body contains other
+    ``{...}`` placeholders such as ``{position:03d}``.
     """
     template_path = files(__package__) / RESOURCE_DIRECTORY / DEFAULT_CONFIGURATION_TEMPLATE
     text = template_path.read_text(encoding="utf-8")
-    return text.replace(VERSION_PLACEHOLDER, version)
+    text = text.replace(VERSION_PLACEHOLDER, version)
+    text = text.replace(f"mpd-port: {MPD_PORT_VOLUMIO_4}", f"mpd-port: {mpd_port}")
+    return text
 
 
 def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:

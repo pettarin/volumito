@@ -23,6 +23,8 @@ from volumito.cli.click_helpers import (
     render_output_filename,
 )
 from volumito.cli.constants import (
+    MPD_PORT_VOLUMIO_3,
+    MPD_PORT_VOLUMIO_4,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
@@ -5644,6 +5646,63 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 0
         assert target.exists()
+
+    def test_create_volumio_version_3_sets_mpd_port(self, runner: CliRunner, tmp_path):
+        """`--volumio-version 3` writes the Volumio 3 MPD port (6599)."""
+        target = tmp_path / "volumito.yaml"
+
+        result = runner.invoke(
+            main, ["configuration", "create", "-f", str(target), "--volumio-version", "3"]
+        )
+
+        assert result.exit_code == 0
+        with open(target, encoding="utf-8") as config_file:
+            document = yaml.safe_load(config_file)
+        assert document["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
+
+    def test_create_volumio_version_short_flag(self, runner: CliRunner, tmp_path):
+        """`-V` is the shorthand for --volumio-version."""
+        target = tmp_path / "volumito.yaml"
+
+        result = runner.invoke(
+            main, ["configuration", "create", "-f", str(target), "-V", "3"]
+        )
+
+        assert result.exit_code == 0
+        with open(target, encoding="utf-8") as config_file:
+            document = yaml.safe_load(config_file)
+        assert document["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
+
+    def test_create_volumio_version_dotted(self, runner: CliRunner, tmp_path):
+        """A dotted version uses its major: 3.123 -> 6599, 4.119 -> 6600."""
+        v3 = tmp_path / "v3.yaml"
+        v4 = tmp_path / "v4.yaml"
+
+        result3 = runner.invoke(
+            main, ["configuration", "create", "-f", str(v3), "--volumio-version", "3.123"]
+        )
+        result4 = runner.invoke(
+            main, ["configuration", "create", "-f", str(v4), "--volumio-version", "4.119"]
+        )
+
+        assert result3.exit_code == 0
+        assert result4.exit_code == 0
+        with open(v3, encoding="utf-8") as config_file:
+            assert yaml.safe_load(config_file)["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
+        with open(v4, encoding="utf-8") as config_file:
+            assert yaml.safe_load(config_file)["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_4
+
+    def test_create_volumio_version_invalid(self, runner: CliRunner, tmp_path):
+        """A non-numeric version is a usage error and writes no file."""
+        target = tmp_path / "volumito.yaml"
+
+        result = runner.invoke(
+            main, ["configuration", "create", "-f", str(target), "--volumio-version", "nope"]
+        )
+
+        assert result.exit_code == 2
+        assert "must be a Volumio version" in result.output
+        assert not target.exists()
 
     def test_create_machine_readable_prints_path(self, runner: CliRunner, tmp_path):
         """In machine-readable mode create prints the quoted destination path."""

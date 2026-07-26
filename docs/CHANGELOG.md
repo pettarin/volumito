@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Option `--volumio-version` for `configuration create`, setting the MPD port from the target
+  Volumio version
 - Probe `/etc` and `/etc/volumito` for a configuration file on POSIX systems
 
 ### Changed

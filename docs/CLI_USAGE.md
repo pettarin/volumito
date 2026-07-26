@@ -221,6 +221,8 @@ The `configuration` command group helps manage these files:
 volumito configuration create                       # in the current directory
 volumito configuration create -d ~/.config/volumito # in a directory (created if needed)
 volumito configuration create -f ./my-config.yaml   # at an exact path
+# Target a Volumio version to set the MPD port (6599 for < 4, otherwise 6600; default 4)
+volumito configuration create --volumio-version 3   # Volumio 3 -> mpd-port 6599
 # By default an existing file is not overwritten; pass --overwrite-existing-files to force it.
 
 # Validate a configuration file and print the values read from it

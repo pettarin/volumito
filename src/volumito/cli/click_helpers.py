@@ -209,6 +209,32 @@ class VolumeParamType(click.ParamType):
         return level
 
 
+class VolumioVersionParamType(click.ParamType):
+    """Click parameter type for a Volumio version string.
+
+    Accepts a dotted-numeric version like "4", "3", "4.119", or "3.123" and returns
+    its integer major version. Non-numeric input is a usage error.
+    """
+
+    name = "volumio_version"
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> int:
+        text = str(value)
+        parts = text.split(".")
+        if not all(part.isdigit() for part in parts):
+            self.fail(
+                f"{text!r} must be a Volumio version like 4, 3, 4.119, or 3.123",
+                param,
+                ctx,
+            )
+        return int(parts[0])
+
+
 def configuration_file_callback(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:

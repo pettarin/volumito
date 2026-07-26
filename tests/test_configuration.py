@@ -19,6 +19,7 @@ from volumito.cli.configuration import (
     probe_configuration_paths,
     resolve_configuration_path,
 )
+from volumito.cli.constants import MPD_PORT_VOLUMIO_3
 
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
@@ -401,6 +402,13 @@ class TestDefaultConfigurationTemplate:
                 },
             },
         }
+
+    def test_mpd_port_substituted(self, tmp_path):
+        """A non-default MPD port replaces the template's Volumio 4 port."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(default_configuration_template("1.2.3", MPD_PORT_VOLUMIO_3))
+
+        assert load_configuration(str(config))["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
 
 
 class TestFlattenConfiguration:

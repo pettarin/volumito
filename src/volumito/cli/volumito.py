@@ -16,6 +16,7 @@ from volumito.cli.click_helpers import (
     SchemeParamType,
     SeekParamType,
     VolumeParamType,
+    VolumioVersionParamType,
     configuration_file_callback,
     create_client,
     download_uri_to,
@@ -45,6 +46,9 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
+    DEFAULT_VOLUMIO_VERSION,
+    MPD_PORT_VOLUMIO_3,
+    MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
@@ -233,11 +237,23 @@ def configuration(ctx: click.Context) -> None:
     default=None,
     help="Exact path of the configuration file to create",
 )
+@click.option(
+    "--volumio-version",
+    "-V",
+    type=VolumioVersionParamType(),
+    default=DEFAULT_VOLUMIO_VERSION,
+    show_default=True,
+    help=(
+        "Target Volumio version (e.g. 4, 4.119, 3, 3.123); selects the MPD port "
+        "(6599 for versions below 4, otherwise 6600)"
+    ),
+)
 @option_overwrite_existing_files
 def configuration_create(
     ctx: click.Context,
     output_directory: str | None,
     output_file: str | None,
+    volumio_version: int,
     overwrite_existing_files: bool,
 ) -> None:
     """Create a configuration file with all known keys set to their default values."""
@@ -262,7 +278,8 @@ def configuration_create(
             )
         sys.exit(1)
 
-    content = default_configuration_template(__version__)
+    mpd_port = MPD_PORT_VOLUMIO_3 if volumio_version < 4 else MPD_PORT_VOLUMIO_4
+    content = default_configuration_template(__version__, mpd_port)
     try:
         parent = os.path.dirname(destination)
         if parent:
