@@ -29,6 +29,7 @@ from volumito.cli.click_helpers import (
     execute_conditionally,
     fetch_or_exit,
     fetch_state_or_exit,
+    ignore_configuration_file_callback,
     option_add_cover_and_metadata,
     option_albumart_file_name_template,
     option_audio_file_name_template,
@@ -113,6 +114,15 @@ from volumito.clients import (
     default="volumio.local",
     show_default=True,
     help="Hostname or IP address of the Volumio instance",
+)
+@click.option(
+    "--ignore-configuration-file",
+    is_flag=True,
+    default=False,
+    is_eager=True,
+    expose_value=False,
+    callback=ignore_configuration_file_callback,
+    help="Ignore any configuration file (skip the lookup and apply the built-in defaults)",
 )
 @click.option(
     "--machine-readable",
@@ -214,6 +224,8 @@ def main(
     configuration_file = ctx.obj.get("configuration_file")
     if verbose and not machine_readable and configuration_file is not None:
         click.echo(f"Using configuration file: {configuration_file}", err=True)
+    elif verbose and not machine_readable and ctx.obj.get("ignore_configuration_file"):
+        click.echo("Ignoring configuration files", err=True)
 
 
 @main.command()

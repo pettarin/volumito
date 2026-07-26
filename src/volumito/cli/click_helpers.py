@@ -27,6 +27,7 @@ from volumito.cli.constants import (
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
     FILE_WRITE_CHUNK_SIZE,
+    MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
 )
@@ -248,12 +249,21 @@ def configuration_file_callback(
 
     Runs eagerly, before the other options resolve, so the loaded values populate
     ``ctx.default_map`` and are only used where the user did not pass an explicit flag.
+    With ``--ignore-configuration-file`` the lookup is skipped entirely (an explicit
+    ``-c`` combined with it is a usage error; both eager callbacks perform the check,
+    since Click processes eager parameters in command-line order).
     """
+    ctx.ensure_object(dict)
+    ctx.obj["configuration_file_option"] = value
+    if ctx.obj.get("ignore_configuration_file"):
+        if value is not None:
+            raise click.UsageError(MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR)
+        ctx.obj["configuration_file"] = None
+        return value
     path = resolve_configuration_path(value)
     if path is not None:
         config = load_configuration(path)
         ctx.default_map = {**(ctx.default_map or {}), **build_click_default_map(config)}
-    ctx.ensure_object(dict)
     ctx.obj["configuration_file"] = path
     return value
 
@@ -732,6 +742,23 @@ def fetch_uri_to_file(uri: str, destination: str, timeout: float) -> None:
     with open(destination, "wb") as f:
         for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
             f.write(chunk)
+
+
+def ignore_configuration_file_callback(
+    ctx: click.Context, param: click.Parameter, value: bool
+) -> bool:
+    """Record the ``--ignore-configuration-file`` flag for the configuration lookup.
+
+    Runs eagerly. When the flag is set and an explicit ``-c`` was already processed
+    (Click processes eager parameters in command-line order, so either callback may
+    run first), the combination is a usage error; otherwise the stored flag makes
+    ``configuration_file_callback`` skip the lookup entirely.
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["ignore_configuration_file"] = value
+    if value and ctx.obj.get("configuration_file_option") is not None:
+        raise click.UsageError(MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR)
+    return value
 
 
 def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., None]:

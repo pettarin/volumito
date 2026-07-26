@@ -144,6 +144,14 @@ The `/etc` locations are probed only on POSIX systems (Linux, macOS); they are s
 If none exists, the built-in defaults are used. A file named with `-c` that does not exist, invalid
 YAML, or an unrecognized section/key is an error.
 
+To skip configuration files entirely — no probing, no application, just the built-in defaults —
+pass the global `--ignore-configuration-file` flag (mutually exclusive with `-c`, and, by nature,
+not settable from a configuration file):
+
+```bash
+volumito --ignore-configuration-file playback status
+```
+
 All sections and keys are optional. Keys mirror the CLI long options (without the leading `--`):
 
 ```yaml

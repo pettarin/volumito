@@ -25,6 +25,11 @@ MPD_PORT_VOLUMIO_3 = 6599
 MPD_PORT_VOLUMIO_4 = 6600
 """MPD port used by Volumio 4 (major version 4 and above)."""
 
+MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR = (
+    "Options -c/--configuration-file and --ignore-configuration-file are mutually exclusive."
+)
+"""Error message when the configuration-file selection options are combined."""
+
 MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
     "Options -d/--output-directory and -f/--output-file are mutually exclusive."
 )

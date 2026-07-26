@@ -818,14 +818,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.17" in result.output
+        assert "volumito, version 0.0.18" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.17"'
+        assert result.output.strip() == '"0.0.18"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -834,7 +834,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.17"'
+        assert result.output.strip() == '"0.0.18"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -6339,6 +6339,45 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         assert "http://probed.local:3000" in result.output
         assert f"Using configuration file: {config}" in result.output
+
+    def test_ignore_configuration_file_skips_probing(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--ignore-configuration-file skips the lookup even when a config would be found."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  host: probed.local\n")
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=[config],
+        )
+
+        result = runner.invoke(
+            main, ["-v", "--ignore-configuration-file", "playback", "status"]
+        )
+
+        assert result.exit_code == 0
+        # The probed config is not applied: the built-in default host is used
+        assert "http://volumio.local:3000" in result.output
+        assert "Ignoring configuration files" in result.output
+        assert "Using configuration file" not in result.output
+
+    def test_ignore_configuration_file_with_explicit_c_rejected(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--ignore-configuration-file and -c are mutually exclusive, in either order."""
+        config = self._write_config(tmp_path, "volumio:\n  host: explicit.local\n")
+
+        first = runner.invoke(
+            main, ["-c", config, "--ignore-configuration-file", "version"]
+        )
+        second = runner.invoke(
+            main, ["--ignore-configuration-file", "-c", config, "version"]
+        )
+
+        assert first.exit_code == 2
+        assert "mutually exclusive" in first.output
+        assert second.exit_code == 2
+        assert "mutually exclusive" in second.output
 
     def test_output_section_enables_verbose(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
