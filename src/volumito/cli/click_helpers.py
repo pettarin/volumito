@@ -14,6 +14,7 @@ from typing import Any, get_args
 
 import click
 import requests
+from packaging.version import InvalidVersion, Version
 
 from volumito import __version__
 from volumito.cli.configuration import (
@@ -212,8 +213,9 @@ class VolumeParamType(click.ParamType):
 class VolumioVersionParamType(click.ParamType):
     """Click parameter type for a Volumio version string.
 
-    Accepts a dotted-numeric version like "4", "3", "4.119", or "3.123" and returns
-    its integer major version. Non-numeric input is a usage error.
+    Parses the version with :class:`packaging.version.Version` and returns its integer
+    major version (e.g. "4" -> 4, "3.123" -> 3). Anything that is not a valid version
+    is a usage error.
     """
 
     name = "volumio_version"
@@ -225,14 +227,14 @@ class VolumioVersionParamType(click.ParamType):
         ctx: click.Context | None,
     ) -> int:
         text = str(value)
-        parts = text.split(".")
-        if not all(part.isdigit() for part in parts):
+        try:
+            return Version(text).major
+        except InvalidVersion:
             self.fail(
-                f"{text!r} must be a Volumio version like 4, 3, 4.119, or 3.123",
+                f"{text!r} is not a valid Volumio version (e.g. 4, 3, 4.119, 3.123)",
                 param,
                 ctx,
             )
-        return int(parts[0])
 
 
 def configuration_file_callback(

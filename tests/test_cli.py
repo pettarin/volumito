@@ -5693,7 +5693,7 @@ class TestConfigurationCommands:
             assert yaml.safe_load(config_file)["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_4
 
     def test_create_volumio_version_invalid(self, runner: CliRunner, tmp_path):
-        """A non-numeric version is a usage error and writes no file."""
+        """A non-version string is a usage error and writes no file."""
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
@@ -5701,8 +5701,21 @@ class TestConfigurationCommands:
         )
 
         assert result.exit_code == 2
-        assert "must be a Volumio version" in result.output
+        assert "is not a valid Volumio version" in result.output
         assert not target.exists()
+
+    def test_create_volumio_version_multi_part(self, runner: CliRunner, tmp_path):
+        """A three-component version is parsed by its major (3.1.2 -> 6599)."""
+        target = tmp_path / "volumito.yaml"
+
+        result = runner.invoke(
+            main, ["configuration", "create", "-f", str(target), "--volumio-version", "3.1.2"]
+        )
+
+        assert result.exit_code == 0
+        with open(target, encoding="utf-8") as config_file:
+            document = yaml.safe_load(config_file)
+        assert document["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
 
     def test_create_machine_readable_prints_path(self, runner: CliRunner, tmp_path):
         """In machine-readable mode create prints the quoted destination path."""
