@@ -124,8 +124,9 @@ download commands, and optional "audio"/"albumart" subsections (mapping to the
 DOWNLOAD_SUBSECTIONS: list[str] = [
     "track-audio",
     "track-albumart",
+    "queue-download",
 ]
-"""The download subsection names (the two track download commands)."""
+"""The download subsection names (the download commands)."""
 
 DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
     DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
@@ -133,6 +134,9 @@ DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
 """Each download subsection mapped to the shared download keys it accepts."""
 
 DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "queue-download": [
+        ["queue", "download"],
+    ],
     "track-albumart": [
         ["track", "albumart"],
     ],
@@ -178,6 +182,7 @@ KEY_PARAM_OVERRIDES: dict[str, str] = {
 
 MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "add-cover-and-metadata": [
+        ["queue", "download"],
         ["track", "audio"],
     ],
     "check-playlist-name": [

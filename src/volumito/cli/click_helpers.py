@@ -273,6 +273,55 @@ def create_client(
     return VolumioRESTAPIClient(host_configuration, timeout)
 
 
+def download_queue_track(
+    uri: str,
+    destination: str,
+    overwrite: bool,
+    timeout: float,
+    create_manifest: bool,
+    state: dict[str, Any],
+    host_configuration: VolumioHostConfiguration,
+    add_cover_and_metadata: bool,
+) -> tuple[str, str | None]:
+    """Download one queue track to ``destination``, reporting the outcome.
+
+    Unlike :func:`download_uri_to`, this never exits: the caller (the ``queue
+    download`` loop) records the outcome and moves on to the next track. Any
+    missing parent directories of ``destination`` are created, so the file-name
+    template can lay tracks out in subdirectories.
+
+    Args:
+        uri: The URI to download
+        destination: The destination file path
+        overwrite: Whether to overwrite the destination file if it already exists
+        timeout: Request timeout in seconds
+        create_manifest: Whether to write a ``<destination>.json`` download manifest
+        state: The current player state dictionary (recorded in the manifest)
+        host_configuration: The Volumio host configuration (recorded in the manifest)
+        add_cover_and_metadata: Recorded in the manifest
+
+    Returns:
+        A ``(status, error)`` pair: ``("skipped", None)`` if the destination exists
+        and ``overwrite`` is false, ``("downloaded", None)`` on success, or
+        ``("error", message)`` on a download or write failure
+    """
+    if not overwrite and os.path.exists(destination):
+        return "skipped", None
+    try:
+        parent = os.path.dirname(destination)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        fetch_uri_to_file(uri, destination, timeout)
+        if create_manifest:
+            write_download_manifest(
+                destination, uri, state, host_configuration, "track", "audio",
+                add_cover_and_metadata,
+            )
+    except (requests.exceptions.RequestException, OSError) as e:
+        return "error", str(e)
+    return "downloaded", None
+
+
 def download_uri_to(
     uri: str,
     output_file: str | None,
@@ -360,33 +409,15 @@ def download_uri_to(
         click.echo(f"\nDownloading {label} to {destination}...", err=True)
 
     try:
-        response = requests.get(uri, timeout=timeout, stream=True)
-        response.raise_for_status()
-
-        with open(destination, "wb") as f:
-            for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
-                f.write(chunk)
+        fetch_uri_to_file(uri, destination, timeout)
 
         if not machine_readable:
             click.echo(f"\n{label.capitalize()} successfully downloaded to {destination}")
 
         if create_manifest:
-            manifest_path = f"{destination}.json"
-            manifest: dict[str, Any] = {
-                "download_date": datetime.now(UTC).isoformat(),
-                "entity": entity,
-                "kind": kind,
-                "output_file_name": os.path.basename(destination),
-                "output_file_path": destination,
-                "source_uri": uri,
-                "state": state,
-                "volumio_host": host_configuration.rest_base_url,
-                "volumito_version": __version__,
-            }
-            if add_cover_and_metadata is not None:
-                manifest["add_cover_and_metadata"] = add_cover_and_metadata
-            with open(manifest_path, "w", encoding="utf-8") as f:
-                json.dump(manifest, f, indent=2, sort_keys=True, ensure_ascii=False)
+            manifest_path = write_download_manifest(
+                destination, uri, state, host_configuration, entity, kind, add_cover_and_metadata
+            )
             if verbose and not machine_readable:
                 click.echo(f"\nManifest written to {manifest_path}...", err=True)
 
@@ -589,6 +620,26 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
     return state
 
 
+def fetch_uri_to_file(uri: str, destination: str, timeout: float) -> None:
+    """Stream ``uri`` into the ``destination`` file.
+
+    Args:
+        uri: The URI to download
+        destination: The destination file path
+        timeout: Request timeout in seconds
+
+    Raises:
+        requests.exceptions.RequestException: If the HTTP request fails
+        OSError: If the destination file cannot be written
+    """
+    response = requests.get(uri, timeout=timeout, stream=True)
+    response.raise_for_status()
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
+            f.write(chunk)
+
+
 def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--add-cover-and-metadata`` option to the ``track audio`` subcommand."""
     return click.option(
@@ -729,6 +780,7 @@ def render_output_filename(
     position_starting_at_one: bool = True,
     replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
+    allow_subdirectories: bool = False,
 ) -> str:
     """Render a safe output file name from a template, track metadata, and the URI.
 
@@ -744,7 +796,11 @@ def render_output_filename(
     untrusted: template fields must be exactly the supported keys (no attribute or
     index access), path separators in the interpolated values are replaced and
     control characters removed, leading dots are stripped from the result, and the
-    rendered name must be a plain file name without path separators.
+    rendered name must be a plain file name without path separators — unless
+    ``allow_subdirectories`` is true, in which case separators coming from the
+    template literals are kept (so the template can lay files out in
+    subdirectories) and the caller is expected to verify that the final path stays
+    inside the output directory.
 
     After rendering, every character of ``replace_characters_in_file_names`` is
     replaced with ``replace_characters_in_file_names_with`` (which must not itself
@@ -758,15 +814,16 @@ def render_output_filename(
         position_starting_at_one: Whether the ``position`` key starts at one
         replace_characters_in_file_names: Characters replaced in the rendered name
         replace_characters_in_file_names_with: Replacement for the replaced characters
+        allow_subdirectories: Whether template-literal path separators are allowed
 
     Returns:
         The rendered, sanitized file name
 
     Raises:
         click.UsageError: If the template references an unknown key, uses an invalid
-            format specification, or renders to a name containing a path separator,
-            or if the replacement string contains a path separator or control
-            character
+            format specification, or renders to a name containing a path separator
+            (unless ``allow_subdirectories`` is true), or if the replacement string
+            contains a path separator or control character
     """
     replacement = replace_characters_in_file_names_with
     if sanitize_filename_component(replacement, "") != replacement:
@@ -824,7 +881,7 @@ def render_output_filename(
         rendered = rendered.replace(character, replacement)
 
     rendered = rendered.lstrip(".")
-    if "/" in rendered or "\\" in rendered:
+    if not allow_subdirectories and ("/" in rendered or "\\" in rendered):
         raise click.UsageError(
             f"Invalid --file-name-template {template!r}: "
             f"it must render to a plain file name, got {rendered!r}"
@@ -919,3 +976,56 @@ def rest_api_sleep(ctx: click.Context) -> None:
         ctx: Click context object holding the shared options
     """
     time.sleep(ctx.obj["rest_api_sleep_before_next_call"])
+
+
+def write_download_manifest(
+    destination: str,
+    uri: str,
+    state: dict[str, Any],
+    host_configuration: VolumioHostConfiguration,
+    entity: str,
+    kind: str,
+    add_cover_and_metadata: bool | None,
+) -> str:
+    """Write the ``<destination>.json`` manifest describing a download.
+
+    Args:
+        destination: The path the URI was downloaded to
+        uri: The downloaded URI
+        state: The current player state dictionary
+        host_configuration: The Volumio host configuration
+        entity: The manifest ``entity`` value (e.g. "track")
+        kind: The manifest ``kind`` value (e.g. "audio" or "albumart")
+        add_cover_and_metadata: Recorded in the manifest when not None
+
+    Returns:
+        The path of the written manifest file
+    """
+    manifest_path = f"{destination}.json"
+    manifest: dict[str, Any] = {
+        "download_date": datetime.now(UTC).isoformat(),
+        "entity": entity,
+        "kind": kind,
+        "output_file_name": os.path.basename(destination),
+        "output_file_path": destination,
+        "source_uri": uri,
+        "state": state,
+        "volumio_host": host_configuration.rest_base_url,
+        "volumito_version": __version__,
+    }
+    if add_cover_and_metadata is not None:
+        manifest["add_cover_and_metadata"] = add_cover_and_metadata
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, sort_keys=True, ensure_ascii=False)
+    return manifest_path
+
+
+def write_queue_log(path: str, log: dict[str, Any]) -> None:
+    """Write the queue download log as sorted, indented JSON.
+
+    Args:
+        path: The path of the log file
+        log: The log dictionary to serialize
+    """
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(log, f, indent=2, sort_keys=True, ensure_ascii=False)

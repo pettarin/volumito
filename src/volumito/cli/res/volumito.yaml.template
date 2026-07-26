@@ -5,6 +5,7 @@
 downloads:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
+  # - queue-download
   # - track-albumart
   # - track-audio
 
@@ -28,6 +29,15 @@ downloads:
 
   # Replacement string for the replaced characters
   replace-characters-in-file-names-with: "_"
+
+  queue-download:
+    # Template (Python str.format) for the -d output file name
+    # (may contain / to lay the files out in subdirectories)
+    file-name-template: '{artist}/{album}/{position:03d}___{title}.{extension}'
+
+    # Add your own overrides here
+    # output-directory: .                     # use the current working directory
+    # output-directory: /tmp/volumito/queue   # use a fixed directory
 
   track-albumart:
     # Template (Python str.format) for the -d output file name

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.17] - 2026-07-26
 
+### Added
+
+- Command `queue download`, downloading every track of the current queue into a directory and
+  writing a timestamped `<timestamp>_queue.json` log with the status of each download
+- For `queue download`, the file-name template may contain path separators to lay the files
+  out in subdirectories of the output directory, created as needed
+- Subsection for the `queue download` subcommand of the `downloads` section
+  of the configuration file
+
 
 ## [0.0.16] - 2026-07-26
 

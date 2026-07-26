@@ -52,6 +52,7 @@ from volumito.clients.rest import (
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
+_QUEUE_FILE_NAME_TEMPLATE = "{artist}/{album}/{position:03d}___{title}.{extension}"
 
 
 @pytest.fixture(autouse=True)
@@ -4357,6 +4358,307 @@ class TestPlaylistCommands:
         assert "Connection error" in result.output
 
 
+class TestQueueDownload:
+    """Test cases for the queue download command."""
+
+    _BASE = ["queue", "download", "--no-create-download-manifest", "--no-add-cover-and-metadata"]
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _queue_tracks(self):
+        return [
+            {"title": "Song A", "artist": "Artist", "album": "Album"},
+            {"title": "Song B", "artist": "Artist", "album": "Album"},
+        ]
+
+    def _mock_services(self, mocker: MockerFixture, tracks, uris, states=None):
+        """Mock the REST client, the MPD client, the HTTP download, and the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.get_queue.return_value = {"queue": tracks}
+        if states is not None:
+            mock_client.get_state.side_effect = states
+        else:
+            mock_client.get_state.return_value = {"title": "Song", "artist": "Artist"}
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mpd = mocker.Mock()
+        mpd.get_track_uri.side_effect = list(uris)
+        mpd_class = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__enter__ = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mpd_class)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client
+
+    def _read_log(self, tmp_path):
+        """Return the single timestamped queue log (path, parsed content)."""
+        logs = list(tmp_path.glob("*_queue.json"))
+        assert len(logs) == 1
+        with open(logs[0], encoding="utf-8") as log_file:
+            return logs[0], json.load(log_file)
+
+    def test_download_happy_path(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """All queue tracks are downloaded, logged, and playback is repositioned."""
+        client = self._mock_services(
+            mocker,
+            self._queue_tracks(),
+            ["http://h/a.flac", "http://h/b.flac"],
+        )
+
+        result = runner.invoke(main, ["-v", *self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "Successfully retrieved queue" in result.output
+        assert (tmp_path / "a.flac").read_bytes() == b"data"
+        assert (tmp_path / "b.flac").read_bytes() == b"data"
+        log_path, log = self._read_log(tmp_path)
+        assert log["entity"] == "queue"
+        assert log["kind"] == "download"
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
+        assert [t["position"] for t in log["tracks"]] == [1, 2]
+        assert log["tracks"][0]["output_file_path"] == str(tmp_path / "a.flac")
+        assert log["tracks"][0]["source_uri"] == "http://h/a.flac"
+        # Stop at the start and at the end; play each track, then reposition to the first
+        assert client.stop.call_count == 2
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert client.pause.call_count == 2
+        assert "Downloaded 2, skipped 0, errors 0" in result.output
+        assert str(log_path) in result.output
+
+    def test_download_subdirectories(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """Template separators create subdirectories; metadata separators are sanitized."""
+        self._mock_services(
+            mocker,
+            [{"title": "Song", "artist": "AC/DC", "album": "Alb"}],
+            ["http://h/a.flac"],
+            states=[{"title": "Song", "artist": "AC/DC", "album": "Alb"}],
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._BASE, "-d", str(tmp_path), "-f", "{artist}/{album}/{title}.{extension}"],
+        )
+
+        assert result.exit_code == 0
+        assert (tmp_path / "AC_DC" / "Alb" / "Song.flac").read_bytes() == b"data"
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "downloaded"
+
+    def test_download_template_escape_rejected(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A template escaping the output directory is a usage error."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+
+        result = runner.invoke(
+            main, [*self._BASE, "-d", str(tmp_path), "-f", "x/../../{title}.{extension}"]
+        )
+
+        assert result.exit_code == 2
+        assert "escapes the output directory" in result.output
+
+    def test_download_requires_output_directory(self, runner: CliRunner):
+        """Without -d (or a configuration value) the command is a usage error."""
+        result = runner.invoke(main, ["queue", "download"])
+
+        assert result.exit_code == 2
+        assert "is required" in result.output
+
+    def test_download_skips_existing(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """An existing destination is skipped when overwrite is off."""
+        (tmp_path / "a.flac").write_bytes(b"old")
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert (tmp_path / "a.flac").read_bytes() == b"old"
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "skipped"
+        assert log["tracks"][0]["output_file_path"] == str(tmp_path / "a.flac")
+        assert "skipped 1" in result.output
+
+    def test_download_error_continues(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A failing track is logged as an error and the loop continues; exit code is 1."""
+        self._mock_services(mocker, self._queue_tracks(), ["http://h/a.flac", "http://h/b.flac"])
+        ok_response = mocker.Mock()
+        ok_response.iter_content.return_value = [b"data"]
+        mocker.patch(
+            "volumito.cli.click_helpers.requests.get",
+            side_effect=[requests.exceptions.RequestException("boom"), ok_response],
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["error", "downloaded"]
+        assert "boom" in log["tracks"][0]["error"]
+        assert (tmp_path / "b.flac").exists()
+        assert "errors 1" in result.output
+
+    def test_download_log_respects_overwrite_flag(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An existing log with the same timestamp is not clobbered without the flag."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        mock_datetime = mocker.patch("volumito.cli.volumito.datetime")
+        mock_datetime.now.return_value.strftime.return_value = "20260101000000"
+        (tmp_path / "20260101000000_queue.json").write_text("old")
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "already exists" in result.output
+        assert (tmp_path / "20260101000000_queue.json").read_text() == "old"
+
+    def test_download_machine_readable(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """In machine-readable mode only the quoted log path is printed."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+
+        result = runner.invoke(main, ["-m", *self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        log_path, log = self._read_log(tmp_path)
+        assert result.output.strip() == json.dumps(str(log_path))
+        assert log["tracks"][0]["status"] == "downloaded"
+
+    def test_download_empty_queue(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """An empty queue downloads nothing and writes no log."""
+        mock_client = mocker.Mock()
+        mock_client.get_queue.return_value = {"queue": []}
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "The queue is empty" in result.output
+        assert list(tmp_path.glob("*_queue.json")) == []
+        mock_client.stop.assert_not_called()
+
+    def test_download_manifest_and_embedding(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With the defaults on, a per-track manifest is written and tags are embedded."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
+
+        result = runner.invoke(main, ["queue", "download", "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        with open(tmp_path / "a.flac.json", encoding="utf-8") as manifest_file:
+            manifest = json.load(manifest_file)
+        assert manifest["entity"] == "track"
+        assert manifest["kind"] == "audio"
+        assert manifest["add_cover_and_metadata"] is True
+        embed.assert_called_once()
+        assert embed.call_args.args[0] == str(tmp_path / "a.flac")
+
+    def test_download_config_subsection(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """The queue-download configuration subsection supplies directory and template."""
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "downloads:\n"
+            "  queue-download:\n"
+            f"    output-directory: {out}\n"
+            '    file-name-template: "{title}.{extension}"\n'
+        )
+        self._mock_services(
+            mocker,
+            [{"title": "Song", "artist": "A", "album": "B"}],
+            ["http://h/a.flac"],
+            states=[{"title": "Song"}],
+        )
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE])
+
+        assert result.exit_code == 0
+        assert (out / "Song.flac").read_bytes() == b"data"
+
+    def test_download_position_starting_at_zero(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--position-starting-at-zero is reflected in the log positions."""
+        self._mock_services(mocker, self._queue_tracks(), ["http://h/a.flac", "http://h/b.flac"])
+
+        result = runner.invoke(
+            main, ["--position-starting-at-zero", *self._BASE, "-d", str(tmp_path)]
+        )
+
+        assert result.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert [t["position"] for t in log["tracks"]] == [0, 1]
+
+    def test_download_api_error_marks_track(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A per-track API error is recorded and the remaining tracks proceed."""
+        self._mock_services(
+            mocker,
+            self._queue_tracks(),
+            ["http://h/b.flac"],
+            states=[VolumioAPIError("bad state"), {"title": "Song B"}],
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "error"
+        assert "bad state" in log["tracks"][0]["error"]
+        assert log["tracks"][1]["status"] == "downloaded"
+
+    def test_download_unresolvable_name(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A URI without a usable file name is recorded as an error."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/"])
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "error"
+        assert "cannot determine a file name" in log["tracks"][0]["error"]
+
+    def test_download_connection_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A connection failure while fetching the queue exits with an error."""
+        mock_client = mocker.Mock()
+        mock_client.get_queue.side_effect = VolumioConnectionError("no route")
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+    def test_download_api_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """An API failure while fetching the queue exits with an error."""
+        mock_client = mocker.Mock()
+        mock_client.get_queue.side_effect = VolumioAPIError("nope")
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "API error" in result.output
+
+
 class TestQueueActions:
     """Test cases for the queue clear/repeat/randomize action commands."""
 
@@ -5879,6 +6181,9 @@ class TestConfigurationCommands:
                     "overwrite-existing-files": False,
                     "replace-characters-in-file-names": " :",
                     "replace-characters-in-file-names-with": "_",
+                    "queue-download": {
+                        "file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
+                    },
                     "track-albumart": {
                         "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                     },

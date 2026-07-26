@@ -32,6 +32,9 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 )
 """Error message when the download destination options are combined."""
 
+OUTPUT_DIRECTORY_REQUIRED_ERROR = "Option -d/--output-directory is required."
+"""Error message when a command requiring the output directory is run without it."""
+
 OUTPUT_FIELDS_ALL = "ALL"
 """The -L/--fields keyword selecting every field."""
 
@@ -45,6 +48,12 @@ OUTPUT_FORMATS = [
     "table",
 ]
 """Accepted values of the -F/--format option."""
+
+QUEUE_LOG_SUFFIX = "_queue.json"
+"""Suffix of the timestamped queue download log file name."""
+
+QUEUE_LOG_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
+"""strftime format of the timestamp prefixing the queue download log file name."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",

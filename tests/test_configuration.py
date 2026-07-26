@@ -24,6 +24,7 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_3
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
+_QUEUE_FILE_NAME_TEMPLATE = "{artist}/{album}/{position:03d}___{title}.{extension}"
 
 
 class TestConfigurationPaths:
@@ -396,6 +397,9 @@ class TestDefaultConfigurationTemplate:
                 "overwrite-existing-files": False,
                 "replace-characters-in-file-names": " :",
                 "replace-characters-in-file-names-with": "_",
+                "queue-download": {
+                    "file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
+                },
                 "track-albumart": {
                     "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                 },
@@ -556,14 +560,15 @@ class TestBuildClickDefaultMap:
         }
 
     def test_downloads_shared_applies_to_both_commands(self):
-        """A shared downloads key applies to both track audio and track albumart."""
+        """A shared downloads key applies to every download command."""
         result = build_click_default_map({"downloads": {"overwrite-existing-files": True}})
 
         assert result == {
+            "queue": {"download": {"overwrite_existing_files": True}},
             "track": {
                 "audio": {"overwrite_existing_files": True},
                 "albumart": {"overwrite_existing_files": True},
-            }
+            },
         }
 
     def test_downloads_per_command_overrides_shared(self):

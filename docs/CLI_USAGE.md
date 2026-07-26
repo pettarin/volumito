@@ -203,15 +203,17 @@ and `playlist play`.
 The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the defaults for the
 corresponding global options and cannot be overridden per command.
 
-The `miscellaneous` section holds the defaults of options belonging to a single command: its
-`add-cover-and-metadata`, `check-playlist-name`, and `check-seek-position` keys set the defaults
-for the corresponding options of `track audio`, `playlist play`, and `playback seek`.
+The `miscellaneous` section holds the defaults of options belonging to specific commands: its
+`add-cover-and-metadata` key sets the default for `track audio` and `queue download`, while
+`check-playlist-name` and `check-seek-position` set the defaults for the corresponding options
+of `playlist play` and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, `--overwrite-existing-files`, `--create-download-manifest`,
 `--replace-characters-in-file-names`, and `--replace-characters-in-file-names-with` options of
-`track audio` and `track albumart`. A key
-placed directly under `downloads` applies to both commands; the optional `track-audio` and `track-albumart`
+`track audio`, `track albumart`, and `queue download`. A key
+placed directly under `downloads` applies to all of them; the optional `track-audio`,
+`track-albumart`, and `queue-download`
 subsections hold the same keys and override the shared value for that command (so each can have its own
 `file-name-template`).
 
@@ -406,6 +408,34 @@ afterward by default. Disable that with `--no-print-resulting-status` (short fla
 # Clear the queue without printing the resulting playback status
 volumito queue clear --no-print-resulting-status
 ```
+
+### Downloading the Queue
+
+`queue download` downloads every track of the current queue into a directory
+(`-d`/`--output-directory`, required). Playback is stopped, then each queue position is played,
+paused after the configured `--rest-api-sleep-before-next-call` (default 1.0 s), and downloaded;
+at the end, playback is left stopped at the first track. The exit code is 1 if any track failed.
+
+```bash
+# Download the whole queue into per-artist/per-album subdirectories
+volumito queue download -d ~/Music -f "{artist}/{album}/{position:03d}_{title}.{extension}"
+```
+
+The file name is rendered from `-f`/`--file-name-template` exactly as for `track audio`
+(same keys, character replacement, and sanitization), with one difference: the template may
+contain path separators to lay the files out in subdirectories, which are created as needed.
+The resulting path must stay inside the output directory (values interpolated from the
+metadata still cannot introduce path components). The other download options
+(`--overwrite-existing-files`, `--create-download-manifest`, `--add-cover-and-metadata`,
+`--replace-characters-in-file-names`, `--replace-characters-in-file-names-with`) apply per
+track.
+
+Each run also writes a `<timestamp>_queue.json` log (e.g. `20260723010203_queue.json`, UTC)
+into the output directory, listing every track with its download status (`pending`,
+`downloaded`, `skipped`, or `error`); the log is updated after each track, so an interrupted
+run leaves a valid partial log. An existing log file is only overwritten with
+`--overwrite-existing-files`. In machine-readable mode the log path is printed as a quoted
+string.
 
 ## Resulting Status
 

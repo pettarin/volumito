@@ -7,6 +7,8 @@
 import json
 import os
 import sys
+from datetime import UTC, datetime
+from typing import Any
 
 import click
 
@@ -19,6 +21,7 @@ from volumito.cli.click_helpers import (
     VolumioVersionParamType,
     configuration_file_callback,
     create_client,
+    download_queue_track,
     download_uri_to,
     embed_track_tags,
     execute_command,
@@ -36,8 +39,11 @@ from volumito.cli.click_helpers import (
     option_print_resulting_status,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    render_output_filename,
     render_payload,
     render_state,
+    rest_api_sleep,
+    write_queue_log,
 )
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
@@ -53,10 +59,14 @@ from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
+    OUTPUT_DIRECTORY_REQUIRED_ERROR,
+    QUEUE_LOG_SUFFIX,
+    QUEUE_LOG_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
 )
 from volumito.cli.pure_helpers import (
+    display_position,
     filter_queue_fields,
     filter_zones_fields,
     format_duration,
@@ -855,6 +865,199 @@ def queue_get(
 
         click.echo(output)
 
+    except VolumioConnectionError as e:
+        if not machine_readable:
+            click.echo(f"Connection error: {e}", err=True)
+        sys.exit(1)
+    except VolumioAPIError as e:
+        if not machine_readable:
+            click.echo(f"API error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:  # pragma: no cover
+        if not machine_readable:
+            click.echo(f"Unexpected error: {e}", err=True)
+        sys.exit(1)
+
+
+@queue.command("download")
+@click.pass_context
+@option_file_name_template
+@option_output_directory
+@option_overwrite_existing_files
+@option_replace_characters_in_file_names
+@option_replace_characters_in_file_names_with
+@option_create_download_manifest
+@option_add_cover_and_metadata
+def queue_download(
+    ctx: click.Context,
+    file_name_template: str,
+    output_directory: str | None,
+    overwrite_existing_files: bool,
+    replace_characters_in_file_names: str,
+    replace_characters_in_file_names_with: str,
+    create_download_manifest: bool,
+    add_cover_and_metadata: bool,
+) -> None:
+    """Download every track of the current queue into a directory.
+
+    Playback is stopped, then each queue position is played, paused after the
+    configured sleep (--rest-api-sleep-before-next-call), and downloaded into
+    -d/--output-directory (required) under the name rendered from
+    -f/--file-name-template. Unlike the track downloads, the template may contain
+    path separators to lay the files out in subdirectories (e.g.
+    "{artist}/{album}/{position:03d}_{title}.{extension}"); the resulting path
+    must stay inside the output directory. A timestamped <timestamp>_queue.json
+    log listing every track and its download status (pending, downloaded, skipped,
+    or error) is written to the output directory and updated after each track.
+    At the end, playback is left stopped at the first track; the exit code is 1
+    if any track failed.
+    """
+    host_configuration = ctx.obj["host_configuration"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
+    mpd_timeout = ctx.obj["mpd_timeout"]
+    verbose = ctx.obj["verbose"]
+    machine_readable = ctx.obj["machine_readable"]
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
+
+    if output_directory is None:
+        raise click.UsageError(OUTPUT_DIRECTORY_REQUIRED_ERROR)
+
+    if verbose and not machine_readable:
+        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+
+    try:
+        client = create_client(host_configuration, rest_api_timeout)
+        tracks = client.get_queue().get("queue", [])
+
+        if verbose and not machine_readable:
+            click.echo("Successfully retrieved queue", err=True)
+
+        if not tracks:
+            if not machine_readable:
+                click.echo("The queue is empty, nothing to download")
+            return
+
+        timestamp = datetime.now(UTC).strftime(QUEUE_LOG_TIMESTAMP_FORMAT)
+        log_path = os.path.join(output_directory, f"{timestamp}{QUEUE_LOG_SUFFIX}")
+        if not overwrite_existing_files and os.path.exists(log_path):
+            if not machine_readable:
+                click.echo(
+                    f"Error: file already exists: {log_path} "
+                    "(use --overwrite-existing-files to overwrite)",
+                    err=True,
+                )
+            sys.exit(1)
+
+        entries: list[dict[str, Any]] = [
+            {
+                "album": track.get("album"),
+                "artist": track.get("artist"),
+                "position": display_position(index, position_starting_at_one),
+                "status": "pending",
+                "title": track.get("title"),
+            }
+            for index, track in enumerate(tracks)
+        ]
+        log: dict[str, Any] = {
+            "download_date": datetime.now(UTC).isoformat(),
+            "entity": "queue",
+            "kind": "download",
+            "output_directory": output_directory,
+            "tracks": entries,
+            "volumio_host": host_configuration.rest_base_url,
+            "volumito_version": __version__,
+        }
+        os.makedirs(output_directory, exist_ok=True)
+        write_queue_log(log_path, log)
+
+        errors = 0
+        client.stop()
+        with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
+            for index, entry in enumerate(entries):
+                destination: str | None = None
+                try:
+                    client.play(index)
+                    rest_api_sleep(ctx)
+                    client.pause()
+                    state = client.get_state()
+                    uri = mpd_client.get_track_uri()
+                    entry["source_uri"] = uri
+                    filename = render_output_filename(
+                        file_name_template,
+                        uri,
+                        state,
+                        "flac",
+                        position_starting_at_one,
+                        replace_characters_in_file_names,
+                        replace_characters_in_file_names_with,
+                        allow_subdirectories=True,
+                    )
+                    if not filename:
+                        status: str = "error"
+                        detail: str | None = "cannot determine a file name for the download"
+                    else:
+                        destination = os.path.join(output_directory, filename)
+                        base = os.path.realpath(output_directory)
+                        if os.path.commonpath([base, os.path.realpath(destination)]) != base:
+                            raise click.UsageError(
+                                f"Invalid --file-name-template {file_name_template!r}: "
+                                f"the file name {filename!r} escapes the output directory"
+                            )
+                        status, detail = download_queue_track(
+                            uri,
+                            destination,
+                            overwrite_existing_files,
+                            rest_api_timeout,
+                            create_download_manifest,
+                            state,
+                            host_configuration,
+                            add_cover_and_metadata,
+                        )
+                        if status == "downloaded" and add_cover_and_metadata:
+                            embed_track_tags(
+                                destination,
+                                state,
+                                host_configuration,
+                                rest_api_timeout,
+                                position_starting_at_one,
+                                verbose,
+                                machine_readable,
+                            )
+                except (VolumioConnectionError, VolumioAPIError) as e:
+                    status, detail = "error", str(e)
+
+                entry["status"] = status
+                if destination is not None and status != "error":
+                    entry["output_file_path"] = destination
+                if status == "error":
+                    errors += 1
+                    entry["error"] = detail
+                write_queue_log(log_path, log)
+                if not machine_readable:
+                    outcome = detail if status == "error" else destination
+                    click.echo(f"[{index + 1}/{len(entries)}] {status}: {outcome}")
+
+        # Leave the player stopped at the first track
+        client.play(0)
+        rest_api_sleep(ctx)
+        client.stop()
+
+        if machine_readable:
+            click.echo(json.dumps(log_path))
+        else:
+            downloaded = sum(1 for e in entries if e["status"] == "downloaded")
+            skipped = sum(1 for e in entries if e["status"] == "skipped")
+            click.echo(
+                f"\nDownloaded {downloaded}, skipped {skipped}, errors {errors}; "
+                f"log written to {log_path}"
+            )
+        if errors:
+            sys.exit(1)
+
+    except click.UsageError:
+        # A bad --file-name-template should surface as a usage error, not be
+        # swallowed by the generic handler below.
+        raise
     except VolumioConnectionError as e:
         if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
