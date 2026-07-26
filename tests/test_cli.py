@@ -41,6 +41,7 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     parse_time_to_seconds,
     rebase_queue_positions,
+    sanitize_filename_component,
 )
 from volumito.cli.volumito import main
 from volumito.clients.rest import (
@@ -398,11 +399,11 @@ class TestRenderOutputFilename:
         assert result == "000_La_rondine.flac"
 
     def test_duration_key(self):
-        """The duration key is formatted as HH:MM:SS."""
+        """The duration key is HH:MM:SS; the default replacement rewrites the colons."""
         result = render_output_filename(
             "{duration}.{extension}", "http://x/y", self._state(), "flac"
         )
-        assert result == "00:03:20.flac"
+        assert result == "00_03_20.flac"
 
     def test_extension_from_uri(self):
         """The extension key is taken from the URI file name."""
@@ -423,6 +424,150 @@ class TestRenderOutputFilename:
         """An invalid format specification raises a UsageError."""
         with pytest.raises(click.UsageError):
             render_output_filename("{title:03d}", "http://x/y.flac", self._state(), "flac")
+
+    def test_traversal_metadata_is_neutralized(self):
+        """Path separators in metadata cannot escape the output directory."""
+        state = {**self._state(), "title": "../../../home/user/x"}
+        result = render_output_filename("{title}.{extension}", "http://x/y.flac", state, "flac")
+        assert "/" not in result
+        assert "\\" not in result
+        assert result == "_.._.._home_user_x.flac"
+
+    def test_separators_in_metadata_replaced(self):
+        """Slashes and backslashes in metadata become the replacement string."""
+        state = {**self._state(), "title": "AC/DC", "album": "Back\\Slash"}
+        result = render_output_filename(
+            "{title}_{album}.{extension}", "http://x/y.flac", state, "flac"
+        )
+        assert result == "AC_DC_Back_Slash.flac"
+
+    def test_control_characters_removed(self):
+        """Control characters (including NUL) in metadata are removed."""
+        state = {**self._state(), "title": "a\x00b\nc"}
+        result = render_output_filename("{title}.{extension}", "http://x/y.flac", state, "flac")
+        assert result == "abc.flac"
+
+    def test_uri_dot_dot_yields_empty_name(self):
+        """A URI whose basename is '..' renders to an empty name (rejected by the caller)."""
+        assert render_output_filename("{file_name_from_uri}", "http://x/foo/..", {}, "flac") == ""
+
+    def test_uri_backslashes_sanitized(self):
+        """Backslashes from the URI path parameter cannot survive into the name."""
+        uri = "http://x/albumart?path=..%5C..%5Cx.jpg"
+        result = render_output_filename("{file_name_from_uri}", uri, {}, "jpg")
+        assert result == "_.._x.jpg"
+
+    def test_attribute_access_rejected(self):
+        """Attribute access in a template field raises a UsageError."""
+        with pytest.raises(click.UsageError, match="unknown key 'title.upper'"):
+            render_output_filename("{title.upper}", "http://x/y.flac", self._state(), "flac")
+
+    def test_positional_field_rejected(self):
+        """A positional template field raises a UsageError."""
+        with pytest.raises(click.UsageError, match="unknown key '0'"):
+            render_output_filename("{0}", "http://x/y.flac", self._state(), "flac")
+
+    def test_unbalanced_template_rejected(self):
+        """A malformed template raises a UsageError."""
+        with pytest.raises(click.UsageError, match="Invalid --file-name-template"):
+            render_output_filename("{title", "http://x/y.flac", self._state(), "flac")
+
+    def test_template_literal_separator_rejected(self):
+        """A template rendering to a path (literal separator) raises a UsageError."""
+        with pytest.raises(click.UsageError, match="plain file name"):
+            render_output_filename(
+                "covers/{album}.{extension}", "http://x/y.flac", self._state(), "flac"
+            )
+
+    def test_template_literal_separator_can_be_replaced(self):
+        """A separator listed in the replace characters is replaced instead of rejected."""
+        result = render_output_filename(
+            "covers/{album}.{extension}",
+            "http://x/y.flac",
+            self._state(),
+            "flac",
+            replace_characters_in_file_names=" /",
+        )
+        assert result == "covers_Puccini.flac"
+
+    def test_leading_dots_stripped(self):
+        """Leading dots are stripped, so the rendered name cannot be a hidden file."""
+        state = {**self._state(), "title": "..hidden"}
+        result = render_output_filename("{title}.{extension}", "http://x/y.flac", state, "flac")
+        assert result == "hidden.flac"
+
+    def test_custom_replace_characters(self):
+        """The replace characters and the replacement string are configurable."""
+        state = {**self._state(), "title": "A (B) C"}
+        result = render_output_filename(
+            "{title}.{extension}",
+            "http://x/y.flac",
+            state,
+            "flac",
+            replace_characters_in_file_names=" ()",
+            replace_characters_in_file_names_with="-",
+        )
+        assert result == "A--B--C.flac"
+
+    def test_empty_replace_characters_keeps_spaces(self):
+        """An empty replace-characters string disables the replacement."""
+        result = render_output_filename(
+            "{title}.{extension}",
+            "http://x/y.flac",
+            self._state(),
+            "flac",
+            replace_characters_in_file_names="",
+        )
+        assert result == "La rondine.flac"
+
+    def test_empty_replacement_removes_characters(self):
+        """An empty replacement string removes the selected characters."""
+        result = render_output_filename(
+            "{title}.{extension}",
+            "http://x/y.flac",
+            self._state(),
+            "flac",
+            replace_characters_in_file_names=" ",
+            replace_characters_in_file_names_with="",
+        )
+        assert result == "Larondine.flac"
+
+    def test_replacement_with_separator_rejected(self):
+        """A replacement string containing a path separator raises a UsageError."""
+        with pytest.raises(click.UsageError, match="replace-characters-in-file-names-with"):
+            render_output_filename(
+                "{title}.{extension}",
+                "http://x/y.flac",
+                self._state(),
+                "flac",
+                replace_characters_in_file_names_with="../",
+            )
+
+    def test_non_numeric_position_falls_back_to_base(self):
+        """A malformed position in the state falls back to the indexing base."""
+        state = {**self._state(), "position": "abc"}
+        result = render_output_filename("{position:03d}_{title}", "http://x/y.flac", state, "flac")
+        assert result == "001_La_rondine"
+
+
+class TestSanitizeFilenameComponent:
+    """Test cases for the sanitize_filename_component function."""
+
+    def test_separators_replaced(self):
+        """Forward and backward slashes become the replacement string."""
+        assert sanitize_filename_component("a/b\\c", "_") == "a_b_c"
+
+    def test_control_characters_removed(self):
+        """Control characters (below 32, and 127) are removed."""
+        assert sanitize_filename_component("a\x00b\tc\nd\x7fe", "_") == "abcde"
+
+    def test_empty_replacement_removes_separators(self):
+        """An empty replacement removes the separators."""
+        assert sanitize_filename_component("a/b\\c", "") == "abc"
+
+    def test_clean_text_unchanged(self):
+        """Text without separators or control characters is returned unchanged."""
+        assert sanitize_filename_component("Song Title (Live) 'x'", "_") == "Song Title (Live) 'x'"
 
 
 class TestParseTimeToSeconds:
@@ -2767,6 +2912,79 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "La_rondine.jpg"), "wb")
+
+    def test_albumart_replace_characters_options(self, runner: CliRunner, mocker: MockerFixture):
+        """The replace-characters options control the file-name substitution."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "La rondine",
+            "albumart": "http://example.com/images/cover.jpg",
+        }
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main,
+            [
+                "track",
+                "albumart",
+                "-d",
+                "/tmp/covers",
+                "-f",
+                "{title}.{extension}",
+                "--replace-characters-in-file-names",
+                " ",
+                "--replace-characters-in-file-names-with",
+                "-",
+                "--no-create-download-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "La-rondine.jpg"), "wb")
+
+    def test_albumart_traversal_title_is_neutralized(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A title with path separators cannot make the download leave the directory."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "../x",
+            "albumart": "http://example.com/images/cover.jpg",
+        }
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+
+        result = runner.invoke(
+            main,
+            [
+                "track",
+                "albumart",
+                "-d",
+                "/tmp/covers",
+                "-f",
+                "{title}.{extension}",
+                "--no-create-download-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        # "../x" is sanitized to ".._x", and the leading dots are stripped
+        mock_open.assert_called_once_with(os.path.join("/tmp/covers", "_x.jpg"), "wb")
 
     def test_albumart_output_directory_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart -d with an invalid -f template errors out."""
@@ -5473,6 +5691,45 @@ class TestConfigurationFile:
         assert out.exists()
         assert not (tmp_path / "cover.jpg.json").exists()
 
+    def test_downloads_shared_replace_characters(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A shared downloads.replace-characters-in-file-names reaches the track commands."""
+        mock_client = mocker.Mock()
+        mock_client.get_state.return_value = {
+            "title": "my cover",
+            "albumart": "http://example.com/images/cover.jpg",
+        }
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mock_open = mocker.patch("volumito.cli.click_helpers.open", mocker.mock_open())
+
+        config = self._write_config(
+            tmp_path, 'downloads:\n  replace-characters-in-file-names: ""\n'
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                "-c",
+                config,
+                "track",
+                "albumart",
+                "-d",
+                "/covers",
+                "-f",
+                "{title}.{extension}",
+                "--no-create-download-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        # The config empties the replace list, so the space in the title is kept
+        mock_open.assert_called_once_with(os.path.join("/covers", "my cover.jpg"), "wb")
+
     def test_miscellaneous_add_cover_and_metadata_false(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -5620,6 +5877,8 @@ class TestConfigurationCommands:
                     "output-directory": None,
                     "output-file": None,
                     "overwrite-existing-files": False,
+                    "replace-characters-in-file-names": " :",
+                    "replace-characters-in-file-names-with": "_",
                     "track-albumart": {
                         "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                     },

@@ -113,6 +113,8 @@ DOWNLOAD_KEYS: list[str] = [
     "output-directory",
     "output-file",
     "overwrite-existing-files",
+    "replace-characters-in-file-names",
+    "replace-characters-in-file-names-with",
 ]
 """The "downloads" section is hierarchical: its scalar keys are shared by both track
 download commands, and optional "audio"/"albumart" subsections (mapping to the

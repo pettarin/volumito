@@ -208,7 +208,8 @@ The `miscellaneous` section holds the defaults of options belonging to a single 
 for the corresponding options of `track audio`, `playlist play`, and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
-`--output-file`, `--overwrite-existing-files`, and `--create-download-manifest` options of
+`--output-file`, `--overwrite-existing-files`, `--create-download-manifest`,
+`--replace-characters-in-file-names`, and `--replace-characters-in-file-names-with` options of
 `track audio` and `track albumart`. A key
 placed directly under `downloads` applies to both commands; the optional `track-audio` and `track-albumart`
 subsections hold the same keys and override the shared value for that command (so each can have its own
@@ -560,7 +561,9 @@ volumito track audio -o /path/to/song.flac --no-add-cover-and-metadata
 
 When downloading into a directory with `-d`, the file name is built from
 `-f`/`--file-name-template` (Python `str.format` syntax, default
-`{file_name_from_uri}`). Any space in the resulting name becomes an underscore:
+`{file_name_from_uri}`). Each character listed in `--replace-characters-in-file-names`
+(default: space and colon) is replaced with the `--replace-characters-in-file-names-with`
+string (default: `_`); pass an empty string to the former to disable the replacement:
 
 ```bash
 # e.g. writes /path/to/music/001_La_rondine.flac
@@ -575,3 +578,7 @@ Supported template keys:
 - `channels` — integer
 - `extension` — the file extension from the URI, defaulting to `flac` for
   `track audio` and `jpg` for `track albumart`
+
+The rendered name is sanitized: path separators and control characters in the interpolated
+metadata are neutralized, leading dots are stripped, and the template must render to a plain
+file name (no path separators), so a download cannot escape the `-d` directory.

@@ -518,6 +518,25 @@ def resolve_output_fields(fields: str, short_fields: list[str]) -> list[str] | N
     return [name.strip() for name in fields.split(",") if name.strip()]
 
 
+def sanitize_filename_component(text: str, replacement: str) -> str:
+    """Neutralize path separators and control characters in a file-name component.
+
+    Replaces ``/`` and ``\\`` with ``replacement`` and removes control characters
+    (ASCII codes below 32, and 127), so an untrusted value (e.g. track metadata or a
+    URI-derived name) cannot introduce new path components or unprintable characters
+    into a file name.
+
+    Args:
+        text: The untrusted text to sanitize
+        replacement: The string substituted for each path separator
+
+    Returns:
+        The sanitized text
+    """
+    sanitized = text.replace("/", replacement).replace("\\", replacement)
+    return "".join(char for char in sanitized if ord(char) >= 32 and ord(char) != 127)
+
+
 def split_camel_case(key: str) -> str:
     """Turn a key into a readable label, splitting underscores and camel case.
 

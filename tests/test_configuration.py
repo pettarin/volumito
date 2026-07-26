@@ -394,6 +394,8 @@ class TestDefaultConfigurationTemplate:
                 "output-directory": None,
                 "output-file": None,
                 "overwrite-existing-files": False,
+                "replace-characters-in-file-names": " :",
+                "replace-characters-in-file-names-with": "_",
                 "track-albumart": {
                     "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                 },

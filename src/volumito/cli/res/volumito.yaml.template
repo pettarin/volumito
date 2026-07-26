@@ -23,6 +23,12 @@ downloads:
   # Overwrite the destination file if it already exists
   overwrite-existing-files: false
 
+  # Characters to replace in the file name generated from the template
+  replace-characters-in-file-names: " :"
+
+  # Replacement string for the replaced characters
+  replace-characters-in-file-names-with: "_"
+
   track-albumart:
     # Template (Python str.format) for the -d output file name
     file-name-template: '000___{album}___{artist}.{extension}'

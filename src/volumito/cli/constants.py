@@ -4,6 +4,12 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES = " :"
+"""Characters replaced by default in file names generated from the template."""
+
+DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH = "_"
+"""Default replacement string for the characters replaced in generated file names."""
+
 DEFAULT_VOLUMIO_VERSION = "4"
 """Default target Volumio version for the "configuration create" command."""
 

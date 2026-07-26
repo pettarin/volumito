@@ -34,6 +34,8 @@ from volumito.cli.click_helpers import (
     option_output_file,
     option_overwrite_existing_files,
     option_print_resulting_status,
+    option_replace_characters_in_file_names,
+    option_replace_characters_in_file_names_with,
     render_payload,
     render_state,
 )
@@ -569,6 +571,8 @@ def track_info(
 @option_output_directory
 @option_output_file
 @option_overwrite_existing_files
+@option_replace_characters_in_file_names
+@option_replace_characters_in_file_names_with
 @option_create_download_manifest
 @option_add_cover_and_metadata
 def audio(
@@ -577,6 +581,8 @@ def audio(
     output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
+    replace_characters_in_file_names: str,
+    replace_characters_in_file_names_with: str,
     create_download_manifest: bool,
     add_cover_and_metadata: bool,
 ) -> None:
@@ -646,6 +652,10 @@ def audio(
                     "audio",
                     ctx.obj["position_starting_at_one"],
                     add_cover_and_metadata,
+                    replace_characters_in_file_names=replace_characters_in_file_names,
+                    replace_characters_in_file_names_with=(
+                        replace_characters_in_file_names_with
+                    ),
                 )
 
                 # Embed track metadata and cover art into the downloaded file
@@ -684,6 +694,8 @@ def audio(
 @option_output_directory
 @option_output_file
 @option_overwrite_existing_files
+@option_replace_characters_in_file_names
+@option_replace_characters_in_file_names_with
 @option_create_download_manifest
 def albumart(
     ctx: click.Context,
@@ -691,6 +703,8 @@ def albumart(
     output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
+    replace_characters_in_file_names: str,
+    replace_characters_in_file_names_with: str,
     create_download_manifest: bool,
 ) -> None:
     """Print the URI of the album art of the current track.
@@ -751,6 +765,10 @@ def albumart(
                 "track",
                 "albumart",
                 ctx.obj["position_starting_at_one"],
+                replace_characters_in_file_names=replace_characters_in_file_names,
+                replace_characters_in_file_names_with=(
+                    replace_characters_in_file_names_with
+                ),
             )
 
     except click.UsageError:

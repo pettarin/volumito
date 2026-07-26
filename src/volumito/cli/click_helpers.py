@@ -10,6 +10,7 @@ import sys
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
+from string import Formatter
 from typing import Any, get_args
 
 import click
@@ -23,6 +24,8 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
+    DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
+    DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
     FILE_WRITE_CHUNK_SIZE,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
@@ -42,6 +45,7 @@ from volumito.cli.pure_helpers import (
     parse_time_to_seconds,
     resolve_albumart_uri,
     resolve_output_fields,
+    sanitize_filename_component,
 )
 from volumito.clients import (
     Scheme,
@@ -287,6 +291,8 @@ def download_uri_to(
     kind: str,
     position_starting_at_one: bool = True,
     add_cover_and_metadata: bool | None = None,
+    replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
+    replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
 ) -> str:
     """Download ``uri`` to a file, printing errors and exiting (1) on failure.
 
@@ -317,6 +323,8 @@ def download_uri_to(
         kind: The manifest ``kind`` value (e.g. "audio" or "albumart")
         position_starting_at_one: Whether the template ``position`` key starts at one
         add_cover_and_metadata: Recorded in the manifest when not None (audio downloads only)
+        replace_characters_in_file_names: Characters replaced in the rendered file name
+        replace_characters_in_file_names_with: Replacement for the replaced characters
 
     Returns:
         The path the URI was downloaded to
@@ -325,7 +333,13 @@ def download_uri_to(
         destination = output_file
     else:  # output_directory is not None
         filename = render_output_filename(
-            file_name_template, uri, state, default_extension, position_starting_at_one
+            file_name_template,
+            uri,
+            state,
+            default_extension,
+            position_starting_at_one,
+            replace_characters_in_file_names,
+            replace_characters_in_file_names_with,
         )
         if not filename:
             if not machine_readable:
@@ -618,7 +632,8 @@ def option_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
         show_default=True,
         help="Template (Python str.format syntax) for the -d output file name. Keys: "
         "file_name_from_uri, position, title, album, artist, trackType, duration, "
-        "bitdepth, samplerate, channels, extension. Spaces become underscores.",
+        "bitdepth, samplerate, channels, extension. Some characters are replaced "
+        "(see --replace-characters-in-file-names).",
     )(func)
 
 
@@ -679,14 +694,43 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_replace_characters_in_file_names(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--replace-characters-in-file-names`` option to a track download subcommand."""
+    return click.option(
+        "--replace-characters-in-file-names",
+        type=str,
+        default=DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
+        show_default=True,
+        help="Characters to replace in the file name generated from -f/--file-name-template",
+    )(func)
+
+
+def option_replace_characters_in_file_names_with(
+    func: Callable[..., None],
+) -> Callable[..., None]:
+    """Add the ``--replace-characters-in-file-names-with`` option to a download subcommand."""
+    return click.option(
+        "--replace-characters-in-file-names-with",
+        type=str,
+        default=DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
+        show_default=True,
+        help=(
+            "Replacement string for the characters selected by "
+            "--replace-characters-in-file-names"
+        ),
+    )(func)
+
+
 def render_output_filename(
     template: str,
     uri: str,
     state: dict[str, Any],
     default_extension: str,
     position_starting_at_one: bool = True,
+    replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
+    replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
 ) -> str:
-    """Render an output file name from a template, track metadata, and the URI.
+    """Render a safe output file name from a template, track metadata, and the URI.
 
     The template uses Python ``str.format`` syntax. Supported keys are:
     ``file_name_from_uri``, ``position`` (int, indexed according to
@@ -694,7 +738,17 @@ def render_output_filename(
     ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
     ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
-    URI file has none. Spaces in the rendered name are replaced with underscores.
+    URI file has none.
+
+    The name is rendered defensively, since the metadata values and the URI are
+    untrusted: template fields must be exactly the supported keys (no attribute or
+    index access), path separators in the interpolated values are replaced and
+    control characters removed, leading dots are stripped from the result, and the
+    rendered name must be a plain file name without path separators.
+
+    After rendering, every character of ``replace_characters_in_file_names`` is
+    replaced with ``replace_characters_in_file_names_with`` (which must not itself
+    contain path separators or control characters).
 
     Args:
         template: The file-name template (``str.format`` syntax)
@@ -702,28 +756,42 @@ def render_output_filename(
         state: The current player state dictionary
         default_extension: Extension to use when the URI file has none (no leading dot)
         position_starting_at_one: Whether the ``position`` key starts at one
+        replace_characters_in_file_names: Characters replaced in the rendered name
+        replace_characters_in_file_names_with: Replacement for the replaced characters
 
     Returns:
-        The rendered file name, with spaces replaced by underscores
+        The rendered, sanitized file name
 
     Raises:
-        click.UsageError: If the template references an unknown key or uses an
-            invalid format specification
+        click.UsageError: If the template references an unknown key, uses an invalid
+            format specification, or renders to a name containing a path separator,
+            or if the replacement string contains a path separator or control
+            character
     """
+    replacement = replace_characters_in_file_names_with
+    if sanitize_filename_component(replacement, "") != replacement:
+        raise click.UsageError(
+            f"Invalid --replace-characters-in-file-names-with {replacement!r}: "
+            "it must not contain path separators or control characters"
+        )
 
     def as_text(key: str) -> str:
         value = state.get(key)
-        return str(value).strip() if value is not None else ""
+        text = str(value).strip() if value is not None else ""
+        return sanitize_filename_component(text, replacement)
 
-    file_name_from_uri = extract_filename_from_uri(uri)
+    try:
+        position = int(state.get("position") or 0)
+    except (TypeError, ValueError):
+        position = 0
+
+    file_name_from_uri = sanitize_filename_component(extract_filename_from_uri(uri), replacement)
     uri_extension = os.path.splitext(file_name_from_uri)[1].lstrip(".")
 
     duration = state.get("duration")
     keys: dict[str, object] = {
         "file_name_from_uri": file_name_from_uri,
-        "position": display_position(
-            int(state.get("position") or 0), position_starting_at_one
-        ),
+        "position": display_position(position, position_starting_at_one),
         "title": as_text("title"),
         "album": as_text("album"),
         "artist": as_text("artist"),
@@ -736,11 +804,32 @@ def render_output_filename(
     }
 
     try:
+        fields = [field for _, field, _, _ in Formatter().parse(template) if field is not None]
+    except ValueError as e:
+        raise click.UsageError(f"Invalid --file-name-template {template!r}: {e}") from e
+    unknown = [field for field in fields if field not in keys]
+    if unknown:
+        accepted = ", ".join(sorted(keys))
+        raise click.UsageError(
+            f"Invalid --file-name-template {template!r}: "
+            f"unknown key {unknown[0]!r} (valid keys: {accepted})"
+        )
+
+    try:
         rendered = template.format(**keys)
     except (KeyError, ValueError, IndexError) as e:
         raise click.UsageError(f"Invalid --file-name-template {template!r}: {e}") from e
 
-    return rendered.replace(" ", "_")
+    for character in replace_characters_in_file_names:
+        rendered = rendered.replace(character, replacement)
+
+    rendered = rendered.lstrip(".")
+    if "/" in rendered or "\\" in rendered:
+        raise click.UsageError(
+            f"Invalid --file-name-template {template!r}: "
+            f"it must render to a plain file name, got {rendered!r}"
+        )
+    return rendered
 
 
 def render_payload(

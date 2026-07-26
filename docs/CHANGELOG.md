@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.16] - 2026-07-26
 
+### Added
+
+- Options `--replace-characters-in-file-names`/`--replace-characters-in-file-names-with` for
+  `track audio` and `track albumart`, selecting the characters replaced in the generated file
+  name and their replacement (by default, spaces and colons become underscores)
+- The replace-characters defaults can be set in the `downloads` section of the configuration file
+
+### Security
+
+- Path separators and control characters in the metadata interpolated into the generated file
+  name are neutralized, and the template must render to a plain file name, so a download cannot
+  escape the output directory
+
 
 ## [0.0.15] - 2026-07-26
 
