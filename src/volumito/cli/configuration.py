@@ -185,11 +185,17 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
         ["queue", "download"],
         ["track", "audio"],
     ],
+    "check-next-track": [
+        ["queue", "download"],
+    ],
     "check-playlist-name": [
         ["playlist", "play"],
     ],
     "check-seek-position": [
         ["playback", "seek"],
+    ],
+    "number-retries-next-track": [
+        ["queue", "download"],
     ],
 }
 """The "miscellaneous" section holds the keys of options living on a specific command:

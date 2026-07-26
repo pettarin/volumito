@@ -54,6 +54,7 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
+    DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
     DEFAULT_VOLUMIO_VERSION,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -74,6 +75,7 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     format_seek,
     format_zones_as_table,
+    queue_track_metadata_current,
     queue_track_numbers,
     rebase_queue_positions,
     resolve_albumart_uri,
@@ -882,6 +884,19 @@ def queue_get(
 
 @queue.command("download")
 @click.pass_context
+@click.option(
+    "--check-next-track/--no-check-next-track",
+    default=True,
+    show_default=True,
+    help="Check that each track's metadata are current before downloading it",
+)
+@click.option(
+    "--number-retries-next-track",
+    type=int,
+    default=DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
+    show_default=True,
+    help="Number of retries waiting for a track's metadata to become current",
+)
 @option_file_name_template
 @option_output_directory
 @option_overwrite_existing_files
@@ -891,6 +906,8 @@ def queue_get(
 @option_add_cover_and_metadata
 def queue_download(
     ctx: click.Context,
+    check_next_track: bool,
+    number_retries_next_track: int,
     file_name_template: str,
     output_directory: str | None,
     overwrite_existing_files: bool,
@@ -911,7 +928,11 @@ def queue_download(
     {position} (the queue position). Unlike the track downloads, the template may
     contain path separators to lay the files out in subdirectories (e.g.
     "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
-    must stay inside the run directory. A queue.json log listing every track and
+    must stay inside the run directory. Before each download, the fetched metadata
+    are checked against the queue listing (title, artist, album, and position must
+    match the entry just played, retrying up to --number-retries-next-track times;
+    disable with --no-check-next-track).
+    A queue.json log listing every track and
     its download status (pending, downloaded, skipped, or error) is written to
     the run directory and updated after each track. At the end, playback is left
     stopped at the first track; the exit code is 1 if any track failed.
@@ -978,58 +999,89 @@ def queue_download(
         write_queue_log(log_path, log)
 
         errors = 0
+        previous_uri: str | None = None
         client.stop()
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
             for index, entry in enumerate(entries):
                 destination: str | None = None
                 try:
-                    client.play(index)
-                    rest_api_sleep(ctx)
-                    client.pause()
-                    state = {**client.get_state(), "tracknumber": track_numbers[index]}
-                    uri = mpd_client.get_track_uri()
-                    entry["source_uri"] = uri
-                    filename = render_output_filename(
-                        file_name_template,
-                        uri,
-                        state,
-                        "flac",
-                        position_starting_at_one,
-                        replace_characters_in_file_names,
-                        replace_characters_in_file_names_with,
-                        allow_subdirectories=True,
+                    expect_same_uri = (
+                        index > 0 and tracks[index].get("uri") == tracks[index - 1].get("uri")
                     )
-                    if not filename:
-                        status: str = "error"
-                        detail: str | None = "cannot determine a file name for the download"
-                    else:
-                        destination = os.path.join(run_directory, filename)
-                        base = os.path.realpath(run_directory)
-                        if os.path.commonpath([base, os.path.realpath(destination)]) != base:
-                            raise click.UsageError(
-                                f"Invalid --file-name-template {file_name_template!r}: "
-                                f"the file name {filename!r} escapes the output directory"
+                    attempt = 0
+                    while True:
+                        client.play(index)
+                        rest_api_sleep(ctx)
+                        client.pause()
+                        rest_api_sleep(ctx)
+                        state = client.get_state()
+                        uri = mpd_client.get_track_uri()
+                        if not check_next_track or queue_track_metadata_current(
+                            state, uri, tracks[index], index, previous_uri, expect_same_uri
+                        ):
+                            fresh = True
+                            break
+                        if attempt >= number_retries_next_track:
+                            fresh = False
+                            break
+                        attempt += 1
+                        if verbose and not machine_readable:
+                            click.echo(
+                                "Track metadata not yet updated, retrying "
+                                f"({attempt}/{number_retries_next_track})...",
+                                err=True,
                             )
-                        status, detail = download_queue_track(
-                            uri,
-                            destination,
-                            overwrite_existing_files,
-                            rest_api_timeout,
-                            create_download_manifest,
-                            state,
-                            host_configuration,
-                            add_cover_and_metadata,
+                    entry["source_uri"] = uri
+                    if not fresh:
+                        status: str = "error"
+                        detail: str | None = (
+                            "track metadata still refer to another track after "
+                            f"{number_retries_next_track} retries"
                         )
-                        if status == "downloaded" and add_cover_and_metadata:
-                            embed_track_tags(
+                    else:
+                        previous_uri = uri
+                        state = {**state, "tracknumber": track_numbers[index]}
+                        filename = render_output_filename(
+                            file_name_template,
+                            uri,
+                            state,
+                            "flac",
+                            position_starting_at_one,
+                            replace_characters_in_file_names,
+                            replace_characters_in_file_names_with,
+                            allow_subdirectories=True,
+                        )
+                        if not filename:
+                            status = "error"
+                            detail = "cannot determine a file name for the download"
+                        else:
+                            destination = os.path.join(run_directory, filename)
+                            base = os.path.realpath(run_directory)
+                            if os.path.commonpath([base, os.path.realpath(destination)]) != base:
+                                raise click.UsageError(
+                                    f"Invalid --file-name-template {file_name_template!r}: "
+                                    f"the file name {filename!r} escapes the output directory"
+                                )
+                            status, detail = download_queue_track(
+                                uri,
                                 destination,
+                                overwrite_existing_files,
+                                rest_api_timeout,
+                                create_download_manifest,
                                 state,
                                 host_configuration,
-                                rest_api_timeout,
-                                position_starting_at_one,
-                                verbose,
-                                machine_readable,
+                                add_cover_and_metadata,
                             )
+                            if status == "downloaded" and add_cover_and_metadata:
+                                embed_track_tags(
+                                    destination,
+                                    state,
+                                    host_configuration,
+                                    rest_api_timeout,
+                                    position_starting_at_one,
+                                    verbose,
+                                    machine_readable,
+                                )
                 except (VolumioConnectionError, VolumioAPIError) as e:
                     status, detail = "error", str(e)
 

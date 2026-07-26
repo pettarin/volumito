@@ -204,9 +204,10 @@ The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the d
 corresponding global options and cannot be overridden per command.
 
 The `miscellaneous` section holds the defaults of options belonging to specific commands: its
-`add-cover-and-metadata` key sets the default for `track audio` and `queue download`, while
-`check-playlist-name` and `check-seek-position` set the defaults for the corresponding options
-of `playlist play` and `playback seek`.
+`add-cover-and-metadata` key sets the default for `track audio` and `queue download`;
+`check-next-track` and `number-retries-next-track` set the defaults for the corresponding
+`queue download` options; and `check-playlist-name` and `check-seek-position` set the defaults
+for the corresponding options of `playlist play` and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, `--overwrite-existing-files`, `--create-download-manifest`,
@@ -417,6 +418,14 @@ into it; an existing directory with the same timestamp is only reused with
 `--overwrite-existing-files`. Playback is stopped, then each queue position is played,
 paused after the configured `--rest-api-sleep-before-next-call` (default 1.0 s), and downloaded;
 at the end, playback is left stopped at the first track. The exit code is 1 if any track failed.
+
+Before each download, the fetched metadata are verified against the queue listing retrieved at
+the start of the run: the state's title, artist, and album must match the queue entry of the
+position just played, the state position must match, and the track URI must differ from the
+previous track's (unless the queue really lists the same URI twice); on a stale read, the
+play/pause/fetch cycle is retried up to `--number-retries-next-track` times (default 5) before
+recording an `error` for that track. Disable the verification with `--no-check-next-track`
+(`--check-next-track` restores it).
 
 ```bash
 # Download the whole queue into per-artist/per-album subdirectories

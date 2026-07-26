@@ -61,11 +61,17 @@ miscellaneous:
   # Embed track metadata and cover art into the downloaded audio file
   add-cover-and-metadata: true
 
+  # Check that each queue-download track's metadata are current before downloading it
+  check-next-track: true
+
   # Check that the playlist name exists before playing it
   check-playlist-name: true
 
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
+
+  # Number of retries waiting for the next track's metadata to become current
+  number-retries-next-track: 5
 
 
 output:

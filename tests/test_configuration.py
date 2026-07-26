@@ -379,8 +379,10 @@ class TestDefaultConfigurationTemplate:
             },
             "miscellaneous": {
                 "add-cover-and-metadata": True,
+                "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
+                "number-retries-next-track": 5,
             },
             "output": {
                 "fields": "SHORT",

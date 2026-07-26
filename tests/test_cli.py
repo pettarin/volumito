@@ -40,6 +40,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_queue_as_table,
     parse_time_to_seconds,
+    queue_track_metadata_current,
     queue_track_numbers,
     rebase_queue_positions,
     sanitize_filename_component,
@@ -4383,6 +4384,72 @@ class TestPlaylistCommands:
         assert "Connection error" in result.output
 
 
+class TestQueueTrackMetadataCurrent:
+    """Test cases for the queue_track_metadata_current function."""
+
+    _EXPECTED = {"album": "X", "artist": "A", "title": "T"}
+
+    def _state(self, **overrides):
+        return {"album": "X", "artist": "A", "title": "T", "position": 2, **overrides}
+
+    def test_current(self):
+        """A state matching the queue entry and position, with a new URI, is accepted."""
+        current = queue_track_metadata_current(self._state(), "u2", self._EXPECTED, 2, "u1", False)
+
+        assert current is True
+
+    def test_title_mismatch(self):
+        """A state title differing from the queue entry is rejected."""
+        state = self._state(title="Other")
+
+        assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
+
+    def test_artist_and_album_mismatch(self):
+        """A state artist or album differing from the queue entry is rejected."""
+        state = self._state(album="Y")
+        assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
+        state = self._state(artist="B")
+        assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
+
+    def test_queue_entry_without_metadata_skips_fields(self):
+        """Queue-entry fields that are absent are not compared."""
+        state = {"title": "Whatever", "position": 2}
+
+        assert queue_track_metadata_current(state, "u2", {}, 2, "u1", False) is True
+
+    def test_wrong_position(self):
+        """A stale position is rejected."""
+        state = self._state(position=1)
+
+        assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
+
+    def test_missing_or_malformed_position(self):
+        """A missing or malformed position is rejected."""
+        state = self._state()
+        del state["position"]
+        assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
+        state = self._state(position="abc")
+        assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
+
+    def test_stale_uri(self):
+        """A URI equal to the previous track's is rejected when a change is expected."""
+        current = queue_track_metadata_current(self._state(), "u1", self._EXPECTED, 2, "u1", False)
+
+        assert current is False
+
+    def test_expected_same_uri(self):
+        """A URI equal to the previous track's is accepted when the queue lists it twice."""
+        current = queue_track_metadata_current(self._state(), "u1", self._EXPECTED, 2, "u1", True)
+
+        assert current is True
+
+    def test_first_track_skips_uri_check(self):
+        """The first track has no previous URI to compare against."""
+        state = self._state(position=0)
+
+        assert queue_track_metadata_current(state, "u1", self._EXPECTED, 0, None, False) is True
+
+
 class TestQueueTrackNumbers:
     """Test cases for the queue_track_numbers function."""
 
@@ -4448,7 +4515,10 @@ class TestQueueDownload:
         if states is not None:
             mock_client.get_state.side_effect = states
         else:
-            mock_client.get_state.return_value = {"title": "Song", "artist": "Artist"}
+            # The default state mirrors the queue entry being played (fresh metadata)
+            mock_client.get_state.side_effect = [
+                {**track, "position": index} for index, track in enumerate(tracks)
+            ]
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -4515,7 +4585,7 @@ class TestQueueDownload:
             mocker,
             [{"title": "Song", "artist": "AC/DC", "album": "Alb"}],
             ["http://h/a.flac"],
-            states=[{"title": "Song", "artist": "AC/DC", "album": "Alb"}],
+            states=[{"title": "Song", "artist": "AC/DC", "album": "Alb", "position": 0}],
         )
 
         result = runner.invoke(
@@ -4657,7 +4727,7 @@ class TestQueueDownload:
             mocker,
             [{"title": "Song", "artist": "A", "album": "B"}],
             ["http://h/a.flac"],
-            states=[{"title": "Song"}],
+            states=[{"title": "Song", "artist": "A", "album": "B", "position": 0}],
         )
 
         result = runner.invoke(main, ["-c", str(config), *self._BASE])
@@ -4687,7 +4757,10 @@ class TestQueueDownload:
             mocker,
             self._queue_tracks(),
             ["http://h/b.flac"],
-            states=[VolumioAPIError("bad state"), {"title": "Song B"}],
+            states=[
+                VolumioAPIError("bad state"),
+                {"title": "Song B", "artist": "Artist", "album": "Album", "position": 1},
+            ],
         )
 
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
@@ -4748,7 +4821,11 @@ class TestQueueDownload:
             mocker,
             tracks,
             ["http://h/a.flac", "http://h/b.flac", "http://h/c.flac"],
-            states=[{"title": "A"}, {"title": "B"}, {"title": "C"}],
+            states=[
+                {"title": "A", "artist": "Art1", "album": "Alb1", "position": 0},
+                {"title": "B", "artist": "Art1", "album": "Alb1", "position": 1},
+                {"title": "C", "artist": "Art2", "album": "Alb2", "position": 2},
+            ],
         )
 
         result = runner.invoke(
@@ -4777,7 +4854,10 @@ class TestQueueDownload:
             mocker,
             tracks,
             ["http://h/a.flac", "http://h/c.flac"],
-            states=[{"title": "A"}, {"title": "C"}],
+            states=[
+                {"title": "A", "artist": "Art1", "album": "Alb1", "position": 0},
+                {"title": "C", "artist": "Art2", "album": "Alb2", "position": 1},
+            ],
         )
         embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
         mocker.patch("volumito.cli.click_helpers.fetch_cover", return_value=None)
@@ -4789,6 +4869,127 @@ class TestQueueDownload:
         assert result.exit_code == 0
         # Both tracks are the first of their album: embedded number 1, not queue 1 and 2
         assert [c.kwargs["track_number"] for c in embed.call_args_list] == [1, 1]
+
+    def test_download_retries_until_metadata_current(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Stale metadata after moving to the next track are retried until current."""
+        states = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0},
+            # track 2, first attempt: stale (still the first track's metadata)
+            {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0},
+            # track 2, retry: fresh
+            {"title": "Song B", "artist": "Artist", "album": "Album", "position": 1},
+        ]
+        uris = ["http://h/a.flac", "http://h/a.flac", "http://h/b.flac"]
+        client = self._mock_services(mocker, self._queue_tracks(), uris, states=states)
+
+        result = runner.invoke(main, ["-v", *self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "retrying (1/5)" in result.output
+        run = self._run_directory(tmp_path)
+        assert (run / "a.flac").exists()
+        assert (run / "b.flac").exists()
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
+        # The retry replays position 1; the final reposition plays 0 again
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (1,), (0,)]
+
+    def test_download_metadata_never_current_marks_error(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A track whose metadata never update is recorded as an error after the retries."""
+        stale = {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0}
+        states = [dict(stale) for _ in range(7)]
+        uris = ["http://h/a.flac"] * 7
+        self._mock_services(mocker, self._queue_tracks(), uris, states=states)
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "downloaded"
+        assert log["tracks"][1]["status"] == "error"
+        assert "after 5 retries" in log["tracks"][1]["error"]
+
+    def test_download_number_retries_option(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--number-retries-next-track 0 fails immediately on stale metadata."""
+        stale = {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0}
+        states = [dict(stale), dict(stale)]
+        uris = ["http://h/a.flac", "http://h/a.flac"]
+        client = self._mock_services(mocker, self._queue_tracks(), uris, states=states)
+
+        result = runner.invoke(
+            main, [*self._BASE, "-d", str(tmp_path), "--number-retries-next-track", "0"]
+        )
+
+        assert result.exit_code == 1
+        _, log = self._read_log(tmp_path)
+        assert "after 0 retries" in log["tracks"][1]["error"]
+        # No retry: one play per track plus the final reposition
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+
+    def test_download_no_check_next_track(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--no-check-next-track accepts the metadata without any verification."""
+        states = [
+            {"title": "Song A", "position": 0},
+            {"title": "Song A", "position": 0},  # stale, but the check is off
+        ]
+        uris = ["http://h/a.flac", "http://h/b.flac"]
+        client = self._mock_services(mocker, self._queue_tracks(), uris, states=states)
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "--no-check-next-track"])
+
+        assert result.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+
+    def test_download_duplicate_adjacent_tracks_accepted(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Two adjacent queue entries with the same URI do not trigger retries."""
+        tracks = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "uri": "x/a.flac"},
+            {"title": "Song A", "artist": "Artist", "album": "Album", "uri": "x/a.flac"},
+        ]
+        states = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0},
+            {"title": "Song A", "artist": "Artist", "album": "Album", "position": 1},
+        ]
+        uris = ["http://h/a.flac", "http://h/a.flac"]
+        client = self._mock_services(mocker, tracks, uris, states=states)
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "skipped"]
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+
+    def test_download_config_check_next_track(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """miscellaneous.check-next-track: false disables the verification."""
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  check-next-track: false\n")
+        states = [
+            {"title": "Song A", "position": 0},
+            {"title": "Song A", "position": 0},  # stale, but the config disables the check
+        ]
+        uris = ["http://h/a.flac", "http://h/b.flac"]
+        client = self._mock_services(mocker, self._queue_tracks(), uris, states=states)
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
+
+        assert result.exit_code == 0
+        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
 
 
 class TestQueueActions:
@@ -6286,8 +6487,10 @@ class TestConfigurationCommands:
                 },
                 "miscellaneous": {
                     "add-cover-and-metadata": True,
+                    "check-next-track": True,
                     "check-playlist-name": True,
                     "check-seek-position": True,
+                    "number-retries-next-track": 5,
                 },
                 "output": {
                     "fields": "SHORT",

@@ -4,6 +4,9 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+DEFAULT_NUMBER_RETRIES_NEXT_TRACK = 5
+"""Default number of retries waiting for a queue track's metadata to become current."""
+
 DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES = " :"
 """Characters replaced by default in file names generated from the template."""
 

@@ -451,6 +451,53 @@ def parse_time_to_seconds(text: str) -> int | None:
     return seconds
 
 
+def queue_track_metadata_current(
+    state: dict[str, Any],
+    uri: str,
+    expected_track: dict[str, Any],
+    index: int,
+    previous_uri: str | None,
+    expect_same_uri: bool,
+) -> bool:
+    """Return True if the fetched metadata refer to the queue track at ``index``.
+
+    The state is compared against ``expected_track``, the corresponding entry of the
+    queue listing: every ``album``/``artist``/``title`` value present in the queue
+    entry must appear identically in the state. The state's ``position`` must equal
+    ``index`` (a missing or malformed position fails the check), and ``uri`` must
+    differ from ``previous_uri`` — the URI of the previously fetched track — unless
+    there is no previous track or the queue itself lists the same URI for both
+    tracks (``expect_same_uri``).
+
+    Args:
+        state: The player state fetched after playing the track
+        uri: The track URI fetched after playing the track
+        expected_track: The queue-listing entry of the track that was played
+        index: The 0-based queue position that was played
+        previous_uri: The URI fetched for the previous track, or None for the first
+        expect_same_uri: Whether the queue lists the same URI for this track and the previous one
+
+    Returns:
+        True if the metadata are current, False if they look stale
+    """
+    for field in ("album", "artist", "title"):
+        expected_value = expected_track.get(field)
+        if expected_value is not None and state.get(field) != expected_value:
+            return False
+    position_value = state.get("position")
+    if position_value is None:
+        return False
+    try:
+        position = int(position_value)
+    except (TypeError, ValueError):
+        return False
+    if position != index:
+        return False
+    if previous_uri is not None and not expect_same_uri and uri == previous_uri:
+        return False
+    return True
+
+
 def queue_track_numbers(tracks: list[dict[str, Any]]) -> list[int]:
     """Return each queue track's 0-based index within its (artist, album) group.
 

@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-run directory of the output directory, with a `queue.json` log of each download's status
 - For `queue download`, the file-name template may contain path separators to lay the files
   out in subdirectories of the output directory, created as needed
+- Options `--check-next-track`/`--no-check-next-track` (default on) and
+  `--number-retries-next-track` for `queue download`, verifying with retries that each track's
+  metadata are current before downloading it
+- The next-track-check defaults can be set in the `miscellaneous` section of the configuration file
 - Subsection for the `queue download` subcommand of the `downloads` section
   of the configuration file
 
