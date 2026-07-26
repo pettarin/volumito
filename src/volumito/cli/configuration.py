@@ -10,8 +10,7 @@ from typing import Any
 import click
 import yaml
 
-# --print-resulting-status lives on the playback and queue action commands.
-ACTION_COMMAND_PATHS = (
+ACTION_COMMAND_PATHS: list[list[str]] = (
     [
         ["playback", name]
         for name in (
@@ -39,24 +38,25 @@ ACTION_COMMAND_PATHS = (
         )
     ]
 )
+"""--print-resulting-status lives on the playback and queue action commands."""
 
-# Configuration file names tried within each directory, in this order.
-CONFIGURATION_FILENAMES = [
+CONFIGURATION_FILENAMES: list[str] = [
     "volumito.yaml",
     ".volumito.yaml",
 ]
+"""Configuration file names tried within each directory, in this order."""
 
-DISPLAY_KEYS = [
+DISPLAY_KEYS: list[str] = [
     "fields",
     "format",
 ]
+"""The display option keys (fields and format) shared by the display subsections."""
 
-# Commands accepting only --format, not --fields.
-FORMAT_KEYS = [
+FORMAT_KEYS: list[str] = [
     "format",
 ]
+"""Commands accepting only --format, not --fields."""
 
-# Display subsection name -> the keys it accepts.
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
@@ -67,58 +67,81 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-info": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
 }
+"""Display subsection name -> the keys it accepts."""
 
-DISPLAY_SUBSECTIONS = list(DISPLAY_SUBSECTION_KEYS)
+DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
+"""The display subsection names, in the order the keys map defines them."""
 
-# Hierarchical subsection name -> the default_map path(s) of the command(s) it targets.
-DISPLAY_SUBSECTION_PATHS = {
-    "collection-statistics": [["collection", "statistics"]],
-    "playback-status": [["playback", "status"]],
-    "playlist-list": [["playlist", "list"]],
-    "queue-get": [["queue", "get"]],
-    "system-info": [["system", "info"], ["info"]],
-    "system-version": [["system", "version"]],
-    "track-info": [["track", "info"]],
-    "zones-get": [["zones", "get"]],
+DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "collection-statistics": [
+        ["collection", "statistics"],
+    ],
+    "playback-status": [
+        ["playback", "status"],
+    ],
+    "playlist-list": [
+        ["playlist", "list"],
+    ],
+    "queue-get": [
+        ["queue", "get"],
+    ],
+    "system-info": [
+        ["system", "info"],
+        ["info"],
+    ],
+    "system-version": [
+        ["system", "version"],
+    ],
+    "track-info": [
+        ["track", "info"],
+    ],
+    "zones-get": [
+        ["zones", "get"],
+    ],
 }
+"""Hierarchical subsection name -> the default_map path(s) of the command(s) it targets."""
 
-# The "downloads" section is hierarchical: its scalar keys are shared by both track
-# download commands, and optional "audio"/"albumart" subsections (mapping to the
-# "track audio"/"track albumart" commands) override the shared values per command.
-DOWNLOAD_KEYS = [
+DOWNLOAD_KEYS: list[str] = [
     "create-download-manifest",
     "file-name-template",
     "output-directory",
     "output-file",
     "overwrite-existing-files",
 ]
+"""The "downloads" section is hierarchical: its scalar keys are shared by both track
+download commands, and optional "audio"/"albumart" subsections (mapping to the
+"track audio"/"track albumart" commands) override the shared values per command.
+"""
 
-DOWNLOAD_SUBSECTIONS = [
+DOWNLOAD_SUBSECTIONS: list[str] = [
     "track-audio",
     "track-albumart",
 ]
+"""The download subsection names (the two track download commands)."""
 
 DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
     DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
 )
+"""Each download subsection mapped to the shared download keys it accepts."""
 
-DOWNLOAD_SUBSECTION_PATHS = {
-    "track-albumart": [["track", "albumart"]],
-    "track-audio": [["track", "audio"]],
+DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "track-albumart": [
+        ["track", "albumart"],
+    ],
+    "track-audio": [
+        ["track", "audio"],
+    ],
 }
+"""Download subsection name -> the default_map path(s) of the command(s) it targets."""
 
-# Keys of the "output" section mapping to a global (top-level group) option.
-GLOBAL_OUTPUT_KEYS = [
+GLOBAL_OUTPUT_KEYS: list[str] = [
     "machine-readable",
     "position-starting-at-one",
     "verbose",
 ]
+"""Keys of the "output" section mapping to a global (top-level group) option."""
 
-# The "output" section is hierarchical: its scalar keys are shared, and optional
-# per-command subsections override the display keys (fields/format). verbose,
-# machine-readable, and position-starting-at-one are global; print-resulting-status
-# applies to the playback and queue action commands.
-OUTPUT_SCALAR_KEYS = [
+OUTPUT_SCALAR_KEYS: list[str] = [
     "verbose",
     "machine-readable",
     "position-starting-at-one",
@@ -126,15 +149,20 @@ OUTPUT_SCALAR_KEYS = [
     "format",
     "print-resulting-status",
 ]
+"""The "output" section is hierarchical: its scalar keys are shared, and optional
+per-command subsections override the display keys (fields/format). verbose,
+machine-readable, and position-starting-at-one are global; print-resulting-status
+applies to the playback and queue action commands.
+"""
 
-# Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
-# Used for validation of the "output" and "downloads" sections.
 HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
     "downloads": (DOWNLOAD_KEYS, DOWNLOAD_SUBSECTION_KEYS),
     "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
 }
+"""Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
+Used for validation of the "output" and "downloads" sections.
+"""
 
-# One-line description of each key, used as a comment in the generated file.
 KEY_COMMENTS: dict[str, str] = {
     "add-cover-and-metadata": (
         "Embed track metadata and cover art into the downloaded audio file"
@@ -168,34 +196,52 @@ KEY_COMMENTS: dict[str, str] = {
     "scheme": "URL scheme used to connect: http or https",
     "verbose": "Enable verbose output",
 }
+"""One-line description of each key, used as a comment in the generated file."""
 
-# Config keys whose CLI parameter name differs from key.replace("-", "_").
-KEY_PARAM_OVERRIDES = {
+KEY_PARAM_OVERRIDES: dict[str, str] = {
     "format": "output_format",
 }
+"""Config keys whose CLI parameter name differs from key.replace("-", "_")."""
 
-# The "miscellaneous" section holds the keys of options living on a specific command:
-# key -> the default_map path(s) of the command(s) it targets.
 MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
-    "add-cover-and-metadata": [["track", "audio"]],
-    "check-playlist-name": [["playlist", "play"]],
-    "check-seek-position": [["playback", "seek"]],
+    "add-cover-and-metadata": [
+        ["track", "audio"],
+    ],
+    "check-playlist-name": [
+        ["playlist", "play"],
+    ],
+    "check-seek-position": [
+        ["playback", "seek"],
+    ],
 }
+"""The "miscellaneous" section holds the keys of options living on a specific command:
+key -> the default_map path(s) of the command(s) it targets.
+"""
 
-# Recognized flat section names and their allowed (hyphenated) keys, in display order.
-# Keys mirror the CLI long options minus the leading "--".
 SECTION_KEYS: dict[str, list[str]] = {
-    "volumio": ["host", "scheme", "rest-api-port", "mpd-port"],
-    "timeouts": ["rest-api-timeout", "mpd-timeout", "rest-api-sleep-before-next-call"],
+    "volumio": [
+        "host",
+        "scheme",
+        "rest-api-port",
+        "mpd-port",
+    ],
+    "timeouts": [
+        "rest-api-timeout",
+        "mpd-timeout",
+        "rest-api-sleep-before-next-call",
+    ],
     "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
 }
+"""Recognized flat section names and their allowed (hyphenated) keys, in display order.
+Keys mirror the CLI long options minus the leading "--".
+"""
 
-# Every recognized top-level section.
-RECOGNIZED_SECTIONS = [
+RECOGNIZED_SECTIONS: list[str] = [
     *SECTION_KEYS,
     "downloads",
     "output",
 ]
+"""Every recognized top-level section."""
 
 
 def _apply_hierarchical(
