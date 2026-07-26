@@ -30,7 +30,8 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
         )
     ] +
     [
-        ["playlist", "play"]
+        ["playlist", "download"],
+        ["playlist", "play"],
     ] +
     [
         ["queue", name]
@@ -146,10 +147,12 @@ DOWNLOAD_SUBSECTIONS: list[str] = [
     "track-audio",
     "track-albumart",
     "queue-download",
+    "playlist-download",
 ]
 """The download subsection names (the download commands)."""
 
 DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "playlist-download": QUEUE_DOWNLOAD_KEYS,
     "queue-download": QUEUE_DOWNLOAD_KEYS,
     "track-albumart": DOWNLOAD_KEYS,
     "track-audio": DOWNLOAD_KEYS,
@@ -157,6 +160,9 @@ DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = {
 """Each download subsection mapped to the keys it accepts."""
 
 DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "playlist-download": [
+        ["playlist", "download"],
+    ],
     "queue-download": [
         ["queue", "download"],
     ],
@@ -205,13 +211,16 @@ KEY_PARAM_OVERRIDES: dict[str, str] = {
 
 MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "add-cover-and-metadata": [
+        ["playlist", "download"],
         ["queue", "download"],
         ["track", "audio"],
     ],
     "check-next-track": [
+        ["playlist", "download"],
         ["queue", "download"],
     ],
     "check-playlist-name": [
+        ["playlist", "download"],
         ["playlist", "play"],
     ],
     "check-seek-position": [

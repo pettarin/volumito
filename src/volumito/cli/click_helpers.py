@@ -24,6 +24,7 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
+    DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
     FILE_WRITE_CHUNK_SIZE,
@@ -801,6 +802,26 @@ def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_check_next_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--check-next-track`` option to a queue/playlist download subcommand."""
+    return click.option(
+        "--check-next-track/--no-check-next-track",
+        default=True,
+        show_default=True,
+        help="Check that each track's metadata are current before downloading it",
+    )(func)
+
+
+def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--check-playlist-name`` option to a playlist subcommand."""
+    return click.option(
+        "--check-playlist-name/--no-check-playlist-name",
+        default=True,
+        show_default=True,
+        help="Check that the playlist name exists before playing it",
+    )(func)
+
+
 def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--create-download-manifest`` option to a track download subcommand."""
     return click.option(
@@ -848,6 +869,17 @@ def option_format(func: Callable[..., None]) -> Callable[..., None]:
         default="pretty",
         show_default=True,
         help="Output format",
+    )(func)
+
+
+def option_number_retries_next_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--number-retries-next-track`` option to a queue/playlist download subcommand."""
+    return click.option(
+        "--number-retries-next-track",
+        type=int,
+        default=DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
+        show_default=True,
+        help="Number of retries waiting for a track's metadata to become current",
     )(func)
 
 
@@ -919,6 +951,17 @@ def option_replace_characters_in_file_names_with(
             "Replacement string for the characters selected by "
             "--replace-characters-in-file-names"
         ),
+    )(func)
+
+
+def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--with-albumart`` option to a queue/playlist download subcommand."""
+    return click.option(
+        "--with-albumart/--no-with-albumart",
+        default=True,
+        show_default=True,
+        help="Download each album's cover, named from --albumart-file-name-template "
+        "(once per cover)",
     )(func)
 
 

@@ -33,16 +33,20 @@ from volumito.cli.click_helpers import (
     option_add_cover_and_metadata,
     option_albumart_file_name_template,
     option_audio_file_name_template,
+    option_check_next_track,
+    option_check_playlist_name,
     option_create_download_manifest,
     option_fields,
     option_file_name_template,
     option_format,
+    option_number_retries_next_track,
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
     option_print_resulting_status,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_with_albumart,
     render_output_filename,
     render_payload,
     render_state,
@@ -58,7 +62,6 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
-    DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
     DEFAULT_VOLUMIO_VERSION,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -920,31 +923,14 @@ def queue_get(
 @option_add_cover_and_metadata
 @option_albumart_file_name_template
 @option_audio_file_name_template
-@click.option(
-    "--check-next-track/--no-check-next-track",
-    default=True,
-    show_default=True,
-    help="Check that each track's metadata are current before downloading it",
-)
+@option_check_next_track
 @option_create_download_manifest
-@click.option(
-    "--number-retries-next-track",
-    type=int,
-    default=DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
-    show_default=True,
-    help="Number of retries waiting for a track's metadata to become current",
-)
+@option_number_retries_next_track
 @option_output_directory
 @option_overwrite_existing_files
 @option_replace_characters_in_file_names
 @option_replace_characters_in_file_names_with
-@click.option(
-    "--with-albumart/--no-with-albumart",
-    default=True,
-    show_default=True,
-    help="Download each album's cover, named from --albumart-file-name-template "
-    "(once per cover)",
-)
+@option_with_albumart
 def queue_download(
     ctx: click.Context,
     add_cover_and_metadata: bool,
@@ -1353,12 +1339,7 @@ def playlist_list(ctx: click.Context, output_format: str) -> None:
 @playlist.command("play")
 @click.pass_context
 @click.argument("name", type=str)
-@click.option(
-    "--check-playlist-name/--no-check-playlist-name",
-    default=True,
-    show_default=True,
-    help="Check that the playlist name exists before playing it",
-)
+@option_check_playlist_name
 @option_print_resulting_status
 def playlist_play(
     ctx: click.Context,
@@ -1382,6 +1363,99 @@ def playlist_play(
             sys.exit(1)
 
     execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@playlist.command("download")
+@click.pass_context
+@click.argument("name", type=str)
+@option_add_cover_and_metadata
+@option_albumart_file_name_template
+@option_audio_file_name_template
+@option_check_next_track
+@option_check_playlist_name
+@option_create_download_manifest
+@option_number_retries_next_track
+@option_output_directory
+@option_overwrite_existing_files
+@option_print_resulting_status
+@option_replace_characters_in_file_names
+@option_replace_characters_in_file_names_with
+@option_with_albumart
+def playlist_download(
+    ctx: click.Context,
+    name: str,
+    add_cover_and_metadata: bool,
+    albumart_file_name_template: str,
+    audio_file_name_template: str,
+    check_next_track: bool,
+    check_playlist_name: bool,
+    create_download_manifest: bool,
+    number_retries_next_track: int,
+    output_directory: str | None,
+    overwrite_existing_files: bool,
+    print_resulting_status: bool,
+    replace_characters_in_file_names: str,
+    replace_characters_in_file_names_with: str,
+    with_albumart: bool,
+) -> None:
+    """Download every track of the playlist named NAME into a directory.
+
+    The queue is cleared and the playlist is played (its name is checked first,
+    like playlist play does, unless --no-check-playlist-name is given), then the
+    resulting queue is downloaded exactly like queue download does: see its help
+    for the run directory, the file-name templates, the metadata checks, the
+    album covers, and the queue.json log.
+    """
+    machine_readable = ctx.obj["machine_readable"]
+    verbose = ctx.obj["verbose"]
+
+    if check_playlist_name:
+        names = fetch_or_exit(ctx, lambda c: c.list_playlists())
+        if name not in names:
+            if not machine_readable:
+                click.echo(f"Error: playlist not found: {name}", err=True)
+                click.echo("Available playlists:", err=True)
+                for available in names or ["(none)"]:
+                    click.echo(f"  {available}", err=True)
+            sys.exit(1)
+
+    host_configuration = ctx.obj["host_configuration"]
+    rest_api_timeout = ctx.obj["rest_api_timeout"]
+
+    try:
+        client = create_client(host_configuration, rest_api_timeout)
+        if verbose and not machine_readable:
+            click.echo("Clearing the queue...", err=True)
+        client.clear()
+        rest_api_sleep(ctx)
+        if verbose and not machine_readable:
+            click.echo(f"Playing playlist {name}...", err=True)
+        client.play_playlist(name)
+        rest_api_sleep(ctx)
+    except VolumioConnectionError as e:
+        if not machine_readable:
+            click.echo(f"Connection error: {e}", err=True)
+        sys.exit(1)
+    except VolumioAPIError as e:
+        if not machine_readable:
+            click.echo(f"API error: {e}", err=True)
+        sys.exit(1)
+
+    ctx.invoke(
+        queue_download,
+        add_cover_and_metadata=add_cover_and_metadata,
+        albumart_file_name_template=albumart_file_name_template,
+        audio_file_name_template=audio_file_name_template,
+        check_next_track=check_next_track,
+        create_download_manifest=create_download_manifest,
+        number_retries_next_track=number_retries_next_track,
+        output_directory=output_directory,
+        overwrite_existing_files=overwrite_existing_files,
+        replace_characters_in_file_names=replace_characters_in_file_names,
+        replace_characters_in_file_names_with=replace_characters_in_file_names_with,
+        with_albumart=with_albumart,
+    )
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 

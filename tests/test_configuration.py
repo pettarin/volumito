@@ -417,6 +417,12 @@ class TestDefaultConfigurationTemplate:
                 "overwrite-existing-files": False,
                 "replace-characters-in-file-names": " :",
                 "replace-characters-in-file-names-with": "_",
+                "playlist-download": {
+                    "albumart-file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
+                    "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
+                    "number-retries-next-track": 5,
+                    "with-albumart": True,
+                },
                 "queue-download": {
                     "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                     "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
@@ -553,7 +559,10 @@ class TestBuildClickDefaultMap:
         )
 
         assert result == {
-            "playlist": {"play": {"check_playlist_name": False}},
+            "playlist": {
+                "download": {"check_playlist_name": False},
+                "play": {"check_playlist_name": False},
+            },
             "playback": {"seek": {"check_seek_position": False}},
         }
 
@@ -580,6 +589,7 @@ class TestBuildClickDefaultMap:
                 "randomize": {"print_resulting_status": False},
             },
             "playlist": {
+                "download": {"print_resulting_status": False},
                 "play": {"print_resulting_status": False},
             },
         }
@@ -589,6 +599,7 @@ class TestBuildClickDefaultMap:
         result = build_click_default_map({"downloads": {"overwrite-existing-files": True}})
 
         assert result == {
+            "playlist": {"download": {"overwrite_existing_files": True}},
             "queue": {"download": {"overwrite_existing_files": True}},
             "track": {
                 "audio": {"overwrite_existing_files": True},

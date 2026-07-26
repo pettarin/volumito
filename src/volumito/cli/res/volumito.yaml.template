@@ -5,6 +5,7 @@
 downloads:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
+  # - playlist-download
   # - queue-download
   # - track-albumart
   # - track-audio
@@ -30,14 +31,28 @@ downloads:
   # Replacement string for the replaced characters
   replace-characters-in-file-names-with: "_"
 
+  playlist-download:
+    # Template (Python str.format) for the album art file names
+    albumart-file-name-template: '000___{album}___{artist}.{extension}'
+
+    # Template (Python str.format) for the audio file names
+    audio-file-name-template: '{position:03d}___{title}___{album}___{artist}.{extension}'
+
+    # Number of retries waiting for the next track's metadata to become current
+    number-retries-next-track: 5
+
+    # Download each album's cover (once per cover)
+    with-albumart: true
+
+    # Add your own overrides here
+    # output-directory: .                       # use the current working directory
+    # output-directory: /tmp/volumito/playlist  # use a fixed directory
+
   queue-download:
     # Template (Python str.format) for the album art file names
     albumart-file-name-template: '{artist}/{album_volume}/000___{album}.{extension}'
 
     # Template (Python str.format) for the audio file names
-    # (may contain / to lay the files out in subdirectories;
-    # {tracknumber} is the track number within its album;
-    # {album_volume} is the album name plus /<volumeNumber> for multi-volume albums)
     audio-file-name-template: '{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}'
 
     # Number of retries waiting for the next track's metadata to become current

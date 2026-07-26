@@ -83,7 +83,14 @@ volumito playlist play "Jazz Classics"
 # The name is checked against the saved playlists first, since the Volumio API
 # reports no error for a name matching no playlist; skip the check with:
 volumito playlist play Rock --no-check-playlist-name
+
+# Download a whole playlist: clear the queue, play the playlist, then download
+# the resulting queue exactly like queue download (same options and behavior)
+volumito playlist download Rock -d ~/Music
 ```
+
+`playlist download` takes the options of both `playlist play` (`--check-playlist-name`,
+`--print-resulting-status`) and `queue download` (see Downloading the Queue).
 
 ## Connection Options
 
@@ -208,28 +215,30 @@ for that command
 (`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
 `previous`, `seek`, `volume`, `mute`, `unmute`), the `queue` action commands (`clear`, `repeat`, `randomize`),
-and `playlist play`.
+`playlist play`, and `playlist download`.
 The `verbose`, `machine-readable`, and `position-starting-at-one` keys set the defaults for the
 corresponding global options and cannot be overridden per command.
 
 The `miscellaneous` section holds the defaults of options belonging to specific commands: its
-`add-cover-and-metadata` key sets the default for `track audio` and `queue download`;
-`check-next-track` sets the default for the corresponding `queue download` option; and
-`check-playlist-name` and `check-seek-position`
-set the defaults for the corresponding options of `playlist play` and `playback seek`.
+`add-cover-and-metadata` key sets the default for `track audio`, `queue download`, and
+`playlist download`; `check-next-track` sets the default for `queue download` and
+`playlist download`; `check-playlist-name` sets the default for `playlist play` and
+`playlist download`; and `check-seek-position`
+sets the default for the corresponding option of `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, `--overwrite-existing-files`, `--create-download-manifest`,
 `--replace-characters-in-file-names`, and `--replace-characters-in-file-names-with` options of
-`track audio`, `track albumart`, and `queue download`. A key
+`track audio`, `track albumart`, `queue download`, and `playlist download`. A key
 placed directly under `downloads` applies to all of them; the optional `track-audio`,
-`track-albumart`, and `queue-download`
+`track-albumart`, `queue-download`, and `playlist-download`
 subsections hold the same keys and override the shared value for that command (so each can have its own
-`file-name-template`). The `queue-download` subsection takes `audio-file-name-template` and
+`file-name-template`). The `queue-download` and `playlist-download` subsections take
+`audio-file-name-template` and
 `albumart-file-name-template` instead of
-`file-name-template` (matching its `--audio-file-name-template` and
-`--albumart-file-name-template` options), also accepts `number-retries-next-track` and
-`with-albumart`, and has no `output-file`.
+`file-name-template` (matching the `--audio-file-name-template` and
+`--albumart-file-name-template` options), also accept `number-retries-next-track` and
+`with-albumart`, and have no `output-file`.
 
 The `configuration` command group helps manage these files:
 

@@ -856,14 +856,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.20" in result.output
+        assert "volumito, version 0.0.21" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.20"'
+        assert result.output.strip() == '"0.0.21"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -872,7 +872,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.20"'
+        assert result.output.strip() == '"0.0.21"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5463,6 +5463,200 @@ class TestQueueDownload:
         assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
 
 
+class TestPlaylistDownload:
+    """Test cases for the playlist download command."""
+
+    _BASE = [
+        "playlist",
+        "download",
+        "Rock",
+        "--no-create-download-manifest",
+        "--no-add-cover-and-metadata",
+        "--no-print-resulting-status",
+    ]
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _queue_tracks(self):
+        return [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "tracknumber": 1},
+            {"title": "Song B", "artist": "Artist", "album": "Album", "tracknumber": 2},
+        ]
+
+    def _mock_services(self, mocker: MockerFixture, tracks, uris, states=None):
+        """Mock the REST client, the MPD client, the HTTP download, and the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.list_playlists.return_value = ["Rock", "Jazz"]
+        mock_client.get_queue.return_value = {"queue": tracks}
+        if states is not None:
+            mock_client.get_state.side_effect = states
+        else:
+            mock_client.get_state.side_effect = [
+                {**track, "position": index} for index, track in enumerate(tracks)
+            ]
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mpd = mocker.Mock()
+        mpd.get_track_uri.side_effect = list(uris)
+        mpd_class = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__enter__ = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mpd_class)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client
+
+    def _run_directory(self, base):
+        """Return the single timestamped per-run download directory under ``base``."""
+        directories = [path for path in base.iterdir() if path.is_dir()]
+        assert len(directories) == 1
+        return directories[0]
+
+    def _read_log(self, base):
+        """Return the run's queue.json log (path, parsed content)."""
+        log_path = self._run_directory(base) / "queue.json"
+        with open(log_path, encoding="utf-8") as log_file:
+            return log_path, json.load(log_file)
+
+    def test_download_happy_path(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """The playlist is checked, played, and its queue downloaded."""
+        client = self._mock_services(
+            mocker, self._queue_tracks(), ["http://h/a.flac", "http://h/b.flac"]
+        )
+
+        result = runner.invoke(main, ["-v", *self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "Playing playlist Rock..." in result.output
+        client.list_playlists.assert_called_once()
+        client.clear.assert_called_once()
+        client.play_playlist.assert_called_once_with("Rock")
+        # The queue is cleared and the playlist played before the download starts
+        calls = [name for name, _, _ in client.method_calls]
+        assert calls.index("clear") < calls.index("play_playlist") < calls.index("get_queue")
+        run = self._run_directory(tmp_path)
+        assert (run / "a.flac").read_bytes() == b"data"
+        assert (run / "b.flac").read_bytes() == b"data"
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
+
+    def test_download_unknown_playlist(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """An unknown playlist name fails before touching the queue."""
+        client = self._mock_services(mocker, [], [])
+
+        result = runner.invoke(main, ["playlist", "download", "Nope", "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "playlist not found: Nope" in result.output
+        client.clear.assert_not_called()
+        client.play_playlist.assert_not_called()
+
+    def test_download_no_check_playlist_name(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--no-check-playlist-name skips the playlist lookup."""
+        client = self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+
+        result = runner.invoke(
+            main, [*self._BASE, "--no-check-playlist-name", "-d", str(tmp_path)]
+        )
+
+        assert result.exit_code == 0
+        client.list_playlists.assert_not_called()
+        client.play_playlist.assert_called_once_with("Rock")
+
+    def test_download_requires_output_directory(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The -d requirement of queue download applies."""
+        client = self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+
+        result = runner.invoke(main, [*self._BASE])
+
+        assert result.exit_code == 2
+        assert "is required" in result.output
+        # The playlist was already played when the requirement is checked
+        client.play_playlist.assert_called_once_with("Rock")
+
+    def test_download_prints_resulting_status(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """By default, the resulting playback status is printed after the run."""
+        tracks = self._queue_tracks()[:1]
+        states = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0},
+            {"title": "Song A", "artist": "StatusMarkerArtist"},
+        ]
+        self._mock_services(mocker, tracks, ["http://h/a.flac"], states=states)
+
+        result = runner.invoke(
+            main,
+            [
+                "playlist",
+                "download",
+                "Rock",
+                "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
+                "-d",
+                str(tmp_path),
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "StatusMarkerArtist" in result.output
+
+    def test_download_config_subsection(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """The playlist-download configuration subsection supplies directory and template."""
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "downloads:\n"
+            "  playlist-download:\n"
+            f"    output-directory: {out}\n"
+            '    audio-file-name-template: "{title}.{extension}"\n'
+        )
+        self._mock_services(
+            mocker,
+            [{"title": "Song", "artist": "A", "album": "B"}],
+            ["http://h/a.flac"],
+            states=[{"title": "Song", "artist": "A", "album": "B", "position": 0}],
+        )
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE])
+
+        assert result.exit_code == 0
+        assert (self._run_directory(out) / "Song.flac").read_bytes() == b"data"
+
+    def test_download_connection_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A connection failure while clearing the queue exits with an error."""
+        client = self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        client.clear.side_effect = VolumioConnectionError("no route")
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+    def test_download_api_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """An API failure while playing the playlist exits with an error."""
+        client = self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        client.play_playlist.side_effect = VolumioAPIError("nope")
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "API error" in result.output
+
+
 class TestQueueActions:
     """Test cases for the queue clear/repeat/randomize action commands."""
 
@@ -7064,6 +7258,12 @@ class TestConfigurationCommands:
                     "overwrite-existing-files": False,
                     "replace-characters-in-file-names": " :",
                     "replace-characters-in-file-names-with": "_",
+                    "playlist-download": {
+                        "albumart-file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
+                        "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
+                        "number-retries-next-track": 5,
+                        "with-albumart": True,
+                    },
                     "queue-download": {
                         "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                         "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
