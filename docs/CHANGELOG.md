@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.20] - 2026-07-26
 
+### Added
+
+- Template key `{album_volume}` for `queue download`, rendering the album name with the volume
+  number appended when the queue holds several volumes of the same album
+- Fields `tracknumber` and `volumeNumber` to the `queue get` default short field set
+
 
 ## [0.0.19] - 2026-07-26
 

@@ -32,12 +32,13 @@ downloads:
 
   queue-download:
     # Template (Python str.format) for the album art file names
-    albumart-file-name-template: '{artist}/{album}/000___{album}.{extension}'
+    albumart-file-name-template: '{artist}/{album_volume}/000___{album}.{extension}'
 
     # Template (Python str.format) for the audio file names
     # (may contain / to lay the files out in subdirectories;
-    # {tracknumber} is the track number within its album)
-    audio-file-name-template: '{artist}/{album}/{tracknumber:03d}___{title}.{extension}'
+    # {tracknumber} is the track number within its album;
+    # {album_volume} is the album name plus /<volumeNumber> for multi-volume albums)
+    audio-file-name-template: '{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}'
 
     # Number of retries waiting for the next track's metadata to become current
     number-retries-next-track: 5

@@ -79,6 +79,7 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     format_seek,
     format_zones_as_table,
+    queue_album_volumes,
     queue_track_metadata_current,
     rebase_queue_positions,
     resolve_albumart_uri,
@@ -967,7 +968,9 @@ def queue_download(
     from -f/--audio-file-name-template. The {tracknumber} template key renders the
     track's number within its album (taken from the queue metadata), so with
     several albums queued every album keeps its own numbering, unlike
-    {position} (the queue position). Unlike the track downloads, the template may
+    {position} (the queue position); the {album_volume} key renders the album
+    name with /<volumeNumber> appended when the queue holds several volumes of
+    the same album. Unlike the track downloads, the template may
     contain path separators to lay the files out in subdirectories (e.g.
     "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
     must stay inside the run directory. Before each download, the fetched metadata
@@ -1045,6 +1048,7 @@ def queue_download(
         errors = 0
         previous_uri: str | None = None
         downloaded_covers: dict[str, str] = {}
+        album_volumes = queue_album_volumes(tracks, replace_characters_in_file_names_with)
         client.stop()
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
             for index, entry in enumerate(entries):
@@ -1085,7 +1089,11 @@ def queue_download(
                         )
                     else:
                         previous_uri = uri
-                        state = {**state, "tracknumber": tracks[index].get("tracknumber")}
+                        state = {
+                            **state,
+                            "album_volume": album_volumes[index],
+                            "tracknumber": tracks[index].get("tracknumber"),
+                        }
                         filename = render_output_filename(
                             audio_file_name_template,
                             uri,

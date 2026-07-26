@@ -80,14 +80,16 @@ SHORT_FORMAT_FIELDS_PLAYER_STATE = [
 ]
 """Short fields list for the "playback status" command."""
 
-SHORT_FORMAT_FIELDS_QUEUE_LIST = [
+SHORT_FORMAT_FIELDS_QUEUE_GET = [
+    "position",
     "title",
     "artist",
     "album",
+    "volumeNumber",
+    "tracknumber",
     "duration",
-    "position",
 ]
-"""Short fields list for the "queue list" command."""
+"""Short fields list for the "queue get" command."""
 
 SHORT_FORMAT_FIELDS_TRACK_INFO = [
     "position",

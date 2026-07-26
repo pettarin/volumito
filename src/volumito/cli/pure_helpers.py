@@ -13,7 +13,7 @@ from volumito.cli.constants import (
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
-    SHORT_FORMAT_FIELDS_QUEUE_LIST,
+    SHORT_FORMAT_FIELDS_QUEUE_GET,
     SHORT_FORMAT_FIELDS_ZONES_GET,
     SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE,
 )
@@ -100,7 +100,7 @@ def filter_queue_fields(
         A list of filtered queue item dictionaries, in the requested order
     """
     queue = queue_data.get("queue", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_LIST)
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_GET)
     filtered_queue = []
 
     for index, item in enumerate(queue):
@@ -323,6 +323,8 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
         title = track.get("title", "Unknown")
         artist = track.get("artist", "Unknown")
         album = track.get("album", "")
+        tracknumber = track.get("tracknumber")
+        volume_number = track.get("volumeNumber")
         duration = track.get("duration")
         service = track.get("service", "")
 
@@ -331,6 +333,10 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
             lines.append(f"{indent}Artist : {artist}")
         if album:
             lines.append(f"{indent}Album  : {album}")
+        if volume_number:
+            lines.append(f"{indent}Volume : {volume_number}")
+        if tracknumber:
+            lines.append(f"{indent}Track  : {tracknumber}")
         if duration and isinstance(duration, int):
             lines.append(f"{indent}Duration: {format_duration(duration)}")
         if service:
@@ -449,6 +455,42 @@ def parse_time_to_seconds(text: str) -> int | None:
     for value in values:
         seconds = seconds * 60 + value
     return seconds
+
+
+def queue_album_volumes(tracks: list[dict[str, Any]], replacement: str) -> list[str]:
+    """Return each queue track's album/volume path component, in queue order.
+
+    A track's ``(artist, album)`` group is multi-volume when the queue holds more
+    than one distinct non-None ``volumeNumber`` for it. A multi-volume track renders
+    as ``<album>/<volumeNumber>`` (a per-volume subdirectory) and any other track as
+    ``<album>`` alone. The album name and the volume number are sanitized separately
+    with ``replacement`` (see ``sanitize_filename_component``), so only the deliberate
+    separator between them survives; a missing album yields an empty string.
+
+    Args:
+        tracks: The queue items, in queue order
+        replacement: The string substituted for path separators in the components
+
+    Returns:
+        The album/volume component of each track, in queue order
+    """
+    volumes: dict[tuple[Any, Any], set[Any]] = {}
+    for track in tracks:
+        key = (track.get("artist"), track.get("album"))
+        volume = track.get("volumeNumber")
+        if volume is not None:
+            volumes.setdefault(key, set()).add(volume)
+
+    components = []
+    for track in tracks:
+        key = (track.get("artist"), track.get("album"))
+        album = sanitize_filename_component(str(track.get("album") or ""), replacement)
+        volume = track.get("volumeNumber")
+        if volume is not None and len(volumes.get(key, set())) > 1:
+            components.append(f"{album}/{sanitize_filename_component(str(volume), replacement)}")
+        else:
+            components.append(album)
+    return components
 
 
 def queue_track_metadata_current(

@@ -26,7 +26,7 @@ from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
-    SHORT_FORMAT_FIELDS_QUEUE_LIST,
+    SHORT_FORMAT_FIELDS_QUEUE_GET,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
 )
 from volumito.cli.pure_helpers import (
@@ -40,6 +40,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_queue_as_table,
     parse_time_to_seconds,
+    queue_album_volumes,
     queue_track_metadata_current,
     rebase_queue_positions,
     sanitize_filename_component,
@@ -53,8 +54,10 @@ from volumito.clients.rest import (
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
-_QUEUE_ALBUMART_FILE_NAME_TEMPLATE = "{artist}/{album}/000___{album}.{extension}"
-_QUEUE_AUDIO_FILE_NAME_TEMPLATE = "{artist}/{album}/{tracknumber:03d}___{title}.{extension}"
+_QUEUE_ALBUMART_FILE_NAME_TEMPLATE = "{artist}/{album_volume}/000___{album}.{extension}"
+_QUEUE_AUDIO_FILE_NAME_TEMPLATE = (
+    "{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -575,6 +578,41 @@ class TestRenderOutputFilename:
         )
 
         assert result == "4"
+
+    def test_album_volume_key(self):
+        """The album_volume key keeps its deliberate separator under subdirectories."""
+        state = {**self._state(), "album_volume": "Elegia/2"}
+
+        result = render_output_filename(
+            "{album_volume}/{title}.{extension}",
+            "http://x/y.flac",
+            state,
+            "flac",
+            allow_subdirectories=True,
+        )
+
+        assert result == "Elegia/2/La_rondine.flac"
+
+    def test_album_volume_key_missing(self):
+        """A missing album_volume renders as an empty string."""
+        assert render_output_filename("x_{album_volume}", "http://x/y.flac", {}, "flac") == "x_"
+
+    def test_album_volume_key_components_sanitized(self):
+        """Backslashes and control characters inside the components are neutralized."""
+        state = {**self._state(), "album_volume": "Ele\\gia/2\x01"}
+
+        result = render_output_filename(
+            "{album_volume}", "http://x/y.flac", state, "flac", allow_subdirectories=True
+        )
+
+        assert result == "Ele_gia/2"
+
+    def test_album_volume_key_requires_subdirectories(self):
+        """A multi-volume value without subdirectory support is rejected."""
+        state = {**self._state(), "album_volume": "Elegia/2"}
+
+        with pytest.raises(click.UsageError, match="plain file name"):
+            render_output_filename("{album_volume}.{extension}", "http://x/y.flac", state, "flac")
 
 
 class TestSanitizeFilenameComponent:
@@ -4384,6 +4422,62 @@ class TestPlaylistCommands:
         assert "Connection error" in result.output
 
 
+class TestQueueAlbumVolumes:
+    """Test cases for the queue_album_volumes function."""
+
+    def test_single_volume_album(self):
+        """An album with one distinct volume renders as the album name alone."""
+        tracks = [
+            {"artist": "A", "album": "Allegria", "volumeNumber": 1},
+            {"artist": "A", "album": "Allegria", "volumeNumber": 1},
+        ]
+
+        assert queue_album_volumes(tracks, "_") == ["Allegria", "Allegria"]
+
+    def test_multi_volume_album(self):
+        """An album with several volumes gets per-volume components."""
+        tracks = [
+            {"artist": "A", "album": "Elegia", "volumeNumber": 1},
+            {"artist": "A", "album": "Elegia", "volumeNumber": 2},
+            {"artist": "A", "album": "Allegria", "volumeNumber": 1},
+        ]
+
+        assert queue_album_volumes(tracks, "_") == ["Elegia/1", "Elegia/2", "Allegria"]
+
+    def test_missing_volume_number(self):
+        """A track without volumeNumber renders the album alone, even in a multi-volume album."""
+        tracks = [
+            {"artist": "A", "album": "Elegia", "volumeNumber": 1},
+            {"artist": "A", "album": "Elegia", "volumeNumber": 2},
+            {"artist": "A", "album": "Elegia"},
+        ]
+
+        assert queue_album_volumes(tracks, "_") == ["Elegia/1", "Elegia/2", "Elegia"]
+
+    def test_same_album_name_different_artists(self):
+        """Same-named albums by different artists are separate groups."""
+        tracks = [
+            {"artist": "A", "album": "Live", "volumeNumber": 1},
+            {"artist": "B", "album": "Live", "volumeNumber": 2},
+        ]
+
+        assert queue_album_volumes(tracks, "_") == ["Live", "Live"]
+
+    def test_album_name_separators_sanitized(self):
+        """Path separators inside the album name are replaced; only ours survives."""
+        tracks = [
+            {"artist": "A", "album": "AC/DC Live", "volumeNumber": 1},
+            {"artist": "A", "album": "AC/DC Live", "volumeNumber": 2},
+        ]
+
+        assert queue_album_volumes(tracks, "_") == ["AC_DC Live/1", "AC_DC Live/2"]
+
+    def test_missing_album_and_empty_queue(self):
+        """A missing album yields an empty component; an empty queue an empty list."""
+        assert queue_album_volumes([{"volumeNumber": 1}], "_") == [""]
+        assert queue_album_volumes([], "_") == []
+
+
 class TestQueueTrackMetadataCurrent:
     """Test cases for the queue_track_metadata_current function."""
 
@@ -4929,6 +5023,83 @@ class TestQueueDownload:
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "skipped"]
         assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+
+    def test_download_album_volume_key(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """{album_volume} creates per-volume subdirectories for multi-volume albums."""
+        tracks = [
+            {
+                "title": "A",
+                "artist": "Art",
+                "album": "Elegia",
+                "tracknumber": 1,
+                "volumeNumber": 1,
+            },
+            {
+                "title": "B",
+                "artist": "Art",
+                "album": "Elegia",
+                "tracknumber": 1,
+                "volumeNumber": 2,
+            },
+            {
+                "title": "C",
+                "artist": "Art",
+                "album": "Allegria",
+                "tracknumber": 1,
+                "volumeNumber": 1,
+            },
+        ]
+        states = [
+            {
+                "title": "A",
+                "artist": "Art",
+                "album": "Elegia",
+                "albumart": "http://e.com/c1.jpg",
+                "position": 0,
+            },
+            {
+                "title": "B",
+                "artist": "Art",
+                "album": "Elegia",
+                "albumart": "http://e.com/c2.jpg",
+                "position": 1,
+            },
+            {
+                "title": "C",
+                "artist": "Art",
+                "album": "Allegria",
+                "albumart": "http://e.com/c3.jpg",
+                "position": 2,
+            },
+        ]
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac", "http://h/b.flac", "http://h/c.flac"],
+            states=states,
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                str(tmp_path),
+                "-f",
+                "{album_volume}/{tracknumber:02d}_{title}.{extension}",
+                "--albumart-file-name-template",
+                "{album_volume}/cover.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert (run / "Elegia" / "1" / "01_A.flac").exists()
+        assert (run / "Elegia" / "2" / "01_B.flac").exists()
+        assert (run / "Allegria" / "01_C.flac").exists()
+        assert (run / "Elegia" / "1" / "cover.jpg").exists()
+        assert (run / "Elegia" / "2" / "cover.jpg").exists()
+        assert (run / "Allegria" / "cover.jpg").exists()
 
     def test_download_albumart_deduplicates(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -5862,8 +6033,8 @@ class TestQueueHelperFunctions:
 
         assert len(result) == 1
         assert result[0]["position"] == 1
-        # Should include only SHORT_FORMAT_FIELDS_QUEUE_LIST
-        for field in SHORT_FORMAT_FIELDS_QUEUE_LIST:
+        # Should include only SHORT_FORMAT_FIELDS_QUEUE_GET
+        for field in SHORT_FORMAT_FIELDS_QUEUE_GET:
             if field in queue_data["queue"][0]:
                 assert field in result[0]
         # Audio-quality fields are no longer part of the queue short field set
@@ -5875,6 +6046,27 @@ class TestQueueHelperFunctions:
         # Should not include non-short fields
         assert "extra_field" not in result[0]
         assert "another_field" not in result[0]
+
+    def test_filter_queue_fields_short_keeps_track_and_volume_numbers(self):
+        """The SHORT field set includes tracknumber and volumeNumber when present."""
+        queue_data = {
+            "queue": [
+                {
+                    "title": "Song",
+                    "artist": "A",
+                    "album": "B",
+                    "tracknumber": 3,
+                    "volumeNumber": 2,
+                    "service": "mpd",
+                }
+            ]
+        }
+
+        result = filter_queue_fields(queue_data, "SHORT")
+
+        assert result[0]["tracknumber"] == 3
+        assert result[0]["volumeNumber"] == 2
+        assert "service" not in result[0]
 
     def test_filter_queue_fields_custom_omits_position(self):
         """A custom list without 'position' drops the synthetic position field."""
@@ -5979,6 +6171,24 @@ class TestQueueHelperFunctions:
         assert "   Sample Rate: 44.1 kHz" in result
         assert "   Bit Depth: 16 bit" in result
         assert "   Channels: 2" in result
+
+    def test_format_queue_as_table_track_and_volume_numbers(self):
+        """The track and volume numbers are printed when present."""
+        tracks = [
+            {
+                "position": 1,
+                "title": "Test Song",
+                "artist": "Test Artist",
+                "album": "Test Album",
+                "tracknumber": 3,
+                "volumeNumber": 2,
+            }
+        ]
+
+        result = format_queue_as_table(tracks)
+
+        assert "   Track  : 3" in result
+        assert "   Volume : 2" in result
 
     def test_format_queue_as_table_two_digit_positions(self):
         """With 10+ tracks the numbers are right-aligned and the details indented to match."""

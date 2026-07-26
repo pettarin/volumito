@@ -645,6 +645,8 @@ Supported template keys:
 - `tracknumber` — the track number of the track within its album, taken from the queue metadata
   by `queue download` (used verbatim, not affected by Position Indexing; 0 when unavailable)
 - `title`, `album`, `artist`, `trackType`, `bitdepth`, `samplerate` — strings
+- `album_volume` — the album name, with `/<volumeNumber>` appended when the queue holds several
+  volumes of that album (computed by `queue download`; creates a per-volume subdirectory)
 - `duration` — track length as `HH:MM:SS`
 - `channels` — integer
 - `extension` — the file extension from the URI, defaulting to `flac` for

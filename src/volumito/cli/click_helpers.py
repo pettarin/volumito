@@ -780,9 +780,9 @@ def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..
         default="{file_name_from_uri}",
         show_default=True,
         help="Template (Python str.format syntax) for the album art file names. Keys: "
-        "file_name_from_uri, position, tracknumber, title, album, artist, trackType, "
-        "duration, bitdepth, samplerate, channels, extension. Some characters are "
-        "replaced (see --replace-characters-in-file-names).",
+        "file_name_from_uri, position, tracknumber, title, album, album_volume, "
+        "artist, trackType, duration, bitdepth, samplerate, channels, extension. "
+        "Some characters are replaced (see --replace-characters-in-file-names).",
     )(func)
 
 
@@ -795,9 +795,9 @@ def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., 
         default="{file_name_from_uri}",
         show_default=True,
         help="Template (Python str.format syntax) for the audio file names. Keys: "
-        "file_name_from_uri, position, tracknumber, title, album, artist, trackType, "
-        "duration, bitdepth, samplerate, channels, extension. Some characters are "
-        "replaced (see --replace-characters-in-file-names).",
+        "file_name_from_uri, position, tracknumber, title, album, album_volume, "
+        "artist, trackType, duration, bitdepth, samplerate, channels, extension. "
+        "Some characters are replaced (see --replace-characters-in-file-names).",
     )(func)
 
 
@@ -832,9 +832,9 @@ def option_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
         default="{file_name_from_uri}",
         show_default=True,
         help="Template (Python str.format syntax) for the -d output file name. Keys: "
-        "file_name_from_uri, position, tracknumber, title, album, artist, trackType, "
-        "duration, bitdepth, samplerate, channels, extension. Some characters are "
-        "replaced (see --replace-characters-in-file-names).",
+        "file_name_from_uri, position, tracknumber, title, album, album_volume, "
+        "artist, trackType, duration, bitdepth, samplerate, channels, extension. "
+        "Some characters are replaced (see --replace-characters-in-file-names).",
     )(func)
 
 
@@ -939,7 +939,10 @@ def render_output_filename(
     ``file_name_from_uri``, ``position`` (int, indexed according to
     ``position_starting_at_one``), ``tracknumber`` (int, the track number of the
     track, taken verbatim from the state's ``tracknumber`` key — injected from the
-    queue metadata by ``queue download``), ``title``, ``album``, ``artist``,
+    queue metadata by ``queue download``), ``title``, ``album``, ``album_volume``
+    (the album name with ``/<volumeNumber>`` appended for multi-volume albums,
+    injected by ``queue download``; its path separator is preserved, so the key is
+    meant for subdirectory-capable templates), ``artist``,
     ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
     ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
@@ -1004,6 +1007,12 @@ def render_output_filename(
     file_name_from_uri = sanitize_filename_component(extract_filename_from_uri(uri), replacement)
     uri_extension = os.path.splitext(file_name_from_uri)[1].lstrip(".")
 
+    # Sanitize the album/volume value per component, keeping its deliberate separator
+    album_volume = "/".join(
+        sanitize_filename_component(part, replacement)
+        for part in str(state.get("album_volume") or "").split("/")
+    )
+
     duration = state.get("duration")
     keys: dict[str, object] = {
         "file_name_from_uri": file_name_from_uri,
@@ -1011,6 +1020,7 @@ def render_output_filename(
         "tracknumber": tracknumber,
         "title": as_text("title"),
         "album": as_text("album"),
+        "album_volume": album_volume,
         "artist": as_text("artist"),
         "trackType": as_text("trackType"),
         "duration": format_duration(int(duration)) if isinstance(duration, int) else "",
