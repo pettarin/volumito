@@ -329,6 +329,14 @@ class TestLoadDefaultMap:
         with pytest.raises(click.BadParameter, match="unknown key 'bad-key'"):
             load_configuration(str(config))
 
+    def test_queue_download_rejects_file_name_template(self, tmp_path):
+        """The queue-download subsection takes audio-file-name-template only."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  queue-download:\n    file-name-template: '{title}'\n")
+
+        with pytest.raises(click.BadParameter, match="unknown key 'file-name-template'"):
+            load_configuration(str(config))
+
     def test_malformed_yaml_raises(self, tmp_path):
         """Invalid YAML raises BadParameter."""
         config = tmp_path / "volumito.yaml"
@@ -401,7 +409,7 @@ class TestDefaultConfigurationTemplate:
                 "replace-characters-in-file-names": " :",
                 "replace-characters-in-file-names-with": "_",
                 "queue-download": {
-                    "file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
+                    "audio-file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
                 },
                 "track-albumart": {
                     "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
@@ -436,6 +444,7 @@ class TestFlattenConfiguration:
                 "output-directory": "/shared",
                 "track-audio": {"output-directory": "/music"},
                 "track-albumart": {"file-name-template": "{title}.{extension}"},
+                "queue-download": {"audio-file-name-template": "{album}/{title}.{extension}"},
             },
         }
 
@@ -448,6 +457,7 @@ class TestFlattenConfiguration:
             ("downloads.output-directory", "/shared"),
             ("downloads.track-audio.output-directory", "/music"),
             ("downloads.track-albumart.file-name-template", "{title}.{extension}"),
+            ("downloads.queue-download.audio-file-name-template", "{album}/{title}.{extension}"),
         ]
 
     def test_empty_config_yields_empty(self):

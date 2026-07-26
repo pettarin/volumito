@@ -4678,7 +4678,7 @@ class TestQueueDownload:
             "downloads:\n"
             "  queue-download:\n"
             f"    output-directory: {out}\n"
-            '    file-name-template: "{title}.{extension}"\n'
+            '    audio-file-name-template: "{title}.{extension}"\n'
         )
         self._mock_services(
             mocker,
@@ -6680,7 +6680,7 @@ class TestConfigurationCommands:
                     "replace-characters-in-file-names": " :",
                     "replace-characters-in-file-names-with": "_",
                     "queue-download": {
-                        "file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
+                        "audio-file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
                     },
                     "track-albumart": {
                         "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,

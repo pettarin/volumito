@@ -121,6 +121,19 @@ download commands, and optional "audio"/"albumart" subsections (mapping to the
 "track audio"/"track albumart" commands) override the shared values per command.
 """
 
+QUEUE_DOWNLOAD_KEYS: list[str] = [
+    "audio-file-name-template",
+    "create-download-manifest",
+    "output-directory",
+    "overwrite-existing-files",
+    "replace-characters-in-file-names",
+    "replace-characters-in-file-names-with",
+]
+"""The keys accepted by the "queue-download" subsection (kept before the subsection
+maps that reference it): the audio template has its own name, and there is no
+output-file since the command has no -o option.
+"""
+
 DOWNLOAD_SUBSECTIONS: list[str] = [
     "track-audio",
     "track-albumart",
@@ -128,10 +141,12 @@ DOWNLOAD_SUBSECTIONS: list[str] = [
 ]
 """The download subsection names (the download commands)."""
 
-DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = dict.fromkeys(
-    DOWNLOAD_SUBSECTIONS, DOWNLOAD_KEYS
-)
-"""Each download subsection mapped to the shared download keys it accepts."""
+DOWNLOAD_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "queue-download": QUEUE_DOWNLOAD_KEYS,
+    "track-albumart": DOWNLOAD_KEYS,
+    "track-audio": DOWNLOAD_KEYS,
+}
+"""Each download subsection mapped to the keys it accepts."""
 
 DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "queue-download": [
@@ -428,7 +443,7 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
         subvalues = downloads.get(subsection, {})
         pairs.extend(
             (f"downloads.{subsection}.{key}", subvalues[key])
-            for key in DOWNLOAD_KEYS
+            for key in DOWNLOAD_SUBSECTION_KEYS[subsection]
             if key in subvalues
         )
     return pairs

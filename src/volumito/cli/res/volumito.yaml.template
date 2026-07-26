@@ -31,10 +31,10 @@ downloads:
   replace-characters-in-file-names-with: "_"
 
   queue-download:
-    # Template (Python str.format) for the -d output file name
+    # Template (Python str.format) for the audio file names
     # (may contain / to lay the files out in subdirectories;
     # {tracknumber} is the track number within its album)
-    file-name-template: '{artist}/{album}/{tracknumber:03d}___{title}.{extension}'
+    audio-file-name-template: '{artist}/{album}/{tracknumber:03d}___{title}.{extension}'
 
     # Add your own overrides here
     # output-directory: .                     # use the current working directory

@@ -709,6 +709,21 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-f``/``--audio-file-name-template`` option to the queue download subcommand."""
+    return click.option(
+        "-f",
+        "--audio-file-name-template",
+        type=str,
+        default="{file_name_from_uri}",
+        show_default=True,
+        help="Template (Python str.format syntax) for the audio file names. Keys: "
+        "file_name_from_uri, position, tracknumber, title, album, artist, trackType, "
+        "duration, bitdepth, samplerate, channels, extension. Some characters are "
+        "replaced (see --replace-characters-in-file-names).",
+    )(func)
+
+
 def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--create-download-manifest`` option to a track download subcommand."""
     return click.option(
@@ -839,6 +854,7 @@ def render_output_filename(
     replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
     allow_subdirectories: bool = False,
+    option_label: str = "--file-name-template",
 ) -> str:
     """Render a safe output file name from a template, track metadata, and the URI.
 
@@ -875,6 +891,7 @@ def render_output_filename(
         replace_characters_in_file_names: Characters replaced in the rendered name
         replace_characters_in_file_names_with: Replacement for the replaced characters
         allow_subdirectories: Whether template-literal path separators are allowed
+        option_label: Name of the template option, used in the error messages
 
     Returns:
         The rendered, sanitized file name
@@ -929,19 +946,19 @@ def render_output_filename(
     try:
         fields = [field for _, field, _, _ in Formatter().parse(template) if field is not None]
     except ValueError as e:
-        raise click.UsageError(f"Invalid --file-name-template {template!r}: {e}") from e
+        raise click.UsageError(f"Invalid {option_label} {template!r}: {e}") from e
     unknown = [field for field in fields if field not in keys]
     if unknown:
         accepted = ", ".join(sorted(keys))
         raise click.UsageError(
-            f"Invalid --file-name-template {template!r}: "
+            f"Invalid {option_label} {template!r}: "
             f"unknown key {unknown[0]!r} (valid keys: {accepted})"
         )
 
     try:
         rendered = template.format(**keys)
     except (KeyError, ValueError, IndexError) as e:
-        raise click.UsageError(f"Invalid --file-name-template {template!r}: {e}") from e
+        raise click.UsageError(f"Invalid {option_label} {template!r}: {e}") from e
 
     for character in replace_characters_in_file_names:
         rendered = rendered.replace(character, replacement)
@@ -949,7 +966,7 @@ def render_output_filename(
     rendered = rendered.lstrip(".")
     if not allow_subdirectories and ("/" in rendered or "\\" in rendered):
         raise click.UsageError(
-            f"Invalid --file-name-template {template!r}: "
+            f"Invalid {option_label} {template!r}: "
             f"it must render to a plain file name, got {rendered!r}"
         )
     return rendered

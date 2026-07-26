@@ -30,6 +30,7 @@ from volumito.cli.click_helpers import (
     fetch_or_exit,
     fetch_state_or_exit,
     option_add_cover_and_metadata,
+    option_audio_file_name_template,
     option_create_download_manifest,
     option_fields,
     option_file_name_template,
@@ -903,7 +904,7 @@ def queue_get(
     show_default=True,
     help="Number of retries waiting for a track's metadata to become current",
 )
-@option_file_name_template
+@option_audio_file_name_template
 @option_output_directory
 @option_overwrite_existing_files
 @option_replace_characters_in_file_names
@@ -915,7 +916,7 @@ def queue_download(
     with_albumart: bool,
     check_next_track: bool,
     number_retries_next_track: int,
-    file_name_template: str,
+    audio_file_name_template: str,
     output_directory: str | None,
     overwrite_existing_files: bool,
     replace_characters_in_file_names: str,
@@ -929,7 +930,7 @@ def queue_download(
     -d/--output-directory (required) and downloads into it. Playback is stopped,
     then each queue position is played, paused after the configured sleep
     (--rest-api-sleep-before-next-call), and downloaded under the name rendered
-    from -f/--file-name-template. The {tracknumber} template key renders the
+    from -f/--audio-file-name-template. The {tracknumber} template key renders the
     track's number within its album (taken from the queue metadata), so with
     several albums queued every album keeps its own numbering, unlike
     {position} (the queue position). Unlike the track downloads, the template may
@@ -1051,7 +1052,7 @@ def queue_download(
                         previous_uri = uri
                         state = {**state, "tracknumber": tracks[index].get("tracknumber")}
                         filename = render_output_filename(
-                            file_name_template,
+                            audio_file_name_template,
                             uri,
                             state,
                             "flac",
@@ -1059,6 +1060,7 @@ def queue_download(
                             replace_characters_in_file_names,
                             replace_characters_in_file_names_with,
                             allow_subdirectories=True,
+                            option_label="--audio-file-name-template",
                         )
                         if not filename:
                             status = "error"
@@ -1068,7 +1070,8 @@ def queue_download(
                             base = os.path.realpath(run_directory)
                             if os.path.commonpath([base, os.path.realpath(destination)]) != base:
                                 raise click.UsageError(
-                                    f"Invalid --file-name-template {file_name_template!r}: "
+                                    "Invalid --audio-file-name-template "
+                                    f"{audio_file_name_template!r}: "
                                     f"the file name {filename!r} escapes the output directory"
                                 )
                             status, detail = download_queue_track(

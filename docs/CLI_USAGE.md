@@ -216,7 +216,8 @@ The `downloads` section sets the defaults for the `--file-name-template`, `--out
 placed directly under `downloads` applies to all of them; the optional `track-audio`,
 `track-albumart`, and `queue-download`
 subsections hold the same keys and override the shared value for that command (so each can have its own
-`file-name-template`).
+`file-name-template`). The `queue-download` subsection takes `audio-file-name-template` instead of
+`file-name-template` (matching its `--audio-file-name-template` option) and has no `output-file`.
 
 The `configuration` command group helps manage these files:
 
@@ -434,7 +435,8 @@ recording an `error` for that track. Disable the verification with `--no-check-n
 volumito queue download -d ~/Music -f "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"
 ```
 
-The file name is rendered from `-f`/`--file-name-template` exactly as for `track audio`
+The file name is rendered from `-f`/`--audio-file-name-template` exactly as for `track audio`'s
+`--file-name-template`
 (same keys, character replacement, and sanitization). The `{tracknumber}` key renders the
 track's number within its album, taken from the queue metadata, so with several albums queued
 each album keeps its own numbering (while `{position}` stays the queue position); the same
