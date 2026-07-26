@@ -17,7 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Options `--check-next-track`/`--no-check-next-track` (default on) and
   `--number-retries-next-track` for `queue download`, verifying with retries that each track's
   metadata are current before downloading it
-- The next-track-check defaults can be set in the `miscellaneous` section of the configuration file
+- Option `--with-albumart`/`--no-with-albumart` (default on) for `queue download`, saving each
+  album's cover into the track's directory, downloading every distinct cover only once
+- The next-track-check and with-albumart defaults can be set in the `miscellaneous` section
+  of the configuration file
 - Subsection for the `queue download` subcommand of the `downloads` section
   of the configuration file
 

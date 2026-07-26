@@ -21,6 +21,7 @@ from volumito.cli.click_helpers import (
     VolumioVersionParamType,
     configuration_file_callback,
     create_client,
+    download_queue_albumart,
     download_queue_track,
     download_uri_to,
     embed_track_tags,
@@ -884,6 +885,12 @@ def queue_get(
 @queue.command("download")
 @click.pass_context
 @click.option(
+    "--with-albumart/--no-with-albumart",
+    default=True,
+    show_default=True,
+    help="Download each album's cover into the track's directory (once per cover)",
+)
+@click.option(
     "--check-next-track/--no-check-next-track",
     default=True,
     show_default=True,
@@ -905,6 +912,7 @@ def queue_get(
 @option_add_cover_and_metadata
 def queue_download(
     ctx: click.Context,
+    with_albumart: bool,
     check_next_track: bool,
     number_retries_next_track: int,
     file_name_template: str,
@@ -930,7 +938,9 @@ def queue_download(
     must stay inside the run directory. Before each download, the fetched metadata
     are checked against the queue listing (title, artist, album, and position must
     match the entry just played, retrying up to --number-retries-next-track times;
-    disable with --no-check-next-track).
+    disable with --no-check-next-track). With --with-albumart (the default), each
+    album's cover is saved as cover.<extension> into the track's directory,
+    downloading every distinct cover only once.
     A queue.json log listing every track and
     its download status (pending, downloaded, skipped, or error) is written to
     the run directory and updated after each track. At the end, playback is left
@@ -998,6 +1008,7 @@ def queue_download(
 
         errors = 0
         previous_uri: str | None = None
+        downloaded_covers: dict[str, str] = {}
         client.stop()
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
             for index, entry in enumerate(entries):
@@ -1080,6 +1091,18 @@ def queue_download(
                                     verbose,
                                     machine_readable,
                                 )
+                            if with_albumart and status != "error":
+                                cover_path = download_queue_albumart(
+                                    state,
+                                    os.path.dirname(destination),
+                                    host_configuration,
+                                    rest_api_timeout,
+                                    overwrite_existing_files,
+                                    machine_readable,
+                                    downloaded_covers,
+                                )
+                                if cover_path is not None:
+                                    entry["albumart_file_path"] = cover_path
                 except (VolumioConnectionError, VolumioAPIError) as e:
                     status, detail = "error", str(e)
 

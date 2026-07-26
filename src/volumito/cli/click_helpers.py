@@ -273,6 +273,56 @@ def create_client(
     return VolumioRESTAPIClient(host_configuration, timeout)
 
 
+def download_queue_albumart(
+    state: dict[str, Any],
+    destination_directory: str,
+    host_configuration: VolumioHostConfiguration,
+    timeout: float,
+    overwrite: bool,
+    machine_readable: bool,
+    downloaded_covers: dict[str, str],
+) -> str | None:
+    """Download the current track's album art into ``destination_directory``.
+
+    The cover is saved as ``cover.<extension>`` next to the track. Each distinct
+    album-art URI is downloaded at most once per run (``downloaded_covers`` maps the
+    URIs already handled to their file paths), and an existing cover file is reused
+    unless ``overwrite`` is true. A download failure is reported as a warning and
+    otherwise ignored.
+
+    Args:
+        state: The current player state dictionary (source of the album-art URI)
+        destination_directory: The directory of the downloaded track
+        host_configuration: The Volumio host configuration (to resolve relative URIs)
+        timeout: Request timeout in seconds
+        overwrite: Whether to overwrite an existing cover file
+        machine_readable: Whether machine-readable mode is active (suppresses messages)
+        downloaded_covers: Cache of album-art URIs already handled, updated in place
+
+    Returns:
+        The cover file path, or None if the track has no album art or the download failed
+    """
+    albumart_uri = resolve_albumart_uri(state, host_configuration)
+    if albumart_uri is None:
+        return None
+    if albumart_uri in downloaded_covers:
+        return downloaded_covers[albumart_uri]
+    file_name = sanitize_filename_component(extract_filename_from_uri(albumart_uri), "_")
+    extension = os.path.splitext(file_name)[1].lstrip(".") or "jpg"
+    cover_path = os.path.join(destination_directory, f"cover.{extension}")
+    if not overwrite and os.path.exists(cover_path):
+        downloaded_covers[albumart_uri] = cover_path
+        return cover_path
+    try:
+        fetch_uri_to_file(albumart_uri, cover_path, timeout)
+    except (requests.exceptions.RequestException, OSError) as e:
+        if not machine_readable:
+            click.echo(f"\nWarning: cannot download album art to {cover_path} ({e})", err=True)
+        return None
+    downloaded_covers[albumart_uri] = cover_path
+    return cover_path
+
+
 def download_queue_track(
     uri: str,
     destination: str,

@@ -73,6 +73,9 @@ miscellaneous:
   # Number of retries waiting for the next track's metadata to become current
   number-retries-next-track: 5
 
+  # Download each album's cover into the track's directory (once per cover)
+  with-albumart: true
+
 
 output:
   # A key here applies to all relevant commands;

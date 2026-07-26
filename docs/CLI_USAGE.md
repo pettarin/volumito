@@ -205,9 +205,9 @@ corresponding global options and cannot be overridden per command.
 
 The `miscellaneous` section holds the defaults of options belonging to specific commands: its
 `add-cover-and-metadata` key sets the default for `track audio` and `queue download`;
-`check-next-track` and `number-retries-next-track` set the defaults for the corresponding
-`queue download` options; and `check-playlist-name` and `check-seek-position` set the defaults
-for the corresponding options of `playlist play` and `playback seek`.
+`with-albumart`, `check-next-track`, and `number-retries-next-track` set the defaults for the
+corresponding `queue download` options; and `check-playlist-name` and `check-seek-position`
+set the defaults for the corresponding options of `playlist play` and `playback seek`.
 
 The `downloads` section sets the defaults for the `--file-name-template`, `--output-directory`,
 `--output-file`, `--overwrite-existing-files`, `--create-download-manifest`,
@@ -447,6 +447,11 @@ metadata still cannot introduce path components). The other download options
 (`--overwrite-existing-files`, `--create-download-manifest`, `--add-cover-and-metadata`,
 `--replace-characters-in-file-names`, `--replace-characters-in-file-names-with`) apply per
 track.
+
+With `--with-albumart` (the default; disable with `--no-with-albumart`), each album's cover is saved as
+`cover.<extension>` into the track's directory. Every distinct cover is downloaded only once
+per run, and an existing cover file is reused unless `--overwrite-existing-files` is given; a
+failed cover download is reported as a warning and does not fail the track.
 
 Each run also writes a `queue.json` log into its timestamped directory, listing every track
 with its download status (`pending`, `downloaded`, `skipped`, or `error`); the log is updated

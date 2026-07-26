@@ -197,6 +197,9 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "number-retries-next-track": [
         ["queue", "download"],
     ],
+    "with-albumart": [
+        ["queue", "download"],
+    ],
 }
 """The "miscellaneous" section holds the keys of options living on a specific command:
 key -> the default_map path(s) of the command(s) it targets.

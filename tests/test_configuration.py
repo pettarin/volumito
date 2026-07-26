@@ -383,6 +383,7 @@ class TestDefaultConfigurationTemplate:
                 "check-playlist-name": True,
                 "check-seek-position": True,
                 "number-retries-next-track": 5,
+                "with-albumart": True,
             },
             "output": {
                 "fields": "SHORT",

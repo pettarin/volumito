@@ -4929,6 +4929,211 @@ class TestQueueDownload:
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "skipped"]
         assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
 
+    def test_download_albumart_deduplicates(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The cover of an album is downloaded only once for all its tracks."""
+        cover_uri = "http://example.com/images/c.jpg"
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": cover_uri,
+                "position": 0,
+            },
+            {
+                "title": "Song B",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": cover_uri,
+                "position": 1,
+            },
+        ]
+        self._mock_services(
+            mocker, self._queue_tracks(), ["http://h/a.flac", "http://h/b.flac"], states=states
+        )
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        http_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._BASE, "-d", str(tmp_path), "-f", "{artist}/{album}/{title}.{extension}"],
+        )
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert (run / "Artist" / "Album" / "cover.jpg").read_bytes() == b"data"
+        # Two audio downloads plus a single cover download
+        assert http_get.call_count == 3
+        _, log = self._read_log(tmp_path)
+        cover = str(run / "Artist" / "Album" / "cover.jpg")
+        assert [t["albumart_file_path"] for t in log["tracks"]] == [cover, cover]
+
+    def test_download_albumart_per_album(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """Each album of the queue gets its own cover in its own directory."""
+        tracks = [
+            {"title": "A", "artist": "Art1", "album": "Alb1", "tracknumber": 1},
+            {"title": "C", "artist": "Art2", "album": "Alb2", "tracknumber": 1},
+        ]
+        states = [
+            {
+                "title": "A",
+                "artist": "Art1",
+                "album": "Alb1",
+                "albumart": "http://example.com/c1.jpg",
+                "position": 0,
+            },
+            {
+                "title": "C",
+                "artist": "Art2",
+                "album": "Alb2",
+                "albumart": "http://example.com/c2.jpg",
+                "position": 1,
+            },
+        ]
+        self._mock_services(
+            mocker, tracks, ["http://h/a.flac", "http://h/c.flac"], states=states
+        )
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        http_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._BASE, "-d", str(tmp_path), "-f", "{artist}/{album}/{title}.{extension}"],
+        )
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert (run / "Art1" / "Alb1" / "cover.jpg").exists()
+        assert (run / "Art2" / "Alb2" / "cover.jpg").exists()
+        assert http_get.call_count == 4
+
+    def test_download_albumart_existing_file_reused(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An existing cover file in the destination directory is not re-downloaded."""
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c1.jpg",
+                "position": 0,
+            },
+            {
+                "title": "Song B",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c2.jpg",
+                "position": 1,
+            },
+        ]
+        self._mock_services(
+            mocker, self._queue_tracks(), ["http://h/a.flac", "http://h/b.flac"], states=states
+        )
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        http_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert (run / "cover.jpg").exists()
+        # The flat run directory already holds cover.jpg when the second URI arrives
+        assert http_get.call_count == 3
+        _, log = self._read_log(tmp_path)
+        cover = str(run / "cover.jpg")
+        assert [t["albumart_file_path"] for t in log["tracks"]] == [cover, cover]
+
+    def test_download_albumart_failure_warns(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A failed cover download warns but does not fail the track."""
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c.jpg",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch(
+            "volumito.cli.click_helpers.requests.get",
+            side_effect=[mock_response, requests.exceptions.RequestException("cover boom")],
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "Warning: cannot download album art" in result.output
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "downloaded"
+        assert "albumart_file_path" not in log["tracks"][0]
+
+    def test_download_no_with_albumart_option(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--no-with-albumart skips the cover downloads entirely."""
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c.jpg",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        http_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "--no-with-albumart"])
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert not (run / "cover.jpg").exists()
+        assert http_get.call_count == 1
+
+    def test_download_config_with_albumart_disabled(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """miscellaneous.with-albumart: false disables the cover downloads."""
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  with-albumart: false\n")
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c.jpg",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
+
+        assert result.exit_code == 0
+        assert not (self._run_directory(out) / "cover.jpg").exists()
+
     def test_download_config_check_next_track(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -6448,6 +6653,7 @@ class TestConfigurationCommands:
                     "check-playlist-name": True,
                     "check-seek-position": True,
                     "number-retries-next-track": 5,
+                    "with-albumart": True,
                 },
                 "output": {
                     "fields": "SHORT",
