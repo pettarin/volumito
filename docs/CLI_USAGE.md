@@ -411,8 +411,10 @@ volumito queue clear --no-print-resulting-status
 
 ### Downloading the Queue
 
-`queue download` downloads every track of the current queue into a directory
-(`-d`/`--output-directory`, required). Playback is stopped, then each queue position is played,
+`queue download` downloads every track of the current queue. Each run creates a timestamped
+directory (e.g. `20260726121314`, UTC) inside `-d`/`--output-directory` (required) and downloads
+into it; an existing directory with the same timestamp is only reused with
+`--overwrite-existing-files`. Playback is stopped, then each queue position is played,
 paused after the configured `--rest-api-sleep-before-next-call` (default 1.0 s), and downloaded;
 at the end, playback is left stopped at the first track. The exit code is 1 if any track failed.
 
@@ -434,12 +436,10 @@ metadata still cannot introduce path components). The other download options
 `--replace-characters-in-file-names`, `--replace-characters-in-file-names-with`) apply per
 track.
 
-Each run also writes a `<timestamp>_queue.json` log (e.g. `20260723010203_queue.json`, UTC)
-into the output directory, listing every track with its download status (`pending`,
-`downloaded`, `skipped`, or `error`); the log is updated after each track, so an interrupted
-run leaves a valid partial log. An existing log file is only overwritten with
-`--overwrite-existing-files`. In machine-readable mode the log path is printed as a quoted
-string.
+Each run also writes a `queue.json` log into its timestamped directory, listing every track
+with its download status (`pending`, `downloaded`, `skipped`, or `error`); the log is updated
+after each track, so an interrupted run leaves a valid partial log. In machine-readable mode
+the log path is printed as a quoted string.
 
 ## Resulting Status
 

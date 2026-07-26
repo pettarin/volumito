@@ -49,11 +49,11 @@ OUTPUT_FORMATS = [
 ]
 """Accepted values of the -F/--format option."""
 
-QUEUE_LOG_SUFFIX = "_queue.json"
-"""Suffix of the timestamped queue download log file name."""
+QUEUE_LOG_FILENAME = "queue.json"
+"""File name of the queue download log, inside the per-run download directory."""
 
 QUEUE_LOG_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
-"""strftime format of the timestamp prefixing the queue download log file name."""
+"""strftime format of the timestamp naming the per-run queue download directory."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",

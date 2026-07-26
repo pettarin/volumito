@@ -4467,12 +4467,17 @@ class TestQueueDownload:
         mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client
 
-    def _read_log(self, tmp_path):
-        """Return the single timestamped queue log (path, parsed content)."""
-        logs = list(tmp_path.glob("*_queue.json"))
-        assert len(logs) == 1
-        with open(logs[0], encoding="utf-8") as log_file:
-            return logs[0], json.load(log_file)
+    def _run_directory(self, base):
+        """Return the single timestamped per-run download directory under ``base``."""
+        directories = [path for path in base.iterdir() if path.is_dir()]
+        assert len(directories) == 1
+        return directories[0]
+
+    def _read_log(self, base):
+        """Return the run's queue.json log (path, parsed content)."""
+        log_path = self._run_directory(base) / "queue.json"
+        with open(log_path, encoding="utf-8") as log_file:
+            return log_path, json.load(log_file)
 
     def test_download_happy_path(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """All queue tracks are downloaded, logged, and playback is repositioned."""
@@ -4486,14 +4491,16 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         assert "Successfully retrieved queue" in result.output
-        assert (tmp_path / "a.flac").read_bytes() == b"data"
-        assert (tmp_path / "b.flac").read_bytes() == b"data"
+        run = self._run_directory(tmp_path)
+        assert (run / "a.flac").read_bytes() == b"data"
+        assert (run / "b.flac").read_bytes() == b"data"
         log_path, log = self._read_log(tmp_path)
         assert log["entity"] == "queue"
         assert log["kind"] == "download"
+        assert log["output_directory"] == str(run)
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
         assert [t["position"] for t in log["tracks"]] == [1, 2]
-        assert log["tracks"][0]["output_file_path"] == str(tmp_path / "a.flac")
+        assert log["tracks"][0]["output_file_path"] == str(run / "a.flac")
         assert log["tracks"][0]["source_uri"] == "http://h/a.flac"
         # Stop at the start and at the end; play each track, then reposition to the first
         assert client.stop.call_count == 2
@@ -4517,7 +4524,8 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        assert (tmp_path / "AC_DC" / "Alb" / "Song.flac").read_bytes() == b"data"
+        run = self._run_directory(tmp_path)
+        assert (run / "AC_DC" / "Alb" / "Song.flac").read_bytes() == b"data"
         _, log = self._read_log(tmp_path)
         assert log["tracks"][0]["status"] == "downloaded"
 
@@ -4541,18 +4549,19 @@ class TestQueueDownload:
         assert result.exit_code == 2
         assert "is required" in result.output
 
-    def test_download_skips_existing(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
-        """An existing destination is skipped when overwrite is off."""
-        (tmp_path / "a.flac").write_bytes(b"old")
-        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+    def test_download_skips_duplicate_names(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A rendered name colliding with an earlier track of the run is skipped."""
+        self._mock_services(mocker, self._queue_tracks(), ["http://h/a.flac", "http://h2/a.flac"])
 
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert (tmp_path / "a.flac").read_bytes() == b"old"
+        run = self._run_directory(tmp_path)
         _, log = self._read_log(tmp_path)
-        assert log["tracks"][0]["status"] == "skipped"
-        assert log["tracks"][0]["output_file_path"] == str(tmp_path / "a.flac")
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "skipped"]
+        assert log["tracks"][1]["output_file_path"] == str(run / "a.flac")
         assert "skipped 1" in result.output
 
     def test_download_error_continues(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
@@ -4571,23 +4580,23 @@ class TestQueueDownload:
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["error", "downloaded"]
         assert "boom" in log["tracks"][0]["error"]
-        assert (tmp_path / "b.flac").exists()
+        assert (self._run_directory(tmp_path) / "b.flac").exists()
         assert "errors 1" in result.output
 
-    def test_download_log_respects_overwrite_flag(
+    def test_download_run_directory_respects_overwrite_flag(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """An existing log with the same timestamp is not clobbered without the flag."""
+        """An existing run directory with the same timestamp is refused without the flag."""
         self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
         mock_datetime = mocker.patch("volumito.cli.volumito.datetime")
         mock_datetime.now.return_value.strftime.return_value = "20260101000000"
-        (tmp_path / "20260101000000_queue.json").write_text("old")
+        (tmp_path / "20260101000000").mkdir()
 
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 1
-        assert "already exists" in result.output
-        assert (tmp_path / "20260101000000_queue.json").read_text() == "old"
+        assert "directory already exists" in result.output
+        assert list((tmp_path / "20260101000000").iterdir()) == []
 
     def test_download_machine_readable(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """In machine-readable mode only the quoted log path is printed."""
@@ -4612,7 +4621,7 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         assert "The queue is empty" in result.output
-        assert list(tmp_path.glob("*_queue.json")) == []
+        assert list(tmp_path.iterdir()) == []
         mock_client.stop.assert_not_called()
 
     def test_download_manifest_and_embedding(
@@ -4625,13 +4634,14 @@ class TestQueueDownload:
         result = runner.invoke(main, ["queue", "download", "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        with open(tmp_path / "a.flac.json", encoding="utf-8") as manifest_file:
+        run = self._run_directory(tmp_path)
+        with open(run / "a.flac.json", encoding="utf-8") as manifest_file:
             manifest = json.load(manifest_file)
         assert manifest["entity"] == "track"
         assert manifest["kind"] == "audio"
         assert manifest["add_cover_and_metadata"] is True
         embed.assert_called_once()
-        assert embed.call_args.args[0] == str(tmp_path / "a.flac")
+        assert embed.call_args.args[0] == str(run / "a.flac")
 
     def test_download_config_subsection(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """The queue-download configuration subsection supplies directory and template."""
@@ -4653,7 +4663,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE])
 
         assert result.exit_code == 0
-        assert (out / "Song.flac").read_bytes() == b"data"
+        assert (self._run_directory(out) / "Song.flac").read_bytes() == b"data"
 
     def test_download_position_starting_at_zero(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -4747,9 +4757,10 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        assert (tmp_path / "01_A.flac").exists()
-        assert (tmp_path / "02_B.flac").exists()
-        assert (tmp_path / "01_C.flac").exists()
+        run = self._run_directory(tmp_path)
+        assert (run / "01_A.flac").exists()
+        assert (run / "02_B.flac").exists()
+        assert (run / "01_C.flac").exists()
         _, log = self._read_log(tmp_path)
         assert [t["track-number"] for t in log["tracks"]] == [1, 2, 1]
         assert [t["position"] for t in log["tracks"]] == [1, 2, 3]

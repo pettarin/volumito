@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Command `queue download`, downloading every track of the current queue into a directory and
-  writing a timestamped `<timestamp>_queue.json` log with the status of each download
+- Command `queue download`, downloading every track of the current queue into a timestamped
+  per-run directory of the output directory, with a `queue.json` log of each download's status
 - For `queue download`, the file-name template may contain path separators to lay the files
   out in subdirectories of the output directory, created as needed
 - Subsection for the `queue download` subcommand of the `downloads` section

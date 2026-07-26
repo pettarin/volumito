@@ -60,7 +60,7 @@ from volumito.cli.constants import (
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
-    QUEUE_LOG_SUFFIX,
+    QUEUE_LOG_FILENAME,
     QUEUE_LOG_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
@@ -901,20 +901,20 @@ def queue_download(
 ) -> None:
     """Download every track of the current queue into a directory.
 
-    Playback is stopped, then each queue position is played, paused after the
-    configured sleep (--rest-api-sleep-before-next-call), and downloaded into
-    -d/--output-directory (required) under the name rendered from
-    -f/--file-name-template. The {tracknumber} template key renders the track's
-    number within its album (computed from the queue), so with several albums
-    queued every album starts again from the indexing base, unlike {position}
-    (the queue position). Unlike the track downloads, the template may contain
-    path separators to lay the files out in subdirectories (e.g.
+    Each run creates a timestamped directory (e.g. 20260726121314) inside
+    -d/--output-directory (required) and downloads into it. Playback is stopped,
+    then each queue position is played, paused after the configured sleep
+    (--rest-api-sleep-before-next-call), and downloaded under the name rendered
+    from -f/--file-name-template. The {tracknumber} template key renders the
+    track's number within its album (computed from the queue), so with several
+    albums queued every album starts again from the indexing base, unlike
+    {position} (the queue position). Unlike the track downloads, the template may
+    contain path separators to lay the files out in subdirectories (e.g.
     "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
-    must stay inside the output directory. A timestamped <timestamp>_queue.json
-    log listing every track and its download status (pending, downloaded, skipped,
-    or error) is written to the output directory and updated after each track.
-    At the end, playback is left stopped at the first track; the exit code is 1
-    if any track failed.
+    must stay inside the run directory. A queue.json log listing every track and
+    its download status (pending, downloaded, skipped, or error) is written to
+    the run directory and updated after each track. At the end, playback is left
+    stopped at the first track; the exit code is 1 if any track failed.
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -942,11 +942,12 @@ def queue_download(
             return
 
         timestamp = datetime.now(UTC).strftime(QUEUE_LOG_TIMESTAMP_FORMAT)
-        log_path = os.path.join(output_directory, f"{timestamp}{QUEUE_LOG_SUFFIX}")
-        if not overwrite_existing_files and os.path.exists(log_path):
+        run_directory = os.path.join(output_directory, timestamp)
+        log_path = os.path.join(run_directory, QUEUE_LOG_FILENAME)
+        if not overwrite_existing_files and os.path.exists(run_directory):
             if not machine_readable:
                 click.echo(
-                    f"Error: file already exists: {log_path} "
+                    f"Error: directory already exists: {run_directory} "
                     "(use --overwrite-existing-files to overwrite)",
                     err=True,
                 )
@@ -968,12 +969,12 @@ def queue_download(
             "download_date": datetime.now(UTC).isoformat(),
             "entity": "queue",
             "kind": "download",
-            "output_directory": output_directory,
+            "output_directory": run_directory,
             "tracks": entries,
             "volumio_host": host_configuration.rest_base_url,
             "volumito_version": __version__,
         }
-        os.makedirs(output_directory, exist_ok=True)
+        os.makedirs(run_directory, exist_ok=True)
         write_queue_log(log_path, log)
 
         errors = 0
@@ -1002,8 +1003,8 @@ def queue_download(
                         status: str = "error"
                         detail: str | None = "cannot determine a file name for the download"
                     else:
-                        destination = os.path.join(output_directory, filename)
-                        base = os.path.realpath(output_directory)
+                        destination = os.path.join(run_directory, filename)
+                        base = os.path.realpath(run_directory)
                         if os.path.commonpath([base, os.path.realpath(destination)]) != base:
                             raise click.UsageError(
                                 f"Invalid --file-name-template {file_name_template!r}: "
