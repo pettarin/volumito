@@ -4891,7 +4891,7 @@ class TestQueueDownload:
         assert (run / "02_B.flac").exists()
         assert (run / "01_C.flac").exists()
         _, log = self._read_log(tmp_path)
-        assert [t["track-number"] for t in log["tracks"]] == [1, 2, 1]
+        assert [t["track_number"] for t in log["tracks"]] == [1, 2, 1]
         assert [t["position"] for t in log["tracks"]] == [1, 2, 3]
 
     def test_download_embeds_album_relative_tracknumber(
@@ -5100,6 +5100,9 @@ class TestQueueDownload:
         assert (run / "Elegia" / "1" / "cover.jpg").exists()
         assert (run / "Elegia" / "2" / "cover.jpg").exists()
         assert (run / "Allegria" / "cover.jpg").exists()
+        _, log = self._read_log(tmp_path)
+        assert [t["volume_number"] for t in log["tracks"]] == [1, 2, 1]
+        assert [t["track_number"] for t in log["tracks"]] == [1, 1, 1]
 
     def test_download_albumart_deduplicates(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path

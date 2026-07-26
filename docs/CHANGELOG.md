@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   number appended when the queue holds several volumes of the same album
 - Fields `tracknumber` and `volumeNumber` to the `queue get` default short field set
 
+### Changed
+
+- The queue download log records the track number under `track_number` and adds `volume_number`
+
 
 ## [0.0.19] - 2026-07-26
 

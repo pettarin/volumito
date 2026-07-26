@@ -1029,7 +1029,8 @@ def queue_download(
                 "position": display_position(index, position_starting_at_one),
                 "status": "pending",
                 "title": track.get("title"),
-                "track-number": track.get("tracknumber"),
+                "track_number": track.get("tracknumber"),
+                "volume_number": track.get("volumeNumber"),
             }
             for index, track in enumerate(tracks)
         ]
