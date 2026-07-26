@@ -74,6 +74,7 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     format_seek,
     format_zones_as_table,
+    queue_track_numbers,
     rebase_queue_positions,
     resolve_albumart_uri,
 )
@@ -903,9 +904,12 @@ def queue_download(
     Playback is stopped, then each queue position is played, paused after the
     configured sleep (--rest-api-sleep-before-next-call), and downloaded into
     -d/--output-directory (required) under the name rendered from
-    -f/--file-name-template. Unlike the track downloads, the template may contain
+    -f/--file-name-template. The {tracknumber} template key renders the track's
+    number within its album (computed from the queue), so with several albums
+    queued every album starts again from the indexing base, unlike {position}
+    (the queue position). Unlike the track downloads, the template may contain
     path separators to lay the files out in subdirectories (e.g.
-    "{artist}/{album}/{position:03d}_{title}.{extension}"); the resulting path
+    "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
     must stay inside the output directory. A timestamped <timestamp>_queue.json
     log listing every track and its download status (pending, downloaded, skipped,
     or error) is written to the output directory and updated after each track.
@@ -948,6 +952,7 @@ def queue_download(
                 )
             sys.exit(1)
 
+        track_numbers = queue_track_numbers(tracks)
         entries: list[dict[str, Any]] = [
             {
                 "album": track.get("album"),
@@ -955,6 +960,7 @@ def queue_download(
                 "position": display_position(index, position_starting_at_one),
                 "status": "pending",
                 "title": track.get("title"),
+                "track-number": display_position(track_numbers[index], position_starting_at_one),
             }
             for index, track in enumerate(tracks)
         ]
@@ -979,7 +985,7 @@ def queue_download(
                     client.play(index)
                     rest_api_sleep(ctx)
                     client.pause()
-                    state = client.get_state()
+                    state = {**client.get_state(), "tracknumber": track_numbers[index]}
                     uri = mpd_client.get_track_uri()
                     entry["source_uri"] = uri
                     filename = render_output_filename(

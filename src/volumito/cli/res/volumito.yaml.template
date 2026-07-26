@@ -32,8 +32,9 @@ downloads:
 
   queue-download:
     # Template (Python str.format) for the -d output file name
-    # (may contain / to lay the files out in subdirectories)
-    file-name-template: '{artist}/{album}/{position:03d}___{title}.{extension}'
+    # (may contain / to lay the files out in subdirectories;
+    # {tracknumber} is the track number within its album)
+    file-name-template: '{artist}/{album}/{tracknumber:03d}___{title}.{extension}'
 
     # Add your own overrides here
     # output-directory: .                     # use the current working directory

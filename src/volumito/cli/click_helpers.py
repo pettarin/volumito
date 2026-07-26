@@ -444,9 +444,11 @@ def embed_track_tags(
 ) -> None:
     """Embed the current track metadata and cover art into a downloaded audio file.
 
-    The metadata and cover come from ``state``. Any problem (an unsupported format, a
-    cover-download failure, or a tagging error) is reported as a warning and otherwise
-    ignored: the already-downloaded file is left in place.
+    The metadata and cover come from ``state``. The embedded track number comes from
+    the state's ``tracknumber`` key when present (the album-relative number injected
+    by ``queue download``), falling back to ``position``. Any problem (an unsupported
+    format, a cover-download failure, or a tagging error) is reported as a warning and
+    otherwise ignored: the already-downloaded file is left in place.
 
     Args:
         destination: The downloaded audio file to tag, modified in place
@@ -457,10 +459,12 @@ def embed_track_tags(
         verbose: Whether to print progress messages
         machine_readable: Whether machine-readable mode is active (suppresses messages)
     """
-    position = state.get("position")
+    number_source = state.get("tracknumber")
+    if number_source is None:
+        number_source = state.get("position")
     track_number = (
-        display_position(int(position), position_starting_at_one)
-        if position is not None
+        display_position(int(number_source), position_starting_at_one)
+        if number_source is not None
         else None
     )
 
@@ -682,9 +686,9 @@ def option_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
         default="{file_name_from_uri}",
         show_default=True,
         help="Template (Python str.format syntax) for the -d output file name. Keys: "
-        "file_name_from_uri, position, title, album, artist, trackType, duration, "
-        "bitdepth, samplerate, channels, extension. Some characters are replaced "
-        "(see --replace-characters-in-file-names).",
+        "file_name_from_uri, position, tracknumber, title, album, artist, trackType, "
+        "duration, bitdepth, samplerate, channels, extension. Some characters are "
+        "replaced (see --replace-characters-in-file-names).",
     )(func)
 
 
@@ -786,7 +790,9 @@ def render_output_filename(
 
     The template uses Python ``str.format`` syntax. Supported keys are:
     ``file_name_from_uri``, ``position`` (int, indexed according to
-    ``position_starting_at_one``), ``title``, ``album``, ``artist``,
+    ``position_starting_at_one``), ``tracknumber`` (int, indexed like ``position``,
+    from the state's ``tracknumber`` key — the album-relative track number injected
+    by ``queue download``), ``title``, ``album``, ``artist``,
     ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
     ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
@@ -842,6 +848,11 @@ def render_output_filename(
     except (TypeError, ValueError):
         position = 0
 
+    try:
+        tracknumber = int(state.get("tracknumber") or 0)
+    except (TypeError, ValueError):
+        tracknumber = 0
+
     file_name_from_uri = sanitize_filename_component(extract_filename_from_uri(uri), replacement)
     uri_extension = os.path.splitext(file_name_from_uri)[1].lstrip(".")
 
@@ -849,6 +860,7 @@ def render_output_filename(
     keys: dict[str, object] = {
         "file_name_from_uri": file_name_from_uri,
         "position": display_position(position, position_starting_at_one),
+        "tracknumber": display_position(tracknumber, position_starting_at_one),
         "title": as_text("title"),
         "album": as_text("album"),
         "artist": as_text("artist"),

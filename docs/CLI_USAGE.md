@@ -418,11 +418,15 @@ at the end, playback is left stopped at the first track. The exit code is 1 if a
 
 ```bash
 # Download the whole queue into per-artist/per-album subdirectories
-volumito queue download -d ~/Music -f "{artist}/{album}/{position:03d}_{title}.{extension}"
+volumito queue download -d ~/Music -f "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"
 ```
 
 The file name is rendered from `-f`/`--file-name-template` exactly as for `track audio`
-(same keys, character replacement, and sanitization), with one difference: the template may
+(same keys, character replacement, and sanitization). The `{tracknumber}` key renders the
+track's number within its album, so with several albums queued each album is numbered from the
+indexing base again (while `{position}` stays the queue position); the same number is embedded
+as the track-number tag when `--add-cover-and-metadata` is on. One further difference: the
+template may
 contain path separators to lay the files out in subdirectories, which are created as needed.
 The resulting path must stay inside the output directory (values interpolated from the
 metadata still cannot introduce path components). The other download options
@@ -603,6 +607,8 @@ volumito track audio -d /path/to/music/ -f "{position:03d}_{title}.{extension}"
 Supported template keys:
 - `file_name_from_uri` — the file name taken from the URI (the default)
 - `position` — track position, indexed as per Position Indexing (e.g. `{position:03d}` → `001`)
+- `tracknumber` — the track number of the track within its album, indexed like `position`
+  (computed from the queue by `queue download`; elsewhere it falls back to the indexing base)
 - `title`, `album`, `artist`, `trackType`, `bitdepth`, `samplerate` — strings
 - `duration` — track length as `HH:MM:SS`
 - `channels` — integer

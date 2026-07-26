@@ -40,6 +40,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_queue_as_table,
     parse_time_to_seconds,
+    queue_track_numbers,
     rebase_queue_positions,
     sanitize_filename_component,
 )
@@ -52,7 +53,7 @@ from volumito.clients.rest import (
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
-_QUEUE_FILE_NAME_TEMPLATE = "{artist}/{album}/{position:03d}___{title}.{extension}"
+_QUEUE_FILE_NAME_TEMPLATE = "{artist}/{album}/{tracknumber:03d}___{title}.{extension}"
 
 
 @pytest.fixture(autouse=True)
@@ -549,6 +550,30 @@ class TestRenderOutputFilename:
         state = {**self._state(), "position": "abc"}
         result = render_output_filename("{position:03d}_{title}", "http://x/y.flac", state, "flac")
         assert result == "001_La_rondine"
+
+    def test_tracknumber_key(self):
+        """The tracknumber key renders the state's tracknumber, indexed like position."""
+        state = {**self._state(), "tracknumber": 4}
+
+        result = render_output_filename("{tracknumber:03d}", "http://x/y.flac", state, "flac")
+
+        assert result == "005"
+
+    def test_tracknumber_key_missing_or_malformed(self):
+        """A missing or malformed tracknumber falls back to the indexing base."""
+        assert render_output_filename("{tracknumber}", "http://x/y.flac", {}, "flac") == "1"
+        state = {"tracknumber": "abc"}
+        assert render_output_filename("{tracknumber}", "http://x/y.flac", state, "flac") == "1"
+
+    def test_tracknumber_key_starting_at_zero(self):
+        """The tracknumber key follows the indexing base."""
+        state = {**self._state(), "tracknumber": 4}
+
+        result = render_output_filename(
+            "{tracknumber}", "http://x/y.flac", state, "flac", position_starting_at_one=False
+        )
+
+        assert result == "4"
 
 
 class TestSanitizeFilenameComponent:
@@ -4358,6 +4383,48 @@ class TestPlaylistCommands:
         assert "Connection error" in result.output
 
 
+class TestQueueTrackNumbers:
+    """Test cases for the queue_track_numbers function."""
+
+    def test_two_albums_restart(self):
+        """Each album's tracks are numbered from zero again."""
+        tracks = [
+            {"artist": "A", "album": "X", "title": "1"},
+            {"artist": "A", "album": "X", "title": "2"},
+            {"artist": "B", "album": "Y", "title": "3"},
+        ]
+
+        assert queue_track_numbers(tracks) == [0, 1, 0]
+
+    def test_interleaved_albums(self):
+        """Interleaved albums keep their own counters."""
+        tracks = [
+            {"artist": "A", "album": "X"},
+            {"artist": "B", "album": "Y"},
+            {"artist": "A", "album": "X"},
+            {"artist": "B", "album": "Y"},
+        ]
+
+        assert queue_track_numbers(tracks) == [0, 0, 1, 1]
+
+    def test_same_album_name_different_artists(self):
+        """Two same-named albums by different artists are not merged."""
+        tracks = [
+            {"artist": "A", "album": "Greatest Hits"},
+            {"artist": "B", "album": "Greatest Hits"},
+        ]
+
+        assert queue_track_numbers(tracks) == [0, 0]
+
+    def test_missing_metadata_groups_together(self):
+        """Tracks without artist/album fall into one shared group."""
+        assert queue_track_numbers([{}, {"title": "t"}, {}]) == [0, 1, 2]
+
+    def test_empty_queue(self):
+        """An empty queue yields an empty list."""
+        assert queue_track_numbers([]) == []
+
+
 class TestQueueDownload:
     """Test cases for the queue download command."""
 
@@ -4657,6 +4724,60 @@ class TestQueueDownload:
 
         assert result.exit_code == 1
         assert "API error" in result.output
+
+    def test_download_tracknumber_restarts_per_album(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """{tracknumber} numbers each album's tracks from one, unlike {position}."""
+        tracks = [
+            {"title": "A", "artist": "Art1", "album": "Alb1"},
+            {"title": "B", "artist": "Art1", "album": "Alb1"},
+            {"title": "C", "artist": "Art2", "album": "Alb2"},
+        ]
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac", "http://h/b.flac", "http://h/c.flac"],
+            states=[{"title": "A"}, {"title": "B"}, {"title": "C"}],
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._BASE, "-d", str(tmp_path), "-f", "{tracknumber:02d}_{title}.{extension}"],
+        )
+
+        assert result.exit_code == 0
+        assert (tmp_path / "01_A.flac").exists()
+        assert (tmp_path / "02_B.flac").exists()
+        assert (tmp_path / "01_C.flac").exists()
+        _, log = self._read_log(tmp_path)
+        assert [t["track-number"] for t in log["tracks"]] == [1, 2, 1]
+        assert [t["position"] for t in log["tracks"]] == [1, 2, 3]
+
+    def test_download_embeds_album_relative_tracknumber(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The embedded track number is the album-relative one, not the queue position."""
+        tracks = [
+            {"title": "A", "artist": "Art1", "album": "Alb1"},
+            {"title": "C", "artist": "Art2", "album": "Alb2"},
+        ]
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac", "http://h/c.flac"],
+            states=[{"title": "A"}, {"title": "C"}],
+        )
+        embed = mocker.patch("volumito.cli.click_helpers.embed_metadata_and_cover")
+        mocker.patch("volumito.cli.click_helpers.fetch_cover", return_value=None)
+
+        result = runner.invoke(
+            main, ["queue", "download", "--no-create-download-manifest", "-d", str(tmp_path)]
+        )
+
+        assert result.exit_code == 0
+        # Both tracks are the first of their album: embedded number 1, not queue 1 and 2
+        assert [c.kwargs["track_number"] for c in embed.call_args_list] == [1, 1]
 
 
 class TestQueueActions:
