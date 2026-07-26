@@ -5104,6 +5104,79 @@ class TestQueueDownload:
         assert [t["volume_number"] for t in log["tracks"]] == [1, 2, 1]
         assert [t["track_number"] for t in log["tracks"]] == [1, 1, 1]
 
+    def test_download_albumart_copied_per_volume(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """One cover URI shared by two volumes lands in both volume directories."""
+        cover_uri = "http://e.com/c.jpg"
+        tracks = [
+            {
+                "title": "A",
+                "artist": "Art",
+                "album": "Elegia",
+                "tracknumber": 1,
+                "volumeNumber": 1,
+            },
+            {
+                "title": "B",
+                "artist": "Art",
+                "album": "Elegia",
+                "tracknumber": 1,
+                "volumeNumber": 2,
+            },
+        ]
+        states = [
+            {
+                "title": "A",
+                "artist": "Art",
+                "album": "Elegia",
+                "albumart": cover_uri,
+                "position": 0,
+            },
+            {
+                "title": "B",
+                "artist": "Art",
+                "album": "Elegia",
+                "albumart": cover_uri,
+                "position": 1,
+            },
+        ]
+        self._mock_services(
+            mocker, tracks, ["http://h/a.flac", "http://h/b.flac"], states=states
+        )
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        http_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get", return_value=mock_response
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                str(tmp_path),
+                "-f",
+                "{album_volume}/{tracknumber:02d}_{title}.{extension}",
+                "--albumart-file-name-template",
+                "{album_volume}/cover.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert (run / "Elegia" / "1" / "cover.jpg").read_bytes() == b"data"
+        assert (run / "Elegia" / "2" / "cover.jpg").read_bytes() == b"data"
+        # The album directory itself also gets a copy of the cover
+        assert (run / "Elegia" / "cover.jpg").read_bytes() == b"data"
+        # Two audio fetches plus a single cover fetch: the other covers are local copies
+        assert http_get.call_count == 3
+        _, log = self._read_log(tmp_path)
+        assert [t["albumart_file_path"] for t in log["tracks"]] == [
+            str(run / "Elegia" / "1" / "cover.jpg"),
+            str(run / "Elegia" / "2" / "cover.jpg"),
+        ]
+
     def test_download_albumart_deduplicates(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):

@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Subsection for the `playlist download` subcommand of the `downloads` section
   of the configuration file
 
+### Fixed
+
+- The album art is saved in every directory it renders to (e.g. one per volume of a
+  multi-volume album, plus the album directory itself), copying the already-downloaded
+  cover instead of re-downloading it
+
 
 ## [0.0.20] - 2026-07-26
 

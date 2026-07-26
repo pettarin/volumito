@@ -476,7 +476,10 @@ saved under the name rendered from `--albumart-file-name-template` (default
 `{file_name_from_uri}`, same keys and sanitization as the audio template, relative to the run
 directory; the generated configuration file showcases
 `{artist}/{album}/000___{album}.{extension}`, placing the cover next to its album's tracks).
-Every distinct cover is downloaded only once per run, and an existing cover file is reused
+Every distinct cover is downloaded only once per run (when the same cover renders to several
+directories, e.g. one per volume of a multi-volume album — which also gets a copy in the album
+directory itself — the further copies are made locally),
+and an existing cover file is reused
 unless `--overwrite-existing-files` is given; a failed cover download is reported as a warning
 and does not fail the track.
 

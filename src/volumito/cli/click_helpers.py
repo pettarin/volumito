@@ -6,6 +6,7 @@
 
 import json
 import os
+import shutil
 import sys
 import time
 from collections.abc import Callable
@@ -243,6 +244,54 @@ class VolumioVersionParamType(click.ParamType):
             )
 
 
+def _materialize_albumart(
+    albumart_uri: str,
+    cover_path: str,
+    overwrite: bool,
+    timeout: float,
+    machine_readable: bool,
+    downloaded_covers: dict[str, str],
+) -> str | None:
+    """Place the album art at ``cover_path``, downloading or copying it.
+
+    The first materialization of ``albumart_uri`` downloads it (recording the file
+    in ``downloaded_covers``); further destinations are copied locally from that
+    file. An existing destination is reused unless ``overwrite`` is true; a failure
+    is reported as a warning.
+
+    Args:
+        albumart_uri: The album-art URI
+        cover_path: The destination file path
+        overwrite: Whether to overwrite an existing cover file
+        timeout: Request timeout in seconds
+        machine_readable: Whether machine-readable mode is active (suppresses messages)
+        downloaded_covers: Cache of album-art URIs already downloaded, updated in place
+
+    Returns:
+        The cover file path, or None if the download or the copy failed
+    """
+    if downloaded_covers.get(albumart_uri) == cover_path:
+        return cover_path
+    if not overwrite and os.path.exists(cover_path):
+        downloaded_covers.setdefault(albumart_uri, cover_path)
+        return cover_path
+    try:
+        parent = os.path.dirname(cover_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        cached = downloaded_covers.get(albumart_uri)
+        if cached is not None and os.path.exists(cached):
+            shutil.copyfile(cached, cover_path)
+        else:
+            fetch_uri_to_file(albumart_uri, cover_path, timeout)
+    except (requests.exceptions.RequestException, OSError) as e:
+        if not machine_readable:
+            click.echo(f"\nWarning: cannot download album art to {cover_path} ({e})", err=True)
+        return None
+    downloaded_covers.setdefault(albumart_uri, cover_path)
+    return cover_path
+
+
 def configuration_file_callback(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:
@@ -303,9 +352,14 @@ def download_queue_albumart(
     (relative to ``run_directory``; the template may lay covers out in
     subdirectories, which are created as needed but must stay inside the run
     directory). Each distinct album-art URI is downloaded at most once per run
-    (``downloaded_covers`` maps the URIs already handled to their file paths), and
-    an existing cover file is reused unless ``overwrite`` is true. A download
-    failure is reported as a warning and otherwise ignored.
+    (``downloaded_covers`` maps the URIs already downloaded to their file paths);
+    when the same URI renders to further destinations (e.g. one per volume of a
+    multi-volume album), the already-downloaded file is copied there locally. For
+    a multi-volume track, the cover is also placed at the path rendered with the
+    album-only ``album_volume`` component (e.g. ``Elegia/cover.jpg`` next to
+    ``Elegia/1/cover.jpg`` and ``Elegia/2/cover.jpg``). An existing cover file is
+    reused unless ``overwrite`` is true. A download failure is reported as a
+    warning and otherwise ignored.
 
     Args:
         state: The current player state dictionary (source of the album-art URI)
@@ -330,44 +384,54 @@ def download_queue_albumart(
     albumart_uri = resolve_albumart_uri(state, host_configuration)
     if albumart_uri is None:
         return None
-    if albumart_uri in downloaded_covers:
-        return downloaded_covers[albumart_uri]
-    filename = render_output_filename(
-        albumart_file_name_template,
-        albumart_uri,
-        state,
-        "jpg",
-        position_starting_at_one,
-        replace_characters_in_file_names,
-        replace_characters_in_file_names_with,
-        allow_subdirectories=True,
-        option_label="--albumart-file-name-template",
-    )
-    if not filename:
+
+    def resolve_cover_path(cover_state: dict[str, Any]) -> str | None:
+        filename = render_output_filename(
+            albumart_file_name_template,
+            albumart_uri,
+            cover_state,
+            "jpg",
+            position_starting_at_one,
+            replace_characters_in_file_names,
+            replace_characters_in_file_names_with,
+            allow_subdirectories=True,
+            option_label="--albumart-file-name-template",
+        )
+        if not filename:
+            return None
+        path = os.path.join(run_directory, filename)
+        base = os.path.realpath(run_directory)
+        if os.path.commonpath([base, os.path.realpath(path)]) != base:
+            raise click.UsageError(
+                f"Invalid --albumart-file-name-template {albumart_file_name_template!r}: "
+                f"the file name {filename!r} escapes the output directory"
+            )
+        return path
+
+    cover_path = resolve_cover_path(state)
+    if cover_path is None:
         if not machine_readable:
             click.echo("\nWarning: cannot determine a file name for the album art", err=True)
         return None
-    cover_path = os.path.join(run_directory, filename)
-    base = os.path.realpath(run_directory)
-    if os.path.commonpath([base, os.path.realpath(cover_path)]) != base:
-        raise click.UsageError(
-            f"Invalid --albumart-file-name-template {albumart_file_name_template!r}: "
-            f"the file name {filename!r} escapes the output directory"
-        )
-    if not overwrite and os.path.exists(cover_path):
-        downloaded_covers[albumart_uri] = cover_path
-        return cover_path
-    try:
-        parent = os.path.dirname(cover_path)
-        if parent:
-            os.makedirs(parent, exist_ok=True)
-        fetch_uri_to_file(albumart_uri, cover_path, timeout)
-    except (requests.exceptions.RequestException, OSError) as e:
-        if not machine_readable:
-            click.echo(f"\nWarning: cannot download album art to {cover_path} ({e})", err=True)
-        return None
-    downloaded_covers[albumart_uri] = cover_path
-    return cover_path
+    result = _materialize_albumart(
+        albumart_uri, cover_path, overwrite, timeout, machine_readable, downloaded_covers
+    )
+
+    # For a multi-volume track, also place the cover in the album directory itself
+    album_volume = str(state.get("album_volume") or "")
+    if result is not None and "/" in album_volume:
+        album_state = {**state, "album_volume": album_volume.split("/", 1)[0]}
+        album_cover_path = resolve_cover_path(album_state)
+        if album_cover_path is not None and album_cover_path != cover_path:
+            _materialize_albumart(
+                albumart_uri,
+                album_cover_path,
+                overwrite,
+                timeout,
+                machine_readable,
+                downloaded_covers,
+            )
+    return result
 
 
 def download_queue_track(
