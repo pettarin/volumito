@@ -582,24 +582,24 @@ def track_info(
 
 @track.command()
 @click.pass_context
+@option_add_cover_and_metadata
+@option_create_download_manifest
 @option_file_name_template
 @option_output_directory
 @option_output_file
 @option_overwrite_existing_files
 @option_replace_characters_in_file_names
 @option_replace_characters_in_file_names_with
-@option_create_download_manifest
-@option_add_cover_and_metadata
 def audio(
     ctx: click.Context,
+    add_cover_and_metadata: bool,
+    create_download_manifest: bool,
     file_name_template: str,
     output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
-    create_download_manifest: bool,
-    add_cover_and_metadata: bool,
 ) -> None:
     """Print the URI of the audio of the current track.
 
@@ -705,22 +705,22 @@ def audio(
 
 @track.command()
 @click.pass_context
+@option_create_download_manifest
 @option_file_name_template
 @option_output_directory
 @option_output_file
 @option_overwrite_existing_files
 @option_replace_characters_in_file_names
 @option_replace_characters_in_file_names_with
-@option_create_download_manifest
 def albumart(
     ctx: click.Context,
+    create_download_manifest: bool,
     file_name_template: str,
     output_directory: str | None,
     output_file: str | None,
     overwrite_existing_files: bool,
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
-    create_download_manifest: bool,
 ) -> None:
     """Print the URI of the album art of the current track.
 
@@ -886,19 +886,16 @@ def queue_get(
 
 @queue.command("download")
 @click.pass_context
-@click.option(
-    "--with-albumart/--no-with-albumart",
-    default=True,
-    show_default=True,
-    help="Download each album's cover, named from --albumart-file-name-template "
-    "(once per cover)",
-)
+@option_add_cover_and_metadata
+@option_albumart_file_name_template
+@option_audio_file_name_template
 @click.option(
     "--check-next-track/--no-check-next-track",
     default=True,
     show_default=True,
     help="Check that each track's metadata are current before downloading it",
 )
+@option_create_download_manifest
 @click.option(
     "--number-retries-next-track",
     type=int,
@@ -906,27 +903,30 @@ def queue_get(
     show_default=True,
     help="Number of retries waiting for a track's metadata to become current",
 )
-@option_albumart_file_name_template
-@option_audio_file_name_template
 @option_output_directory
 @option_overwrite_existing_files
 @option_replace_characters_in_file_names
 @option_replace_characters_in_file_names_with
-@option_create_download_manifest
-@option_add_cover_and_metadata
+@click.option(
+    "--with-albumart/--no-with-albumart",
+    default=True,
+    show_default=True,
+    help="Download each album's cover, named from --albumart-file-name-template "
+    "(once per cover)",
+)
 def queue_download(
     ctx: click.Context,
-    with_albumart: bool,
-    check_next_track: bool,
-    number_retries_next_track: int,
+    add_cover_and_metadata: bool,
     albumart_file_name_template: str,
     audio_file_name_template: str,
+    check_next_track: bool,
+    create_download_manifest: bool,
+    number_retries_next_track: int,
     output_directory: str | None,
     overwrite_existing_files: bool,
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
-    create_download_manifest: bool,
-    add_cover_and_metadata: bool,
+    with_albumart: bool,
 ) -> None:
     """Download every track of the current queue into a directory.
 
