@@ -5,8 +5,6 @@ Rough plan, broken down by milestone:
 ## v0.1.0
 
 - REST API client, CLI: support metadatas (premium)
-- CLI: add metadata to FLAC output file when using `track audio`
-- CLI: add `queue download` subcommand
 
 ## v0.2.0
 
