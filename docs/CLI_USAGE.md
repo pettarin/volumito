@@ -259,8 +259,10 @@ volumito playback status -F raw
 
 ## Position Indexing
 
-Queue positions and track numbers are indexed starting at one by default; the global
-`--position-starting-at-zero` flag switches to the zero-based indexing used by the Volumio API:
+Queue positions are indexed starting at one by default; the global
+`--position-starting-at-zero` flag switches to the zero-based indexing used by the Volumio API
+(track numbers coming from the track metadata, like the `{tracknumber}` template key, are
+absolute and unaffected):
 
 ```bash
 # Positions start at one (default)
@@ -434,8 +436,9 @@ volumito queue download -d ~/Music -f "{artist}/{album}/{tracknumber:03d}_{title
 
 The file name is rendered from `-f`/`--file-name-template` exactly as for `track audio`
 (same keys, character replacement, and sanitization). The `{tracknumber}` key renders the
-track's number within its album, so with several albums queued each album is numbered from the
-indexing base again (while `{position}` stays the queue position); the same number is embedded
+track's number within its album, taken from the queue metadata, so with several albums queued
+each album keeps its own numbering (while `{position}` stays the queue position); the same
+number is embedded
 as the track-number tag when `--add-cover-and-metadata` is on. One further difference: the
 template may
 contain path separators to lay the files out in subdirectories, which are created as needed.
@@ -616,8 +619,8 @@ volumito track audio -d /path/to/music/ -f "{position:03d}_{title}.{extension}"
 Supported template keys:
 - `file_name_from_uri` — the file name taken from the URI (the default)
 - `position` — track position, indexed as per Position Indexing (e.g. `{position:03d}` → `001`)
-- `tracknumber` — the track number of the track within its album, indexed like `position`
-  (computed from the queue by `queue download`; elsewhere it falls back to the indexing base)
+- `tracknumber` — the track number of the track within its album, taken from the queue metadata
+  by `queue download` (used verbatim, not affected by Position Indexing; 0 when unavailable)
 - `title`, `album`, `artist`, `trackType`, `bitdepth`, `samplerate` — strings
 - `duration` — track length as `HH:MM:SS`
 - `channels` — integer

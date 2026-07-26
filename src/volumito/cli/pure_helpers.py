@@ -498,29 +498,6 @@ def queue_track_metadata_current(
     return True
 
 
-def queue_track_numbers(tracks: list[dict[str, Any]]) -> list[int]:
-    """Return each queue track's 0-based index within its (artist, album) group.
-
-    The index counts the earlier queue entries with the same ``(artist, album)``
-    pair, so with several albums in the queue every album's tracks are numbered
-    from the indexing base again (even when the albums are interleaved), and two
-    same-named albums by different artists are not merged.
-
-    Args:
-        tracks: The queue items, in queue order
-
-    Returns:
-        The 0-based album-relative index of each track, in queue order
-    """
-    counts: dict[tuple[Any, Any], int] = {}
-    numbers = []
-    for track in tracks:
-        key = (track.get("artist"), track.get("album"))
-        numbers.append(counts.get(key, 0))
-        counts[key] = counts.get(key, 0) + 1
-    return numbers
-
-
 def rebase_queue_positions(
     tracks: list[dict[str, Any]], starting_at_one: bool
 ) -> list[dict[str, Any]]:

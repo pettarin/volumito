@@ -104,7 +104,7 @@ output:
   # Produce machine-readable output only
   machine-readable: false
 
-  # Index queue positions and track numbers starting at one (true) or zero (false)
+  # Index queue positions starting at one (true) or zero (false)
   position-starting-at-one: true
 
   # After a playback or queue command like pause or clear, print the resulting playback status

@@ -41,7 +41,6 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     parse_time_to_seconds,
     queue_track_metadata_current,
-    queue_track_numbers,
     rebase_queue_positions,
     sanitize_filename_component,
 )
@@ -553,21 +552,21 @@ class TestRenderOutputFilename:
         assert result == "001_La_rondine"
 
     def test_tracknumber_key(self):
-        """The tracknumber key renders the state's tracknumber, indexed like position."""
+        """The tracknumber key renders the state's tracknumber verbatim."""
         state = {**self._state(), "tracknumber": 4}
 
         result = render_output_filename("{tracknumber:03d}", "http://x/y.flac", state, "flac")
 
-        assert result == "005"
+        assert result == "004"
 
     def test_tracknumber_key_missing_or_malformed(self):
-        """A missing or malformed tracknumber falls back to the indexing base."""
-        assert render_output_filename("{tracknumber}", "http://x/y.flac", {}, "flac") == "1"
+        """A missing or malformed tracknumber falls back to zero."""
+        assert render_output_filename("{tracknumber}", "http://x/y.flac", {}, "flac") == "0"
         state = {"tracknumber": "abc"}
-        assert render_output_filename("{tracknumber}", "http://x/y.flac", state, "flac") == "1"
+        assert render_output_filename("{tracknumber}", "http://x/y.flac", state, "flac") == "0"
 
-    def test_tracknumber_key_starting_at_zero(self):
-        """The tracknumber key follows the indexing base."""
+    def test_tracknumber_key_ignores_indexing_option(self):
+        """The tracknumber key is absolute, not affected by the indexing base."""
         state = {**self._state(), "tracknumber": 4}
 
         result = render_output_filename(
@@ -4450,48 +4449,6 @@ class TestQueueTrackMetadataCurrent:
         assert queue_track_metadata_current(state, "u1", self._EXPECTED, 0, None, False) is True
 
 
-class TestQueueTrackNumbers:
-    """Test cases for the queue_track_numbers function."""
-
-    def test_two_albums_restart(self):
-        """Each album's tracks are numbered from zero again."""
-        tracks = [
-            {"artist": "A", "album": "X", "title": "1"},
-            {"artist": "A", "album": "X", "title": "2"},
-            {"artist": "B", "album": "Y", "title": "3"},
-        ]
-
-        assert queue_track_numbers(tracks) == [0, 1, 0]
-
-    def test_interleaved_albums(self):
-        """Interleaved albums keep their own counters."""
-        tracks = [
-            {"artist": "A", "album": "X"},
-            {"artist": "B", "album": "Y"},
-            {"artist": "A", "album": "X"},
-            {"artist": "B", "album": "Y"},
-        ]
-
-        assert queue_track_numbers(tracks) == [0, 0, 1, 1]
-
-    def test_same_album_name_different_artists(self):
-        """Two same-named albums by different artists are not merged."""
-        tracks = [
-            {"artist": "A", "album": "Greatest Hits"},
-            {"artist": "B", "album": "Greatest Hits"},
-        ]
-
-        assert queue_track_numbers(tracks) == [0, 0]
-
-    def test_missing_metadata_groups_together(self):
-        """Tracks without artist/album fall into one shared group."""
-        assert queue_track_numbers([{}, {"title": "t"}, {}]) == [0, 1, 2]
-
-    def test_empty_queue(self):
-        """An empty queue yields an empty list."""
-        assert queue_track_numbers([]) == []
-
-
 class TestQueueDownload:
     """Test cases for the queue download command."""
 
@@ -4504,8 +4461,8 @@ class TestQueueDownload:
 
     def _queue_tracks(self):
         return [
-            {"title": "Song A", "artist": "Artist", "album": "Album"},
-            {"title": "Song B", "artist": "Artist", "album": "Album"},
+            {"title": "Song A", "artist": "Artist", "album": "Album", "tracknumber": 1},
+            {"title": "Song B", "artist": "Artist", "album": "Album", "tracknumber": 2},
         ]
 
     def _mock_services(self, mocker: MockerFixture, tracks, uris, states=None):
@@ -4813,9 +4770,9 @@ class TestQueueDownload:
     ):
         """{tracknumber} numbers each album's tracks from one, unlike {position}."""
         tracks = [
-            {"title": "A", "artist": "Art1", "album": "Alb1"},
-            {"title": "B", "artist": "Art1", "album": "Alb1"},
-            {"title": "C", "artist": "Art2", "album": "Alb2"},
+            {"title": "A", "artist": "Art1", "album": "Alb1", "tracknumber": 1},
+            {"title": "B", "artist": "Art1", "album": "Alb1", "tracknumber": 2},
+            {"title": "C", "artist": "Art2", "album": "Alb2", "tracknumber": 1},
         ]
         self._mock_services(
             mocker,
@@ -4847,8 +4804,8 @@ class TestQueueDownload:
     ):
         """The embedded track number is the album-relative one, not the queue position."""
         tracks = [
-            {"title": "A", "artist": "Art1", "album": "Alb1"},
-            {"title": "C", "artist": "Art2", "album": "Alb2"},
+            {"title": "A", "artist": "Art1", "album": "Alb1", "tracknumber": 1},
+            {"title": "C", "artist": "Art2", "album": "Alb2", "tracknumber": 1},
         ]
         self._mock_services(
             mocker,

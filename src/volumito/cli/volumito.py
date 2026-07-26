@@ -76,7 +76,6 @@ from volumito.cli.pure_helpers import (
     format_seek,
     format_zones_as_table,
     queue_track_metadata_current,
-    queue_track_numbers,
     rebase_queue_positions,
     resolve_albumart_uri,
 )
@@ -141,7 +140,7 @@ from volumito.clients import (
     "--position-starting-at-one/--position-starting-at-zero",
     default=True,
     show_default=True,
-    help="Index queue positions and track numbers starting at one (or at zero)",
+    help="Index queue positions starting at one (or at zero)",
 )
 @click.option(
     "--rest-api-port",
@@ -923,8 +922,8 @@ def queue_download(
     then each queue position is played, paused after the configured sleep
     (--rest-api-sleep-before-next-call), and downloaded under the name rendered
     from -f/--file-name-template. The {tracknumber} template key renders the
-    track's number within its album (computed from the queue), so with several
-    albums queued every album starts again from the indexing base, unlike
+    track's number within its album (taken from the queue metadata), so with
+    several albums queued every album keeps its own numbering, unlike
     {position} (the queue position). Unlike the track downloads, the template may
     contain path separators to lay the files out in subdirectories (e.g.
     "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
@@ -974,7 +973,6 @@ def queue_download(
                 )
             sys.exit(1)
 
-        track_numbers = queue_track_numbers(tracks)
         entries: list[dict[str, Any]] = [
             {
                 "album": track.get("album"),
@@ -982,7 +980,7 @@ def queue_download(
                 "position": display_position(index, position_starting_at_one),
                 "status": "pending",
                 "title": track.get("title"),
-                "track-number": display_position(track_numbers[index], position_starting_at_one),
+                "track-number": track.get("tracknumber"),
             }
             for index, track in enumerate(tracks)
         ]
@@ -1040,7 +1038,7 @@ def queue_download(
                         )
                     else:
                         previous_uri = uri
-                        state = {**state, "tracknumber": track_numbers[index]}
+                        state = {**state, "tracknumber": tracks[index].get("tracknumber")}
                         filename = render_output_filename(
                             file_name_template,
                             uri,

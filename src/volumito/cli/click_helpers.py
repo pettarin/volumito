@@ -445,10 +445,12 @@ def embed_track_tags(
     """Embed the current track metadata and cover art into a downloaded audio file.
 
     The metadata and cover come from ``state``. The embedded track number comes from
-    the state's ``tracknumber`` key when present (the album-relative number injected
-    by ``queue download``), falling back to ``position``. Any problem (an unsupported
-    format, a cover-download failure, or a tagging error) is reported as a warning and
-    otherwise ignored: the already-downloaded file is left in place.
+    the state's ``tracknumber`` key when present (the track number from the queue
+    metadata, used verbatim — injected by ``queue download``), falling back to
+    ``position`` (indexed according to ``position_starting_at_one``). Any problem
+    (an unsupported format, a cover-download failure, or a tagging error) is
+    reported as a warning and otherwise ignored: the already-downloaded file is
+    left in place.
 
     Args:
         destination: The downloaded audio file to tag, modified in place
@@ -459,14 +461,16 @@ def embed_track_tags(
         verbose: Whether to print progress messages
         machine_readable: Whether machine-readable mode is active (suppresses messages)
     """
-    number_source = state.get("tracknumber")
-    if number_source is None:
-        number_source = state.get("position")
-    track_number = (
-        display_position(int(number_source), position_starting_at_one)
-        if number_source is not None
-        else None
-    )
+    tracknumber = state.get("tracknumber")
+    if tracknumber is not None:
+        track_number: int | None = int(tracknumber)
+    else:
+        position = state.get("position")
+        track_number = (
+            display_position(int(position), position_starting_at_one)
+            if position is not None
+            else None
+        )
 
     cover = fetch_cover(state, host_configuration, timeout, machine_readable)
 
@@ -790,9 +794,9 @@ def render_output_filename(
 
     The template uses Python ``str.format`` syntax. Supported keys are:
     ``file_name_from_uri``, ``position`` (int, indexed according to
-    ``position_starting_at_one``), ``tracknumber`` (int, indexed like ``position``,
-    from the state's ``tracknumber`` key — the album-relative track number injected
-    by ``queue download``), ``title``, ``album``, ``artist``,
+    ``position_starting_at_one``), ``tracknumber`` (int, the track number of the
+    track, taken verbatim from the state's ``tracknumber`` key — injected from the
+    queue metadata by ``queue download``), ``title``, ``album``, ``artist``,
     ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
     ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
@@ -860,7 +864,7 @@ def render_output_filename(
     keys: dict[str, object] = {
         "file_name_from_uri": file_name_from_uri,
         "position": display_position(position, position_starting_at_one),
-        "tracknumber": display_position(tracknumber, position_starting_at_one),
+        "tracknumber": tracknumber,
         "title": as_text("title"),
         "album": as_text("album"),
         "artist": as_text("artist"),
