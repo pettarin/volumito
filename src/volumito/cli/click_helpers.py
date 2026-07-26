@@ -275,45 +275,81 @@ def create_client(
 
 def download_queue_albumart(
     state: dict[str, Any],
-    destination_directory: str,
+    run_directory: str,
+    albumart_file_name_template: str,
     host_configuration: VolumioHostConfiguration,
     timeout: float,
     overwrite: bool,
     machine_readable: bool,
     downloaded_covers: dict[str, str],
+    position_starting_at_one: bool,
+    replace_characters_in_file_names: str,
+    replace_characters_in_file_names_with: str,
 ) -> str | None:
-    """Download the current track's album art into ``destination_directory``.
+    """Download the current track's album art into the run directory.
 
-    The cover is saved as ``cover.<extension>`` next to the track. Each distinct
-    album-art URI is downloaded at most once per run (``downloaded_covers`` maps the
-    URIs already handled to their file paths), and an existing cover file is reused
-    unless ``overwrite`` is true. A download failure is reported as a warning and
-    otherwise ignored.
+    The cover is saved under the name rendered from ``albumart_file_name_template``
+    (relative to ``run_directory``; the template may lay covers out in
+    subdirectories, which are created as needed but must stay inside the run
+    directory). Each distinct album-art URI is downloaded at most once per run
+    (``downloaded_covers`` maps the URIs already handled to their file paths), and
+    an existing cover file is reused unless ``overwrite`` is true. A download
+    failure is reported as a warning and otherwise ignored.
 
     Args:
         state: The current player state dictionary (source of the album-art URI)
-        destination_directory: The directory of the downloaded track
+        run_directory: The per-run download directory
+        albumart_file_name_template: Template for the cover file name
         host_configuration: The Volumio host configuration (to resolve relative URIs)
         timeout: Request timeout in seconds
         overwrite: Whether to overwrite an existing cover file
         machine_readable: Whether machine-readable mode is active (suppresses messages)
         downloaded_covers: Cache of album-art URIs already handled, updated in place
+        position_starting_at_one: Whether the template ``position`` key starts at one
+        replace_characters_in_file_names: Characters replaced in the rendered file name
+        replace_characters_in_file_names_with: Replacement for the replaced characters
 
     Returns:
         The cover file path, or None if the track has no album art or the download failed
+
+    Raises:
+        click.UsageError: If the template is invalid or renders to a path escaping
+            the run directory
     """
     albumart_uri = resolve_albumart_uri(state, host_configuration)
     if albumart_uri is None:
         return None
     if albumart_uri in downloaded_covers:
         return downloaded_covers[albumart_uri]
-    file_name = sanitize_filename_component(extract_filename_from_uri(albumart_uri), "_")
-    extension = os.path.splitext(file_name)[1].lstrip(".") or "jpg"
-    cover_path = os.path.join(destination_directory, f"cover.{extension}")
+    filename = render_output_filename(
+        albumart_file_name_template,
+        albumart_uri,
+        state,
+        "jpg",
+        position_starting_at_one,
+        replace_characters_in_file_names,
+        replace_characters_in_file_names_with,
+        allow_subdirectories=True,
+        option_label="--albumart-file-name-template",
+    )
+    if not filename:
+        if not machine_readable:
+            click.echo("\nWarning: cannot determine a file name for the album art", err=True)
+        return None
+    cover_path = os.path.join(run_directory, filename)
+    base = os.path.realpath(run_directory)
+    if os.path.commonpath([base, os.path.realpath(cover_path)]) != base:
+        raise click.UsageError(
+            f"Invalid --albumart-file-name-template {albumart_file_name_template!r}: "
+            f"the file name {filename!r} escapes the output directory"
+        )
     if not overwrite and os.path.exists(cover_path):
         downloaded_covers[albumart_uri] = cover_path
         return cover_path
     try:
+        parent = os.path.dirname(cover_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
         fetch_uri_to_file(albumart_uri, cover_path, timeout)
     except (requests.exceptions.RequestException, OSError) as e:
         if not machine_readable:
@@ -706,6 +742,20 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
         show_default=True,
         help="Embed track metadata and cover art into the downloaded file "
         "(FLAC, MP3, MP4/M4A)",
+    )(func)
+
+
+def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--albumart-file-name-template`` option to the queue download subcommand."""
+    return click.option(
+        "--albumart-file-name-template",
+        type=str,
+        default="{file_name_from_uri}",
+        show_default=True,
+        help="Template (Python str.format syntax) for the album art file names. Keys: "
+        "file_name_from_uri, position, tracknumber, title, album, artist, trackType, "
+        "duration, bitdepth, samplerate, channels, extension. Some characters are "
+        "replaced (see --replace-characters-in-file-names).",
     )(func)
 
 

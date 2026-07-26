@@ -30,6 +30,7 @@ from volumito.cli.click_helpers import (
     fetch_or_exit,
     fetch_state_or_exit,
     option_add_cover_and_metadata,
+    option_albumart_file_name_template,
     option_audio_file_name_template,
     option_create_download_manifest,
     option_fields,
@@ -889,7 +890,8 @@ def queue_get(
     "--with-albumart/--no-with-albumart",
     default=True,
     show_default=True,
-    help="Download each album's cover into the track's directory (once per cover)",
+    help="Download each album's cover, named from --albumart-file-name-template "
+    "(once per cover)",
 )
 @click.option(
     "--check-next-track/--no-check-next-track",
@@ -904,6 +906,7 @@ def queue_get(
     show_default=True,
     help="Number of retries waiting for a track's metadata to become current",
 )
+@option_albumart_file_name_template
 @option_audio_file_name_template
 @option_output_directory
 @option_overwrite_existing_files
@@ -916,6 +919,7 @@ def queue_download(
     with_albumart: bool,
     check_next_track: bool,
     number_retries_next_track: int,
+    albumart_file_name_template: str,
     audio_file_name_template: str,
     output_directory: str | None,
     overwrite_existing_files: bool,
@@ -940,8 +944,9 @@ def queue_download(
     are checked against the queue listing (title, artist, album, and position must
     match the entry just played, retrying up to --number-retries-next-track times;
     disable with --no-check-next-track). With --with-albumart (the default), each
-    album's cover is saved as cover.<extension> into the track's directory,
-    downloading every distinct cover only once.
+    album's cover is saved under the name rendered from
+    --albumart-file-name-template (relative to the run directory), downloading
+    every distinct cover only once.
     A queue.json log listing every track and
     its download status (pending, downloaded, skipped, or error) is written to
     the run directory and updated after each track. At the end, playback is left
@@ -1097,12 +1102,16 @@ def queue_download(
                             if with_albumart and status != "error":
                                 cover_path = download_queue_albumart(
                                     state,
-                                    os.path.dirname(destination),
+                                    run_directory,
+                                    albumart_file_name_template,
                                     host_configuration,
                                     rest_api_timeout,
                                     overwrite_existing_files,
                                     machine_readable,
                                     downloaded_covers,
+                                    position_starting_at_one,
+                                    replace_characters_in_file_names,
+                                    replace_characters_in_file_names_with,
                                 )
                                 if cover_path is not None:
                                     entry["albumart_file_path"] = cover_path

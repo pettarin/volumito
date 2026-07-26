@@ -53,7 +53,8 @@ from volumito.clients.rest import (
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
-_QUEUE_FILE_NAME_TEMPLATE = "{artist}/{album}/{tracknumber:03d}___{title}.{extension}"
+_QUEUE_ALBUMART_FILE_NAME_TEMPLATE = "{artist}/{album}/000___{album}.{extension}"
+_QUEUE_AUDIO_FILE_NAME_TEMPLATE = "{artist}/{album}/{tracknumber:03d}___{title}.{extension}"
 
 
 @pytest.fixture(autouse=True)
@@ -4966,11 +4967,12 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         run = self._run_directory(tmp_path)
-        assert (run / "Artist" / "Album" / "cover.jpg").read_bytes() == b"data"
+        # Default albumart template: the file name from the album-art URI
+        assert (run / "c.jpg").read_bytes() == b"data"
         # Two audio downloads plus a single cover download
         assert http_get.call_count == 3
         _, log = self._read_log(tmp_path)
-        cover = str(run / "Artist" / "Album" / "cover.jpg")
+        cover = str(run / "c.jpg")
         assert [t["albumart_file_path"] for t in log["tracks"]] == [cover, cover]
 
     def test_download_albumart_per_album(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
@@ -5011,27 +5013,27 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         run = self._run_directory(tmp_path)
-        assert (run / "Art1" / "Alb1" / "cover.jpg").exists()
-        assert (run / "Art2" / "Alb2" / "cover.jpg").exists()
+        assert (run / "c1.jpg").exists()
+        assert (run / "c2.jpg").exists()
         assert http_get.call_count == 4
 
     def test_download_albumart_existing_file_reused(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """An existing cover file in the destination directory is not re-downloaded."""
+        """An existing cover file at the rendered path is not re-downloaded."""
         states = [
             {
                 "title": "Song A",
                 "artist": "Artist",
                 "album": "Album",
-                "albumart": "http://example.com/c1.jpg",
+                "albumart": "http://h1/img/cover.jpg",
                 "position": 0,
             },
             {
                 "title": "Song B",
                 "artist": "Artist",
                 "album": "Album",
-                "albumart": "http://example.com/c2.jpg",
+                "albumart": "http://h2/img/cover.jpg",
                 "position": 1,
             },
         ]
@@ -5049,7 +5051,7 @@ class TestQueueDownload:
         assert result.exit_code == 0
         run = self._run_directory(tmp_path)
         assert (run / "cover.jpg").exists()
-        # The flat run directory already holds cover.jpg when the second URI arrives
+        # Two distinct URIs render the same name: the existing file is reused
         assert http_get.call_count == 3
         _, log = self._read_log(tmp_path)
         cover = str(run / "cover.jpg")
@@ -5108,7 +5110,7 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         run = self._run_directory(tmp_path)
-        assert not (run / "cover.jpg").exists()
+        assert not (run / "c.jpg").exists()
         assert http_get.call_count == 1
 
     def test_download_config_with_albumart_disabled(
@@ -5132,7 +5134,120 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
 
         assert result.exit_code == 0
-        assert not (self._run_directory(out) / "cover.jpg").exists()
+        assert not (self._run_directory(out) / "c.jpg").exists()
+
+    def test_download_albumart_custom_template(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--albumart-file-name-template renders the cover path, creating subdirectories."""
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c.jpg",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                str(tmp_path),
+                "--albumart-file-name-template",
+                "{artist}/{album}/000___{album}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        run = self._run_directory(tmp_path)
+        assert (run / "Artist" / "Album" / "000___Album.jpg").read_bytes() == b"data"
+        _, log = self._read_log(tmp_path)
+        expected = str(run / "Artist" / "Album" / "000___Album.jpg")
+        assert log["tracks"][0]["albumart_file_path"] == expected
+
+    def test_download_albumart_config_template(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The queue-download albumart-file-name-template configuration key is respected."""
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "downloads:\n"
+            "  queue-download:\n"
+            '    albumart-file-name-template: "{album}_cover.{extension}"\n'
+        )
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c.jpg",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
+
+        assert result.exit_code == 0
+        assert (self._run_directory(out) / "Album_cover.jpg").exists()
+
+    def test_download_albumart_template_escape_rejected(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An albumart template escaping the run directory is a usage error."""
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/c.jpg",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                str(tmp_path),
+                "--albumart-file-name-template",
+                "x/../../{album}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "Invalid --albumart-file-name-template" in result.output
+        assert "escapes the output directory" in result.output
+
+    def test_download_albumart_unresolvable_name_warns(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A cover whose name cannot be determined warns without failing the track."""
+        states = [
+            {
+                "title": "Song A",
+                "artist": "Artist",
+                "album": "Album",
+                "albumart": "http://example.com/",
+                "position": 0,
+            },
+        ]
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"], states=states)
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "Warning: cannot determine a file name for the album art" in result.output
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "downloaded"
+        assert "albumart_file_path" not in log["tracks"][0]
 
     def test_download_config_check_next_track(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6680,7 +6795,8 @@ class TestConfigurationCommands:
                     "replace-characters-in-file-names": " :",
                     "replace-characters-in-file-names-with": "_",
                     "queue-download": {
-                        "audio-file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
+                        "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
+                        "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
                     },
                     "track-albumart": {
                         "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,

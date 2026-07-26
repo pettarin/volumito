@@ -24,7 +24,8 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_3
 # The per-command file-name-template defaults emitted in the bundled template.
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
-_QUEUE_FILE_NAME_TEMPLATE = "{artist}/{album}/{tracknumber:03d}___{title}.{extension}"
+_QUEUE_ALBUMART_FILE_NAME_TEMPLATE = "{artist}/{album}/000___{album}.{extension}"
+_QUEUE_AUDIO_FILE_NAME_TEMPLATE = "{artist}/{album}/{tracknumber:03d}___{title}.{extension}"
 
 
 class TestConfigurationPaths:
@@ -409,7 +410,8 @@ class TestDefaultConfigurationTemplate:
                 "replace-characters-in-file-names": " :",
                 "replace-characters-in-file-names-with": "_",
                 "queue-download": {
-                    "audio-file-name-template": _QUEUE_FILE_NAME_TEMPLATE,
+                    "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
+                    "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
                 },
                 "track-albumart": {
                     "file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,

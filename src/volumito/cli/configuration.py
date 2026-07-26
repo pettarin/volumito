@@ -122,6 +122,7 @@ download commands, and optional "audio"/"albumart" subsections (mapping to the
 """
 
 QUEUE_DOWNLOAD_KEYS: list[str] = [
+    "albumart-file-name-template",
     "audio-file-name-template",
     "create-download-manifest",
     "output-directory",

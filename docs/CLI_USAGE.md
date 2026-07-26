@@ -216,8 +216,10 @@ The `downloads` section sets the defaults for the `--file-name-template`, `--out
 placed directly under `downloads` applies to all of them; the optional `track-audio`,
 `track-albumart`, and `queue-download`
 subsections hold the same keys and override the shared value for that command (so each can have its own
-`file-name-template`). The `queue-download` subsection takes `audio-file-name-template` instead of
-`file-name-template` (matching its `--audio-file-name-template` option) and has no `output-file`.
+`file-name-template`). The `queue-download` subsection takes `audio-file-name-template` and
+`albumart-file-name-template` instead of
+`file-name-template` (matching its `--audio-file-name-template` and
+`--albumart-file-name-template` options) and has no `output-file`.
 
 The `configuration` command group helps manage these files:
 
@@ -450,10 +452,14 @@ metadata still cannot introduce path components). The other download options
 `--replace-characters-in-file-names`, `--replace-characters-in-file-names-with`) apply per
 track.
 
-With `--with-albumart` (the default; disable with `--no-with-albumart`), each album's cover is saved as
-`cover.<extension>` into the track's directory. Every distinct cover is downloaded only once
-per run, and an existing cover file is reused unless `--overwrite-existing-files` is given; a
-failed cover download is reported as a warning and does not fail the track.
+With `--with-albumart` (the default; disable with `--no-with-albumart`), each album's cover is
+saved under the name rendered from `--albumart-file-name-template` (default
+`{file_name_from_uri}`, same keys and sanitization as the audio template, relative to the run
+directory; the generated configuration file showcases
+`{artist}/{album}/000___{album}.{extension}`, placing the cover next to its album's tracks).
+Every distinct cover is downloaded only once per run, and an existing cover file is reused
+unless `--overwrite-existing-files` is given; a failed cover download is reported as a warning
+and does not fail the track.
 
 Each run also writes a `queue.json` log into its timestamped directory, listing every track
 with its download status (`pending`, `downloaded`, `skipped`, or `error`); the log is updated
