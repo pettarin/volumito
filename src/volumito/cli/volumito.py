@@ -1467,7 +1467,7 @@ def playlist_download(
 def story(ctx: click.Context) -> None:
     """Query album, artist, credits, label, and place stories.
 
-    Requires the Volumio Premium metavolumio plugin.
+    Requires the Volumio host to be running with a Premium (or better) subscription.
     """
     pass
 

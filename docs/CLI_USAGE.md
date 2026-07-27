@@ -94,8 +94,8 @@ volumito playlist download Rock -d ~/Music
 
 ## Stories
 
-Query album, artist, credits, label, and place stories via the metavolumio plugin endpoint
-(requires a Volumio Premium subscription):
+Query album, artist, credits, label, and place stories via the metavolumio plugin endpoint.
+Requires the Volumio host to be running with a Premium (or better) subscription:
 
 ```bash
 # Story of an album, given as ARTIST ALBUM arguments or as a single MBID
