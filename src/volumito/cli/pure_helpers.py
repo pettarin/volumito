@@ -69,6 +69,11 @@ def filter_fields(
 ) -> dict[str, Any]:
     """Filter the state dictionary based on the fields option.
 
+    A requested field that is not a top-level key but contains ``.`` is resolved as a
+    dotted path into nested dictionaries (e.g. ``data.value``); when the full path
+    resolves, the value appears in the output keyed by the dotted string. Fields that
+    cannot be resolved are silently omitted.
+
     Args:
         state: The state dictionary from the Volumio API
         fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
@@ -80,7 +85,20 @@ def filter_fields(
     selected = resolve_output_fields(fields, short_fields)
     if selected is None:  # ALL
         return state
-    return {key: state[key] for key in selected if key in state}
+    filtered: dict[str, Any] = {}
+    for key in selected:
+        if key in state:
+            filtered[key] = state[key]
+        elif "." in key:
+            current: Any = state
+            for part in key.split("."):
+                if isinstance(current, dict) and part in current:
+                    current = current[part]
+                else:
+                    break
+            else:
+                filtered[key] = current
+    return filtered
 
 
 def filter_queue_fields(
@@ -216,7 +234,9 @@ def format_as_table(
 
     if field_order is not None:
         # Display the requested fields in the given order, with title-cased labels
-        field_list = [(key.replace("_", " ").title(), key) for key in field_order]
+        field_list = [
+            (key.replace("_", " ").replace(".", " ").title(), key) for key in field_order
+        ]
     elif set(state.keys()).issubset(set(SHORT_FORMAT_FIELDS_PLAYER_STATE)):
         # Use predefined labels for the player short field set
         field_list = [
@@ -411,6 +431,23 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
                 lines.append(f"{indent}{label:17}: {value}")
 
     return "\n".join(lines)
+
+
+def is_mbid(text: str) -> bool:
+    """Check whether the text has the shape of a MusicBrainz identifier (MBID).
+
+    An MBID is a UUID: five groups of 8, 4, 4, 4, and 12 hexadecimal digits
+    separated by hyphens.
+
+    Args:
+        text: The text to check
+
+    Returns:
+        True if the text is UUID-shaped, False otherwise
+    """
+    return (
+        re.fullmatch(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", text) is not None
+    )
 
 
 def number_prefix_width(numbers: list[str]) -> int:
@@ -639,3 +676,36 @@ def split_camel_case(key: str) -> str:
     """
     spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", key.replace("_", " "))
     return spaced.title()
+
+
+def story_query_payload(
+    arguments: tuple[str, ...],
+    argument_type: str,
+    name_keys: tuple[str, ...],
+) -> dict[str, str] | None:
+    """Resolve the "story" positional arguments into the metavolumio data payload.
+
+    A "mbid" interpretation takes a single argument, mapped to ``{"mbid": ...}``. A
+    "name" interpretation takes one argument per key in ``name_keys`` (e.g. a single
+    artist name, or an ARTIST ALBUM pair), mapped to those keys in order. The
+    "autodetect" type selects "mbid" for a single UUID-shaped argument and "name"
+    when the argument count matches ``name_keys``. Any other combination is invalid.
+
+    Args:
+        arguments: The positional arguments of the command
+        argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
+        name_keys: The payload keys of the "name" interpretation, in argument order
+
+    Returns:
+        The data payload (without the mode key), or None if the arguments are invalid
+    """
+    if argument_type == "autodetect":
+        if len(arguments) == 1 and is_mbid(arguments[0]):
+            argument_type = "mbid"
+        elif len(arguments) == len(name_keys):
+            argument_type = "name"
+    if argument_type == "mbid" and len(arguments) == 1:
+        return {"mbid": arguments[0]}
+    if argument_type == "name" and len(arguments) == len(name_keys):
+        return dict(zip(name_keys, arguments, strict=True))
+    return None

@@ -73,6 +73,11 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
+    "story-album": DISPLAY_KEYS,
+    "story-artist": DISPLAY_KEYS,
+    "story-credits": DISPLAY_KEYS,
+    "story-label": DISPLAY_KEYS,
+    "story-place": DISPLAY_KEYS,
 }
 """Display subsection name -> the keys it accepts."""
 
@@ -91,6 +96,21 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "queue-get": [
         ["queue", "get"],
+    ],
+    "story-album": [
+        ["story", "album"],
+    ],
+    "story-artist": [
+        ["story", "artist"],
+    ],
+    "story-credits": [
+        ["story", "credits"],
+    ],
+    "story-label": [
+        ["story", "label"],
+    ],
+    "story-place": [
+        ["story", "place"],
     ],
     "system-info": [
         ["system", "info"],

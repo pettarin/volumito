@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.22] - 2026-07-27
+
+### Added
+
+- Command group `story` with subcommands `album`, `artist`, `credits`, `label`, and `place`,
+  querying the Volumio Premium metavolumio plugin endpoint
+- Subsections for the `story` subcommands of the `output` section of the configuration file
+- Dotted field names (e.g. `data.value`) in the `--fields` option, selecting fields nested
+  inside the response
+
+
 ## [0.0.21] - 2026-07-26
 
 ### Added

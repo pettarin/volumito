@@ -647,6 +647,118 @@ class TestVolumioRESTAPIClient:
 
         assert "Failed to connect to Volumio instance" in str(exc_info.value)
 
+    def test_plugin_endpoint_success(self, mocker: MockerFixture):
+        """Test successful plugin_endpoint() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "success": True,
+            "data": {"type": "story", "value": "A story."},
+        }
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.plugin_endpoint(
+            "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
+        )
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pluginEndpoint",
+            json={
+                "endpoint": "metavolumio",
+                "data": {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"},
+            },
+            timeout=5.0,
+        )
+        assert data["success"] is True
+        assert data["data"]["value"] == "A story."
+
+    def test_plugin_endpoint_connection_error(self, mocker: MockerFixture):
+        """Test plugin_endpoint() with connection error."""
+        mocker.patch(
+            "requests.post",
+            side_effect=requests.exceptions.ConnectionError("Connection refused"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+
+        assert "Failed to connect" in str(exc_info.value)
+
+    def test_plugin_endpoint_timeout_error(self, mocker: MockerFixture):
+        """Test plugin_endpoint() with timeout error."""
+        mocker.patch(
+            "requests.post", side_effect=requests.exceptions.Timeout("Request timeout")
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+
+        assert "timed out" in str(exc_info.value)
+
+    def test_plugin_endpoint_http_error(self, mocker: MockerFixture):
+        """Test plugin_endpoint() with HTTP error."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 404
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "404 Not Found"
+        )
+        mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+
+        assert "HTTP error 404" in str(exc_info.value)
+
+    def test_plugin_endpoint_invalid_json(self, mocker: MockerFixture):
+        """Test plugin_endpoint() with invalid JSON response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+
+        assert "Failed to parse JSON" in str(exc_info.value)
+
+    def test_plugin_endpoint_non_dict_response(self, mocker: MockerFixture):
+        """Test plugin_endpoint() when API returns non-dictionary JSON."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = []  # list, not a dictionary
+        mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+
+        assert "Expected JSON object" in str(exc_info.value)
+        assert "got list" in str(exc_info.value)
+
+    def test_plugin_endpoint_generic_request_exception(self, mocker: MockerFixture):
+        """Test plugin_endpoint() with generic RequestException."""
+        mocker.patch(
+            "requests.post",
+            side_effect=requests.exceptions.RequestException("Generic error"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+
+        assert "Request to Volumio instance" in str(exc_info.value)
+
     def test_send_command_success(self, mocker: MockerFixture):
         """Test successful send_command() call."""
         # Mock response

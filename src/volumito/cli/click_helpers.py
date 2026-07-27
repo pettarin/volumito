@@ -28,10 +28,14 @@ from volumito.cli.constants import (
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
+    DEFAULT_STORY_ARGUMENT_TYPE,
     FILE_WRITE_CHUNK_SIZE,
     MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
+    SHORT_FORMAT_FIELDS_STORY,
+    STORY_ARGUMENT_TYPES,
+    STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
 )
 from volumito.cli.metadata import (
     UnsupportedAudioFormatError,
@@ -49,6 +53,7 @@ from volumito.cli.pure_helpers import (
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
+    story_query_payload,
 )
 from volumito.clients import (
     Scheme,
@@ -1018,6 +1023,22 @@ def option_replace_characters_in_file_names_with(
     )(func)
 
 
+def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-T/--type`` option to a story subcommand."""
+    return click.option(
+        "-T",
+        "--type",
+        "argument_type",
+        type=click.Choice(STORY_ARGUMENT_TYPES),
+        default=DEFAULT_STORY_ARGUMENT_TYPE,
+        show_default=True,
+        help=(
+            "How to interpret the positional argument(s): name, mbid, or "
+            "autodetect (mbid iff a single UUID-shaped argument)"
+        ),
+    )(func)
+
+
 def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--with-albumart`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1244,6 +1265,97 @@ def render_state(
             output = format_as_pretty(filtered_state, position_starting_at_one)
 
     click.echo(output)
+
+
+def render_story(
+    ctx: click.Context,
+    mode: str,
+    data: dict[str, str],
+    fields: str,
+    output_format: str,
+    heading: str,
+) -> None:
+    """Fetch a metavolumio story payload and print it per the fields/format options.
+
+    The metavolumio plugin endpoint (a Volumio Premium feature) is queried with the
+    given mode and data payload. A response whose "success" flag is not true is
+    reported as an error (exit code 1). The successful response envelope is rendered
+    like the other query commands, honoring the fields and format options.
+
+    Args:
+        ctx: Click context object containing shared options
+        mode: The metavolumio mode (e.g. "storyAlbum")
+        data: The data payload for the mode (without the mode key)
+        fields: The fields option ("short" or "all")
+        output_format: The output format ("json", "pretty", "raw", or "table")
+        heading: The heading line for the table output format
+    """
+    verbose = ctx.obj["verbose"]
+    machine_readable = ctx.obj["machine_readable"]
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
+
+    response = fetch_or_exit(
+        ctx, lambda c: c.plugin_endpoint("metavolumio", {"mode": mode, **data})
+    )
+
+    if response.get("success") is not True:
+        if not machine_readable:
+            error = response.get("error", "unknown error")
+            click.echo(f"Story error: {error}", err=True)
+        sys.exit(1)
+
+    if verbose and not machine_readable:
+        click.echo("Successfully retrieved story", err=True)
+
+    if output_format == "raw":
+        # Raw JSON without formatting (ignores fields filter)
+        output = json.dumps(response)
+    else:
+        # Apply fields filter for all formatted outputs
+        filtered_response = filter_fields(response, fields, SHORT_FORMAT_FIELDS_STORY)
+
+        if output_format == "table":
+            # Preserve the requested field order (and labels) in the table; None => all
+            field_order = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_STORY)
+            output = format_as_table(
+                filtered_response,
+                heading=heading,
+                field_order=field_order,
+                position_starting_at_one=position_starting_at_one,
+            )
+        elif output_format == "json":
+            output = format_as_json(filtered_response)
+        else:  # pretty
+            output = format_as_pretty(filtered_response, position_starting_at_one)
+
+    click.echo(output)
+
+
+def resolve_story_payload(
+    arguments: tuple[str, ...],
+    argument_type: str,
+    name_keys: tuple[str, ...],
+) -> dict[str, str]:
+    """Resolve the "story" positional arguments, failing on an invalid combination.
+
+    See :func:`volumito.cli.pure_helpers.story_query_payload` for the resolution
+    rules.
+
+    Args:
+        arguments: The positional arguments of the command
+        argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
+        name_keys: The payload keys of the "name" interpretation, in argument order
+
+    Returns:
+        The data payload (without the mode key)
+
+    Raises:
+        click.UsageError: If the arguments cannot be resolved (exit code 2)
+    """
+    payload = story_query_payload(arguments, argument_type, name_keys)
+    if payload is None:
+        raise click.UsageError(STORY_ARTIST_ALBUM_ARGUMENTS_ERROR)
+    return payload
 
 
 def rest_api_sleep(ctx: click.Context) -> None:

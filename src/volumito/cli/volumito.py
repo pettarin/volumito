@@ -46,10 +46,13 @@ from volumito.cli.click_helpers import (
     option_print_resulting_status,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_story_type,
     option_with_albumart,
     render_output_filename,
     render_payload,
     render_state,
+    render_story,
+    resolve_story_payload,
     rest_api_sleep,
     write_queue_log,
 )
@@ -1457,6 +1460,106 @@ def playlist_download(
         with_albumart=with_albumart,
     )
     execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@main.group()
+@click.pass_context
+def story(ctx: click.Context) -> None:
+    """Query album, artist, credits, label, and place stories.
+
+    Requires the Volumio Premium metavolumio plugin.
+    """
+    pass
+
+
+@story.command("album")
+@click.pass_context
+@click.argument("arguments", nargs=-1, type=str)
+@option_fields
+@option_format
+@option_story_type
+def story_album(
+    ctx: click.Context,
+    arguments: tuple[str, ...],
+    fields: str,
+    output_format: str,
+    argument_type: str,
+) -> None:
+    """Get the story of the album given as ARTIST ALBUM arguments or a single MBID."""
+    payload = resolve_story_payload(arguments, argument_type, ("artist", "album"))
+    render_story(ctx, "storyAlbum", payload, fields, output_format, heading="Album Story")
+
+
+@story.command("artist")
+@click.pass_context
+@click.argument("value", type=str)
+@option_fields
+@option_format
+@option_story_type
+def story_artist(
+    ctx: click.Context,
+    value: str,
+    fields: str,
+    output_format: str,
+    argument_type: str,
+) -> None:
+    """Get the story of the artist given as a name or MBID argument."""
+    payload = resolve_story_payload((value,), argument_type, ("artist",))
+    render_story(ctx, "storyArtist", payload, fields, output_format, heading="Artist Story")
+
+
+@story.command("credits")
+@click.pass_context
+@click.argument("arguments", nargs=-1, type=str)
+@option_fields
+@option_format
+@option_story_type
+def story_credits(
+    ctx: click.Context,
+    arguments: tuple[str, ...],
+    fields: str,
+    output_format: str,
+    argument_type: str,
+) -> None:
+    """Get the credits of the album given as ARTIST ALBUM arguments or a single MBID."""
+    payload = resolve_story_payload(arguments, argument_type, ("artist", "album"))
+    render_story(ctx, "creditsAlbum", payload, fields, output_format, heading="Album Credits")
+
+
+@story.command("label")
+@click.pass_context
+@click.argument("value", type=str)
+@option_fields
+@option_format
+@option_story_type
+def story_label(
+    ctx: click.Context,
+    value: str,
+    fields: str,
+    output_format: str,
+    argument_type: str,
+) -> None:
+    """Get the story of the label given as a name or MBID argument."""
+    payload = resolve_story_payload((value,), argument_type, ("label",))
+    render_story(ctx, "storyLabel", payload, fields, output_format, heading="Label Story")
+
+
+@story.command("place")
+@click.pass_context
+@click.argument("value", type=str)
+@option_fields
+@option_format
+@option_story_type
+def story_place(
+    ctx: click.Context,
+    value: str,
+    fields: str,
+    output_format: str,
+    argument_type: str,
+) -> None:
+    """Get the story of the place given as a name or MBID argument."""
+    payload = resolve_story_payload((value,), argument_type, ("place",))
+    render_story(ctx, "storyPlace", payload, fields, output_format, heading="Place Story")
 
 
 # "info" is a top-level synonym for "system info"

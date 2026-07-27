@@ -511,6 +511,13 @@ class TestBuildClickDefaultMap:
             "zones": {"get": formatting},
             "system": {"version": format_only, "info": format_only},
             "collection": {"statistics": format_only},
+            "story": {
+                "album": formatting,
+                "artist": formatting,
+                "credits": formatting,
+                "label": formatting,
+                "place": formatting,
+            },
             # "info" is the top-level synonym of "system info"
             "info": format_only,
         }
@@ -546,6 +553,21 @@ class TestBuildClickDefaultMap:
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-get has no override, so it keeps the shared value.
         assert result["queue"]["get"] == {"output_format": "pretty"}
+
+    def test_story_subsection_overrides_shared(self):
+        """A per-command story subsection overrides the shared display value."""
+        result = build_click_default_map(
+            {
+                "output": {
+                    "format": "pretty",
+                    "story-album": {"format": "table"},
+                }
+            }
+        )
+
+        assert result["story"]["album"] == {"output_format": "table"}
+        # The sibling story commands keep the shared value.
+        assert result["story"]["artist"] == {"output_format": "pretty"}
 
     def test_miscellaneous_keys_nested_under_their_command(self):
         """The miscellaneous keys land in their command slot, not at the top level."""

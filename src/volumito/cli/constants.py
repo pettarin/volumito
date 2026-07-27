@@ -13,6 +13,9 @@ DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES = " :"
 DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH = "_"
 """Default replacement string for the characters replaced in generated file names."""
 
+DEFAULT_STORY_ARGUMENT_TYPE = "autodetect"
+"""Default value of the -T/--type option of the "story" subcommands."""
+
 DEFAULT_VOLUMIO_VERSION = "4"
 """Default target Volumio version for the "configuration create" command."""
 
@@ -91,6 +94,11 @@ SHORT_FORMAT_FIELDS_QUEUE_GET = [
 ]
 """Short fields list for the "queue get" command."""
 
+SHORT_FORMAT_FIELDS_STORY = [
+    "data.value",
+]
+"""Short fields list for the "story" subcommands."""
+
 SHORT_FORMAT_FIELDS_TRACK_INFO = [
     "position",
     "title",
@@ -116,3 +124,15 @@ SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE = [
     "albumart",
 ]
 """Keys of the "state" subdictionary omitted by the short fields of "zones get"."""
+
+STORY_ARGUMENT_TYPES = [
+    "autodetect",
+    "mbid",
+    "name",
+]
+"""Accepted values of the -T/--type option of the "story" subcommands."""
+
+STORY_ARTIST_ALBUM_ARGUMENTS_ERROR = (
+    "Expected ARTIST ALBUM arguments, or a single MBID argument."
+)
+"""Error message when the "story album"/"story credits" arguments cannot be resolved."""

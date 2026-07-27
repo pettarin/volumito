@@ -379,6 +379,60 @@ class VolumioRESTAPIClient:
         """
         return self._get(path).text
 
+    def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """POST ``payload`` as JSON to ``path`` and parse the response as a JSON object.
+
+        Args:
+            path: The URL path to request
+            payload: The JSON body to send
+
+        Returns:
+            The parsed JSON object
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        url = f"{self.host_configuration.rest_base_url}{path}"
+
+        try:
+            response = requests.post(url, json=payload, timeout=self.timeout)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as e:
+            raise VolumioConnectionError(
+                f"Failed to connect to Volumio instance at "
+                f"{self.host_configuration.rest_base_url}: {e}"
+            ) from e
+        except requests.exceptions.Timeout as e:
+            raise VolumioConnectionError(
+                f"Connection to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} "
+                f"timed out after {self.timeout} seconds: {e}"
+            ) from e
+        except requests.exceptions.HTTPError as e:
+            raise VolumioAPIError(
+                f"Volumio API returned HTTP error {response.status_code}: {e}"
+            ) from e
+        except requests.exceptions.RequestException as e:
+            raise VolumioConnectionError(
+                f"Request to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} failed: {e}"
+            ) from e
+
+        try:
+            data = response.json()
+        except ValueError as e:
+            raise VolumioAPIError(
+                f"Failed to parse JSON response from Volumio API: {e}"
+            ) from e
+
+        if not isinstance(data, dict):
+            raise VolumioAPIError(
+                f"Expected JSON object from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
     def ping(self) -> str:
         """Ping the Volumio instance to check that it is reachable.
 
@@ -465,3 +519,23 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self.send_command(f"playplaylist&name={quote(name, safe='')}")
+
+    def plugin_endpoint(self, endpoint: str, data: dict[str, Any]) -> dict[str, Any]:
+        """POST a plugin endpoint request to the Volumio instance.
+
+        The response envelope (e.g. ``{"success": true, "data": {...}}`` or
+        ``{"success": false, "error": "..."}`` for the Premium plugins) is returned
+        verbatim, without interpreting the "success" flag.
+
+        Args:
+            endpoint: The name of the plugin endpoint (e.g. "metavolumio")
+            data: The data payload to send to the plugin endpoint
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        return self._post_json("/api/v1/pluginEndpoint", {"endpoint": endpoint, "data": data})

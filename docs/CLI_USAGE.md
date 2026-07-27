@@ -92,6 +92,44 @@ volumito playlist download Rock -d ~/Music
 `playlist download` takes the options of both `playlist play` (`--check-playlist-name`,
 `--print-resulting-status`) and `queue download` (see Downloading the Queue).
 
+## Stories
+
+Query album, artist, credits, label, and place stories via the metavolumio plugin endpoint
+(requires a Volumio Premium subscription):
+
+```bash
+# Story of an album, given as ARTIST ALBUM arguments or as a single MBID
+# (a MusicBrainz identifier, i.e. a UUID)
+volumito story album "Miles Davis" "Kind of Blue"
+volumito story album 83d91898-7763-47d7-b03b-b92132375c47
+
+# Force the interpretation of the argument(s) with -T/--type
+volumito story album -T mbid some-nonstandard-identifier
+volumito story album -T name "83d91898-7763-47d7-b03b-b92132375c47" "An Album"
+
+# Story of an artist, given as a name or MBID argument
+volumito story artist "Miles Davis"
+volumito story artist 83d91898-7763-47d7-b03b-b92132375c47
+
+# Credits of an album (same arguments as story album)
+volumito story credits "Miles Davis" "Kind of Blue"
+
+# Story of a label or a place, given as a name or MBID argument
+volumito story label "Blue Note"
+volumito story label 83d91898-7763-47d7-b03b-b92132375c47
+volumito story place "Abbey Road Studios"
+volumito story place 83d91898-7763-47d7-b03b-b92132375c47
+```
+
+The subcommands interpret their positional arguments per `-T/--type`: `name` (artist, album,
+label, or place name), `mbid` (a MusicBrainz identifier), or `autodetect` (the default: a
+single UUID-shaped argument is an MBID, an argument pair is ARTIST ALBUM for
+`album`/`credits`, and a single non-UUID argument is the name for `artist`/`label`/`place`).
+
+The subcommands honor the `--fields`/`--format` options (see Field Filtering and Output
+Formats); the default `SHORT` fields show only the story text (the `data.value` field of the
+response). Use `-L ALL` for the full response envelope.
+
 ## Connection Options
 
 Specify custom connection parameters:
@@ -206,11 +244,13 @@ downloads:
 
 The `output` section's `fields` and `format` keys set the defaults for the corresponding
 `--fields`/`--format` options of the commands that support them: `format` applies to `playback status`,
-`track info`, `queue get`, `zones get`, `playlist list`, `system version`, `system info`, and
-`collection statistics`, while `fields` applies to the first four only. A key placed directly under
+`track info`, `queue get`, `zones get`, `playlist list`, `system version`, `system info`,
+`collection statistics`, and the `story` subcommands, while `fields` applies to the first four
+and the `story` subcommands only. A key placed directly under
 `output` applies to all the commands accepting it; the optional `playback-status`, `track-info`,
-`queue-get`, `playlist-list`, `zones-get`, `system-version`, `system-info`, and
-`collection-statistics` subsections hold the same keys and override the shared value
+`queue-get`, `playlist-list`, `zones-get`, `system-version`, `system-info`,
+`collection-statistics`, `story-album`, `story-artist`, `story-credits`, `story-label`, and
+`story-place` subsections hold the same keys and override the shared value
 for that command
 (`system-info` also covers the top-level `info` synonym). The `print-resulting-status` key sets the
 default for the `-r` option of the `playback` action commands (`toggle`, `play`, `pause`, `stop`, `next`,
@@ -316,6 +356,9 @@ volumito playback status -L ALL
 
 # Show only the given fields, in order
 volumito playback status -L artist,album,title
+
+# A dotted name selects a field nested inside the response (e.g. for the story commands)
+volumito story artist "Miles Davis" -L data.type,data.value
 ```
 
 The `SHORT` fields include:

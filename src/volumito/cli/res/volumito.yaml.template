@@ -103,6 +103,11 @@ output:
   # - playback-status
   # - playlist-list
   # - queue-get
+  # - story-album
+  # - story-artist
+  # - story-credits
+  # - story-label
+  # - story-place
   # - system-info
   # - system-version
   # - track-info
@@ -145,6 +150,21 @@ output:
     # Add your own overrides here
 
   queue-get:
+    # Add your own overrides here
+
+  story-album:
+    # Add your own overrides here
+
+  story-artist:
+    # Add your own overrides here
+
+  story-credits:
+    # Add your own overrides here
+
+  story-label:
+    # Add your own overrides here
+
+  story-place:
     # Add your own overrides here
 
   system-info:
