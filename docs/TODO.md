@@ -4,7 +4,8 @@ Rough plan, broken down by milestone:
 
 ## v0.1.0
 
-- REST API client, CLI: support metadatas (premium)
+- Code cleanup
+- Documentation review
 
 ## v0.2.0
 
