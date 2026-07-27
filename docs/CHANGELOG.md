@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Command group `story` with subcommands `album`, `artist`, `credits`, `label`, and `place`,
   querying the Volumio Premium metavolumio plugin endpoint
+- Option `--current-track` for `story album`, `story artist`, and `story credits`,
+  taking the values from the currently playing track
 - Subsections for the `story` subcommands of the `output` section of the configuration file
 - Dotted field names (e.g. `data.value`) in the `--fields` option, selecting fields nested
   inside the response

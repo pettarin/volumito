@@ -119,12 +119,22 @@ volumito story label "Blue Note"
 volumito story label 83d91898-7763-47d7-b03b-b92132375c47
 volumito story place "Abbey Road Studios"
 volumito story place 83d91898-7763-47d7-b03b-b92132375c47
+
+# The --current-track option takes the values from the currently playing track
+volumito story album --current-track
+volumito story artist --current-track
+volumito story credits --current-track
 ```
 
 The subcommands interpret their positional arguments per `-T/--type`: `name` (artist, album,
 label, or place name), `mbid` (a MusicBrainz identifier), or `autodetect` (the default: a
 single UUID-shaped argument is an MBID, an argument pair is ARTIST ALBUM for
 `album`/`credits`, and a single non-UUID argument is the name for `artist`/`label`/`place`).
+
+The `album`, `artist`, and `credits` subcommands (not `label`/`place`) also accept the
+`--current-track` option, which populates the artist and album from the currently playing
+track instead of the positional arguments (it is mutually exclusive with them, and bypasses
+`-T/--type`); it is an error if the current track does not provide the needed values.
 
 The subcommands honor the `--fields`/`--format` options (see Field Filtering and Output
 Formats); the default `SHORT` fields show only the story text (the `data.value` field of the

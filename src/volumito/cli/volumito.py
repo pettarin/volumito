@@ -36,6 +36,7 @@ from volumito.cli.click_helpers import (
     option_check_next_track,
     option_check_playlist_name,
     option_create_download_manifest,
+    option_current_track,
     option_fields,
     option_file_name_template,
     option_format,
@@ -75,6 +76,7 @@ from volumito.cli.constants import (
     QUEUE_LOG_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
+    STORY_ARTIST_ARGUMENT_ERROR,
 )
 from volumito.cli.pure_helpers import (
     display_position,
@@ -1475,54 +1477,72 @@ def story(ctx: click.Context) -> None:
 @story.command("album")
 @click.pass_context
 @click.argument("arguments", nargs=-1, type=str)
+@option_current_track
 @option_fields
 @option_format
 @option_story_type
 def story_album(
     ctx: click.Context,
     arguments: tuple[str, ...],
+    current_track: bool,
     fields: str,
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the story of the album given as ARTIST ALBUM arguments or a single MBID."""
-    payload = resolve_story_payload(arguments, argument_type, ("artist", "album"))
+    """Get the story of the album given as ARTIST ALBUM, a single MBID, or the current track."""
+    payload = resolve_story_payload(
+        ctx, arguments, argument_type, ("artist", "album"), current_track=current_track
+    )
     render_story(ctx, "storyAlbum", payload, fields, output_format, heading="Album Story")
 
 
 @story.command("artist")
 @click.pass_context
-@click.argument("value", type=str)
+@click.argument("value", required=False, default=None, type=str)
+@option_current_track
 @option_fields
 @option_format
 @option_story_type
 def story_artist(
     ctx: click.Context,
-    value: str,
+    value: str | None,
+    current_track: bool,
     fields: str,
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the story of the artist given as a name or MBID argument."""
-    payload = resolve_story_payload((value,), argument_type, ("artist",))
+    """Get the story of the artist given as a NAME or MBID argument, or of the current track."""
+    arguments = () if value is None else (value,)
+    payload = resolve_story_payload(
+        ctx,
+        arguments,
+        argument_type,
+        ("artist",),
+        current_track=current_track,
+        arguments_error=STORY_ARTIST_ARGUMENT_ERROR,
+    )
     render_story(ctx, "storyArtist", payload, fields, output_format, heading="Artist Story")
 
 
 @story.command("credits")
 @click.pass_context
 @click.argument("arguments", nargs=-1, type=str)
+@option_current_track
 @option_fields
 @option_format
 @option_story_type
 def story_credits(
     ctx: click.Context,
     arguments: tuple[str, ...],
+    current_track: bool,
     fields: str,
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the credits of the album given as ARTIST ALBUM arguments or a single MBID."""
-    payload = resolve_story_payload(arguments, argument_type, ("artist", "album"))
+    """Get the credits of the album given as ARTIST ALBUM, a single MBID, or the current track."""
+    payload = resolve_story_payload(
+        ctx, arguments, argument_type, ("artist", "album"), current_track=current_track
+    )
     render_story(ctx, "creditsAlbum", payload, fields, output_format, heading="Album Credits")
 
 
@@ -1540,7 +1560,7 @@ def story_label(
     argument_type: str,
 ) -> None:
     """Get the story of the label given as a name or MBID argument."""
-    payload = resolve_story_payload((value,), argument_type, ("label",))
+    payload = resolve_story_payload(ctx, (value,), argument_type, ("label",))
     render_story(ctx, "storyLabel", payload, fields, output_format, heading="Label Story")
 
 
@@ -1558,7 +1578,7 @@ def story_place(
     argument_type: str,
 ) -> None:
     """Get the story of the place given as a name or MBID argument."""
-    payload = resolve_story_payload((value,), argument_type, ("place",))
+    payload = resolve_story_payload(ctx, (value,), argument_type, ("place",))
     render_story(ctx, "storyPlace", payload, fields, output_format, heading="Place Story")
 
 

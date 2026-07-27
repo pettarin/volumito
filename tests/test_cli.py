@@ -25,10 +25,12 @@ from volumito.cli.click_helpers import (
 from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
+    MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_GET,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
+    STORY_ARTIST_ARGUMENT_ERROR,
 )
 from volumito.cli.pure_helpers import (
     display_position,
@@ -4597,6 +4599,12 @@ class TestStoryCommands:
             "success": True,
             "data": {"type": "story", "value": "A long story."},
         }
+        mock_client.get_state.return_value = {
+            "status": "play",
+            "title": "La rondine",
+            "artist": " Mango ",
+            "album": "Sirtaki",
+        }
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -4614,6 +4622,8 @@ class TestStoryCommands:
             "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
         )
         assert json.loads(result.output)["data.value"] == "A long story."
+        # Explicit arguments never trigger a state fetch
+        mock_client.get_state.assert_not_called()
 
     def test_album_single_mbid(self, runner: CliRunner, mocker: MockerFixture):
         """story album autodetects a single UUID-shaped argument as an MBID."""
@@ -4784,6 +4794,127 @@ class TestStoryCommands:
         mock_client.plugin_endpoint.assert_called_once_with(
             "metavolumio", {"mode": "storyPlace", "place": self._MBID}
         )
+
+    def test_album_current_track(self, runner: CliRunner, mocker: MockerFixture):
+        """story album --current-track takes artist and album from the player state."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "album", "--current-track"])
+
+        assert result.exit_code == 0
+        mock_client.get_state.assert_called_once_with()
+        # The state values are stripped of surrounding whitespace
+        mock_client.plugin_endpoint.assert_called_once_with(
+            "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
+        )
+
+    def test_artist_current_track(self, runner: CliRunner, mocker: MockerFixture):
+        """story artist --current-track takes the artist from the player state."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "artist", "--current-track"])
+
+        assert result.exit_code == 0
+        mock_client.plugin_endpoint.assert_called_once_with(
+            "metavolumio", {"mode": "storyArtist", "artist": "Mango"}
+        )
+
+    def test_credits_current_track(self, runner: CliRunner, mocker: MockerFixture):
+        """story credits --current-track takes artist and album from the player state."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "credits", "--current-track"])
+
+        assert result.exit_code == 0
+        mock_client.plugin_endpoint.assert_called_once_with(
+            "metavolumio", {"mode": "creditsAlbum", "artist": "Mango", "album": "Sirtaki"}
+        )
+
+    def test_current_track_ignores_type(self, runner: CliRunner, mocker: MockerFixture):
+        """The --current-track option bypasses the -T/--type interpretation."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "artist", "-T", "mbid", "--current-track"])
+
+        assert result.exit_code == 0
+        mock_client.plugin_endpoint.assert_called_once_with(
+            "metavolumio", {"mode": "storyArtist", "artist": "Mango"}
+        )
+
+    def test_current_track_with_arguments_error(self, runner: CliRunner, mocker: MockerFixture):
+        """Combining --current-track with positional arguments is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["story", "album", "--current-track", "Mango", "Sirtaki"]
+        )
+
+        assert result.exit_code == 2
+        assert MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR in result.output
+        mock_client.get_state.assert_not_called()
+
+    def test_artist_no_argument_error(self, runner: CliRunner, mocker: MockerFixture):
+        """story artist without an argument (and without --current-track) is a usage error."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "artist"])
+
+        assert result.exit_code == 2
+        assert STORY_ARTIST_ARGUMENT_ERROR in result.output
+
+    def test_current_track_missing_album(self, runner: CliRunner, mocker: MockerFixture):
+        """A current track without an album fails story album --current-track."""
+        mock_client = self._mock_client(mocker)
+        mock_client.get_state.return_value = {"status": "play", "artist": "Mango"}
+
+        result = runner.invoke(main, ["story", "album", "--current-track"])
+
+        assert result.exit_code == 1
+        assert "the current track does not provide the required metadata" in result.output.lower()
+        mock_client.plugin_endpoint.assert_not_called()
+
+    def test_current_track_blank_artist(self, runner: CliRunner, mocker: MockerFixture):
+        """A current track with a blank artist fails story artist --current-track."""
+        mock_client = self._mock_client(mocker)
+        mock_client.get_state.return_value = {"status": "stop", "artist": "   "}
+
+        result = runner.invoke(main, ["story", "artist", "--current-track"])
+
+        assert result.exit_code == 1
+        assert "the current track does not provide the required metadata" in result.output.lower()
+
+    def test_current_track_missing_metadata_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """In machine-readable mode the missing-metadata failure exits 1 printing nothing."""
+        mock_client = self._mock_client(mocker)
+        mock_client.get_state.return_value = {"status": "stop"}
+
+        result = runner.invoke(main, ["-m", "story", "artist", "--current-track"])
+
+        assert result.exit_code == 1
+        assert result.output.strip() == ""
+
+    def test_current_track_state_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A failing state fetch exits 1 before querying the story."""
+        mock_client = self._mock_client(mocker)
+        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+
+        result = runner.invoke(main, ["story", "album", "--current-track"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+        mock_client.plugin_endpoint.assert_not_called()
+
+    def test_label_has_no_current_track_option(self, runner: CliRunner, mocker: MockerFixture):
+        """story label does not support the --current-track option."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "label", "--current-track"])
+
+        assert result.exit_code == 2
+        assert "No such option: --current-track" in result.output
+        mock_client.plugin_endpoint.assert_not_called()
 
     def test_failure_envelope(self, runner: CliRunner, mocker: MockerFixture):
         """A success=false response exits 1 with the reported error."""

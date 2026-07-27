@@ -31,11 +31,13 @@ from volumito.cli.constants import (
     DEFAULT_STORY_ARGUMENT_TYPE,
     FILE_WRITE_CHUNK_SIZE,
     MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR,
+    MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
     SHORT_FORMAT_FIELDS_STORY,
     STORY_ARGUMENT_TYPES,
     STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
+    STORY_CURRENT_TRACK_METADATA_ERROR,
 )
 from volumito.cli.metadata import (
     UnsupportedAudioFormatError,
@@ -901,6 +903,19 @@ def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--current-track`` option to a story subcommand."""
+    return click.option(
+        "--current-track",
+        is_flag=True,
+        default=False,
+        help=(
+            "Use the currently playing track's metadata instead of the "
+            "positional argument(s)"
+        ),
+    )(func)
+
+
 def option_fields(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-L``/``--fields`` option to a display subcommand."""
     return click.option(
@@ -1332,29 +1347,53 @@ def render_story(
 
 
 def resolve_story_payload(
+    ctx: click.Context,
     arguments: tuple[str, ...],
     argument_type: str,
     name_keys: tuple[str, ...],
+    current_track: bool = False,
+    arguments_error: str = STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
 ) -> dict[str, str]:
     """Resolve the "story" positional arguments, failing on an invalid combination.
 
-    See :func:`volumito.cli.pure_helpers.story_query_payload` for the resolution
-    rules.
+    With ``current_track`` set (the --current-track option, mutually exclusive with
+    the positional arguments), the payload values are taken from the currently
+    playing track (fetched from the Volumio instance), bypassing the argument-type
+    interpretation; a current track lacking one of the needed values is an error
+    (exit code 1). Otherwise, see
+    :func:`volumito.cli.pure_helpers.story_query_payload` for the resolution rules.
 
     Args:
+        ctx: Click context object containing shared options
         arguments: The positional arguments of the command
         argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
         name_keys: The payload keys of the "name" interpretation, in argument order
+        current_track: Whether to take the payload values from the current track
+        arguments_error: The usage error message when the arguments cannot be resolved
 
     Returns:
         The data payload (without the mode key)
 
     Raises:
-        click.UsageError: If the arguments cannot be resolved (exit code 2)
+        click.UsageError: If the arguments cannot be resolved or combined with
+            --current-track (exit code 2)
     """
+    if current_track:
+        if arguments:
+            raise click.UsageError(MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR)
+        state = fetch_state_or_exit(ctx)
+        values = []
+        for key in name_keys:
+            value = state.get(key)
+            if not isinstance(value, str) or not value.strip():
+                if not ctx.obj["machine_readable"]:
+                    click.echo(f"Error: {STORY_CURRENT_TRACK_METADATA_ERROR}", err=True)
+                sys.exit(1)
+            values.append(value.strip())
+        return dict(zip(name_keys, values, strict=True))
     payload = story_query_payload(arguments, argument_type, name_keys)
     if payload is None:
-        raise click.UsageError(STORY_ARTIST_ALBUM_ARGUMENTS_ERROR)
+        raise click.UsageError(arguments_error)
     return payload
 
 

@@ -38,6 +38,11 @@ MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
 )
 """Error message when the "configuration create" destination options are combined."""
 
+MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR = (
+    "Option --current-track and positional arguments are mutually exclusive."
+)
+"""Error message when a "story" subcommand combines --current-track with arguments."""
+
 MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
     "Options -d/--output-directory and -o/--output-file are mutually exclusive."
 )
@@ -136,3 +141,9 @@ STORY_ARTIST_ALBUM_ARGUMENTS_ERROR = (
     "Expected ARTIST ALBUM arguments, or a single MBID argument."
 )
 """Error message when the "story album"/"story credits" arguments cannot be resolved."""
+
+STORY_ARTIST_ARGUMENT_ERROR = "Expected a NAME or MBID argument."
+"""Error message when the "story artist" argument is missing."""
+
+STORY_CURRENT_TRACK_METADATA_ERROR = "The current track does not provide the required metadata."
+"""Error message when the current track lacks the metadata a "story" subcommand needs."""
