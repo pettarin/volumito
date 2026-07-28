@@ -114,12 +114,16 @@ volumito/
 
 ### Other Branches
 
-- Fix branches should be named `fix/#123_short_description`
+- Fix branches should be named `fix/gh_#123_short_description`
   where `#123` is the ID of the GitHub issue being fixed.
-- Feature branches should be named `feature/#456_short_description`
+- Feature branches should be named `feature/gh_#456_short_description`
   where `#456` is the ID of the GitHub issue describing the requested feature.
 - In both cases, it is mandatory to have a GitHub issue
   describing the issue being fixed or the new feature being added.
+- No need to squash commits on a fix or feature branch,
+  just try to have meaningful commit messages if you have more than one commit.
+  Usually it is preferable referencing the GitHub issue
+  (`Fixes #123 ...` or `Implement #456 ...`) in the commit message.
 
 ### Versioning
 
@@ -160,13 +164,14 @@ are handled by creating a new issue in
 Before submitting a PR, please make sure:
 
 - You read carefully this page.
-- You are legally able and comfortable applying the current
+- You are legally able to and comfortable with applying the current
   [license](../LICENSE)
   to your code contribution.
 - If you used an automated tool (e.g., a LLM/AI tool) to generate it,
   you reviewed and understand the implementation,
   and you took care of removing any unnecessary code (a.k.a., "AI slop").
-- You run all the tests with the `make test-all` command as explained above.
-- Your PR is from a fix or feature branch (ideally branched off
-  a recent state of the `devel` branch), and against the `devel` branch.
+- You run all the tests with the `make test-all` command as explained above,
+  and they all pass.
+- Your PR is from a fix branch or feature branch (ideally branched off
+  a recent state of the `devel` branch), and its target is the `devel` branch.
 
