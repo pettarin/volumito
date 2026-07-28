@@ -550,23 +550,23 @@ class TestVolumioRESTAPIClient:
 
         assert "Failed to parse JSON" in str(exc_info.value)
 
-    def test_list_playlists_success(self, mocker: MockerFixture):
-        """Test successful list_playlists() call."""
+    def test_playlists_success(self, mocker: MockerFixture):
+        """Test successful playlists property access."""
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = ["Rock", "Jazz"]
         mock_get = mocker.patch("requests.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
-        data = client.list_playlists()
+        data = client.playlists
 
         mock_get.assert_called_once_with(
             "http://volumio.local:3000/api/v1/listplaylists", timeout=5.0
         )
         assert data == ["Rock", "Jazz"]
 
-    def test_list_playlists_connection_error(self, mocker: MockerFixture):
-        """Test list_playlists() translates a connection error."""
+    def test_playlists_connection_error(self, mocker: MockerFixture):
+        """Test the playlists property translates a connection error."""
         mocker.patch(
             "requests.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
@@ -575,12 +575,12 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
-            client.list_playlists()
+            _ = client.playlists
 
         assert "Failed to connect to Volumio instance" in str(exc_info.value)
 
-    def test_list_playlists_invalid_json(self, mocker: MockerFixture):
-        """Test list_playlists() with an invalid JSON response."""
+    def test_playlists_invalid_json(self, mocker: MockerFixture):
+        """Test the playlists property with an invalid JSON response."""
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
@@ -589,12 +589,12 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
-            client.list_playlists()
+            _ = client.playlists
 
         assert "Failed to parse JSON" in str(exc_info.value)
 
-    def test_list_playlists_non_list_response(self, mocker: MockerFixture):
-        """Test list_playlists() rejects a payload that is not a JSON array."""
+    def test_playlists_non_list_response(self, mocker: MockerFixture):
+        """Test the playlists property rejects a payload that is not a JSON array."""
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"playlists": ["Rock"]}
@@ -603,7 +603,7 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
-            client.list_playlists()
+            _ = client.playlists
 
         assert "Expected JSON array from Volumio API, got dict" in str(exc_info.value)
 

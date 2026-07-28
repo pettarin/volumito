@@ -1335,7 +1335,7 @@ def playlist(ctx: click.Context) -> None:
 @option_format
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the playlists saved on the Volumio instance."""
-    names = fetch_or_exit(ctx, lambda c: c.list_playlists())
+    names = fetch_or_exit(ctx, lambda c: c.playlists)
 
     if output_format == "raw":
         output = json.dumps(names)
@@ -1366,7 +1366,7 @@ def playlist_play(
     unless --no-check-playlist-name is given, the name is looked up first.
     """
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.list_playlists())
+        names = fetch_or_exit(ctx, lambda c: c.playlists)
         if name not in names:
             if not ctx.obj["machine_readable"]:
                 click.echo(f"Error: playlist not found: {name}", err=True)
@@ -1424,7 +1424,7 @@ def playlist_download(
     verbose = ctx.obj["verbose"]
 
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.list_playlists())
+        names = fetch_or_exit(ctx, lambda c: c.playlists)
         if name not in names:
             if not machine_readable:
                 click.echo(f"Error: playlist not found: {name}", err=True)

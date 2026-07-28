@@ -415,18 +415,6 @@ class VolumioRESTAPIClient:
             return self._plugin_endpoint("metavolumio", {"mode": "storyPlace", **payload})
         raise ValueError("one of album, artist, label, or place is required")
 
-    def list_playlists(self) -> list[Any]:
-        """List the playlists saved on the Volumio instance.
-
-        Returns:
-            A list containing the names of the saved playlists
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self._get_json_list("/api/v1/listplaylists")
-
     def mute(self) -> dict[str, Any]:
         """Mute the playback volume.
 
@@ -506,6 +494,21 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._send_command(f"playplaylist&name={quote(name, safe='')}")
+
+    @property
+    def playlists(self) -> list[Any]:
+        """The names of the playlists saved on the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            A list containing the names of the saved playlists
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json_list("/api/v1/listplaylists")
 
     def previous(self) -> dict[str, Any]:
         """Skip to the previous track.

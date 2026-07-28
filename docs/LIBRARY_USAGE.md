@@ -83,7 +83,7 @@ client.next()
 
 # list playlists and play one
 playlist_name = "Jazz Classics"
-if playlist_name in client.list_playlists():
+if playlist_name in client.playlists:
     client.play_playlist(playlist_name)
 else:
     print(f"No such playlist: '{playlist_name}'")

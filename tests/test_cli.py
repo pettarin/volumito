@@ -4283,8 +4283,10 @@ class TestPlaylistCommands:
     def _mock_client(self, mocker: MockerFixture, playlists=None):
         """Mock VolumioRESTAPIClient with usable playlist methods; patch out the sleep."""
         mock_client = mocker.Mock()
-        mock_client.list_playlists.return_value = (
-            self.PLAYLISTS if playlists is None else playlists
+        _attach_property(
+            mock_client,
+            "playlists",
+            return_value=self.PLAYLISTS if playlists is None else playlists,
         )
         mock_client.play_playlist.return_value = {"response": "playPlaylist Response"}
         _attach_property(mock_client, "state", return_value={
@@ -4376,7 +4378,9 @@ class TestPlaylistCommands:
     def test_list_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """playlist list exits 1 on a connection error."""
         mock_client, _ = self._mock_client(mocker)
-        mock_client.list_playlists.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "playlists", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         result = runner.invoke(main, ["playlist", "list"])
 
@@ -4386,7 +4390,7 @@ class TestPlaylistCommands:
     def test_list_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """playlist list exits 1 on an API error."""
         mock_client, _ = self._mock_client(mocker)
-        mock_client.list_playlists.side_effect = VolumioAPIError("Bad payload")
+        _attach_property(mock_client, "playlists", side_effect=VolumioAPIError("Bad payload"))
 
         result = runner.invoke(main, ["playlist", "list"])
 
@@ -4451,7 +4455,7 @@ class TestPlaylistCommands:
         )
 
         assert result.exit_code == 0
-        mock_client.list_playlists.assert_called_once()
+        mock_client.playlists_property.assert_called_once()
         mock_client.play_playlist.assert_called_once_with("Rock")
 
     def test_play_unknown_name(self, runner: CliRunner, mocker: MockerFixture):
@@ -4519,13 +4523,15 @@ class TestPlaylistCommands:
         )
 
         assert result.exit_code == 0
-        mock_client.list_playlists.assert_not_called()
+        mock_client.playlists_property.assert_not_called()
         mock_client.play_playlist.assert_called_once_with("Nope")
 
     def test_play_check_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A failing lookup exits 1 without sending the command."""
         mock_client, _ = self._mock_client(mocker)
-        mock_client.list_playlists.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "playlists", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         result = runner.invoke(main, ["playlist", "play", "Rock"])
 
@@ -6245,7 +6251,7 @@ class TestPlaylistDownload:
     def _mock_services(self, mocker: MockerFixture, tracks, uris, states=None):
         """Mock the REST client, the MPD client, the HTTP download, and the sleep."""
         mock_client = mocker.Mock()
-        mock_client.list_playlists.return_value = ["Rock", "Jazz"]
+        _attach_property(mock_client, "playlists", return_value=["Rock", "Jazz"])
         _attach_property(mock_client, "queue", return_value={"queue": tracks})
         if states is not None:
             _attach_property(mock_client, "state", side_effect=states)
@@ -6297,7 +6303,7 @@ class TestPlaylistDownload:
 
         assert result.exit_code == 0
         assert "Playing playlist Rock..." in result.output
-        client.list_playlists.assert_called_once()
+        client.playlists_property.assert_called_once()
         client.clear.assert_called_once()
         client.play_playlist.assert_called_once_with("Rock")
         # The queue is cleared and the playlist played before the download starts
@@ -6333,7 +6339,7 @@ class TestPlaylistDownload:
         )
 
         assert result.exit_code == 0
-        client.list_playlists.assert_not_called()
+        client.playlists_property.assert_not_called()
         client.play_playlist.assert_called_once_with("Rock")
 
     def test_download_requires_output_directory(
@@ -7593,6 +7599,7 @@ class TestConfigurationFile:
         """The miscellaneous section can turn off the playlist name check."""
         mock_client = self._mock_rest_client(mocker)
         mock_client.play_playlist.return_value = {"response": "playPlaylist Response"}
+        _attach_property(mock_client, "playlists", return_value=["Rock"])
         config = self._write_config(
             tmp_path, "miscellaneous:\n  check-playlist-name: false\n"
         )
@@ -7602,7 +7609,7 @@ class TestConfigurationFile:
         )
 
         assert result.exit_code == 0
-        mock_client.list_playlists.assert_not_called()
+        mock_client.playlists_property.assert_not_called()
         mock_client.play_playlist.assert_called_once_with("Nope")
 
     def test_miscellaneous_section_disables_the_seek_position_check(
@@ -7628,7 +7635,7 @@ class TestConfigurationFile:
     ):
         """The playlist-list subsection sets the format of the playlist list command."""
         mock_client = self._mock_rest_client(mocker)
-        mock_client.list_playlists.return_value = ["Rock"]
+        _attach_property(mock_client, "playlists", return_value=["Rock"])
         config = self._write_config(
             tmp_path, "output:\n  format: json\n  playlist-list:\n    format: table\n"
         )

@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mute`/`unmute` values to the volume method
 - The REST API client query methods are now read-only properties: `get_state` -> `state`,
   `get_queue` -> `queue`, `get_system_version` -> `system_version`, `get_system_info` ->
-  `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`
+  `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`,
+  `list_playlists` -> `playlists`
 - The REST API client `send_command` method is now private (`_send_command`), proxied by
   the public playback and queue methods
 - The REST API client `plugin_endpoint` method is now private (`_plugin_endpoint`), proxied
