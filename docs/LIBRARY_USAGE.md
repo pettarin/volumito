@@ -55,8 +55,8 @@ client.stop()
 
 # control the volume
 client.volume(50)
-client.volume("mute")
-client.volume("unmute")
+client.mute()
+client.unmute()
 
 # print the current queue
 queue = client.get_queue()["queue"]

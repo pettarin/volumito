@@ -975,9 +975,31 @@ class TestVolumioRESTAPIClient:
         mock_send_command = mocker.patch.object(client, "send_command")
         mock_send_command.return_value = {"response": "volume"}
 
-        result = client.volume("mute")
+        result = client.volume("plus")
+
+        mock_send_command.assert_called_once_with("volume&volume=plus")
+        assert result["response"] == "volume"
+
+    def test_mute(self, mocker: MockerFixture):
+        """Test mute() method."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "volume"}
+
+        result = client.mute()
 
         mock_send_command.assert_called_once_with("volume&volume=mute")
+        assert result["response"] == "volume"
+
+    def test_unmute(self, mocker: MockerFixture):
+        """Test unmute() method."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "send_command")
+        mock_send_command.return_value = {"response": "volume"}
+
+        result = client.unmute()
+
+        mock_send_command.assert_called_once_with("volume&volume=unmute")
         assert result["response"] == "volume"
 
     def test_seek_seconds(self, mocker: MockerFixture):

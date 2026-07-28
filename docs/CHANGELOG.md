@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.23] - 2026-07-28
 
+### Added
+
+- Methods `mute` and `unmute` to the REST API client
+
+### Changed
+
+- The CLI mute/unmute operations call the new client methods instead of passing the special
+  `mute`/`unmute` values to the volume method
+
 
 ## [0.0.22] - 2026-07-27
 

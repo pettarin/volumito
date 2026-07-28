@@ -187,10 +187,12 @@ class VolumioRESTAPIClient:
     def volume(self, value: int | str) -> dict[str, Any]:
         """Set or adjust the playback volume.
 
+        See :meth:`mute` and :meth:`unmute` for muting and unmuting the volume.
+
         Args:
             value: An integer between 0 and 100 (inclusive) to set an absolute
-                volume level, or one of the strings "mute", "unmute", "plus",
-                "minus"
+                volume level, or one of the strings "plus", "minus" to step the
+                volume relatively to the current level
 
         Returns:
             A dictionary containing the response from the Volumio API
@@ -200,6 +202,30 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self.send_command(f"volume&volume={value}")
+
+    def mute(self) -> dict[str, Any]:
+        """Mute the playback volume.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self.send_command("volume&volume=mute")
+
+    def unmute(self) -> dict[str, Any]:
+        """Unmute the playback volume.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self.send_command("volume&volume=unmute")
 
     def seek(self, value: int | str) -> dict[str, Any]:
         """Seek to a position in the track currently playing.

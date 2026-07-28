@@ -577,7 +577,12 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
         state = fetch_state_or_exit(ctx)
         click.echo(state.get("volume"))
         return
-    execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
+    if value == "mute":
+        execute_command(ctx, "volume mute", lambda c: c.mute())
+    elif value == "unmute":
+        execute_command(ctx, "volume unmute", lambda c: c.unmute())
+    else:
+        execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
@@ -586,7 +591,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
 @option_print_resulting_status
 def mute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
-    execute_command(ctx, "volume mute", lambda c: c.volume("mute"))
+    execute_command(ctx, "volume mute", lambda c: c.mute())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
@@ -595,7 +600,7 @@ def mute(ctx: click.Context, print_resulting_status: bool) -> None:
 @option_print_resulting_status
 def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
-    execute_command(ctx, "volume unmute", lambda c: c.volume("unmute"))
+    execute_command(ctx, "volume unmute", lambda c: c.unmute())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
