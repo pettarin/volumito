@@ -1169,6 +1169,17 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("volume&volume=50")
         assert result["response"] == "volume"
 
+    @pytest.mark.parametrize("value", [-1, 101])
+    def test_volume_out_of_range(self, mocker: MockerFixture, value: int):
+        """Test volume() method rejects an out-of-range level."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+
+        with pytest.raises(ValueError, match="between 0 and 100"):
+            client.volume(value)
+
+        mock_send_command.assert_not_called()
+
     def test_increase_volume(self, mocker: MockerFixture):
         """Test increase_volume() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())

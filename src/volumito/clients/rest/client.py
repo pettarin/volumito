@@ -736,9 +736,12 @@ class VolumioRESTAPIClient:
             A dictionary containing the response from the Volumio API
 
         Raises:
+            ValueError: If the value is outside the 0-100 range
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
+        if not 0 <= value <= 100:
+            raise ValueError(f"The volume level must be between 0 and 100, got {value}")
         return self._send_command(f"volume&volume={value}")
 
     @property

@@ -22,8 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mute`/`unmute` values to the volume method
 - The REST API client seek method accepts only an integer position; the CLI relative
   seeking calls the new seek methods instead of passing the special `plus`/`minus` values
-- The REST API client volume method accepts only an integer level; the CLI volume stepping
-  calls the new volume methods instead of passing the special `plus`/`minus` values
+- The REST API client volume method accepts only an integer level, validating that it is
+  between 0 and 100; the CLI volume stepping calls the new volume methods instead of
+  passing the special `plus`/`minus` values
 - The REST API client query methods are now read-only properties: `get_state` -> `state`,
   `get_queue` -> `queue`, `get_system_version` -> `system_version`, `get_system_info` ->
   `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`,
