@@ -296,7 +296,7 @@ contains the API reference of the Python library `volumito`.
 
 The list of releases and their changes is contained
 in the
-[docs/CHANGELOG](docs/CHANGELOG.md)
+[docs/CHANGELOG.md](docs/CHANGELOG.md)
 document.
 
 
@@ -313,7 +313,9 @@ run the tests, browse the project structure, and contribute.
 This project is licensed under
 the GNU General Public License v3.0 or later (GPLv3+).
 
-See the [LICENSE](LICENSE) file for details.
+See the
+[LICENSE](LICENSE)
+file for details.
 
 
 ## Authors
@@ -326,7 +328,8 @@ See the [LICENSE](LICENSE) file for details.
 Volumio and the Volumio logo are registered trademarks of Volumio SRL,
 a company registered in Italy (VAT ID: IT07009020483).
 
-Please refer to the [Volumio Terms Of Service](https://volumio.com/terms-of-service/).
+Please refer to the
+[Volumio Terms Of Service](https://volumio.com/terms-of-service/).
 
 This project and its authors are not affiliated
 nor endorsed by Volumio SRL.
