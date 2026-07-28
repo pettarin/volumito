@@ -53,8 +53,9 @@ client.pause()
 client.play()
 client.stop()
 
-# control the volume
-client.volume(50)
+# read and control the volume
+print(client.volume)
+client.volume = 50
 client.mute()
 client.unmute()
 

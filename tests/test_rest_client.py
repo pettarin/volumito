@@ -1158,27 +1158,57 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("prev")
         assert result["response"] == "prev"
 
-    def test_volume_absolute(self, mocker: MockerFixture):
-        """Test volume() method with an absolute integer level."""
+    def test_volume_setter(self, mocker: MockerFixture):
+        """Test setting the volume property to an absolute integer level."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
         mock_send_command.return_value = {"response": "volume"}
 
-        result = client.volume(50)
+        client.volume = 50
 
         mock_send_command.assert_called_once_with("volume&volume=50")
-        assert result["response"] == "volume"
 
     @pytest.mark.parametrize("value", [-1, 101])
-    def test_volume_out_of_range(self, mocker: MockerFixture, value: int):
-        """Test volume() method rejects an out-of-range level."""
+    def test_volume_setter_out_of_range(self, mocker: MockerFixture, value: int):
+        """Test setting the volume property rejects an out-of-range level."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
 
         with pytest.raises(ValueError, match="between 0 and 100"):
-            client.volume(value)
+            client.volume = value
 
         mock_send_command.assert_not_called()
+
+    def test_volume_getter(self, mocker: MockerFixture):
+        """Test reading the volume property from the playback state."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "play", "volume": 49}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        assert client.volume == 49
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/getState", timeout=5.0
+        )
+
+    @pytest.mark.parametrize(
+        "state",
+        [{"status": "play"}, {"status": "play", "volume": "loud"}],
+        ids=["missing", "not-an-integer"],
+    )
+    def test_volume_getter_invalid_level(self, mocker: MockerFixture, state: dict):
+        """Test reading the volume property with a missing or non-integer level."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = state
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError, match="integer volume level"):
+            _ = client.volume
 
     def test_increase_volume(self, mocker: MockerFixture):
         """Test increase_volume() method."""

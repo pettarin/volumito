@@ -101,6 +101,7 @@ from volumito.clients import (
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioMPDClient,
+    VolumioRESTAPIClient,
 )
 
 
@@ -582,11 +583,15 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
     "unmute", "plus" (also "increase"/"up"), "minus" (also "decrease"/"down").
     """
     if value is None:
-        state = fetch_state_or_exit(ctx)
-        click.echo(state.get("volume"))
+        click.echo(fetch_or_exit(ctx, lambda c: c.volume))
         return
     if isinstance(value, int):
-        execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
+        level = value
+
+        def set_volume(client: VolumioRESTAPIClient) -> None:
+            client.volume = level
+
+        execute_command(ctx, f"volume {value}", set_volume)
     elif value == "mute":
         execute_command(ctx, "volume mute", lambda c: c.mute())
     elif value == "unmute":

@@ -698,7 +698,7 @@ def embed_track_tags(
 def execute_command(
     ctx: click.Context,
     command_name: str,
-    command_func: Callable[[VolumioRESTAPIClient], dict[str, Any]],
+    command_func: Callable[[VolumioRESTAPIClient], object],
 ) -> None:
     """Execute a playback control command.
 

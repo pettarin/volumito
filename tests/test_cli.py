@@ -1718,7 +1718,7 @@ class TestCLICommands:
     def test_volume_absolute_success(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback volume with an absolute integer level."""
         mock_client = mocker.Mock()
-        mock_client.volume.return_value = {"response": "volume"}
+        _attach_property(mock_client, "volume")
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1729,13 +1729,13 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Command 'volume 50' executed successfully" in result.output
-        # The value reaches the client as an int
-        mock_client.volume.assert_called_once_with(50)
+        # The value reaches the client as an int, assigned to the volume property
+        mock_client.volume_property.assert_called_once_with(50)
 
     def test_volume_no_value_prints_current(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback volume without a value prints the current volume."""
         mock_client = mocker.Mock()
-        _attach_property(mock_client, "state", return_value={"volume": 42, "title": "Test"})
+        _attach_property(mock_client, "volume", return_value=42)
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1746,8 +1746,8 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "42" in result.output
-        # No volume command is sent when only querying the current level
-        mock_client.volume.assert_not_called()
+        # The property is only read, never assigned
+        mock_client.volume_property.assert_called_once_with()
 
     @pytest.mark.parametrize(
         ("spelling", "method"),
@@ -1763,6 +1763,7 @@ class TestCLICommands:
     ):
         """Test playback volume dispatches the step aliases to the dedicated methods."""
         mock_client = mocker.Mock()
+        _attach_property(mock_client, "volume")
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1773,7 +1774,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         getattr(mock_client, method).assert_called_once_with()
-        mock_client.volume.assert_not_called()
+        mock_client.volume_property.assert_not_called()
 
     @pytest.mark.parametrize(
         ("keyword", "method"),
@@ -1784,6 +1785,7 @@ class TestCLICommands:
     ):
         """Test playback volume dispatches the step keywords to the dedicated methods."""
         mock_client = mocker.Mock()
+        _attach_property(mock_client, "volume")
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1794,7 +1796,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         getattr(mock_client, method).assert_called_once_with()
-        mock_client.volume.assert_not_called()
+        mock_client.volume_property.assert_not_called()
 
     @pytest.mark.parametrize("keyword", ["mute", "unmute"])
     def test_volume_mute_keywords(
@@ -1802,6 +1804,7 @@ class TestCLICommands:
     ):
         """Test playback volume dispatches mute/unmute to the dedicated client methods."""
         mock_client = mocker.Mock()
+        _attach_property(mock_client, "volume")
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1812,13 +1815,13 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         getattr(mock_client, keyword).assert_called_once_with()
-        mock_client.volume.assert_not_called()
+        mock_client.volume_property.assert_not_called()
 
     @pytest.mark.parametrize("level", ["0", "100"])
     def test_volume_boundaries(self, runner: CliRunner, mocker: MockerFixture, level: str):
         """Test playback volume accepts the 0 and 100 boundary levels."""
         mock_client = mocker.Mock()
-        mock_client.volume.return_value = {"response": "volume"}
+        _attach_property(mock_client, "volume")
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1828,12 +1831,13 @@ class TestCLICommands:
         result = runner.invoke(main, ["playback", "volume", level])
 
         assert result.exit_code == 0
-        mock_client.volume.assert_called_once_with(int(level))
+        mock_client.volume_property.assert_called_once_with(int(level))
 
     @pytest.mark.parametrize("bad_value", ["101", "-1", "foo", "UP", "+"])
     def test_volume_invalid(self, runner: CliRunner, mocker: MockerFixture, bad_value: str):
         """Test playback volume rejects out-of-range, non-numeric, and non-lowercase values."""
         mock_client = mocker.Mock()
+        _attach_property(mock_client, "volume")
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1844,11 +1848,12 @@ class TestCLICommands:
 
         # Click reports a usage error (exit code 2) and never calls the client
         assert result.exit_code == 2
-        mock_client.volume.assert_not_called()
+        mock_client.volume_property.assert_not_called()
 
     def test_mute_synonym(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback mute is a synonym for playback volume mute."""
         mock_client = mocker.Mock()
+        _attach_property(mock_client, "volume")
         mock_client.mute.return_value = {"response": "volume"}
 
         mocker.patch(
@@ -1861,11 +1866,12 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Command 'volume mute' executed successfully" in result.output
         mock_client.mute.assert_called_once_with()
-        mock_client.volume.assert_not_called()
+        mock_client.volume_property.assert_not_called()
 
     def test_unmute_synonym(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback unmute is a synonym for playback volume unmute."""
         mock_client = mocker.Mock()
+        _attach_property(mock_client, "volume")
         mock_client.unmute.return_value = {"response": "volume"}
 
         mocker.patch(
@@ -1878,7 +1884,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Command 'volume unmute' executed successfully" in result.output
         mock_client.unmute.assert_called_once_with()
-        mock_client.volume.assert_not_called()
+        mock_client.volume_property.assert_not_called()
 
     def test_track_info_help(self, runner: CliRunner):
         """Test track info command with --help."""
@@ -6888,7 +6894,7 @@ class TestPrintResultingState:
         """Mock VolumioRESTAPIClient with a usable state property, patch out the sleep."""
         mock_client = mocker.Mock()
         mock_client.pause.return_value = {"response": "pause"}
-        mock_client.volume.return_value = {"response": "volume"}
+        _attach_property(mock_client, "volume")
         _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "Test Artist",
@@ -6945,7 +6951,7 @@ class TestPrintResultingState:
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
-        mock_client.volume.assert_called_once_with(50)
+        mock_client.volume_property.assert_called_once_with(50)
         mock_sleep.assert_called_once_with(1.0)
 
     def test_custom_sleep_before_next_call(self, runner: CliRunner, mocker: MockerFixture):

@@ -723,26 +723,39 @@ class VolumioRESTAPIClient:
         """
         return self._send_command("volume&volume=unmute")
 
-    def volume(self, value: int) -> dict[str, Any]:
-        """Set the playback volume to an absolute level.
+    @property
+    def volume(self) -> int:
+        """The playback volume level of the Volumio instance.
+
+        Reading the property fetches the level from the current playback state
+        (each access performs a fresh HTTP request); assigning to it sets the
+        volume to an absolute level, an integer between 0 and 100 (inclusive),
+        raising a ValueError for an out-of-range value.
 
         See :meth:`decrease_volume` and :meth:`increase_volume` for stepping the
         volume, and :meth:`mute` and :meth:`unmute` for muting and unmuting it.
 
-        Args:
-            value: The volume level, an integer between 0 and 100 (inclusive)
-
         Returns:
-            A dictionary containing the response from the Volumio API
+            The volume level, an integer between 0 and 100 (inclusive)
 
         Raises:
-            ValueError: If the value is outside the 0-100 range
             VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain an integer volume level
         """
+        value = self.state.get("volume")
+        if not isinstance(value, int):
+            raise VolumioAPIError(
+                f"Expected an integer volume level in the Volumio state, "
+                f"got {type(value).__name__}"
+            )
+        return value
+
+    @volume.setter
+    def volume(self, value: int) -> None:
         if not 0 <= value <= 100:
             raise ValueError(f"The volume level must be between 0 and 100, got {value}")
-        return self._send_command(f"volume&volume={value}")
+        self._send_command(f"volume&volume={value}")
 
     @property
     def zones(self) -> dict[str, Any]:
