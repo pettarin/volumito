@@ -15,8 +15,8 @@ host.
 
 - Clean Python API to query and control a Volumio host
 - Type-safe implementation with type hints
-- Comprehensive test coverage (100%)
-- An extensive and configurable CLI tool
+- Comprehensive unit test coverage (100%)
+- Extensive and configurable CLI tool
 
 
 ## Requirements
@@ -32,9 +32,13 @@ host.
                to manage virtual environments; feel free to replace it
                with your favorite tool (`conda`, `uv`, etc.)
 
-### From PyPI
+### From PyPI (Recommended)
 
-Create a virtual environment (only the first time),
+`volumito` is published on PyPI by @pettarin as the same-name package
+[volumito](https://pypi.org/project/volumito/)
+, and this is the recommended way of installing it for most users.
+
+Only the first time: create a virtual environment,
 activate it, and install the latest release of `volumito`
 available on PyPI with `pip`:
 
@@ -49,8 +53,27 @@ You should be able to run:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.0.13
+volumito, version 0.1.0
 ```
+
+The next time you want to use `volumito`,
+you will only need to activate the existing virtual environment:
+
+```bash
+$ micromamba activate volumito_env
+
+(volumito_env) $ volumito version
+volumito, version 0.1.0
+```
+
+To update `volumito`, use the `-U/--upgrade` option:
+
+```bash
+$ micromamba activate volumito_env
+
+(volumito_env) $ pip install volumito --upgrade
+```
+
 
 ### From Source
 
@@ -73,7 +96,7 @@ You should be able to run:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.0.13
+volumito, version 0.1.0
 ```
 
 
@@ -89,6 +112,10 @@ where it is installed:
 $ # print help/usage messages; it works globally and on commands and subcommands
 $ volumito --help
 $ volumito playback --help
+
+$ # create a configuration file (you might want to inspect/edit it later)
+$ volumito configuration create -f ~/volumito.yaml
+Created configuration file ~/volumito.yaml
 
 $ # print information about the Volumio host
 $ volumito system info
