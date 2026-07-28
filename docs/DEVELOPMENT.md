@@ -2,7 +2,7 @@
 
 **IMPORTANT**: the examples in the documentation use `micromamba`
                to manage virtual environments; feel free to replace it
-               with your favorite tool (`conda`, `uv`, etc.)
+               with your favorite tool (`conda`, `uv`, etc.).
 
 ## Setup Development Environment
 
@@ -57,10 +57,10 @@ volumito, version 0.1.0
 volumito/
 ├── docs/
 │   ├── CHANGELOG.md                        # releases and their changes
-│   ├── CLI_USAGE.md                        # CLI tool documentation
+│   ├── CLI_USAGE.md                        # volumito CLI tool documentation
 │   ├── DEVELOPMENT.md                      # this file
 │   ├── LIBRARY_USAGE.md                    # Python library documentation
-│   └── TODO.md                             # planned work, broken down by milestone
+│   └── TODO.md                             # planned work, broken down by future milestone
 ├── res/
 │   └── copyright_header.txt                # header prepended to every source file
 ├── src/
@@ -102,8 +102,7 @@ volumito/
 - Branch `main` is protected, and it represents the sources of the latest stable release.
 - Only the maintainer is allowed to push there directly,
   usually merging the `devel` branch when preparing a new release.
-- A commit tagged `vX.Y.Z` represents the commit from which
-  PyPI package `volumito==X.Y.Z` has been published to PyPI.
+- Published packages on PyPI are from commit tagged `vX.Y.Z`.
 
 ### Branch `devel`
 
@@ -124,10 +123,9 @@ volumito/
 
 ### Versioning
 
-This project adheres to
+- This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-Each released version is published on PyPI as package
+- Each released version is published on PyPI as package
 [volumito](https://pypi.org/project/volumito/)
 and the corresponding commit tagged with `vX.Y.Z`,
 where `volumito==X.Y.Z` is the released version.
@@ -162,7 +160,8 @@ are handled by creating a new issue in
 Before submitting a PR, please make sure:
 
 - You read carefully this page.
-- You are legally able and comfortable applying the current license
+- You are legally able and comfortable applying the current
+  [license](../LICENSE)
   to your code contribution.
 - If you used an automated tool (e.g., a LLM/AI tool) to generate it,
   you reviewed and understand the implementation,

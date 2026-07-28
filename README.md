@@ -13,16 +13,17 @@ host.
 
 ## Features
 
-- Clean Python API to query and control a Volumio host
+- Clean Python API to query the state of a Volumio host and to control it
+- Extensive and configurable CLI tool
+- AI-generated, Human-reviewed code
 - Type-safe implementation with type hints
 - Comprehensive unit test coverage (100%)
-- Extensive and configurable CLI tool
 
 
 ## Requirements
 
 - Python 3.13 or later
-- A package/virtual environment manager tool
+- A package/virtual environment manager tool (e.g., `micromamba`, `conda`, `uv`, etc.)
 - A running Volumio host
 
 
@@ -30,7 +31,7 @@ host.
 
 **IMPORTANT**: the examples in the documentation use `micromamba`
                to manage virtual environments; feel free to replace it
-               with your favorite tool (`conda`, `uv`, etc.)
+               with your favorite tool (`conda`, `uv`, etc.).
 
 ### From PyPI (Recommended)
 
@@ -105,7 +106,7 @@ volumito, version 0.1.0
 ### CLI Usage
 
 Some examples of the commands made available
-by the CLI tool ``volumito`` in the virtual enviroment
+by the CLI tool `volumito` in the virtual enviroment
 where it is installed:
 
 ```bash
