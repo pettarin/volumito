@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The CLI mute/unmute operations call the new client methods instead of passing the special
   `mute`/`unmute` values to the volume method
+- The REST API client query methods are now read-only properties: `get_state` -> `state`,
+  `get_queue` -> `queue`, `get_system_version` -> `system_version`, `get_system_info` ->
+  `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`
 
 
 ## [0.0.22] - 2026-07-27

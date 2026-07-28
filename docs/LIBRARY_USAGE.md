@@ -24,8 +24,7 @@ client = VolumioRESTAPIClient(host)
 
 
 # retrieve and print the system information
-sysinfo = client.get_system_info()
-print(sysinfo)
+print(client.system_info)
 # {'id': 'REDACTED', 'host': 'http://192.168.1.122', 'name': 'volumio',
 # 'type': 'device', 'serviceName': 'Volumio', 'state': {'status': 'play',
 # 'volume': 39, 'mute': False, 'artist': 'Paolo Conte', 'track': 'Recitando',
@@ -36,8 +35,7 @@ print(sysinfo)
 
 
 # retrieve and print the current playing state
-state = client.get_state()
-print(state)
+print(client.state)
 # {'status': 'play', 'position': 5, 'title': 'Recitando', 'artist': 'Paolo Conte',
 # 'album': "Paolo Conte Alla Scala - il Maestro è nell'anima",
 # 'albumart': 'https://static.qobuz.com/images/covers/jc/sa/m0kxbt4a8sajc_600.jpg',
@@ -59,7 +57,7 @@ client.mute()
 client.unmute()
 
 # print the current queue
-queue = client.get_queue()["queue"]
+queue = client.queue["queue"]
 for index, item in enumerate(queue, 1):
     print(f"{index}. {item.get('title')} - {item.get('artist')}")
 # 1. Aguaplano - Paolo Conte

@@ -30,8 +30,11 @@ class VolumioRESTAPIClient:
         self.host_configuration = host_configuration
         self.timeout = timeout
 
-    def get_state(self) -> dict[str, Any]:
-        """Get the current playback state of the Volumio instance.
+    @property
+    def state(self) -> dict[str, Any]:
+        """The current playback state of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
 
         Returns:
             A dictionary containing the current state of the Volumio instance
@@ -42,8 +45,11 @@ class VolumioRESTAPIClient:
         """
         return self._get_json("/api/v1/getState")
 
-    def get_queue(self) -> dict[str, Any]:
-        """Get the current playback queue of the Volumio instance.
+    @property
+    def queue(self) -> dict[str, Any]:
+        """The current playback queue of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
 
         Returns:
             A dictionary containing the current playback queue
@@ -471,8 +477,11 @@ class VolumioRESTAPIClient:
         """
         return self._get_text("/api/v1/ping")
 
-    def get_system_version(self) -> dict[str, Any]:
-        """Get the system version of the Volumio instance.
+    @property
+    def system_version(self) -> dict[str, Any]:
+        """The system version of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
 
         Returns:
             A dictionary containing the Volumio system version information
@@ -483,8 +492,11 @@ class VolumioRESTAPIClient:
         """
         return self._get_json("/api/v1/getSystemVersion")
 
-    def get_system_info(self) -> dict[str, Any]:
-        """Get the system information of the Volumio instance.
+    @property
+    def system_info(self) -> dict[str, Any]:
+        """The system information of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
 
         Returns:
             A dictionary containing the Volumio system information
@@ -495,8 +507,11 @@ class VolumioRESTAPIClient:
         """
         return self._get_json("/api/v1/getSystemInfo")
 
-    def collectionstats(self) -> dict[str, Any]:
-        """Get the statistics of the music collection of the Volumio instance.
+    @property
+    def collection_statistics(self) -> dict[str, Any]:
+        """The statistics of the music collection of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
 
         Returns:
             A dictionary containing the statistics of the music collection
@@ -507,8 +522,11 @@ class VolumioRESTAPIClient:
         """
         return self._get_json("/api/v1/collectionstats")
 
-    def get_zones(self) -> dict[str, Any]:
-        """Get the multiroom zones seen by the Volumio instance.
+    @property
+    def zones(self) -> dict[str, Any]:
+        """The multiroom zones seen by the Volumio instance.
+
+        Each access performs a fresh HTTP request.
 
         Returns:
             A dictionary containing the multiroom zones (under the "zones" key)

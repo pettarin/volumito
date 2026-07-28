@@ -6,6 +6,7 @@
 
 import json
 import os
+from unittest.mock import Mock, PropertyMock
 
 import click
 import pytest
@@ -77,6 +78,28 @@ def _isolate_config_probing(mocker: MockerFixture):
         "volumito.cli.configuration.configuration_paths",
         return_value=[],
     )
+
+
+def _attach_property(mock_client: Mock, name: str, **kwargs: object) -> PropertyMock:
+    """Attach a PropertyMock as the ``name`` property of the mocked client.
+
+    The property must live on the mock's type (each Mock instance has its own type,
+    so this does not leak across tests). The PropertyMock is also stashed on the
+    mock as the plain ``{name}_property`` attribute, so tests can assert on the
+    property accesses (e.g. ``mock_client.state_property.assert_not_called()``).
+
+    Args:
+        mock_client: The mocked VolumioRESTAPIClient instance
+        name: The property name (e.g. "state")
+        **kwargs: Passed to PropertyMock (e.g. return_value, side_effect)
+
+    Returns:
+        The attached PropertyMock
+    """
+    prop = PropertyMock(**kwargs)
+    setattr(type(mock_client), name, prop)
+    setattr(mock_client, f"{name}_property", prop)
+    return prop
 
 
 class TestFilterFields:
@@ -933,10 +956,10 @@ class TestCLICommands:
     def test_info_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """The info alias fetches the system info and prints it as pretty JSON."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {
+        _attach_property(mock_client, "system_info", return_value={
             "name": "Living Room",
             "systemversion": "3.601",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -947,7 +970,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Living Room" in result.output
-        mock_client.get_system_info.assert_called_once()
+        mock_client.system_info_property.assert_called_once()
 
     def test_playback_status_help(self, runner: CliRunner):
         """Test playback status command with --help."""
@@ -973,11 +996,11 @@ class TestCLICommands:
     def test_playback_status_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback status (the canonical form of info) with default options."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "position": 0,
             "title": "Test Song",
             "artist": "Test Artist",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -992,7 +1015,7 @@ class TestCLICommands:
     def test_info_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with custom host."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {"name": "Test"}
+        _attach_property(mock_client, "system_info", return_value={"name": "Test"})
 
         mock_client_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1009,7 +1032,9 @@ class TestCLICommands:
     def test_info_with_raw_format(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with --format raw prints compact JSON."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
+        _attach_property(
+            mock_client, "system_info", return_value={"name": "Test", "systemversion": "3.601"}
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1028,7 +1053,7 @@ class TestCLICommands:
     def test_short_option_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -H shorthand for --host."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {"name": "Test"}
+        _attach_property(mock_client, "system_info", return_value={"name": "Test"})
 
         mock_client_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1044,7 +1069,7 @@ class TestCLICommands:
     def test_short_option_ports(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -M/-P shorthands for --mpd-port/--rest-api-port."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {"name": "Test"}
+        _attach_property(mock_client, "system_info", return_value={"name": "Test"})
 
         mock_client_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1061,7 +1086,7 @@ class TestCLICommands:
     def test_short_option_format(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -F shorthand for --format (on playback status)."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1077,11 +1102,11 @@ class TestCLICommands:
     def test_short_option_fields(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -L shorthand for --fields (on playback status)."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test",
             "volume": 100,
             "extra": "data",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1097,7 +1122,9 @@ class TestCLICommands:
     def test_short_option_format_raw(self, runner: CliRunner, mocker: MockerFixture):
         """Test the -F shorthand with the raw format (on the info/system info command)."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {"name": "Test", "systemversion": "3.601"}
+        _attach_property(
+            mock_client, "system_info", return_value={"name": "Test", "systemversion": "3.601"}
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1130,7 +1157,7 @@ class TestCLICommands:
     def test_info_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with --verbose flag."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.return_value = {"name": "Test"}
+        _attach_property(mock_client, "system_info", return_value={"name": "Test"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1146,7 +1173,9 @@ class TestCLICommands:
     def test_info_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with connection error."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "system_info", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1161,7 +1190,7 @@ class TestCLICommands:
     def test_info_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test info command with API error."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.side_effect = VolumioAPIError("API error")
+        _attach_property(mock_client, "system_info", side_effect=VolumioAPIError("API error"))
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1178,7 +1207,9 @@ class TestCLICommands:
     ):
         """Test info command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
-        mock_client.get_system_info.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "system_info", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1703,7 +1734,7 @@ class TestCLICommands:
     def test_volume_no_value_prints_current(self, runner: CliRunner, mocker: MockerFixture):
         """Test playback volume without a value prints the current volume."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"volume": 42, "title": "Test"}
+        _attach_property(mock_client, "state", return_value={"volume": 42, "title": "Test"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1861,11 +1892,11 @@ class TestCLICommands:
     def test_track_info_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test successful track info command with default options."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "position": 0,
             "title": "Test Song",
             "artist": "Test Artist",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1880,7 +1911,7 @@ class TestCLICommands:
     def test_track_info_fields_short(self, runner: CliRunner, mocker: MockerFixture):
         """Test track info with the track-oriented short field set."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test",
             "artist": "Test Artist",
             "samplerate": "44.1 kHz",
@@ -1889,7 +1920,7 @@ class TestCLICommands:
             "status": "play",
             "volume": 100,
             "extra": "data",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1912,11 +1943,11 @@ class TestCLICommands:
     def test_track_info_fields_all(self, runner: CliRunner, mocker: MockerFixture):
         """Test track info with --fields all."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test",
             "status": "play",
             "extra": "data",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1933,14 +1964,14 @@ class TestCLICommands:
     def test_track_info_format_table(self, runner: CliRunner, mocker: MockerFixture):
         """Test track info --format table: 'Track Info' heading and track short-field order."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "position": 0,
             "title": "Test Song",
             "artist": "Test Artist",
             "trackType": "flac",
             "samplerate": "44.1 kHz",
             "bitdepth": "16 bit",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1967,7 +1998,7 @@ class TestCLICommands:
     def test_track_info_raw(self, runner: CliRunner, mocker: MockerFixture):
         """Test track info with the raw format."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test", "extra": "data"}
+        _attach_property(mock_client, "state", return_value={"title": "Test", "extra": "data"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2013,12 +2044,12 @@ class TestCLICommands:
     def test_audio_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test successful audio command with default options."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "Test Artist",
             "album": "Test Album",
             "service": "mpd",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2037,10 +2068,10 @@ class TestCLICommands:
     def test_audio_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with custom host."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "Test Artist",
-        }
+        })
 
         mock_client_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2062,7 +2093,7 @@ class TestCLICommands:
     def test_audio_with_custom_mpd_port(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with custom MPD port."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
+        _attach_property(mock_client, "state", return_value={"title": "Test"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2079,7 +2110,7 @@ class TestCLICommands:
     def test_audio_with_custom_timeouts(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command routes --rest-api-timeout and --mpd-timeout to the right clients."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test"}
+        _attach_property(mock_client, "state", return_value={"title": "Test"})
 
         mock_rest_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2108,7 +2139,7 @@ class TestCLICommands:
     def test_audio_replaces_localhost(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command replaces localhost with host value."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2127,7 +2158,7 @@ class TestCLICommands:
     def test_audio_replaces_127_0_0_1(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command replaces 127.0.0.1 with host value."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2146,7 +2177,7 @@ class TestCLICommands:
     def test_audio_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with --verbose flag."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2166,7 +2197,7 @@ class TestCLICommands:
     def test_audio_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with --machine-readable flag."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2187,7 +2218,9 @@ class TestCLICommands:
     def test_audio_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with connection error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "state", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2202,7 +2235,7 @@ class TestCLICommands:
     def test_audio_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with API error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioAPIError("API error")
+        _attach_property(mock_client, "state", side_effect=VolumioAPIError("API error"))
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2217,7 +2250,7 @@ class TestCLICommands:
     def test_audio_mpd_connection_refused(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with MPD connection refused."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2241,7 +2274,7 @@ class TestCLICommands:
     def test_audio_mpd_os_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with MPD OS error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2265,7 +2298,7 @@ class TestCLICommands:
     def test_audio_mpd_no_current_song(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command when no track is playing."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2287,7 +2320,9 @@ class TestCLICommands:
     ):
         """Test audio command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "state", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2304,7 +2339,7 @@ class TestCLICommands:
     ):
         """Test audio command with minimal metadata."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"status": "play"}
+        _attach_property(mock_client, "state", return_value={"status": "play"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2323,7 +2358,7 @@ class TestCLICommands:
     def test_audio_mpd_generic_exception(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with generic MPD exception after connection."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2345,7 +2380,7 @@ class TestCLICommands:
     ):
         """Test audio command with generic MPD exception and --machine-readable flag."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2366,7 +2401,7 @@ class TestCLICommands:
     def test_audio_with_output_directory(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with -d flag (filename taken from the URI)."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2403,7 +2438,7 @@ class TestCLICommands:
     def test_audio_output_directory_with_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio -d with a -f/--file-name-template."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"position": 0, "title": "La rondine"}
+        _attach_property(mock_client, "state", return_value={"position": 0, "title": "La rondine"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2436,7 +2471,7 @@ class TestCLICommands:
     def test_audio_output_directory_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio -d with an invalid -f template errors out."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2461,7 +2496,7 @@ class TestCLICommands:
     def test_audio_no_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command refuses to overwrite an existing file by default."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2488,7 +2523,7 @@ class TestCLICommands:
     def test_audio_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command overwrites an existing file with --overwrite-existing-files."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2527,10 +2562,10 @@ class TestCLICommands:
     ):
         """Test audio command with -o and explicit file path."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "Test Artist",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2572,9 +2607,9 @@ class TestCLICommands:
     ):
         """Test audio command with --verbose and -o option."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2601,9 +2636,9 @@ class TestCLICommands:
     def test_audio_file_write_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with file write error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2628,9 +2663,9 @@ class TestCLICommands:
     def test_audio_download_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with download error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2661,9 +2696,9 @@ class TestCLICommands:
     def test_albumart_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test successful albumart command with default options."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "/albumart?path=image.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2680,9 +2715,9 @@ class TestCLICommands:
     def test_albumart_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with custom host."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "/albumart?path=image.jpg",
-        }
+        })
 
         mock_client_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2699,9 +2734,9 @@ class TestCLICommands:
     def test_albumart_with_absolute_uri(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with absolute URI."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/albumart.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2716,9 +2751,9 @@ class TestCLICommands:
     def test_albumart_with_relative_uri(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with relative URI path."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "/albumart",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2734,9 +2769,9 @@ class TestCLICommands:
     def test_albumart_with_output_file(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with -o/--output-file option."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/albumart.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2766,9 +2801,9 @@ class TestCLICommands:
     def test_albumart_missing_albumart(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command when albumart field is missing."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2783,9 +2818,9 @@ class TestCLICommands:
     def test_albumart_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with --verbose flag."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/albumart.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2802,9 +2837,9 @@ class TestCLICommands:
     def test_albumart_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with --machine-readable flag."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/albumart.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2821,7 +2856,9 @@ class TestCLICommands:
     def test_albumart_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with connection error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "state", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2836,7 +2873,7 @@ class TestCLICommands:
     def test_albumart_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with API error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioAPIError("API error")
+        _attach_property(mock_client, "state", side_effect=VolumioAPIError("API error"))
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2851,9 +2888,9 @@ class TestCLICommands:
     def test_albumart_download_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with download error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/albumart.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2874,9 +2911,9 @@ class TestCLICommands:
     def test_albumart_file_write_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command with file write error."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/albumart.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2901,7 +2938,9 @@ class TestCLICommands:
     ):
         """Test albumart command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "state", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2919,9 +2958,9 @@ class TestCLICommands:
     ):
         """Test albumart -d flag: filename from the URI 'path' query parameter."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "/albumart?path=/mnt/USB/Album/cover.png",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2949,9 +2988,9 @@ class TestCLICommands:
     ):
         """Test albumart -d flag: filename from a direct URI path."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/images/cover.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -2975,11 +3014,11 @@ class TestCLICommands:
     ):
         """Test albumart -d with a -f/--file-name-template."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "position": 0,
             "title": "La rondine",
             "albumart": "http://example.com/images/cover.jpg",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3013,10 +3052,10 @@ class TestCLICommands:
     ):
         """Test albumart {extension} defaults to jpg when the URI has no extension."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "La rondine",
             "albumart": "http://example.com/albumart",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3047,10 +3086,10 @@ class TestCLICommands:
     def test_albumart_replace_characters_options(self, runner: CliRunner, mocker: MockerFixture):
         """The replace-characters options control the file-name substitution."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "La rondine",
             "albumart": "http://example.com/images/cover.jpg",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -3086,10 +3125,10 @@ class TestCLICommands:
     ):
         """A title with path separators cannot make the download leave the directory."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "../x",
             "albumart": "http://example.com/images/cover.jpg",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -3120,7 +3159,9 @@ class TestCLICommands:
     def test_albumart_output_directory_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart -d with an invalid -f template errors out."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/cover.jpg"}
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3137,9 +3178,9 @@ class TestCLICommands:
     ):
         """Test albumart -d flag errors when no file name can be derived from the URI."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "albumart": "http://example.com/",
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3163,7 +3204,9 @@ class TestCLICommands:
     def test_albumart_no_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command refuses to overwrite an existing file by default."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/cover.jpg"}
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3189,7 +3232,9 @@ class TestCLICommands:
     def test_albumart_overwrite_existing_file(self, runner: CliRunner, mocker: MockerFixture):
         """Test albumart command overwrites an existing file with --overwrite-existing-files."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"albumart": "http://example.com/cover.jpg"}
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/cover.jpg"}
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3227,7 +3272,7 @@ class TestCLICommands:
         """track audio writes a sidecar JSON manifest next to the downloaded file."""
         state = {"title": "Test Song", "artist": "X", "status": "play"}
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = state
+        _attach_property(mock_client, "state", return_value=state)
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
@@ -3277,7 +3322,7 @@ class TestCLICommands:
         """track albumart writes a manifest with kind 'albumart' (default on, non-verbose)."""
         state = {"albumart": "http://example.com/images/cover.jpg", "status": "play"}
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = state
+        _attach_property(mock_client, "state", return_value=state)
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
@@ -3308,7 +3353,7 @@ class TestCLICommands:
     ):
         """--no-create-download-manifest suppresses the sidecar JSON file."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
@@ -3336,7 +3381,7 @@ class TestCLICommands:
     def _mock_audio_download(self, mocker: MockerFixture, state: dict, chunks=(b"data",)):
         """Mock the REST client (state), MPD (URI), and requests.get for an audio download."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = state
+        _attach_property(mock_client, "state", return_value=state)
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
         mock_response = mocker.Mock()
@@ -3429,7 +3474,7 @@ class TestCLICommands:
         """A failure fetching the cover warns and embeds the metadata without a cover."""
         state = {"title": "T", "albumart": "http://example.com/cover.jpg"}
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = state
+        _attach_property(mock_client, "state", return_value=state)
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
@@ -3537,7 +3582,7 @@ class TestCLICommands:
     def test_queue_get_success_default(self, runner: CliRunner, mocker: MockerFixture):
         """Test successful queue get command with default options."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {
                     "title": "Song 1",
@@ -3554,7 +3599,7 @@ class TestCLICommands:
                     "service": "webradio",
                 },
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3570,11 +3615,11 @@ class TestCLICommands:
     def test_queue_get_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with custom host."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {"title": "Test Song", "artist": "Test Artist"}
             ]
-        }
+        })
 
         mock_client_class = mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3590,11 +3635,11 @@ class TestCLICommands:
     def test_queue_get_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with --format json."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {"title": "Test Song", "artist": "Test Artist", "duration": 180}
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3614,11 +3659,11 @@ class TestCLICommands:
     def test_queue_get_with_format_table(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with --format table."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {"title": "Test Song", "artist": "Test Artist", "duration": 180}
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3634,7 +3679,7 @@ class TestCLICommands:
     def test_queue_get_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with --fields all."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {
                     "title": "Test",
@@ -3642,7 +3687,7 @@ class TestCLICommands:
                     "extra_field": "extra_data",
                 }
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3658,7 +3703,7 @@ class TestCLICommands:
     def test_queue_get_with_fields_short(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with --fields short."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {
                     "title": "Test",
@@ -3666,7 +3711,7 @@ class TestCLICommands:
                     "extra_field": "extra_data",
                 }
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3684,11 +3729,11 @@ class TestCLICommands:
     def test_queue_get_with_raw_format(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with --format raw."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {"title": "Test", "artist": "Artist", "extra_field": "data"}
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3706,11 +3751,11 @@ class TestCLICommands:
     def test_queue_get_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with --verbose flag."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {"title": "Test Song"}
             ]
-        }
+        })
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3725,7 +3770,9 @@ class TestCLICommands:
     def test_queue_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with connection error."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "queue", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3740,7 +3787,7 @@ class TestCLICommands:
     def test_queue_get_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with API error."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.side_effect = VolumioAPIError("API error")
+        _attach_property(mock_client, "queue", side_effect=VolumioAPIError("API error"))
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3757,7 +3804,9 @@ class TestCLICommands:
     ):
         """Test queue get command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "queue", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3773,7 +3822,7 @@ class TestCLICommands:
     def test_queue_get_empty_queue(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue get command with empty queue."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {"queue": []}
+        _attach_property(mock_client, "queue", return_value={"queue": []})
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -3799,14 +3848,14 @@ class TestSystemCommands:
         """Mock VolumioRESTAPIClient with usable system-utility methods."""
         mock_client = mocker.Mock()
         mock_client.ping.return_value = "pong"
-        mock_client.get_system_version.return_value = {
+        _attach_property(mock_client, "system_version", return_value={
             "systemversion": "3.601",
             "hardware": "pi",
-        }
-        mock_client.get_system_info.return_value = {
+        })
+        _attach_property(mock_client, "system_info", return_value={
             "name": "Living Room",
             "systemversion": "3.601",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -3911,7 +3960,7 @@ class TestSystemCommands:
     def test_version_api_error(self, runner: CliRunner, mocker: MockerFixture):
         """system version exits 1 on an API error."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_system_version.side_effect = VolumioAPIError("API error")
+        _attach_property(mock_client, "system_version", side_effect=VolumioAPIError("API error"))
 
         result = runner.invoke(main, ["system", "version"])
 
@@ -3970,14 +4019,14 @@ class TestCollectionCommands:
         return CliRunner()
 
     def _mock_client(self, mocker: MockerFixture):
-        """Mock VolumioRESTAPIClient with a usable collectionstats method."""
+        """Mock VolumioRESTAPIClient with a usable collection_statistics property."""
         mock_client = mocker.Mock()
-        mock_client.collectionstats.return_value = {
+        _attach_property(mock_client, "collection_statistics", return_value={
             "artists": 3,
             "albums": 4,
             "songs": 105,
             "playtime": "7:11:15",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -4027,7 +4076,11 @@ class TestCollectionCommands:
     def test_statistics_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """collection statistics exits 1 on a connection error."""
         mock_client = self._mock_client(mocker)
-        mock_client.collectionstats.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client,
+            "collection_statistics",
+            side_effect=VolumioConnectionError("Connection failed"),
+        )
 
         result = runner.invoke(main, ["collection", "statistics"])
 
@@ -4065,9 +4118,9 @@ class TestZonesCommands:
         return CliRunner()
 
     def _mock_client(self, mocker: MockerFixture, zones=None):
-        """Mock VolumioRESTAPIClient with a usable get_zones method."""
+        """Mock VolumioRESTAPIClient with a usable zones property."""
         mock_client = mocker.Mock()
-        mock_client.get_zones.return_value = self.ZONES if zones is None else zones
+        _attach_property(mock_client, "zones", return_value=self.ZONES if zones is None else zones)
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -4206,7 +4259,9 @@ class TestZonesCommands:
     def test_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """zones get exits 1 on a connection error."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_zones.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "zones", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         result = runner.invoke(main, ["zones", "get"])
 
@@ -4231,10 +4286,10 @@ class TestPlaylistCommands:
             self.PLAYLISTS if playlists is None else playlists
         )
         mock_client.play_playlist.return_value = {"response": "playPlaylist Response"}
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "StatusMarkerArtist",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -4370,7 +4425,7 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         mock_sleep.assert_called_once_with(1.0)
-        mock_client.get_state.assert_called_once()
+        mock_client.state_property.assert_called_once()
         assert "StatusMarkerArtist" in result.output
 
     def test_play_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
@@ -4383,7 +4438,7 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         mock_sleep.assert_not_called()
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
         assert "StatusMarkerArtist" not in result.output
 
     def test_play_checks_the_name_by_default(self, runner: CliRunner, mocker: MockerFixture):
@@ -4619,12 +4674,12 @@ class TestStoryCommands:
             "success": True,
             "data": {"type": "story", "value": "A long story."},
         }
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "status": "play",
             "title": "La rondine",
             "artist": " Mango ",
             "album": "Sirtaki",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -4643,7 +4698,7 @@ class TestStoryCommands:
         )
         assert json.loads(result.output)["data.value"] == "A long story."
         # Explicit arguments never trigger a state fetch
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
 
     def test_album_single_mbid(self, runner: CliRunner, mocker: MockerFixture):
         """story album autodetects a single UUID-shaped argument as an MBID."""
@@ -4822,7 +4877,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "--current-track"])
 
         assert result.exit_code == 0
-        mock_client.get_state.assert_called_once_with()
+        mock_client.state_property.assert_called_once_with()
         # The state values are stripped of surrounding whitespace
         mock_client.plugin_endpoint.assert_called_once_with(
             "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
@@ -4871,7 +4926,7 @@ class TestStoryCommands:
 
         assert result.exit_code == 2
         assert MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR in result.output
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
 
     def test_artist_no_argument_error(self, runner: CliRunner, mocker: MockerFixture):
         """story artist without an argument (and without --current-track) is a usage error."""
@@ -4885,7 +4940,7 @@ class TestStoryCommands:
     def test_current_track_missing_album(self, runner: CliRunner, mocker: MockerFixture):
         """A current track without an album fails story album --current-track."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_state.return_value = {"status": "play", "artist": "Mango"}
+        _attach_property(mock_client, "state", return_value={"status": "play", "artist": "Mango"})
 
         result = runner.invoke(main, ["story", "album", "--current-track"])
 
@@ -4896,7 +4951,7 @@ class TestStoryCommands:
     def test_current_track_blank_artist(self, runner: CliRunner, mocker: MockerFixture):
         """A current track with a blank artist fails story artist --current-track."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_state.return_value = {"status": "stop", "artist": "   "}
+        _attach_property(mock_client, "state", return_value={"status": "stop", "artist": "   "})
 
         result = runner.invoke(main, ["story", "artist", "--current-track"])
 
@@ -4908,7 +4963,7 @@ class TestStoryCommands:
     ):
         """In machine-readable mode the missing-metadata failure exits 1 printing nothing."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_state.return_value = {"status": "stop"}
+        _attach_property(mock_client, "state", return_value={"status": "stop"})
 
         result = runner.invoke(main, ["-m", "story", "artist", "--current-track"])
 
@@ -4918,7 +4973,9 @@ class TestStoryCommands:
     def test_current_track_state_error(self, runner: CliRunner, mocker: MockerFixture):
         """A failing state fetch exits 1 before querying the story."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "state", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         result = runner.invoke(main, ["story", "album", "--current-track"])
 
@@ -5200,14 +5257,18 @@ class TestQueueDownload:
     def _mock_services(self, mocker: MockerFixture, tracks, uris, states=None):
         """Mock the REST client, the MPD client, the HTTP download, and the sleep."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {"queue": tracks}
+        _attach_property(mock_client, "queue", return_value={"queue": tracks})
         if states is not None:
-            mock_client.get_state.side_effect = states
+            _attach_property(mock_client, "state", side_effect=states)
         else:
             # The default state mirrors the queue entry being played (fresh metadata)
-            mock_client.get_state.side_effect = [
-                {**track, "position": index} for index, track in enumerate(tracks)
-            ]
+            _attach_property(
+                mock_client,
+                "state",
+                side_effect=[
+                    {**track, "position": index} for index, track in enumerate(tracks)
+                ],
+            )
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -5371,7 +5432,7 @@ class TestQueueDownload:
     def test_download_empty_queue(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """An empty queue downloads nothing and writes no log."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {"queue": []}
+        _attach_property(mock_client, "queue", return_value={"queue": []})
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
         )
@@ -5474,7 +5535,7 @@ class TestQueueDownload:
     def test_download_connection_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """A connection failure while fetching the queue exits with an error."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.side_effect = VolumioConnectionError("no route")
+        _attach_property(mock_client, "queue", side_effect=VolumioConnectionError("no route"))
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
         )
@@ -5487,7 +5548,7 @@ class TestQueueDownload:
     def test_download_api_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """An API failure while fetching the queue exits with an error."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.side_effect = VolumioAPIError("nope")
+        _attach_property(mock_client, "queue", side_effect=VolumioAPIError("nope"))
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
         )
@@ -6200,13 +6261,17 @@ class TestPlaylistDownload:
         """Mock the REST client, the MPD client, the HTTP download, and the sleep."""
         mock_client = mocker.Mock()
         mock_client.list_playlists.return_value = ["Rock", "Jazz"]
-        mock_client.get_queue.return_value = {"queue": tracks}
+        _attach_property(mock_client, "queue", return_value={"queue": tracks})
         if states is not None:
-            mock_client.get_state.side_effect = states
+            _attach_property(mock_client, "state", side_effect=states)
         else:
-            mock_client.get_state.side_effect = [
-                {**track, "position": index} for index, track in enumerate(tracks)
-            ]
+            _attach_property(
+                mock_client,
+                "state",
+                side_effect=[
+                    {**track, "position": index} for index, track in enumerate(tracks)
+                ],
+            )
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -6251,8 +6316,10 @@ class TestPlaylistDownload:
         client.clear.assert_called_once()
         client.play_playlist.assert_called_once_with("Rock")
         # The queue is cleared and the playlist played before the download starts
+        # (the queue fetch is a property read, so "stop" — the download's first
+        # playback command — is the anchor visible in method_calls)
         calls = [name for name, _, _ in client.method_calls]
-        assert calls.index("clear") < calls.index("play_playlist") < calls.index("get_queue")
+        assert calls.index("clear") < calls.index("play_playlist") < calls.index("stop")
         run = self._run_directory(tmp_path)
         assert (run / "a.flac").read_bytes() == b"data"
         assert (run / "b.flac").read_bytes() == b"data"
@@ -6382,10 +6449,10 @@ class TestQueueActions:
         mock_client.repeat.return_value = {"response": "repeat"}
         mock_client.randomize.return_value = {"response": "random"}
         # The resulting print is the playback status (getState), like the playback actions.
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "StatusMarkerArtist",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -6405,7 +6472,7 @@ class TestQueueActions:
         assert "Command 'clear' executed successfully" in result.output
         assert "StatusMarkerArtist" in result.output
         mock_client.clear.assert_called_once()
-        mock_client.get_state.assert_called_once()
+        mock_client.state_property.assert_called_once()
         mock_sleep.assert_called_once_with(1.0)
 
     def test_clear_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
@@ -6418,7 +6485,7 @@ class TestQueueActions:
         assert "Command 'clear' executed successfully" in result.output
         assert "StatusMarkerArtist" not in result.output
         mock_client.clear.assert_called_once()
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
         mock_sleep.assert_not_called()
 
     def test_repeat_toggle(self, runner: CliRunner, mocker: MockerFixture):
@@ -6512,7 +6579,7 @@ class TestQueueActions:
 
         assert result.exit_code == 0
         assert "StatusMarkerArtist" in result.output
-        mock_client.get_state.assert_called_once()
+        mock_client.state_property.assert_called_once()
         mock_sleep.assert_called_once_with(1.0)
 
     def test_machine_readable_suppresses_success_message(
@@ -6539,13 +6606,17 @@ class TestSeekCommand:
         return CliRunner()
 
     def _mock_client(self, mocker: MockerFixture, state=None):
-        """Mock VolumioRESTAPIClient with a usable seek/get_state; patch out the sleep."""
+        """Mock VolumioRESTAPIClient with a usable seek and state; patch out the sleep."""
         mock_client = mocker.Mock()
         mock_client.seek.return_value = {"response": "seek"}
-        mock_client.get_state.return_value = (
-            {"seek": 252345, "duration": 4000, "artist": "StatusMarkerArtist"}
-            if state is None
-            else state
+        _attach_property(
+            mock_client,
+            "state",
+            return_value=(
+                {"seek": 252345, "duration": 4000, "artist": "StatusMarkerArtist"}
+                if state is None
+                else state
+            ),
         )
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -6662,7 +6733,7 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         mock_sleep.assert_called_once_with(1.0)
-        mock_client.get_state.assert_called_once()
+        mock_client.state_property.assert_called_once()
         assert "StatusMarkerArtist" in result.output
 
     def test_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
@@ -6682,7 +6753,7 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         mock_sleep.assert_not_called()
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
 
     def test_position_within_the_duration(self, runner: CliRunner, mocker: MockerFixture):
         """A position inside the track duration is checked and sent."""
@@ -6693,7 +6764,7 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.get_state.assert_called_once()
+        mock_client.state_property.assert_called_once()
         mock_client.seek.assert_called_once_with(42)
 
     def test_position_equal_to_the_duration(self, runner: CliRunner, mocker: MockerFixture):
@@ -6746,7 +6817,7 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
         mock_client.seek.assert_called_once_with(3600)
 
     @pytest.mark.parametrize("spelling", ["plus", "minus"])
@@ -6761,7 +6832,7 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
         mock_client.seek.assert_called_once_with(spelling)
 
     @pytest.mark.parametrize(
@@ -6785,7 +6856,9 @@ class TestSeekCommand:
     def test_check_state_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A failing state fetch during the check exits 1 without sending the command."""
         mock_client, _ = self._mock_client(mocker)
-        mock_client.get_state.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "state", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         result = runner.invoke(main, ["playback", "seek", "42"])
 
@@ -6813,14 +6886,14 @@ class TestPrintResultingState:
         return CliRunner()
 
     def _mock_client(self, mocker: MockerFixture):
-        """Mock VolumioRESTAPIClient with a usable get_state, patch out the sleep."""
+        """Mock VolumioRESTAPIClient with a usable state property, patch out the sleep."""
         mock_client = mocker.Mock()
         mock_client.pause.return_value = {"response": "pause"}
         mock_client.volume.return_value = {"response": "volume"}
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "Test Artist",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -6839,7 +6912,7 @@ class TestPrintResultingState:
         # The resulting status is printed after the command
         assert "Test Song" in result.output
         mock_sleep.assert_called_once_with(1.0)
-        mock_client.get_state.assert_called_once()
+        mock_client.state_property.assert_called_once()
 
     def test_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
         """--no-print-resulting-status skips the sleep and the state print."""
@@ -6851,7 +6924,7 @@ class TestPrintResultingState:
         assert "Command 'pause' executed successfully" in result.output
         assert "Test Song" not in result.output
         mock_sleep.assert_not_called()
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
 
     def test_short_flag_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
         """The -r short flag behaves like the enabled default."""
@@ -7147,11 +7220,11 @@ class TestPositionIndexing:
     def _mock_state_client(self, mocker: MockerFixture):
         """Mock the REST client, returning a state whose position is the API's second track."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "status": "play",
             "position": 1,
             "title": "Test Song",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -7161,12 +7234,12 @@ class TestPositionIndexing:
     def _mock_queue_client(self, mocker: MockerFixture):
         """Mock the REST client, returning a two-track queue."""
         mock_client = mocker.Mock()
-        mock_client.get_queue.return_value = {
+        _attach_property(mock_client, "queue", return_value={
             "queue": [
                 {"title": "Song 1", "artist": "Artist 1"},
                 {"title": "Song 2", "artist": "Artist 2"},
             ]
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -7325,7 +7398,7 @@ class TestPositionIndexing:
     def test_track_audio_template(self, runner: CliRunner, mocker: MockerFixture):
         """The {position} template key follows the indexing base."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"position": 1, "title": "La rondine"}
+        _attach_property(mock_client, "state", return_value={"position": 1, "title": "La rondine"})
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -7364,11 +7437,11 @@ class TestPositionIndexing:
     def test_albumart_template(self, runner: CliRunner, mocker: MockerFixture):
         """The {position} template key follows the indexing base for album art too."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "position": 1,
             "title": "La rondine",
             "albumart": "http://volumio.local:3000/albumart?path=/mnt/x/cover.jpg",
-        }
+        })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -7408,7 +7481,7 @@ class TestConfigurationFile:
     def _mock_rest_client(self, mocker: MockerFixture):
         """Patch VolumioRESTAPIClient so `playback status` succeeds with a minimal state."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
         return mock_client
 
@@ -7562,7 +7635,7 @@ class TestConfigurationFile:
         )
 
         assert result.exit_code == 0
-        mock_client.get_state.assert_not_called()
+        mock_client.state_property.assert_not_called()
         mock_client.seek.assert_called_once_with(3600)
 
     def test_output_subsection_sets_format_for_playlist_list(
@@ -7586,7 +7659,7 @@ class TestConfigurationFile:
     ):
         """The output section can select the zero-based position indexing."""
         mock_client = self._mock_rest_client(mocker)
-        mock_client.get_state.return_value = {"title": "Test Song", "position": 1}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song", "position": 1})
         config = self._write_config(tmp_path, "output:\n  position-starting-at-one: false\n")
 
         result = runner.invoke(main, ["-c", config, "playback", "status"])
@@ -7645,8 +7718,8 @@ class TestConfigurationFile:
     ):
         """The format of the system and collection commands can be set from the config."""
         mock_client = self._mock_rest_client(mocker)
-        mock_client.get_system_info.return_value = {"name": "Living Room"}
-        mock_client.collectionstats.return_value = {"songs": 105}
+        _attach_property(mock_client, "system_info", return_value={"name": "Living Room"})
+        _attach_property(mock_client, "collection_statistics", return_value={"songs": 105})
         config = self._write_config(
             tmp_path,
             "output:\n"
@@ -7699,7 +7772,7 @@ class TestConfigurationFile:
     ):
         """A per-command downloads.audio.output-directory sets the track audio download dir."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "Test Song"}
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mpd = mocker.Mock()
@@ -7740,7 +7813,9 @@ class TestConfigurationFile:
     ):
         """A shared downloads.output-directory applies to the track albumart download dir."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/images/cover.jpg"}
+        )
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
@@ -7762,7 +7837,9 @@ class TestConfigurationFile:
     ):
         """A shared downloads.create-download-manifest: false reaches the track commands."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"albumart": "http://example.com/images/cover.jpg"}
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/images/cover.jpg"}
+        )
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
@@ -7784,10 +7861,10 @@ class TestConfigurationFile:
     ):
         """A shared downloads.replace-characters-in-file-names reaches the track commands."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {
+        _attach_property(mock_client, "state", return_value={
             "title": "my cover",
             "albumart": "http://example.com/images/cover.jpg",
-        }
+        })
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mock_response = mocker.Mock()
@@ -7823,7 +7900,7 @@ class TestConfigurationFile:
     ):
         """A miscellaneous.add-cover-and-metadata: false disables embedding for track audio."""
         mock_client = mocker.Mock()
-        mock_client.get_state.return_value = {"title": "T"}
+        _attach_property(mock_client, "state", return_value={"title": "T"})
         mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
 
         mpd = mocker.Mock()

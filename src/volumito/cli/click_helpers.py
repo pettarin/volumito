@@ -792,7 +792,7 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
     Returns:
         The state dictionary returned by the client
     """
-    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.get_state())
+    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.state)
     return state
 
 

@@ -666,7 +666,7 @@ def audio(
     try:
         # Get current track metadata (also validates REST connectivity)
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.get_state()
+        state = client.state
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -786,7 +786,7 @@ def albumart(
     try:
         # Get current state metadata
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.get_state()
+        state = client.state
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -880,7 +880,7 @@ def queue_get(
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        queue_data = client.get_queue()
+        queue_data = client.queue
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved queue", err=True)
@@ -996,7 +996,7 @@ def queue_download(
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        tracks = client.get_queue().get("queue", [])
+        tracks = client.queue.get("queue", [])
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved queue", err=True)
@@ -1060,7 +1060,7 @@ def queue_download(
                         rest_api_sleep(ctx)
                         client.pause()
                         rest_api_sleep(ctx)
-                        state = client.get_state()
+                        state = client.state
                         uri = mpd_client.get_track_uri()
                         if not check_next_track or queue_track_metadata_current(
                             state, uri, tracks[index], index, previous_uri, expect_same_uri
@@ -1261,7 +1261,7 @@ def system_ping(ctx: click.Context) -> None:
 @option_format
 def system_version(ctx: click.Context, output_format: str) -> None:
     """Get the system version of the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.get_system_version())
+    data = fetch_or_exit(ctx, lambda c: c.system_version)
     render_payload(ctx, data, output_format, heading="Volumio System Version")
 
 
@@ -1270,7 +1270,7 @@ def system_version(ctx: click.Context, output_format: str) -> None:
 @option_format
 def system_info(ctx: click.Context, output_format: str) -> None:
     """Get the system information of the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.get_system_info())
+    data = fetch_or_exit(ctx, lambda c: c.system_info)
     render_payload(ctx, data, output_format, heading="Volumio System Info")
 
 
@@ -1286,7 +1286,7 @@ def collection(ctx: click.Context) -> None:
 @option_format
 def collection_statistics(ctx: click.Context, output_format: str) -> None:
     """Get the statistics of the music collection of the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.collectionstats())
+    data = fetch_or_exit(ctx, lambda c: c.collection_statistics)
     render_payload(ctx, data, output_format, heading="Collection Statistics")
 
 
@@ -1303,7 +1303,7 @@ def zones(ctx: click.Context) -> None:
 @option_format
 def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
     """Get the multiroom zones seen by the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.get_zones())
+    data = fetch_or_exit(ctx, lambda c: c.zones)
 
     if output_format == "raw":
         # Raw JSON without formatting (ignores fields filter)
