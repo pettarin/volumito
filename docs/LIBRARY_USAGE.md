@@ -7,7 +7,6 @@ For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
 ## Contents
 
 - [Quick Start](#quick-start)
-- [Error Handling](#error-handling)
 - [Units And Conventions](#units-and-conventions)
 
 
@@ -16,11 +15,10 @@ For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
 ```python
 from volumito import (
     VolumioHostConfiguration,
-    VolumioMPDClient,
     VolumioRESTAPIClient,
 )
 
-host = VolumioHostConfiguration(host="volumio3b.local")
+host = VolumioHostConfiguration(host="volumio.local")  # replace with your Volumio host
 client = VolumioRESTAPIClient(host)
 
 
@@ -56,7 +54,8 @@ for index, item in enumerate(queue):
 # 5. Ratafià - Paolo Conte
 # ...
 
-# play the 4th (0-index) track in the current queue
+# play the 4th track of the current queue
+# (positions start at zero, see Units And Conventions below)
 client.play(3)
 
 # seek to 01:42 in the current track
@@ -79,7 +78,7 @@ else:
 ## Units And Conventions
 
 The library currently retains
-the same units and conventions of the Volumio API:
+the same units and conventions as the Volumio API:
 
 | Value                   | Unit Or Indexing Convention       |
 |-------------------------|-----------------------------------|
