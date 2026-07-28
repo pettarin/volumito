@@ -1750,20 +1750,19 @@ class TestCLICommands:
         mock_client.volume.assert_not_called()
 
     @pytest.mark.parametrize(
-        ("spelling", "canonical"),
+        ("spelling", "method"),
         [
-            ("up", "plus"),
-            ("increase", "plus"),
-            ("down", "minus"),
-            ("decrease", "minus"),
+            ("up", "increase_volume"),
+            ("increase", "increase_volume"),
+            ("down", "decrease_volume"),
+            ("decrease", "decrease_volume"),
         ],
     )
     def test_volume_alias_success(
-        self, runner: CliRunner, mocker: MockerFixture, spelling: str, canonical: str
+        self, runner: CliRunner, mocker: MockerFixture, spelling: str, method: str
     ):
-        """Test playback volume normalizes step aliases to the canonical keyword."""
+        """Test playback volume dispatches the step aliases to the dedicated methods."""
         mock_client = mocker.Mock()
-        mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1773,15 +1772,18 @@ class TestCLICommands:
         result = runner.invoke(main, ["playback", "volume", spelling])
 
         assert result.exit_code == 0
-        mock_client.volume.assert_called_once_with(canonical)
+        getattr(mock_client, method).assert_called_once_with()
+        mock_client.volume.assert_not_called()
 
-    @pytest.mark.parametrize("keyword", ["plus", "minus"])
+    @pytest.mark.parametrize(
+        ("keyword", "method"),
+        [("plus", "increase_volume"), ("minus", "decrease_volume")],
+    )
     def test_volume_keyword_success(
-        self, runner: CliRunner, mocker: MockerFixture, keyword: str
+        self, runner: CliRunner, mocker: MockerFixture, keyword: str, method: str
     ):
-        """Test playback volume with each accepted step keyword value."""
+        """Test playback volume dispatches the step keywords to the dedicated methods."""
         mock_client = mocker.Mock()
-        mock_client.volume.return_value = {"response": "volume"}
 
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -1791,7 +1793,8 @@ class TestCLICommands:
         result = runner.invoke(main, ["playback", "volume", keyword])
 
         assert result.exit_code == 0
-        mock_client.volume.assert_called_once_with(keyword)
+        getattr(mock_client, method).assert_called_once_with()
+        mock_client.volume.assert_not_called()
 
     @pytest.mark.parametrize("keyword", ["mute", "unmute"])
     def test_volume_mute_keywords(

@@ -344,6 +344,20 @@ class VolumioRESTAPIClient:
         """
         return self._get_json("/api/v1/collectionstats")
 
+    def decrease_volume(self) -> dict[str, Any]:
+        """Decrease the playback volume by one step.
+
+        The decrement is the one defined in the settings of the Volumio host.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("volume&volume=minus")
+
     def get_album_credits(self, artist: Artist | None, album: Album) -> dict[str, Any]:
         """Get the credits of an album via the metavolumio plugin endpoint.
 
@@ -414,6 +428,20 @@ class VolumioRESTAPIClient:
             payload = self._story_entity_payload("place", place)
             return self._plugin_endpoint("metavolumio", {"mode": "storyPlace", **payload})
         raise ValueError("One of album, artist, label, or place is required")
+
+    def increase_volume(self) -> dict[str, Any]:
+        """Increase the playback volume by one step.
+
+        The increment is the one defined in the settings of the Volumio host.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("volume&volume=plus")
 
     def mute(self) -> dict[str, Any]:
         """Mute the playback volume.
@@ -695,15 +723,14 @@ class VolumioRESTAPIClient:
         """
         return self._send_command("volume&volume=unmute")
 
-    def volume(self, value: int | str) -> dict[str, Any]:
-        """Set or adjust the playback volume.
+    def volume(self, value: int) -> dict[str, Any]:
+        """Set the playback volume to an absolute level.
 
-        See :meth:`mute` and :meth:`unmute` for muting and unmuting the volume.
+        See :meth:`decrease_volume` and :meth:`increase_volume` for stepping the
+        volume, and :meth:`mute` and :meth:`unmute` for muting and unmuting it.
 
         Args:
-            value: An integer between 0 and 100 (inclusive) to set an absolute
-                volume level, or one of the strings "plus", "minus" to step the
-                volume relatively to the current level
+            value: The volume level, an integer between 0 and 100 (inclusive)
 
         Returns:
             A dictionary containing the response from the Volumio API

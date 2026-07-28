@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Methods `get_story` and `get_album_credits` to the REST API client, taking the new
   entity dataclasses `Album`, `Artist`, `Label`, and `Place` (by free text or MBID)
+- Methods `increase_volume` and `decrease_volume` to the REST API client
 - Methods `mute` and `unmute` to the REST API client
 - Methods `seek_forward` and `seek_backward` to the REST API client
 
@@ -21,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mute`/`unmute` values to the volume method
 - The REST API client seek method accepts only an integer position; the CLI relative
   seeking calls the new seek methods instead of passing the special `plus`/`minus` values
+- The REST API client volume method accepts only an integer level; the CLI volume stepping
+  calls the new volume methods instead of passing the special `plus`/`minus` values
 - The REST API client query methods are now read-only properties: `get_state` -> `state`,
   `get_queue` -> `queue`, `get_system_version` -> `system_version`, `get_system_info` ->
   `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`,

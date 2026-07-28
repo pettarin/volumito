@@ -1169,15 +1169,26 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("volume&volume=50")
         assert result["response"] == "volume"
 
-    def test_volume_keyword(self, mocker: MockerFixture):
-        """Test volume() method with a keyword value."""
+    def test_increase_volume(self, mocker: MockerFixture):
+        """Test increase_volume() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
         mock_send_command.return_value = {"response": "volume"}
 
-        result = client.volume("plus")
+        result = client.increase_volume()
 
         mock_send_command.assert_called_once_with("volume&volume=plus")
+        assert result["response"] == "volume"
+
+    def test_decrease_volume(self, mocker: MockerFixture):
+        """Test decrease_volume() method."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+        mock_send_command.return_value = {"response": "volume"}
+
+        result = client.decrease_volume()
+
+        mock_send_command.assert_called_once_with("volume&volume=minus")
         assert result["response"] == "volume"
 
     def test_mute(self, mocker: MockerFixture):

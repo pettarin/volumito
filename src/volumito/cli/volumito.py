@@ -585,12 +585,16 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
         state = fetch_state_or_exit(ctx)
         click.echo(state.get("volume"))
         return
-    if value == "mute":
+    if isinstance(value, int):
+        execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
+    elif value == "mute":
         execute_command(ctx, "volume mute", lambda c: c.mute())
     elif value == "unmute":
         execute_command(ctx, "volume unmute", lambda c: c.unmute())
-    else:
-        execute_command(ctx, f"volume {value}", lambda c: c.volume(value))
+    elif value == "plus":
+        execute_command(ctx, "volume plus", lambda c: c.increase_volume())
+    elif value == "minus":
+        execute_command(ctx, "volume minus", lambda c: c.decrease_volume())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
