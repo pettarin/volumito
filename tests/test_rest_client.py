@@ -860,7 +860,7 @@ class TestVolumioRESTAPIClient:
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
-        with pytest.raises(ValueError, match="one of album, artist, label, or place"):
+        with pytest.raises(ValueError, match="One of album, artist, label, or place"):
             client.get_story()
         mock_post.assert_not_called()
 

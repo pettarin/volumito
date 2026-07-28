@@ -294,12 +294,12 @@ class VolumioRESTAPIClient:
         """
         if album.is_mbid:
             if artist is not None:
-                raise ValueError("an album by MBID does not take an artist")
+                raise ValueError("An album specified by MBID does not take an artist")
             return {"mbid": album.value}
         if artist is None:
-            raise ValueError("an album by title requires an artist")
+            raise ValueError("An album specified by title requires an artist")
         if artist.is_mbid:
-            raise ValueError("an album by title requires the artist by name, not by MBID")
+            raise ValueError("An album specified by title requires the artist by name, not by MBID")
         return {"artist": artist.value, "album": album.value}
 
     @staticmethod
@@ -396,15 +396,15 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error or a non-object response
         """
         if label is not None and place is not None:
-            raise ValueError("the label and place entities are mutually exclusive")
+            raise ValueError("The label and place entities are mutually exclusive")
         if album is not None:
             if label is not None or place is not None:
-                raise ValueError("an album story does not take a label or place")
+                raise ValueError("An album story does not take a label or place")
             payload = self._story_album_payload(artist, album)
             return self._plugin_endpoint("metavolumio", {"mode": "storyAlbum", **payload})
         if artist is not None:
             if label is not None or place is not None:
-                raise ValueError("an artist story does not take a label or place")
+                raise ValueError("An artist story does not take a label or place")
             payload = self._story_entity_payload("artist", artist)
             return self._plugin_endpoint("metavolumio", {"mode": "storyArtist", **payload})
         if label is not None:
@@ -413,7 +413,7 @@ class VolumioRESTAPIClient:
         if place is not None:
             payload = self._story_entity_payload("place", place)
             return self._plugin_endpoint("metavolumio", {"mode": "storyPlace", **payload})
-        raise ValueError("one of album, artist, label, or place is required")
+        raise ValueError("One of album, artist, label, or place is required")
 
     def mute(self) -> dict[str, Any]:
         """Mute the playback volume.
