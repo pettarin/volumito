@@ -640,6 +640,42 @@ def is_muted(ctx: click.Context) -> None:
     click.echo(json.dumps(muted) if ctx.obj["machine_readable"] else muted)
 
 
+@playback.command("is_paused")
+@click.pass_context
+def is_paused(ctx: click.Context) -> None:
+    """Print whether the playback of the Volumio instance is paused.
+
+    In machine-readable mode the value is printed as a JSON boolean
+    (``true``/``false``).
+    """
+    paused = fetch_or_exit(ctx, lambda c: c.is_paused)
+    click.echo(json.dumps(paused) if ctx.obj["machine_readable"] else paused)
+
+
+@playback.command("is_playing")
+@click.pass_context
+def is_playing(ctx: click.Context) -> None:
+    """Print whether the Volumio instance is playing.
+
+    In machine-readable mode the value is printed as a JSON boolean
+    (``true``/``false``).
+    """
+    playing = fetch_or_exit(ctx, lambda c: c.is_playing)
+    click.echo(json.dumps(playing) if ctx.obj["machine_readable"] else playing)
+
+
+@playback.command("is_stopped")
+@click.pass_context
+def is_stopped(ctx: click.Context) -> None:
+    """Print whether the playback of the Volumio instance is stopped.
+
+    In machine-readable mode the value is printed as a JSON boolean
+    (``true``/``false``).
+    """
+    stopped = fetch_or_exit(ctx, lambda c: c.is_stopped)
+    click.echo(json.dumps(stopped) if ctx.obj["machine_readable"] else stopped)
+
+
 @main.group()
 @click.pass_context
 def track(ctx: click.Context) -> None:

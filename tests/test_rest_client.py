@@ -1264,6 +1264,54 @@ class TestVolumioRESTAPIClient:
         with pytest.raises(VolumioAPIError, match="boolean mute flag"):
             _ = client.is_muted
 
+    @pytest.mark.parametrize(
+        ("status", "playing", "paused", "stopped"),
+        [
+            ("play", True, False, False),
+            ("pause", False, True, False),
+            ("stop", False, False, True),
+        ],
+    )
+    def test_is_playing_is_paused_is_stopped(
+        self,
+        mocker: MockerFixture,
+        status: str,
+        playing: bool,
+        paused: bool,
+        stopped: bool,
+    ):
+        """Test reading the status-based boolean properties from the playback state."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": status, "volume": 49}
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        assert client.is_playing is playing
+        assert client.is_paused is paused
+        assert client.is_stopped is stopped
+
+    @pytest.mark.parametrize(
+        "state",
+        [{"volume": 49}, {"volume": 49, "status": 1}],
+        ids=["missing", "not-a-string"],
+    )
+    @pytest.mark.parametrize("name", ["is_playing", "is_paused", "is_stopped"])
+    def test_is_playing_is_paused_invalid_status(
+        self, mocker: MockerFixture, name: str, state: dict
+    ):
+        """Test the status-based boolean properties with a missing or non-string status."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = state
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError, match="string status"):
+            _ = getattr(client, name)
+
     def test_mute(self, mocker: MockerFixture):
         """Test mute() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())

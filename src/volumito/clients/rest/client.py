@@ -278,6 +278,25 @@ class VolumioRESTAPIClient:
 
         return data
 
+    def _status(self) -> str:
+        """Return the playback status string from the current playback state.
+
+        Returns:
+            The playback status (e.g. "play", "pause", "stop")
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain a string status
+        """
+        value = self.state.get("status")
+        if not isinstance(value, str):
+            raise VolumioAPIError(
+                f"Expected a string status in the Volumio state, "
+                f"got {type(value).__name__}"
+            )
+        return value
+
     @staticmethod
     def _story_album_payload(artist: Artist | None, album: Album) -> dict[str, str]:
         """Build the metavolumio data payload (without the mode key) for an album query.
@@ -466,6 +485,63 @@ class VolumioRESTAPIClient:
                 f"got {type(value).__name__}"
             )
         return value
+
+    @property
+    def is_paused(self) -> bool:
+        """Whether the playback of the Volumio instance is paused.
+
+        True if and only if the playback status is "pause". Each access performs a
+        fresh HTTP request (reading the playback state).
+
+        See :meth:`pause` for pausing the playback.
+
+        Returns:
+            True if the playback status is "pause", False otherwise
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain a string status
+        """
+        return self._status() == "pause"
+
+    @property
+    def is_playing(self) -> bool:
+        """Whether the Volumio instance is playing.
+
+        True if and only if the playback status is "play". Each access performs a
+        fresh HTTP request (reading the playback state).
+
+        See :meth:`play` for starting the playback.
+
+        Returns:
+            True if the playback status is "play", False otherwise
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain a string status
+        """
+        return self._status() == "play"
+
+    @property
+    def is_stopped(self) -> bool:
+        """Whether the playback of the Volumio instance is stopped.
+
+        True if and only if the playback status is "stop". Each access performs a
+        fresh HTTP request (reading the playback state).
+
+        See :meth:`stop` for stopping the playback.
+
+        Returns:
+            True if the playback status is "stop", False otherwise
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain a string status
+        """
+        return self._status() == "stop"
 
     def mute(self) -> dict[str, Any]:
         """Mute the playback volume.

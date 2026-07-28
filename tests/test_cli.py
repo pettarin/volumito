@@ -1935,6 +1935,64 @@ class TestCLICommands:
         assert result.exit_code == 1
         assert "Connection error" in result.output
 
+    @pytest.mark.parametrize("command", ["is_paused", "is_playing", "is_stopped"])
+    @pytest.mark.parametrize("value", [True, False])
+    def test_status_flag_commands(
+        self, runner: CliRunner, mocker: MockerFixture, command: str, value: bool
+    ):
+        """The playback status flag commands print the flag read from the client."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, command, return_value=value)
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["playback", command])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == str(value)
+        getattr(mock_client, f"{command}_property").assert_called_once_with()
+
+    @pytest.mark.parametrize("command", ["is_paused", "is_playing", "is_stopped"])
+    def test_status_flag_commands_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture, command: str
+    ):
+        """In machine-readable mode the status flags are printed as JSON booleans."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, command, return_value=True)
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["-m", "playback", command])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "true"
+
+    @pytest.mark.parametrize("command", ["is_paused", "is_playing", "is_stopped"])
+    def test_status_flag_commands_connection_error(
+        self, runner: CliRunner, mocker: MockerFixture, command: str
+    ):
+        """The playback status flag commands exit 1 on a connection error."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client, command, side_effect=VolumioConnectionError("Connection failed")
+        )
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["playback", command])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
     def test_track_info_help(self, runner: CliRunner):
         """Test track info command with --help."""
         result = runner.invoke(main, ["track", "info", "--help"])

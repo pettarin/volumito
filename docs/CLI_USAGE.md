@@ -423,6 +423,17 @@ volumito playback unmute
 volumito playback is_muted
 ```
 
+## Playback Status Flags
+
+Print whether the playback is paused, playing, or stopped (True/False; `-m` prints the
+JSON booleans `true`/`false`):
+
+```bash
+volumito playback is_paused
+volumito playback is_playing
+volumito playback is_stopped
+```
+
 ## Seek Control
 
 Print, set, or adjust the position within the track being played:

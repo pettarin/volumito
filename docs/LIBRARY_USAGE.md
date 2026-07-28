@@ -47,10 +47,13 @@ print(client.state)
 # 'mute': False, 'disableVolumeControl': False, 'stream': False,
 # 'updatedb': False, 'volatile': False, 'service': 'qobuz'}
 
-# pause/play/stop the current track
+# pause/play/stop the current track (and check the playback status)
 client.pause()
+print(client.is_paused)
 client.play()
+print(client.is_playing)
 client.stop()
+print(client.is_stopped)
 
 # read and control the volume
 print(client.volume)
