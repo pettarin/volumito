@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The REST API client query methods are now read-only properties: `get_state` -> `state`,
   `get_queue` -> `queue`, `get_system_version` -> `system_version`, `get_system_info` ->
   `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`
+- The REST API client `send_command` method is now private (`_send_command`), proxied by
+  the public playback and queue methods
 
 
 ## [0.0.22] - 2026-07-27

@@ -30,273 +30,6 @@ class VolumioRESTAPIClient:
         self.host_configuration = host_configuration
         self.timeout = timeout
 
-    @property
-    def state(self) -> dict[str, Any]:
-        """The current playback state of the Volumio instance.
-
-        Each access performs a fresh HTTP request.
-
-        Returns:
-            A dictionary containing the current state of the Volumio instance
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self._get_json("/api/v1/getState")
-
-    @property
-    def queue(self) -> dict[str, Any]:
-        """The current playback queue of the Volumio instance.
-
-        Each access performs a fresh HTTP request.
-
-        Returns:
-            A dictionary containing the current playback queue
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self._get_json("/api/v1/getQueue")
-
-    def send_command(self, cmd: str) -> dict[str, Any]:
-        """Send a playback control command to the Volumio instance.
-
-        Args:
-            cmd: The command to send (e.g., "play", "pause", "stop", "toggle", "next", "prev")
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        url = f"{self.host_configuration.rest_base_url}/api/v1/commands/?cmd={cmd}"
-
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError as e:
-            raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at "
-                f"{self.host_configuration.rest_base_url}: {e}"
-            ) from e
-        except requests.exceptions.Timeout as e:
-            raise VolumioConnectionError(
-                f"Connection to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} "
-                f"timed out after {self.timeout} seconds: {e}"
-            ) from e
-        except requests.exceptions.HTTPError as e:
-            raise VolumioAPIError(
-                f"Volumio API returned HTTP error {response.status_code}: {e}"
-            ) from e
-        except requests.exceptions.RequestException as e:
-            raise VolumioConnectionError(
-                f"Request to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} failed: {e}"
-            ) from e
-
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, dict):
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
-
-    def toggle(self) -> dict[str, Any]:
-        """Toggle between play and pause states.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("toggle")
-
-    def play(self, position: int | None = None) -> dict[str, Any]:
-        """Start playback.
-
-        Args:
-            position: Optional position in the queue to play (0-indexed)
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        if position is not None:
-            return self.send_command(f"play&N={position}")
-        return self.send_command("play")
-
-    def pause(self) -> dict[str, Any]:
-        """Pause playback.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("pause")
-
-    def stop(self) -> dict[str, Any]:
-        """Stop playback.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("stop")
-
-    def next(self) -> dict[str, Any]:
-        """Skip to the next track.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("next")
-
-    def previous(self) -> dict[str, Any]:
-        """Skip to the previous track.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("prev")
-
-    def volume(self, value: int | str) -> dict[str, Any]:
-        """Set or adjust the playback volume.
-
-        See :meth:`mute` and :meth:`unmute` for muting and unmuting the volume.
-
-        Args:
-            value: An integer between 0 and 100 (inclusive) to set an absolute
-                volume level, or one of the strings "plus", "minus" to step the
-                volume relatively to the current level
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command(f"volume&volume={value}")
-
-    def mute(self) -> dict[str, Any]:
-        """Mute the playback volume.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("volume&volume=mute")
-
-    def unmute(self) -> dict[str, Any]:
-        """Unmute the playback volume.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("volume&volume=unmute")
-
-    def seek(self, value: int | str) -> dict[str, Any]:
-        """Seek to a position in the track currently playing.
-
-        Args:
-            value: The position to seek to, in seconds, or one of the strings
-                "plus" and "minus" to seek relatively to the current position
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command(f"seek&position={value}")
-
-    def clear(self) -> dict[str, Any]:
-        """Clear the playback queue.
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self.send_command("clearQueue")
-
-    def repeat(self, value: bool | None = None) -> dict[str, Any]:
-        """Set or toggle the repeat mode.
-
-        Args:
-            value: True to enable, False to disable, or None (the default) to let
-                the Volumio API toggle the current repeat mode
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        if value is None:
-            return self.send_command("repeat")
-        return self.send_command(f"repeat&value={str(value).lower()}")
-
-    def randomize(self, value: bool | None = None) -> dict[str, Any]:
-        """Set or toggle the random (shuffle) mode.
-
-        Args:
-            value: True to enable, False to disable, or None (the default) to let
-                the Volumio API toggle the current random mode
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        if value is None:
-            return self.send_command("random")
-        return self.send_command(f"random&value={str(value).lower()}")
-
     def _get(self, path: str) -> requests.Response:
         """GET ``{rest_base_url}{path}``, translating request failures to Volumio errors.
 
@@ -465,47 +198,70 @@ class VolumioRESTAPIClient:
 
         return data
 
-    def ping(self) -> str:
-        """Ping the Volumio instance to check that it is reachable.
+    def _send_command(self, cmd: str) -> dict[str, Any]:
+        """Send a playback control command to the Volumio instance.
+
+        Args:
+            cmd: The command to send (e.g., "play", "pause", "stop", "toggle", "next", "prev")
 
         Returns:
-            The response body text (``"pong"`` from a healthy Volumio instance)
+            A dictionary containing the response from the Volumio API
 
         Raises:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        return self._get_text("/api/v1/ping")
+        url = f"{self.host_configuration.rest_base_url}/api/v1/commands/?cmd={cmd}"
 
-    @property
-    def system_version(self) -> dict[str, Any]:
-        """The system version of the Volumio instance.
+        try:
+            response = requests.get(url, timeout=self.timeout)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as e:
+            raise VolumioConnectionError(
+                f"Failed to connect to Volumio instance at "
+                f"{self.host_configuration.rest_base_url}: {e}"
+            ) from e
+        except requests.exceptions.Timeout as e:
+            raise VolumioConnectionError(
+                f"Connection to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} "
+                f"timed out after {self.timeout} seconds: {e}"
+            ) from e
+        except requests.exceptions.HTTPError as e:
+            raise VolumioAPIError(
+                f"Volumio API returned HTTP error {response.status_code}: {e}"
+            ) from e
+        except requests.exceptions.RequestException as e:
+            raise VolumioConnectionError(
+                f"Request to Volumio instance at "
+                f"{self.host_configuration.rest_base_url} failed: {e}"
+            ) from e
 
-        Each access performs a fresh HTTP request.
+        try:
+            data = response.json()
+        except ValueError as e:
+            raise VolumioAPIError(
+                f"Failed to parse JSON response from Volumio API: {e}"
+            ) from e
+
+        if not isinstance(data, dict):
+            raise VolumioAPIError(
+                f"Expected JSON object from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
+    def clear(self) -> dict[str, Any]:
+        """Clear the playback queue.
 
         Returns:
-            A dictionary containing the Volumio system version information
+            A dictionary containing the response from the Volumio API
 
         Raises:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        return self._get_json("/api/v1/getSystemVersion")
-
-    @property
-    def system_info(self) -> dict[str, Any]:
-        """The system information of the Volumio instance.
-
-        Each access performs a fresh HTTP request.
-
-        Returns:
-            A dictionary containing the Volumio system information
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self._get_json("/api/v1/getSystemInfo")
+        return self._send_command("clearQueue")
 
     @property
     def collection_statistics(self) -> dict[str, Any]:
@@ -522,21 +278,6 @@ class VolumioRESTAPIClient:
         """
         return self._get_json("/api/v1/collectionstats")
 
-    @property
-    def zones(self) -> dict[str, Any]:
-        """The multiroom zones seen by the Volumio instance.
-
-        Each access performs a fresh HTTP request.
-
-        Returns:
-            A dictionary containing the multiroom zones (under the "zones" key)
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
-        """
-        return self._get_json("/api/v1/getzones")
-
     def list_playlists(self) -> list[Any]:
         """List the playlists saved on the Volumio instance.
 
@@ -548,6 +289,71 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._get_json_list("/api/v1/listplaylists")
+
+    def mute(self) -> dict[str, Any]:
+        """Mute the playback volume.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("volume&volume=mute")
+
+    def next(self) -> dict[str, Any]:
+        """Skip to the next track.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("next")
+
+    def pause(self) -> dict[str, Any]:
+        """Pause playback.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("pause")
+
+    def ping(self) -> str:
+        """Ping the Volumio instance to check that it is reachable.
+
+        Returns:
+            The response body text (``"pong"`` from a healthy Volumio instance)
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_text("/api/v1/ping")
+
+    def play(self, position: int | None = None) -> dict[str, Any]:
+        """Start playback.
+
+        Args:
+            position: Optional position in the queue to play (0-indexed)
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        if position is not None:
+            return self._send_command(f"play&N={position}")
+        return self._send_command("play")
 
     def play_playlist(self, name: str) -> dict[str, Any]:
         """Start playback of a saved playlist.
@@ -562,7 +368,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        return self.send_command(f"playplaylist&name={quote(name, safe='')}")
+        return self._send_command(f"playplaylist&name={quote(name, safe='')}")
 
     def plugin_endpoint(self, endpoint: str, data: dict[str, Any]) -> dict[str, Any]:
         """POST a plugin endpoint request to the Volumio instance.
@@ -583,3 +389,197 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error or a non-object response
         """
         return self._post_json("/api/v1/pluginEndpoint", {"endpoint": endpoint, "data": data})
+
+    def previous(self) -> dict[str, Any]:
+        """Skip to the previous track.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("prev")
+
+    @property
+    def queue(self) -> dict[str, Any]:
+        """The current playback queue of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            A dictionary containing the current playback queue
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getQueue")
+
+    def randomize(self, value: bool | None = None) -> dict[str, Any]:
+        """Set or toggle the random (shuffle) mode.
+
+        Args:
+            value: True to enable, False to disable, or None (the default) to let
+                the Volumio API toggle the current random mode
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        if value is None:
+            return self._send_command("random")
+        return self._send_command(f"random&value={str(value).lower()}")
+
+    def repeat(self, value: bool | None = None) -> dict[str, Any]:
+        """Set or toggle the repeat mode.
+
+        Args:
+            value: True to enable, False to disable, or None (the default) to let
+                the Volumio API toggle the current repeat mode
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        if value is None:
+            return self._send_command("repeat")
+        return self._send_command(f"repeat&value={str(value).lower()}")
+
+    def seek(self, value: int | str) -> dict[str, Any]:
+        """Seek to a position in the track currently playing.
+
+        Args:
+            value: The position to seek to, in seconds, or one of the strings
+                "plus" and "minus" to seek relatively to the current position
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command(f"seek&position={value}")
+
+    @property
+    def state(self) -> dict[str, Any]:
+        """The current playback state of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            A dictionary containing the current state of the Volumio instance
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getState")
+
+    def stop(self) -> dict[str, Any]:
+        """Stop playback.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("stop")
+
+    @property
+    def system_info(self) -> dict[str, Any]:
+        """The system information of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            A dictionary containing the Volumio system information
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getSystemInfo")
+
+    @property
+    def system_version(self) -> dict[str, Any]:
+        """The system version of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            A dictionary containing the Volumio system version information
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getSystemVersion")
+
+    def toggle(self) -> dict[str, Any]:
+        """Toggle between play and pause states.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("toggle")
+
+    def unmute(self) -> dict[str, Any]:
+        """Unmute the playback volume.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("volume&volume=unmute")
+
+    def volume(self, value: int | str) -> dict[str, Any]:
+        """Set or adjust the playback volume.
+
+        See :meth:`mute` and :meth:`unmute` for muting and unmuting the volume.
+
+        Args:
+            value: An integer between 0 and 100 (inclusive) to set an absolute
+                volume level, or one of the strings "plus", "minus" to step the
+                volume relatively to the current level
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command(f"volume&volume={value}")
+
+    @property
+    def zones(self) -> dict[str, Any]:
+        """The multiroom zones seen by the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            A dictionary containing the multiroom zones (under the "zones" key)
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._get_json("/api/v1/getzones")
