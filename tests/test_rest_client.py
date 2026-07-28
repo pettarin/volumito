@@ -1254,16 +1254,47 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("volume&volume=unmute")
         assert result["response"] == "volume"
 
-    def test_seek_seconds(self, mocker: MockerFixture):
-        """Test seek() method with a number of seconds."""
+    def test_seek_setter(self, mocker: MockerFixture):
+        """Test setting the seek property to a number of seconds."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
         mock_send_command.return_value = {"response": "seek"}
 
-        result = client.seek(252)
+        client.seek = 252
 
         mock_send_command.assert_called_once_with("seek&position=252")
-        assert result["response"] == "seek"
+
+    def test_seek_getter(self, mocker: MockerFixture):
+        """Test reading the seek property from the playback state, in whole seconds."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "play", "seek": 125029}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        # The state reports milliseconds, rounded down to seconds
+        assert client.seek == 125
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/getState", timeout=5.0
+        )
+
+    @pytest.mark.parametrize(
+        "state",
+        [{"status": "play"}, {"status": "play", "seek": "early"}],
+        ids=["missing", "not-an-integer"],
+    )
+    def test_seek_getter_invalid_position(self, mocker: MockerFixture, state: dict):
+        """Test reading the seek property with a missing or non-integer position."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = state
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError, match="integer seek position"):
+            _ = client.seek
 
     def test_seek_backward(self, mocker: MockerFixture):
         """Test seek_backward() method."""
@@ -1288,7 +1319,7 @@ class TestVolumioRESTAPIClient:
         assert result["response"] == "seek"
 
     def test_seek_connection_error(self, mocker: MockerFixture):
-        """Test seek() translates a connection error."""
+        """Test the seek setter translates a connection error."""
         mocker.patch(
             "requests.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
@@ -1297,7 +1328,7 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
-            client.seek(10)
+            client.seek = 10
 
         assert "Failed to connect to Volumio instance" in str(exc_info.value)
 

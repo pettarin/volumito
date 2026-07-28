@@ -20,8 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The CLI mute/unmute operations call the new client methods instead of passing the special
   `mute`/`unmute` values to the volume method
-- The REST API client seek method accepts only an integer position; the CLI relative
-  seeking calls the new seek methods instead of passing the special `plus`/`minus` values
+- The REST API client seek is now a read/write property, working in seconds: reading it
+  returns the current position from the playback state (rounded down to whole seconds),
+  and assigning it seeks to an absolute position; the CLI relative seeking calls the new
+  seek methods instead of passing the special `plus`/`minus` values
 - The REST API client volume is now a read/write property: reading it returns the current
   level from the playback state, and assigning it sets an integer level, validated to be
   between 0 and 100; the CLI volume stepping calls the new volume methods instead of

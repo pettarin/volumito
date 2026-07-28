@@ -540,6 +540,8 @@ def seek(
     against the duration of the current track, when the latter is known.
     """
     if value is None:
+        # Read the raw state (not the seek property, which rounds to whole seconds)
+        # to keep the millisecond precision of the printed position
         state = fetch_state_or_exit(ctx)
         current = state.get("seek")
         if not isinstance(current, int):
@@ -563,7 +565,12 @@ def seek(
             sys.exit(1)
 
     if isinstance(value, int):
-        execute_command(ctx, f"seek {value}", lambda c: c.seek(value))
+        target = value
+
+        def set_seek(client: VolumioRESTAPIClient) -> None:
+            client.seek = target
+
+        execute_command(ctx, f"seek {value}", set_seek)
     elif value == "plus":
         execute_command(ctx, "seek plus", lambda c: c.seek_forward())
     elif value == "minus":

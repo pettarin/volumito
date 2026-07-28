@@ -6606,18 +6606,15 @@ class TestSeekCommand:
         return CliRunner()
 
     def _mock_client(self, mocker: MockerFixture, state=None):
-        """Mock VolumioRESTAPIClient with a usable seek and state; patch out the sleep."""
+        """Mock VolumioRESTAPIClient with usable seek and state properties; patch the sleep."""
         mock_client = mocker.Mock()
-        mock_client.seek.return_value = {"response": "seek"}
-        _attach_property(
-            mock_client,
-            "state",
-            return_value=(
-                {"seek": 252345, "duration": 4000, "artist": "StatusMarkerArtist"}
-                if state is None
-                else state
-            ),
+        state_value = (
+            {"seek": 252345, "duration": 4000, "artist": "StatusMarkerArtist"}
+            if state is None
+            else state
         )
+        _attach_property(mock_client, "seek")
+        _attach_property(mock_client, "state", return_value=state_value)
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -6641,7 +6638,8 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         assert result.output.strip() == "00:04:12.345"
-        mock_client.seek.assert_not_called()
+        # No seek command is sent when only querying the current position
+        mock_client.seek_property.assert_not_called()
 
     def test_no_value_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """In machine-readable mode the position is printed as a quoted string."""
@@ -6697,7 +6695,7 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         getattr(mock_client, method).assert_called_once_with()
-        mock_client.seek.assert_not_called()
+        mock_client.seek_property.assert_not_called()
 
     @pytest.mark.parametrize(
         ("value", "expected"),
@@ -6714,7 +6712,7 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.seek.assert_called_once_with(expected)
+        mock_client.seek_property.assert_called_once_with(expected)
 
     @pytest.mark.parametrize("value", ["-1", "bogus", "1:2:3:4", "00:99", "12s"])
     def test_invalid_values(self, runner: CliRunner, mocker: MockerFixture, value: str):
@@ -6724,7 +6722,7 @@ class TestSeekCommand:
         result = runner.invoke(main, ["playback", "seek", "--", value])
 
         assert result.exit_code != 0
-        mock_client.seek.assert_not_called()
+        mock_client.seek_property.assert_not_called()
 
     def test_default_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
         """By default, playback seek waits and prints the resulting playback status."""
@@ -6766,7 +6764,7 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         mock_client.state_property.assert_called_once()
-        mock_client.seek.assert_called_once_with(42)
+        mock_client.seek_property.assert_called_once_with(42)
 
     def test_position_equal_to_the_duration(self, runner: CliRunner, mocker: MockerFixture):
         """A position exactly at the end of the track is accepted."""
@@ -6777,7 +6775,7 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.seek.assert_called_once_with(300)
+        mock_client.seek_property.assert_called_once_with(300)
 
     def test_position_past_the_duration(self, runner: CliRunner, mocker: MockerFixture):
         """A position past the track duration exits 1 without sending the command."""
@@ -6788,7 +6786,7 @@ class TestSeekCommand:
         assert result.exit_code == 1
         assert "seek position out of range: 01:00:00" in result.output
         assert "current track duration: 00:05:00" in result.output
-        mock_client.seek.assert_not_called()
+        mock_client.seek_property.assert_not_called()
 
     def test_position_past_the_duration_machine_readable(
         self, runner: CliRunner, mocker: MockerFixture
@@ -6800,7 +6798,7 @@ class TestSeekCommand:
 
         assert result.exit_code == 1
         assert result.output == ""
-        mock_client.seek.assert_not_called()
+        mock_client.seek_property.assert_not_called()
 
     def test_no_check_seek_position(self, runner: CliRunner, mocker: MockerFixture):
         """With --no-check-seek-position an out-of-range position is sent unchecked."""
@@ -6819,7 +6817,7 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         mock_client.state_property.assert_not_called()
-        mock_client.seek.assert_called_once_with(3600)
+        mock_client.seek_property.assert_called_once_with(3600)
 
     @pytest.mark.parametrize(
         ("spelling", "method"),
@@ -6838,7 +6836,7 @@ class TestSeekCommand:
         assert result.exit_code == 0
         mock_client.state_property.assert_not_called()
         getattr(mock_client, method).assert_called_once_with()
-        mock_client.seek.assert_not_called()
+        mock_client.seek_property.assert_not_called()
 
     @pytest.mark.parametrize(
         "state",
@@ -6856,7 +6854,7 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.seek.assert_called_once_with(3600)
+        mock_client.seek_property.assert_called_once_with(3600)
 
     def test_check_state_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A failing state fetch during the check exits 1 without sending the command."""
@@ -6869,12 +6867,14 @@ class TestSeekCommand:
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
-        mock_client.seek.assert_not_called()
+        mock_client.seek_property.assert_not_called()
 
     def test_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """playback seek exits 1 on a connection error."""
         mock_client, _ = self._mock_client(mocker)
-        mock_client.seek.side_effect = VolumioConnectionError("Connection failed")
+        _attach_property(
+            mock_client, "seek", side_effect=VolumioConnectionError("Connection failed")
+        )
 
         result = runner.invoke(main, ["playback", "seek", "42"])
 
@@ -7631,7 +7631,7 @@ class TestConfigurationFile:
     ):
         """The miscellaneous section can turn off the seek position check."""
         mock_client = self._mock_rest_client(mocker)
-        mock_client.seek.return_value = {"response": "seek"}
+        _attach_property(mock_client, "seek")
         config = self._write_config(
             tmp_path, "miscellaneous:\n  check-seek-position: false\n"
         )
@@ -7642,7 +7642,7 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         mock_client.state_property.assert_not_called()
-        mock_client.seek.assert_called_once_with(3600)
+        mock_client.seek_property.assert_called_once_with(3600)
 
     def test_output_subsection_sets_format_for_playlist_list(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path

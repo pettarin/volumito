@@ -7,7 +7,6 @@ For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
 ## Contents
 
 - [Quick Start](#quick-start)
-- [Units And Conventions](#units-and-conventions)
 
 
 ## Quick Start
@@ -74,8 +73,9 @@ for index, item in enumerate(queue, 1):
 # (positions start at zero, see Units And Conventions below)
 client.play(3)
 
-# seek to 01:42 in the current track
-client.seek(102)
+# read the seek position, then seek to 01:42 (both in seconds)
+print(client.seek)
+client.seek = 102
 
 # play the previous/next track
 client.previous()
@@ -98,17 +98,4 @@ client.get_story(album=Album("Kind of Blue"), artist=Artist("Miles Davis"))
 client.get_story(album=Album("83d91898-7763-47d7-b03b-b92132375c47", is_mbid=True))
 client.get_album_credits(Artist("Miles Davis"), Album("Kind of Blue"))
 ```
-
-
-## Units And Conventions
-
-The library currently retains
-the same units and conventions as the Volumio API:
-
-| Value                   | Unit Or Indexing Convention       |
-|-------------------------|-----------------------------------|
-| `duration` in the state | **seconds**                       |
-| `position` in the state | queue index, **starting at zero** |
-| `seek(value)` argument  | **seconds**                       |
-| `seek` in the state     | **milliseconds**                  |
 

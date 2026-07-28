@@ -601,22 +601,36 @@ class VolumioRESTAPIClient:
             return self._send_command("repeat")
         return self._send_command(f"repeat&value={str(value).lower()}")
 
-    def seek(self, value: int) -> dict[str, Any]:
-        """Seek to an absolute position in the track currently playing.
+    @property
+    def seek(self) -> int:
+        """The seek position, in seconds, in the track currently playing.
+
+        Reading the property fetches the position from the current playback state,
+        rounding the milliseconds reported there down to whole seconds (each access
+        performs a fresh HTTP request); assigning to it seeks to an absolute
+        position, also in seconds.
 
         See :meth:`seek_backward` and :meth:`seek_forward` for relative seeking.
 
-        Args:
-            value: The position to seek to, in seconds
-
         Returns:
-            A dictionary containing the response from the Volumio API
+            The current seek position, in seconds
 
         Raises:
             VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error response
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain an integer seek position
         """
-        return self._send_command(f"seek&position={value}")
+        value = self.state.get("seek")
+        if not isinstance(value, int):
+            raise VolumioAPIError(
+                f"Expected an integer seek position in the Volumio state, "
+                f"got {type(value).__name__}"
+            )
+        return value // 1000
+
+    @seek.setter
+    def seek(self, value: int) -> None:
+        self._send_command(f"seek&position={value}")
 
     def seek_backward(self) -> dict[str, Any]:
         """Seek backward by 10 seconds in the track currently playing.
