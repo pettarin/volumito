@@ -8,7 +8,13 @@ import pytest
 import requests
 from pytest_mock import MockerFixture
 
-from volumito.clients import VolumioHostConfiguration
+from volumito.clients import (
+    Album,
+    Artist,
+    Label,
+    Place,
+    VolumioHostConfiguration,
+)
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -648,7 +654,7 @@ class TestVolumioRESTAPIClient:
         assert "Failed to connect to Volumio instance" in str(exc_info.value)
 
     def test_plugin_endpoint_success(self, mocker: MockerFixture):
-        """Test successful plugin_endpoint() call."""
+        """Test successful _plugin_endpoint() call."""
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -658,7 +664,7 @@ class TestVolumioRESTAPIClient:
         mock_post = mocker.patch("requests.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
-        data = client.plugin_endpoint(
+        data = client._plugin_endpoint(
             "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
         )
 
@@ -674,7 +680,7 @@ class TestVolumioRESTAPIClient:
         assert data["data"]["value"] == "A story."
 
     def test_plugin_endpoint_connection_error(self, mocker: MockerFixture):
-        """Test plugin_endpoint() with connection error."""
+        """Test _plugin_endpoint() with connection error."""
         mocker.patch(
             "requests.post",
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
@@ -683,12 +689,12 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
-            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+            client._plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
 
         assert "Failed to connect" in str(exc_info.value)
 
     def test_plugin_endpoint_timeout_error(self, mocker: MockerFixture):
-        """Test plugin_endpoint() with timeout error."""
+        """Test _plugin_endpoint() with timeout error."""
         mocker.patch(
             "requests.post", side_effect=requests.exceptions.Timeout("Request timeout")
         )
@@ -696,12 +702,12 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
-            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+            client._plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
 
         assert "timed out" in str(exc_info.value)
 
     def test_plugin_endpoint_http_error(self, mocker: MockerFixture):
-        """Test plugin_endpoint() with HTTP error."""
+        """Test _plugin_endpoint() with HTTP error."""
         mock_response = mocker.Mock()
         mock_response.status_code = 404
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
@@ -712,12 +718,12 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
-            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+            client._plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
 
         assert "HTTP error 404" in str(exc_info.value)
 
     def test_plugin_endpoint_invalid_json(self, mocker: MockerFixture):
-        """Test plugin_endpoint() with invalid JSON response."""
+        """Test _plugin_endpoint() with invalid JSON response."""
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
@@ -726,12 +732,12 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
-            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+            client._plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
 
         assert "Failed to parse JSON" in str(exc_info.value)
 
     def test_plugin_endpoint_non_dict_response(self, mocker: MockerFixture):
-        """Test plugin_endpoint() when API returns non-dictionary JSON."""
+        """Test _plugin_endpoint() when API returns non-dictionary JSON."""
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = []  # list, not a dictionary
@@ -740,13 +746,13 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioAPIError) as exc_info:
-            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+            client._plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
 
         assert "Expected JSON object" in str(exc_info.value)
         assert "got list" in str(exc_info.value)
 
     def test_plugin_endpoint_generic_request_exception(self, mocker: MockerFixture):
-        """Test plugin_endpoint() with generic RequestException."""
+        """Test _plugin_endpoint() with generic RequestException."""
         mocker.patch(
             "requests.post",
             side_effect=requests.exceptions.RequestException("Generic error"),
@@ -755,9 +761,203 @@ class TestVolumioRESTAPIClient:
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
         with pytest.raises(VolumioConnectionError) as exc_info:
-            client.plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
+            client._plugin_endpoint("metavolumio", {"mode": "storyArtist", "artist": "Mango"})
 
         assert "Request to Volumio instance" in str(exc_info.value)
+
+    def _mock_story_post(self, mocker: MockerFixture):
+        """Mock requests.post with a successful metavolumio envelope response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "success": True,
+            "data": {"type": "story", "value": "A story."},
+        }
+        return mocker.patch("requests.post", return_value=mock_response)
+
+    def _assert_story_posted(self, mock_post, data):
+        """Assert that the metavolumio endpoint was called with the given data payload."""
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pluginEndpoint",
+            json={"endpoint": "metavolumio", "data": data},
+            timeout=5.0,
+        )
+
+    def test_get_story_artist_name(self, mocker: MockerFixture):
+        """Test get_story() with an artist by name."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.get_story(artist=Artist("Mango"))
+
+        self._assert_story_posted(mock_post, {"mode": "storyArtist", "artist": "Mango"})
+        assert data["success"] is True
+
+    def test_get_story_artist_mbid(self, mocker: MockerFixture):
+        """Test get_story() with an artist by MBID."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_story(artist=Artist("83d91898-7763-47d7-b03b-b92132375c47", is_mbid=True))
+
+        self._assert_story_posted(
+            mock_post,
+            {"mode": "storyArtist", "mbid": "83d91898-7763-47d7-b03b-b92132375c47"},
+        )
+
+    def test_get_story_album_pair(self, mocker: MockerFixture):
+        """Test get_story() with an album by title and its artist."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_story(album=Album("Sirtaki"), artist=Artist("Mango"))
+
+        self._assert_story_posted(
+            mock_post, {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
+        )
+
+    def test_get_story_album_mbid(self, mocker: MockerFixture):
+        """Test get_story() with an album by MBID."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_story(album=Album("mbid-value", is_mbid=True))
+
+        self._assert_story_posted(mock_post, {"mode": "storyAlbum", "mbid": "mbid-value"})
+
+    def test_get_story_label_name(self, mocker: MockerFixture):
+        """Test get_story() with a label by name."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_story(label=Label("Blue Note"))
+
+        self._assert_story_posted(mock_post, {"mode": "storyLabel", "label": "Blue Note"})
+
+    def test_get_story_label_mbid(self, mocker: MockerFixture):
+        """Test get_story() with a label by MBID."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_story(label=Label("mbid-value", is_mbid=True))
+
+        self._assert_story_posted(mock_post, {"mode": "storyLabel", "mbid": "mbid-value"})
+
+    def test_get_story_place_name(self, mocker: MockerFixture):
+        """Test get_story() with a place by name."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_story(place=Place("Abbey Road Studios"))
+
+        self._assert_story_posted(
+            mock_post, {"mode": "storyPlace", "place": "Abbey Road Studios"}
+        )
+
+    def test_get_story_no_entities(self, mocker: MockerFixture):
+        """Test get_story() without any entity."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="one of album, artist, label, or place"):
+            client.get_story()
+        mock_post.assert_not_called()
+
+    def test_get_story_label_and_place(self, mocker: MockerFixture):
+        """Test get_story() with both a label and a place."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="mutually exclusive"):
+            client.get_story(label=Label("Blue Note"), place=Place("Abbey Road Studios"))
+        mock_post.assert_not_called()
+
+    def test_get_story_album_and_label(self, mocker: MockerFixture):
+        """Test get_story() with both an album and a label."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="does not take a label or place"):
+            client.get_story(
+                album=Album("Sirtaki"), artist=Artist("Mango"), label=Label("Blue Note")
+            )
+        mock_post.assert_not_called()
+
+    def test_get_story_artist_and_place(self, mocker: MockerFixture):
+        """Test get_story() with both an artist and a place."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="does not take a label or place"):
+            client.get_story(artist=Artist("Mango"), place=Place("Abbey Road Studios"))
+        mock_post.assert_not_called()
+
+    def test_get_story_album_without_artist(self, mocker: MockerFixture):
+        """Test get_story() with an album by title but no artist."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="requires an artist"):
+            client.get_story(album=Album("Sirtaki"))
+        mock_post.assert_not_called()
+
+    def test_get_story_album_mbid_with_artist(self, mocker: MockerFixture):
+        """Test get_story() with an album by MBID and an artist."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="does not take an artist"):
+            client.get_story(album=Album("mbid-value", is_mbid=True), artist=Artist("Mango"))
+        mock_post.assert_not_called()
+
+    def test_get_story_album_with_mbid_artist(self, mocker: MockerFixture):
+        """Test get_story() with an album by title and an artist by MBID."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="artist by name, not by MBID"):
+            client.get_story(
+                album=Album("Sirtaki"), artist=Artist("mbid-value", is_mbid=True)
+            )
+        mock_post.assert_not_called()
+
+    def test_get_album_credits_pair(self, mocker: MockerFixture):
+        """Test get_album_credits() with an album by title and its artist."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.get_album_credits(Artist("Mango"), Album("Sirtaki"))
+
+        self._assert_story_posted(
+            mock_post, {"mode": "creditsAlbum", "artist": "Mango", "album": "Sirtaki"}
+        )
+        assert data["success"] is True
+
+    def test_get_album_credits_mbid(self, mocker: MockerFixture):
+        """Test get_album_credits() with an album by MBID."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.get_album_credits(None, Album("mbid-value", is_mbid=True))
+
+        self._assert_story_posted(mock_post, {"mode": "creditsAlbum", "mbid": "mbid-value"})
+
+    def test_get_album_credits_album_without_artist(self, mocker: MockerFixture):
+        """Test get_album_credits() with an album by title but no artist."""
+        mock_post = self._mock_story_post(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError, match="requires an artist"):
+            client.get_album_credits(None, Album("Sirtaki"))
+        mock_post.assert_not_called()
 
     def test_send_command_success(self, mocker: MockerFixture):
         """Test successful _send_command() call."""

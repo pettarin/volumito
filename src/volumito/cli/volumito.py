@@ -53,7 +53,8 @@ from volumito.cli.click_helpers import (
     render_payload,
     render_state,
     render_story,
-    resolve_story_payload,
+    resolve_story_album_entities,
+    resolve_story_entity,
     rest_api_sleep,
     write_queue_log,
 )
@@ -76,7 +77,6 @@ from volumito.cli.constants import (
     QUEUE_LOG_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
-    STORY_ARTIST_ARGUMENT_ERROR,
 )
 from volumito.cli.pure_helpers import (
     display_position,
@@ -93,6 +93,9 @@ from volumito.cli.pure_helpers import (
     resolve_albumart_uri,
 )
 from volumito.clients import (
+    Artist,
+    Label,
+    Place,
     Scheme,
     VolumioAPIError,
     VolumioConnectionError,
@@ -1495,10 +1498,16 @@ def story_album(
     argument_type: str,
 ) -> None:
     """Get the story of the album given as ARTIST ALBUM, a single MBID, or the current track."""
-    payload = resolve_story_payload(
-        ctx, arguments, argument_type, ("artist", "album"), current_track=current_track
+    artist, album = resolve_story_album_entities(
+        ctx, arguments, argument_type, current_track=current_track
     )
-    render_story(ctx, "storyAlbum", payload, fields, output_format, heading="Album Story")
+    render_story(
+        ctx,
+        lambda c: c.get_story(album=album, artist=artist),
+        fields,
+        output_format,
+        heading="Album Story",
+    )
 
 
 @story.command("artist")
@@ -1518,15 +1527,16 @@ def story_artist(
 ) -> None:
     """Get the story of the artist given as a NAME or MBID argument, or of the current track."""
     arguments = () if value is None else (value,)
-    payload = resolve_story_payload(
-        ctx,
-        arguments,
-        argument_type,
-        ("artist",),
-        current_track=current_track,
-        arguments_error=STORY_ARTIST_ARGUMENT_ERROR,
+    artist = resolve_story_entity(
+        ctx, arguments, argument_type, Artist, current_track=current_track
     )
-    render_story(ctx, "storyArtist", payload, fields, output_format, heading="Artist Story")
+    render_story(
+        ctx,
+        lambda c: c.get_story(artist=artist),
+        fields,
+        output_format,
+        heading="Artist Story",
+    )
 
 
 @story.command("credits")
@@ -1545,10 +1555,16 @@ def story_credits(
     argument_type: str,
 ) -> None:
     """Get the credits of the album given as ARTIST ALBUM, a single MBID, or the current track."""
-    payload = resolve_story_payload(
-        ctx, arguments, argument_type, ("artist", "album"), current_track=current_track
+    artist, album = resolve_story_album_entities(
+        ctx, arguments, argument_type, current_track=current_track
     )
-    render_story(ctx, "creditsAlbum", payload, fields, output_format, heading="Album Credits")
+    render_story(
+        ctx,
+        lambda c: c.get_album_credits(artist, album),
+        fields,
+        output_format,
+        heading="Album Credits",
+    )
 
 
 @story.command("label")
@@ -1565,8 +1581,14 @@ def story_label(
     argument_type: str,
 ) -> None:
     """Get the story of the label given as a name or MBID argument."""
-    payload = resolve_story_payload(ctx, (value,), argument_type, ("label",))
-    render_story(ctx, "storyLabel", payload, fields, output_format, heading="Label Story")
+    label = resolve_story_entity(ctx, (value,), argument_type, Label)
+    render_story(
+        ctx,
+        lambda c: c.get_story(label=label),
+        fields,
+        output_format,
+        heading="Label Story",
+    )
 
 
 @story.command("place")
@@ -1583,8 +1605,14 @@ def story_place(
     argument_type: str,
 ) -> None:
     """Get the story of the place given as a name or MBID argument."""
-    payload = resolve_story_payload(ctx, (value,), argument_type, ("place",))
-    render_story(ctx, "storyPlace", payload, fields, output_format, heading="Place Story")
+    place = resolve_story_entity(ctx, (value,), argument_type, Place)
+    render_story(
+        ctx,
+        lambda c: c.get_story(place=place),
+        fields,
+        output_format,
+        heading="Place Story",
+    )
 
 
 # "info" is a top-level synonym for "system info"

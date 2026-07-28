@@ -9,6 +9,13 @@ from urllib.parse import quote
 
 import requests
 
+from volumito.clients.entities import (
+    Album,
+    Artist,
+    Label,
+    MusicBrainzEntityReference,
+    Place,
+)
 from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 
@@ -144,6 +151,26 @@ class VolumioRESTAPIClient:
         """
         return self._get(path).text
 
+    def _plugin_endpoint(self, endpoint: str, data: dict[str, Any]) -> dict[str, Any]:
+        """POST a plugin endpoint request to the Volumio instance.
+
+        The response envelope (e.g. ``{"success": true, "data": {...}}`` or
+        ``{"success": false, "error": "..."}`` for the Premium plugins) is returned
+        verbatim, without interpreting the "success" flag.
+
+        Args:
+            endpoint: The name of the plugin endpoint (e.g. "metavolumio")
+            data: The data payload to send to the plugin endpoint
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        return self._post_json("/api/v1/pluginEndpoint", {"endpoint": endpoint, "data": data})
+
     def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         """POST ``payload`` as JSON to ``path`` and parse the response as a JSON object.
 
@@ -251,6 +278,45 @@ class VolumioRESTAPIClient:
 
         return data
 
+    @staticmethod
+    def _story_album_payload(artist: Artist | None, album: Album) -> dict[str, str]:
+        """Build the metavolumio data payload (without the mode key) for an album query.
+
+        Args:
+            artist: The album's artist by name; must be None when the album is an MBID
+            album: The album, by title (requiring the artist) or by MBID
+
+        Returns:
+            The data payload dictionary
+
+        Raises:
+            ValueError: If the artist/album combination is invalid
+        """
+        if album.is_mbid:
+            if artist is not None:
+                raise ValueError("an album by MBID does not take an artist")
+            return {"mbid": album.value}
+        if artist is None:
+            raise ValueError("an album by title requires an artist")
+        if artist.is_mbid:
+            raise ValueError("an album by title requires the artist by name, not by MBID")
+        return {"artist": artist.value, "album": album.value}
+
+    @staticmethod
+    def _story_entity_payload(key: str, entity: MusicBrainzEntityReference) -> dict[str, str]:
+        """Build the metavolumio data payload (without the mode key) for a single entity.
+
+        Args:
+            key: The payload key of the free-text value (e.g. "artist")
+            entity: The entity, by free-text value or by MBID
+
+        Returns:
+            The data payload dictionary
+        """
+        if entity.is_mbid:
+            return {"mbid": entity.value}
+        return {key: entity.value}
+
     def clear(self) -> dict[str, Any]:
         """Clear the playback queue.
 
@@ -277,6 +343,77 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._get_json("/api/v1/collectionstats")
+
+    def get_album_credits(self, artist: Artist | None, album: Album) -> dict[str, Any]:
+        """Get the credits of an album via the metavolumio plugin endpoint.
+
+        Requires the Volumio host to be running with a Premium (or better)
+        subscription. The response envelope (``{"success": ..., ...}``) is returned
+        verbatim, without interpreting the "success" flag.
+
+        Args:
+            artist: The album's artist by name; must be None when the album is an MBID
+            album: The album, by title (requiring the artist) or by MBID
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            ValueError: If the artist/album combination is invalid
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        payload = self._story_album_payload(artist, album)
+        return self._plugin_endpoint("metavolumio", {"mode": "creditsAlbum", **payload})
+
+    def get_story(
+        self,
+        album: Album | None = None,
+        artist: Artist | None = None,
+        label: Label | None = None,
+        place: Place | None = None,
+    ) -> dict[str, Any]:
+        """Get the story of an album, artist, label, or place via metavolumio.
+
+        Requires the Volumio host to be running with a Premium (or better)
+        subscription. Exactly one entity must be queried: an album (with its artist
+        by name, unless the album is an MBID), an artist, a label, or a place. The
+        response envelope (``{"success": ..., ...}``) is returned verbatim, without
+        interpreting the "success" flag.
+
+        Args:
+            album: The album, by title (requiring the artist) or by MBID
+            artist: The artist, by name or by MBID (or the album's artist by name)
+            label: The record label, by name or by MBID
+            place: The place, by name or by MBID
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            ValueError: If the entity combination is invalid
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        if label is not None and place is not None:
+            raise ValueError("the label and place entities are mutually exclusive")
+        if album is not None:
+            if label is not None or place is not None:
+                raise ValueError("an album story does not take a label or place")
+            payload = self._story_album_payload(artist, album)
+            return self._plugin_endpoint("metavolumio", {"mode": "storyAlbum", **payload})
+        if artist is not None:
+            if label is not None or place is not None:
+                raise ValueError("an artist story does not take a label or place")
+            payload = self._story_entity_payload("artist", artist)
+            return self._plugin_endpoint("metavolumio", {"mode": "storyArtist", **payload})
+        if label is not None:
+            payload = self._story_entity_payload("label", label)
+            return self._plugin_endpoint("metavolumio", {"mode": "storyLabel", **payload})
+        if place is not None:
+            payload = self._story_entity_payload("place", place)
+            return self._plugin_endpoint("metavolumio", {"mode": "storyPlace", **payload})
+        raise ValueError("one of album, artist, label, or place is required")
 
     def list_playlists(self) -> list[Any]:
         """List the playlists saved on the Volumio instance.
@@ -369,26 +506,6 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._send_command(f"playplaylist&name={quote(name, safe='')}")
-
-    def plugin_endpoint(self, endpoint: str, data: dict[str, Any]) -> dict[str, Any]:
-        """POST a plugin endpoint request to the Volumio instance.
-
-        The response envelope (e.g. ``{"success": true, "data": {...}}`` or
-        ``{"success": false, "error": "..."}`` for the Premium plugins) is returned
-        verbatim, without interpreting the "success" flag.
-
-        Args:
-            endpoint: The name of the plugin endpoint (e.g. "metavolumio")
-            data: The data payload to send to the plugin endpoint
-
-        Returns:
-            A dictionary containing the response from the Volumio API
-
-        Raises:
-            VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error or a non-object response
-        """
-        return self._post_json("/api/v1/pluginEndpoint", {"endpoint": endpoint, "data": data})
 
     def previous(self) -> dict[str, Any]:
         """Skip to the previous track.

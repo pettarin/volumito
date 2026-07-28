@@ -5,6 +5,10 @@
 """
 
 from volumito.clients import (
+    Album,
+    Artist,
+    Label,
+    Place,
     VolumioAPIError,
     VolumioConnectionError,
     VolumioError,
@@ -18,6 +22,10 @@ __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
 __all__ = [
+    "Album",
+    "Artist",
+    "Label",
+    "Place",
     "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",

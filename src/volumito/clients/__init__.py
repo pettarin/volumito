@@ -4,6 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+from volumito.clients.entities import Album, Artist, Label, Place
 from volumito.clients.errors import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -14,6 +15,10 @@ from volumito.clients.mpd import VolumioMPDClient
 from volumito.clients.rest import VolumioRESTAPIClient
 
 __all__ = [
+    "Album",
+    "Artist",
+    "Label",
+    "Place",
     "Scheme",
     "VolumioHostConfiguration",
     "VolumioRESTAPIClient",

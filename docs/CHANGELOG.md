@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Methods `get_story` and `get_album_credits` to the REST API client, taking the new
+  entity dataclasses `Album`, `Artist`, `Label`, and `Place` (by free text or MBID)
 - Methods `mute` and `unmute` to the REST API client
 
 ### Changed
@@ -21,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `system_info`, `collectionstats` -> `collection_statistics`, `get_zones` -> `zones`
 - The REST API client `send_command` method is now private (`_send_command`), proxied by
   the public playback and queue methods
+- The REST API client `plugin_endpoint` method is now private (`_plugin_endpoint`), proxied
+  by the story query methods, which the CLI story commands now call
 
 
 ## [0.0.22] - 2026-07-27

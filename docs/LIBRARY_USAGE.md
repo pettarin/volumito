@@ -14,6 +14,8 @@ For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
 
 ```python
 from volumito import (
+    Album,
+    Artist,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
 )
@@ -85,6 +87,15 @@ if playlist_name in client.list_playlists():
     client.play_playlist(playlist_name)
 else:
     print(f"No such playlist: '{playlist_name}'")
+
+
+# get stories and album credits
+# (requires a Premium subscription on the Volumio host;
+# entities are given by free text, or by MusicBrainz ID with is_mbid=True)
+client.get_story(artist=Artist("Miles Davis"))
+client.get_story(album=Album("Kind of Blue"), artist=Artist("Miles Davis"))
+client.get_story(album=Album("83d91898-7763-47d7-b03b-b92132375c47", is_mbid=True))
+client.get_album_credits(Artist("Miles Davis"), Album("Kind of Blue"))
 ```
 
 

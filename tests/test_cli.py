@@ -49,9 +49,10 @@ from volumito.cli.pure_helpers import (
     queue_track_metadata_current,
     rebase_queue_positions,
     sanitize_filename_component,
-    story_query_payload,
+    story_query_reference,
 )
 from volumito.cli.volumito import main
+from volumito.clients import Album, Artist, Label, Place
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -4571,90 +4572,78 @@ class TestIsMbid:
         assert is_mbid("x83d91898-7763-47d7-b03b-b92132375c47") is False
 
 
-class TestStoryQueryPayload:
-    """Test cases for the story_query_payload function."""
+class TestStoryQueryReference:
+    """Test cases for the story_query_reference function."""
 
     _MBID = "83d91898-7763-47d7-b03b-b92132375c47"
 
     def test_pair_autodetect_two_arguments(self):
         """Two arguments autodetect as an ARTIST ALBUM pair."""
-        result = story_query_payload(("Mango", "Sirtaki"), "autodetect", ("artist", "album"))
+        result = story_query_reference(("Mango", "Sirtaki"), "autodetect", pair=True)
 
-        assert result == {"artist": "Mango", "album": "Sirtaki"}
+        assert result == ("name", ("Mango", "Sirtaki"))
 
     def test_pair_autodetect_single_mbid(self):
         """A single UUID-shaped argument autodetects as an MBID."""
-        result = story_query_payload((self._MBID,), "autodetect", ("artist", "album"))
+        result = story_query_reference((self._MBID,), "autodetect", pair=True)
 
-        assert result == {"mbid": self._MBID}
+        assert result == ("mbid", (self._MBID,))
 
     def test_pair_autodetect_single_name_invalid(self):
         """A single non-UUID argument cannot be autodetected for a pair command."""
-        assert story_query_payload(("Sirtaki",), "autodetect", ("artist", "album")) is None
+        assert story_query_reference(("Sirtaki",), "autodetect", pair=True) is None
 
     def test_pair_autodetect_no_arguments_invalid(self):
         """No arguments are invalid."""
-        assert story_query_payload((), "autodetect", ("artist", "album")) is None
+        assert story_query_reference((), "autodetect", pair=True) is None
 
     def test_pair_autodetect_three_arguments_invalid(self):
         """More than two arguments are invalid."""
-        assert story_query_payload(("A", "B", "C"), "autodetect", ("artist", "album")) is None
+        assert story_query_reference(("A", "B", "C"), "autodetect", pair=True) is None
 
     def test_pair_explicit_mbid(self):
         """An explicit mbid type takes the single argument verbatim, without shape checks."""
-        result = story_query_payload(("not-a-uuid",), "mbid", ("artist", "album"))
+        result = story_query_reference(("not-a-uuid",), "mbid", pair=True)
 
-        assert result == {"mbid": "not-a-uuid"}
+        assert result == ("mbid", ("not-a-uuid",))
 
     def test_pair_explicit_mbid_two_arguments_invalid(self):
         """An explicit mbid type rejects two arguments."""
-        assert story_query_payload(("A", "B"), "mbid", ("artist", "album")) is None
+        assert story_query_reference(("A", "B"), "mbid", pair=True) is None
 
     def test_pair_explicit_name_uuid_arguments(self):
         """An explicit name type keeps UUID-shaped arguments as an ARTIST ALBUM pair."""
-        result = story_query_payload((self._MBID, "Sirtaki"), "name", ("artist", "album"))
+        result = story_query_reference((self._MBID, "Sirtaki"), "name", pair=True)
 
-        assert result == {"artist": self._MBID, "album": "Sirtaki"}
+        assert result == ("name", (self._MBID, "Sirtaki"))
 
     def test_pair_explicit_name_single_argument_invalid(self):
         """An explicit name type rejects a single argument for a pair command."""
-        assert story_query_payload(("Sirtaki",), "name", ("artist", "album")) is None
+        assert story_query_reference(("Sirtaki",), "name", pair=True) is None
 
     def test_single_autodetect_name(self):
         """A single non-UUID argument autodetects as a name."""
-        result = story_query_payload(("Mango",), "autodetect", ("artist",))
+        result = story_query_reference(("Mango",), "autodetect", pair=False)
 
-        assert result == {"artist": "Mango"}
+        assert result == ("name", ("Mango",))
 
     def test_single_autodetect_mbid(self):
         """A single UUID-shaped argument autodetects as an MBID."""
-        result = story_query_payload((self._MBID,), "autodetect", ("artist",))
+        result = story_query_reference((self._MBID,), "autodetect", pair=False)
 
-        assert result == {"mbid": self._MBID}
+        assert result == ("mbid", (self._MBID,))
 
     def test_single_explicit_name_uuid_argument(self):
         """An explicit name type keeps a UUID-shaped argument as a name."""
-        result = story_query_payload((self._MBID,), "name", ("artist",))
+        result = story_query_reference((self._MBID,), "name", pair=False)
 
-        assert result == {"artist": self._MBID}
+        assert result == ("name", (self._MBID,))
 
     def test_single_explicit_mbid(self):
         """An explicit mbid type takes the single argument verbatim."""
-        result = story_query_payload(("Mango",), "mbid", ("artist",))
+        result = story_query_reference(("Mango",), "mbid", pair=False)
 
-        assert result == {"mbid": "Mango"}
-
-    def test_single_label_key(self):
-        """The name interpretation maps the argument to the given key (label)."""
-        result = story_query_payload(("Blue Note",), "autodetect", ("label",))
-
-        assert result == {"label": "Blue Note"}
-
-    def test_single_place_key(self):
-        """The name interpretation maps the argument to the given key (place)."""
-        result = story_query_payload(("Abbey Road Studios",), "name", ("place",))
-
-        assert result == {"place": "Abbey Road Studios"}
+        assert result == ("mbid", ("Mango",))
 
 
 class TestStoryCommands:
@@ -4668,12 +4657,14 @@ class TestStoryCommands:
         return CliRunner()
 
     def _mock_client(self, mocker: MockerFixture):
-        """Mock VolumioRESTAPIClient with a successful plugin_endpoint method."""
+        """Mock VolumioRESTAPIClient with successful story query methods."""
         mock_client = mocker.Mock()
-        mock_client.plugin_endpoint.return_value = {
+        envelope = {
             "success": True,
             "data": {"type": "story", "value": "A long story."},
         }
+        mock_client.get_story.return_value = envelope
+        mock_client.get_album_credits.return_value = envelope
         _attach_property(mock_client, "state", return_value={
             "status": "play",
             "title": "La rondine",
@@ -4693,8 +4684,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "Mango", "Sirtaki"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
+        mock_client.get_story.assert_called_once_with(
+            album=Album("Sirtaki"), artist=Artist("Mango")
         )
         assert json.loads(result.output)["data.value"] == "A long story."
         # Explicit arguments never trigger a state fetch
@@ -4707,8 +4698,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyAlbum", "mbid": self._MBID}
+        mock_client.get_story.assert_called_once_with(
+            album=Album(self._MBID, is_mbid=True), artist=None
         )
 
     def test_album_explicit_mbid_type(self, runner: CliRunner, mocker: MockerFixture):
@@ -4718,8 +4709,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "-T", "mbid", "not-a-uuid"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyAlbum", "mbid": "not-a-uuid"}
+        mock_client.get_story.assert_called_once_with(
+            album=Album("not-a-uuid", is_mbid=True), artist=None
         )
 
     def test_album_explicit_name_type(self, runner: CliRunner, mocker: MockerFixture):
@@ -4729,8 +4720,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "-T", "name", self._MBID, "Sirtaki"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyAlbum", "artist": self._MBID, "album": "Sirtaki"}
+        mock_client.get_story.assert_called_once_with(
+            album=Album("Sirtaki"), artist=Artist(self._MBID)
         )
 
     def test_album_single_name_argument_error(self, runner: CliRunner, mocker: MockerFixture):
@@ -4778,9 +4769,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "artist", "Mango"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyArtist", "artist": "Mango"}
-        )
+        mock_client.get_story.assert_called_once_with(artist=Artist("Mango"))
 
     def test_artist_mbid(self, runner: CliRunner, mocker: MockerFixture):
         """story artist autodetects a UUID-shaped argument as an MBID."""
@@ -4789,9 +4778,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "artist", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyArtist", "mbid": self._MBID}
-        )
+        mock_client.get_story.assert_called_once_with(artist=Artist(self._MBID, is_mbid=True))
 
     def test_artist_explicit_name_type(self, runner: CliRunner, mocker: MockerFixture):
         """story artist -T name keeps a UUID-shaped argument as the artist name."""
@@ -4800,9 +4787,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "artist", "-T", "name", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyArtist", "artist": self._MBID}
-        )
+        mock_client.get_story.assert_called_once_with(artist=Artist(self._MBID))
 
     def test_credits_name_pair(self, runner: CliRunner, mocker: MockerFixture):
         """story credits autodetects two arguments as an ARTIST ALBUM pair."""
@@ -4811,8 +4796,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "credits", "Mango", "Sirtaki"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "creditsAlbum", "artist": "Mango", "album": "Sirtaki"}
+        mock_client.get_album_credits.assert_called_once_with(
+            Artist("Mango"), Album("Sirtaki")
         )
 
     def test_credits_explicit_name_type_single_argument_error(
@@ -4833,9 +4818,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "label", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyLabel", "mbid": self._MBID}
-        )
+        mock_client.get_story.assert_called_once_with(label=Label(self._MBID, is_mbid=True))
 
     def test_label_name(self, runner: CliRunner, mocker: MockerFixture):
         """story label autodetects a non-UUID argument as the label name."""
@@ -4844,9 +4827,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "label", "Blue Note"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyLabel", "label": "Blue Note"}
-        )
+        mock_client.get_story.assert_called_once_with(label=Label("Blue Note"))
 
     def test_place_mbid(self, runner: CliRunner, mocker: MockerFixture):
         """story place autodetects a UUID-shaped argument as an MBID."""
@@ -4855,9 +4836,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "place", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyPlace", "mbid": self._MBID}
-        )
+        mock_client.get_story.assert_called_once_with(place=Place(self._MBID, is_mbid=True))
 
     def test_place_explicit_name_type(self, runner: CliRunner, mocker: MockerFixture):
         """story place -T name keeps a UUID-shaped argument as the place name."""
@@ -4866,9 +4845,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "place", "-T", "name", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyPlace", "place": self._MBID}
-        )
+        mock_client.get_story.assert_called_once_with(place=Place(self._MBID))
 
     def test_album_current_track(self, runner: CliRunner, mocker: MockerFixture):
         """story album --current-track takes artist and album from the player state."""
@@ -4879,8 +4856,8 @@ class TestStoryCommands:
         assert result.exit_code == 0
         mock_client.state_property.assert_called_once_with()
         # The state values are stripped of surrounding whitespace
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyAlbum", "artist": "Mango", "album": "Sirtaki"}
+        mock_client.get_story.assert_called_once_with(
+            album=Album("Sirtaki"), artist=Artist("Mango")
         )
 
     def test_artist_current_track(self, runner: CliRunner, mocker: MockerFixture):
@@ -4890,9 +4867,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "artist", "--current-track"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyArtist", "artist": "Mango"}
-        )
+        mock_client.get_story.assert_called_once_with(artist=Artist("Mango"))
 
     def test_credits_current_track(self, runner: CliRunner, mocker: MockerFixture):
         """story credits --current-track takes artist and album from the player state."""
@@ -4901,8 +4876,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "credits", "--current-track"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "creditsAlbum", "artist": "Mango", "album": "Sirtaki"}
+        mock_client.get_album_credits.assert_called_once_with(
+            Artist("Mango"), Album("Sirtaki")
         )
 
     def test_current_track_ignores_type(self, runner: CliRunner, mocker: MockerFixture):
@@ -4912,9 +4887,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "artist", "-T", "mbid", "--current-track"])
 
         assert result.exit_code == 0
-        mock_client.plugin_endpoint.assert_called_once_with(
-            "metavolumio", {"mode": "storyArtist", "artist": "Mango"}
-        )
+        mock_client.get_story.assert_called_once_with(artist=Artist("Mango"))
 
     def test_current_track_with_arguments_error(self, runner: CliRunner, mocker: MockerFixture):
         """Combining --current-track with positional arguments is a usage error."""
@@ -4923,6 +4896,18 @@ class TestStoryCommands:
         result = runner.invoke(
             main, ["story", "album", "--current-track", "Mango", "Sirtaki"]
         )
+
+        assert result.exit_code == 2
+        assert MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR in result.output
+        mock_client.state_property.assert_not_called()
+
+    def test_artist_current_track_with_argument_error(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Combining --current-track with the artist argument is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "artist", "--current-track", "Mango"])
 
         assert result.exit_code == 2
         assert MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR in result.output
@@ -4946,7 +4931,7 @@ class TestStoryCommands:
 
         assert result.exit_code == 1
         assert "the current track does not provide the required metadata" in result.output.lower()
-        mock_client.plugin_endpoint.assert_not_called()
+        mock_client.get_story.assert_not_called()
 
     def test_current_track_blank_artist(self, runner: CliRunner, mocker: MockerFixture):
         """A current track with a blank artist fails story artist --current-track."""
@@ -4981,7 +4966,7 @@ class TestStoryCommands:
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
-        mock_client.plugin_endpoint.assert_not_called()
+        mock_client.get_story.assert_not_called()
 
     def test_label_has_no_current_track_option(self, runner: CliRunner, mocker: MockerFixture):
         """story label does not support the --current-track option."""
@@ -4991,12 +4976,12 @@ class TestStoryCommands:
 
         assert result.exit_code == 2
         assert "No such option: --current-track" in result.output
-        mock_client.plugin_endpoint.assert_not_called()
+        mock_client.get_story.assert_not_called()
 
     def test_failure_envelope(self, runner: CliRunner, mocker: MockerFixture):
         """A success=false response exits 1 with the reported error."""
         mock_client = self._mock_client(mocker)
-        mock_client.plugin_endpoint.return_value = {
+        mock_client.get_story.return_value = {
             "success": False,
             "error": "Metavolumio not available",
         }
@@ -5009,7 +4994,7 @@ class TestStoryCommands:
     def test_failure_envelope_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """In machine-readable mode a success=false response exits 1 printing nothing."""
         mock_client = self._mock_client(mocker)
-        mock_client.plugin_endpoint.return_value = {"success": False, "error": "nope"}
+        mock_client.get_story.return_value = {"success": False, "error": "nope"}
 
         result = runner.invoke(main, ["-m", "story", "artist", "Mango"])
 
@@ -5019,7 +5004,7 @@ class TestStoryCommands:
     def test_failure_envelope_missing_success(self, runner: CliRunner, mocker: MockerFixture):
         """A response without the success flag exits 1 with the fallback error."""
         mock_client = self._mock_client(mocker)
-        mock_client.plugin_endpoint.return_value = {"data": {"value": "A long story."}}
+        mock_client.get_story.return_value = {"data": {"value": "A long story."}}
 
         result = runner.invoke(main, ["story", "artist", "Mango"])
 
@@ -5029,7 +5014,7 @@ class TestStoryCommands:
     def test_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """story artist exits 1 on a connection error."""
         mock_client = self._mock_client(mocker)
-        mock_client.plugin_endpoint.side_effect = VolumioConnectionError("Connection failed")
+        mock_client.get_story.side_effect = VolumioConnectionError("Connection failed")
 
         result = runner.invoke(main, ["story", "artist", "Mango"])
 

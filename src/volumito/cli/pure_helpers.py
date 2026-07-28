@@ -678,34 +678,35 @@ def split_camel_case(key: str) -> str:
     return spaced.title()
 
 
-def story_query_payload(
+def story_query_reference(
     arguments: tuple[str, ...],
     argument_type: str,
-    name_keys: tuple[str, ...],
-) -> dict[str, str] | None:
-    """Resolve the "story" positional arguments into the metavolumio data payload.
+    pair: bool,
+) -> tuple[str, tuple[str, ...]] | None:
+    """Resolve the "story" positional arguments into an interpreted reference.
 
-    A "mbid" interpretation takes a single argument, mapped to ``{"mbid": ...}``. A
-    "name" interpretation takes one argument per key in ``name_keys`` (e.g. a single
-    artist name, or an ARTIST ALBUM pair), mapped to those keys in order. The
+    A "mbid" interpretation takes a single argument; a "name" interpretation takes
+    one argument (or an ARTIST ALBUM argument pair when ``pair`` is set). The
     "autodetect" type selects "mbid" for a single UUID-shaped argument and "name"
-    when the argument count matches ``name_keys``. Any other combination is invalid.
+    when the argument count matches. Any other combination is invalid.
 
     Args:
         arguments: The positional arguments of the command
         argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
-        name_keys: The payload keys of the "name" interpretation, in argument order
+        pair: Whether the "name" interpretation takes an ARTIST ALBUM argument pair
 
     Returns:
-        The data payload (without the mode key), or None if the arguments are invalid
+        The pair ("mbid", (value,)) or ("name", values), or None if the arguments
+        are invalid
     """
+    name_count = 2 if pair else 1
     if argument_type == "autodetect":
         if len(arguments) == 1 and is_mbid(arguments[0]):
             argument_type = "mbid"
-        elif len(arguments) == len(name_keys):
+        elif len(arguments) == name_count:
             argument_type = "name"
     if argument_type == "mbid" and len(arguments) == 1:
-        return {"mbid": arguments[0]}
-    if argument_type == "name" and len(arguments) == len(name_keys):
-        return dict(zip(name_keys, arguments, strict=True))
+        return ("mbid", arguments)
+    if argument_type == "name" and len(arguments) == name_count:
+        return ("name", arguments)
     return None

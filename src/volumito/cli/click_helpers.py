@@ -37,6 +37,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_STORY,
     STORY_ARGUMENT_TYPES,
     STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
+    STORY_ARTIST_ARGUMENT_ERROR,
     STORY_CURRENT_TRACK_METADATA_ERROR,
 )
 from volumito.cli.metadata import (
@@ -55,15 +56,18 @@ from volumito.cli.pure_helpers import (
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
-    story_query_payload,
+    story_query_reference,
 )
 from volumito.clients import (
+    Album,
+    Artist,
     Scheme,
     VolumioAPIError,
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
 )
+from volumito.clients.entities import MusicBrainzEntityReference
 
 
 class OnOffParamType(click.ParamType):
@@ -297,6 +301,29 @@ def _materialize_albumart(
         return None
     downloaded_covers.setdefault(albumart_uri, cover_path)
     return cover_path
+
+
+def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tuple[str, ...]:
+    """Fetch the current track's values for the given state keys, exiting on failure.
+
+    Args:
+        ctx: Click context object containing shared options
+        keys: The state keys to read (e.g. ("artist", "album"))
+
+    Returns:
+        The (stripped) state values, one per key; a missing, non-string, or blank
+        value is an error (exit code 1, message suppressed in machine-readable mode)
+    """
+    state = fetch_state_or_exit(ctx)
+    values = []
+    for key in keys:
+        value = state.get(key)
+        if not isinstance(value, str) or not value.strip():
+            if not ctx.obj["machine_readable"]:
+                click.echo(f"Error: {STORY_CURRENT_TRACK_METADATA_ERROR}", err=True)
+            sys.exit(1)
+        values.append(value.strip())
+    return tuple(values)
 
 
 def configuration_file_callback(
@@ -1284,23 +1311,21 @@ def render_state(
 
 def render_story(
     ctx: click.Context,
-    mode: str,
-    data: dict[str, str],
+    fetch: Callable[[VolumioRESTAPIClient], dict[str, Any]],
     fields: str,
     output_format: str,
     heading: str,
 ) -> None:
     """Fetch a metavolumio story payload and print it per the fields/format options.
 
-    The metavolumio plugin endpoint (a Volumio Premium feature) is queried with the
-    given mode and data payload. A response whose "success" flag is not true is
-    reported as an error (exit code 1). The successful response envelope is rendered
-    like the other query commands, honoring the fields and format options.
+    A response whose "success" flag is not true is reported as an error (exit
+    code 1). The successful response envelope is rendered like the other query
+    commands, honoring the fields and format options.
 
     Args:
         ctx: Click context object containing shared options
-        mode: The metavolumio mode (e.g. "storyAlbum")
-        data: The data payload for the mode (without the mode key)
+        fetch: Function querying the story on the VolumioRESTAPIClient (e.g. calling
+            its get_story or get_album_credits method)
         fields: The fields option ("short" or "all")
         output_format: The output format ("json", "pretty", "raw", or "table")
         heading: The heading line for the table output format
@@ -1309,9 +1334,7 @@ def render_story(
     machine_readable = ctx.obj["machine_readable"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
-    response = fetch_or_exit(
-        ctx, lambda c: c.plugin_endpoint("metavolumio", {"mode": mode, **data})
-    )
+    response = fetch_or_exit(ctx, fetch)
 
     if response.get("success") is not True:
         if not machine_readable:
@@ -1346,33 +1369,29 @@ def render_story(
     click.echo(output)
 
 
-def resolve_story_payload(
+def resolve_story_album_entities(
     ctx: click.Context,
     arguments: tuple[str, ...],
     argument_type: str,
-    name_keys: tuple[str, ...],
     current_track: bool = False,
-    arguments_error: str = STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
-) -> dict[str, str]:
-    """Resolve the "story" positional arguments, failing on an invalid combination.
+) -> tuple[Artist | None, Album]:
+    """Resolve the "story album"/"story credits" arguments into entity references.
 
     With ``current_track`` set (the --current-track option, mutually exclusive with
-    the positional arguments), the payload values are taken from the currently
-    playing track (fetched from the Volumio instance), bypassing the argument-type
-    interpretation; a current track lacking one of the needed values is an error
-    (exit code 1). Otherwise, see
-    :func:`volumito.cli.pure_helpers.story_query_payload` for the resolution rules.
+    the positional arguments), the artist and album are taken from the currently
+    playing track, bypassing the argument-type interpretation. Otherwise, see
+    :func:`volumito.cli.pure_helpers.story_query_reference` for the resolution
+    rules: an MBID argument yields the album only (with no artist), and an ARTIST
+    ALBUM argument pair yields both entities by name.
 
     Args:
         ctx: Click context object containing shared options
         arguments: The positional arguments of the command
         argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
-        name_keys: The payload keys of the "name" interpretation, in argument order
-        current_track: Whether to take the payload values from the current track
-        arguments_error: The usage error message when the arguments cannot be resolved
+        current_track: Whether to take the entity values from the current track
 
     Returns:
-        The data payload (without the mode key)
+        The artist (or None for an album by MBID) and the album
 
     Raises:
         click.UsageError: If the arguments cannot be resolved or combined with
@@ -1381,20 +1400,57 @@ def resolve_story_payload(
     if current_track:
         if arguments:
             raise click.UsageError(MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR)
-        state = fetch_state_or_exit(ctx)
-        values = []
-        for key in name_keys:
-            value = state.get(key)
-            if not isinstance(value, str) or not value.strip():
-                if not ctx.obj["machine_readable"]:
-                    click.echo(f"Error: {STORY_CURRENT_TRACK_METADATA_ERROR}", err=True)
-                sys.exit(1)
-            values.append(value.strip())
-        return dict(zip(name_keys, values, strict=True))
-    payload = story_query_payload(arguments, argument_type, name_keys)
-    if payload is None:
-        raise click.UsageError(arguments_error)
-    return payload
+        artist_value, album_value = _story_current_track_values(ctx, ("artist", "album"))
+        return (Artist(artist_value), Album(album_value))
+    reference = story_query_reference(arguments, argument_type, pair=True)
+    if reference is None:
+        raise click.UsageError(STORY_ARTIST_ALBUM_ARGUMENTS_ERROR)
+    kind, values = reference
+    if kind == "mbid":
+        return (None, Album(values[0], is_mbid=True))
+    return (Artist(values[0]), Album(values[1]))
+
+
+def resolve_story_entity[E: MusicBrainzEntityReference](
+    ctx: click.Context,
+    arguments: tuple[str, ...],
+    argument_type: str,
+    entity_class: type[E],
+    current_track: bool = False,
+) -> E:
+    """Resolve a single-entity "story" argument into an entity reference.
+
+    With ``current_track`` set (the --current-track option, mutually exclusive with
+    the positional arguments), the entity value is taken from the currently playing
+    track (using the lowercased entity class name as the state key), bypassing the
+    argument-type interpretation. Otherwise, see
+    :func:`volumito.cli.pure_helpers.story_query_reference` for the resolution
+    rules.
+
+    Args:
+        ctx: Click context object containing shared options
+        arguments: The positional arguments of the command
+        argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
+        entity_class: The entity class (e.g. Artist, Label, or Place)
+        current_track: Whether to take the entity value from the current track
+
+    Returns:
+        The entity reference
+
+    Raises:
+        click.UsageError: If the arguments cannot be resolved or combined with
+            --current-track (exit code 2)
+    """
+    if current_track:
+        if arguments:
+            raise click.UsageError(MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR)
+        (value,) = _story_current_track_values(ctx, (entity_class.__name__.lower(),))
+        return entity_class(value)
+    reference = story_query_reference(arguments, argument_type, pair=False)
+    if reference is None:
+        raise click.UsageError(STORY_ARTIST_ARGUMENT_ERROR)
+    kind, values = reference
+    return entity_class(values[0], is_mbid=kind == "mbid")
 
 
 def rest_api_sleep(ctx: click.Context) -> None:
