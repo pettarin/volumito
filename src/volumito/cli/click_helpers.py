@@ -67,7 +67,7 @@ from volumito.clients import (
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
 )
-from volumito.clients.entities import MusicBrainzEntityReference
+from volumito.clients.entities import MusicEntity
 
 
 class OnOffParamType(click.ParamType):
@@ -1411,7 +1411,7 @@ def resolve_story_album_entities(
     return (Artist(values[0]), Album(values[1]))
 
 
-def resolve_story_entity[E: MusicBrainzEntityReference](
+def resolve_story_entity[E: MusicEntity](
     ctx: click.Context,
     arguments: tuple[str, ...],
     argument_type: str,

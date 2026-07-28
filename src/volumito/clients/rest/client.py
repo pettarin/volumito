@@ -13,7 +13,7 @@ from volumito.clients.entities import (
     Album,
     Artist,
     Label,
-    MusicBrainzEntityReference,
+    MusicEntity,
     Place,
 )
 from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
@@ -154,12 +154,12 @@ class VolumioRESTAPIClient:
     def _plugin_endpoint(self, endpoint: str, data: dict[str, Any]) -> dict[str, Any]:
         """POST a plugin endpoint request to the Volumio instance.
 
-        The response envelope (e.g. ``{"success": true, "data": {...}}`` or
+        The response envelope (e.g., ``{"success": true, "data": {...}}`` or
         ``{"success": false, "error": "..."}`` for the Premium plugins) is returned
         verbatim, without interpreting the "success" flag.
 
         Args:
-            endpoint: The name of the plugin endpoint (e.g. "metavolumio")
+            endpoint: The name of the plugin endpoint (e.g., "metavolumio")
             data: The data payload to send to the plugin endpoint
 
         Returns:
@@ -303,11 +303,11 @@ class VolumioRESTAPIClient:
         return {"artist": artist.value, "album": album.value}
 
     @staticmethod
-    def _story_entity_payload(key: str, entity: MusicBrainzEntityReference) -> dict[str, str]:
+    def _story_entity_payload(key: str, entity: MusicEntity) -> dict[str, str]:
         """Build the metavolumio data payload (without the mode key) for a single entity.
 
         Args:
-            key: The payload key of the free-text value (e.g. "artist")
+            key: The payload key of the free-text value (e.g., "artist")
             entity: The entity, by free-text value or by MBID
 
         Returns:
