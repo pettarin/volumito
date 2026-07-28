@@ -561,7 +561,12 @@ def seek(
                 )
             sys.exit(1)
 
-    execute_command(ctx, f"seek {value}", lambda c: c.seek(value))
+    if isinstance(value, int):
+        execute_command(ctx, f"seek {value}", lambda c: c.seek(value))
+    elif value == "plus":
+        execute_command(ctx, "seek plus", lambda c: c.seek_forward())
+    elif value == "minus":
+        execute_command(ctx, "seek minus", lambda c: c.seek_backward())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 

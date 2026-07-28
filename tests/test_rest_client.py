@@ -1213,13 +1213,24 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("seek&position=252")
         assert result["response"] == "seek"
 
-    def test_seek_keyword(self, mocker: MockerFixture):
-        """Test seek() method with a relative keyword value."""
+    def test_seek_backward(self, mocker: MockerFixture):
+        """Test seek_backward() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
         mock_send_command.return_value = {"response": "seek"}
 
-        result = client.seek("plus")
+        result = client.seek_backward()
+
+        mock_send_command.assert_called_once_with("seek&position=minus")
+        assert result["response"] == "seek"
+
+    def test_seek_forward(self, mocker: MockerFixture):
+        """Test seek_forward() method."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+        mock_send_command.return_value = {"response": "seek"}
+
+        result = client.seek_forward()
 
         mock_send_command.assert_called_once_with("seek&position=plus")
         assert result["response"] == "seek"

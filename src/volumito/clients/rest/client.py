@@ -573,12 +573,13 @@ class VolumioRESTAPIClient:
             return self._send_command("repeat")
         return self._send_command(f"repeat&value={str(value).lower()}")
 
-    def seek(self, value: int | str) -> dict[str, Any]:
-        """Seek to a position in the track currently playing.
+    def seek(self, value: int) -> dict[str, Any]:
+        """Seek to an absolute position in the track currently playing.
+
+        See :meth:`seek_backward` and :meth:`seek_forward` for relative seeking.
 
         Args:
-            value: The position to seek to, in seconds, or one of the strings
-                "plus" and "minus" to seek relatively to the current position
+            value: The position to seek to, in seconds
 
         Returns:
             A dictionary containing the response from the Volumio API
@@ -588,6 +589,30 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._send_command(f"seek&position={value}")
+
+    def seek_backward(self) -> dict[str, Any]:
+        """Seek backward by 10 seconds in the track currently playing.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("seek&position=minus")
+
+    def seek_forward(self) -> dict[str, Any]:
+        """Seek forward by 10 seconds in the track currently playing.
+
+        Returns:
+            A dictionary containing the response from the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return self._send_command("seek&position=plus")
 
     @property
     def state(self) -> dict[str, Any]:

@@ -6664,22 +6664,22 @@ class TestSeekCommand:
         assert result.output == ""
 
     @pytest.mark.parametrize(
-        ("spelling", "canonical"),
+        ("spelling", "method"),
         [
-            ("plus", "plus"),
-            ("increase", "plus"),
-            ("up", "plus"),
-            ("forward", "plus"),
-            ("minus", "minus"),
-            ("decrease", "minus"),
-            ("down", "minus"),
-            ("backward", "minus"),
+            ("plus", "seek_forward"),
+            ("increase", "seek_forward"),
+            ("up", "seek_forward"),
+            ("forward", "seek_forward"),
+            ("minus", "seek_backward"),
+            ("decrease", "seek_backward"),
+            ("down", "seek_backward"),
+            ("backward", "seek_backward"),
         ],
     )
     def test_relative_values(
-        self, runner: CliRunner, mocker: MockerFixture, spelling: str, canonical: str
+        self, runner: CliRunner, mocker: MockerFixture, spelling: str, method: str
     ):
-        """The relative aliases reach the client as their canonical keyword."""
+        """The relative aliases dispatch to the dedicated client methods."""
         mock_client, _ = self._mock_client(mocker)
 
         result = runner.invoke(
@@ -6687,7 +6687,8 @@ class TestSeekCommand:
         )
 
         assert result.exit_code == 0
-        mock_client.seek.assert_called_once_with(canonical)
+        getattr(mock_client, method).assert_called_once_with()
+        mock_client.seek.assert_not_called()
 
     @pytest.mark.parametrize(
         ("value", "expected"),
@@ -6811,9 +6812,12 @@ class TestSeekCommand:
         mock_client.state_property.assert_not_called()
         mock_client.seek.assert_called_once_with(3600)
 
-    @pytest.mark.parametrize("spelling", ["plus", "minus"])
+    @pytest.mark.parametrize(
+        ("spelling", "method"),
+        [("plus", "seek_forward"), ("minus", "seek_backward")],
+    )
     def test_relative_values_are_not_checked(
-        self, runner: CliRunner, mocker: MockerFixture, spelling: str
+        self, runner: CliRunner, mocker: MockerFixture, spelling: str, method: str
     ):
         """The relative keywords are exempt from the check."""
         mock_client, _ = self._mock_client(mocker, state={"duration": 300})
@@ -6824,7 +6828,8 @@ class TestSeekCommand:
 
         assert result.exit_code == 0
         mock_client.state_property.assert_not_called()
-        mock_client.seek.assert_called_once_with(spelling)
+        getattr(mock_client, method).assert_called_once_with()
+        mock_client.seek.assert_not_called()
 
     @pytest.mark.parametrize(
         "state",
