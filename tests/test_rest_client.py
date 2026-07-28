@@ -1232,6 +1232,38 @@ class TestVolumioRESTAPIClient:
         mock_send_command.assert_called_once_with("volume&volume=minus")
         assert result["response"] == "volume"
 
+    @pytest.mark.parametrize("value", [True, False])
+    def test_is_muted(self, mocker: MockerFixture, value: bool):
+        """Test reading the is_muted property from the playback state."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "play", "mute": value}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        assert client.is_muted is value
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/getState", timeout=5.0
+        )
+
+    @pytest.mark.parametrize(
+        "state",
+        [{"status": "play"}, {"status": "play", "mute": "yes"}],
+        ids=["missing", "not-a-boolean"],
+    )
+    def test_is_muted_invalid_flag(self, mocker: MockerFixture, state: dict):
+        """Test reading the is_muted property with a missing or non-boolean flag."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = state
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError, match="boolean mute flag"):
+            _ = client.is_muted
+
     def test_mute(self, mocker: MockerFixture):
         """Test mute() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())

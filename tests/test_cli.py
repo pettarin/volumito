@@ -1886,6 +1886,55 @@ class TestCLICommands:
         mock_client.unmute.assert_called_once_with()
         mock_client.volume_property.assert_not_called()
 
+    @pytest.mark.parametrize("value", [True, False])
+    def test_is_muted(self, runner: CliRunner, mocker: MockerFixture, value: bool):
+        """playback is_muted prints the mute flag read from the client."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "is_muted", return_value=value)
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["playback", "is_muted"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == str(value)
+        mock_client.is_muted_property.assert_called_once_with()
+
+    def test_is_muted_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode the mute flag is printed as a JSON boolean."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "is_muted", return_value=True)
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["-m", "playback", "is_muted"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "true"
+
+    def test_is_muted_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """playback is_muted exits 1 on a connection error."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client, "is_muted", side_effect=VolumioConnectionError("Connection failed")
+        )
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["playback", "is_muted"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
     def test_track_info_help(self, runner: CliRunner):
         """Test track info command with --help."""
         result = runner.invoke(main, ["track", "info", "--help"])

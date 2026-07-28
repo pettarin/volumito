@@ -443,6 +443,30 @@ class VolumioRESTAPIClient:
         """
         return self._send_command("volume&volume=plus")
 
+    @property
+    def is_muted(self) -> bool:
+        """Whether the playback volume of the Volumio instance is muted.
+
+        Each access performs a fresh HTTP request (reading the playback state).
+
+        See :meth:`mute` and :meth:`unmute` for muting and unmuting the volume.
+
+        Returns:
+            True if the volume is muted, False otherwise
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response, or the playback
+                state does not contain a boolean mute flag
+        """
+        value = self.state.get("mute")
+        if not isinstance(value, bool):
+            raise VolumioAPIError(
+                f"Expected a boolean mute flag in the Volumio state, "
+                f"got {type(value).__name__}"
+            )
+        return value
+
     def mute(self) -> dict[str, Any]:
         """Mute the playback volume.
 

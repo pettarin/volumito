@@ -10,11 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Command `playback is_muted`, printing whether the volume is muted
 - Methods `get_story` and `get_album_credits` to the REST API client, taking the new
   entity dataclasses `Album`, `Artist`, `Label`, and `Place` (by free text or MBID)
 - Methods `increase_volume` and `decrease_volume` to the REST API client
 - Methods `mute` and `unmute` to the REST API client
 - Methods `seek_forward` and `seek_backward` to the REST API client
+- Read-only property `is_muted` to the REST API client
 
 ### Changed
 

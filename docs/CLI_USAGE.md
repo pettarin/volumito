@@ -418,6 +418,9 @@ volumito playback volume unmute
 # `playback mute` and `playback unmute` are synonyms for the two commands above
 volumito playback mute
 volumito playback unmute
+
+# Print whether the volume is muted (True/False; -m prints the JSON booleans true/false)
+volumito playback is_muted
 ```
 
 ## Seek Control

@@ -628,6 +628,18 @@ def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
+@playback.command("is_muted")
+@click.pass_context
+def is_muted(ctx: click.Context) -> None:
+    """Print whether the volume of the Volumio instance is muted.
+
+    In machine-readable mode the value is printed as a JSON boolean
+    (``true``/``false``).
+    """
+    muted = fetch_or_exit(ctx, lambda c: c.is_muted)
+    click.echo(json.dumps(muted) if ctx.obj["machine_readable"] else muted)
+
+
 @main.group()
 @click.pass_context
 def track(ctx: click.Context) -> None:

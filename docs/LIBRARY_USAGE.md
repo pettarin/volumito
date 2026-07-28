@@ -56,6 +56,7 @@ client.stop()
 print(client.volume)
 client.volume = 50
 client.mute()
+print(client.is_muted)
 client.unmute()
 
 # print the current queue
