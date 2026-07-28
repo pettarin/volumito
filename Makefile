@@ -27,7 +27,9 @@
 	test \
 	test-all \
 	test-unit \
-	uninstall-this
+	uninstall-this \
+	upload-production-pypi \
+	upload-test-pypi
 
 help:
 	@echo "Available targets:"
@@ -159,4 +161,16 @@ micromamba-reinstall-e-this-dev: \
 micromamba-reinstall-e-this-dev-test: \
 	micromamba-reinstall-e-this-dev \
 	test
+
+upload-production-pypi: \
+	reinstall-e-this-dev-test \
+	clean \
+	build-sdist
+	python3 -m twine upload --repository pypi dist/*
+
+upload-test-pypi: \
+	reinstall-e-this-dev-test \
+	clean \
+	build-sdist
+	python3 -m twine upload --repository testpypi dist/*
 
