@@ -16,12 +16,15 @@ Rough plan, broken down by milestone:
 - Library: add async REST API client
 - CLI: allow choosing any of the implemented clients
 
-## v1.0.0
+## v0.4.0
 
 - Library: add WebSocket client
+
+## v1.0.0
+
 - Establish a CI/CD workflow for the `volumito` package
-- Establish a CI/CD workflow for the documentation
-- Add info for contributors
+- Establish a CI/CD workflow for the Sphinx documentation
+- Review info for contributors
 
 ## v2.0.0
 
