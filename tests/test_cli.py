@@ -144,6 +144,24 @@ def _queue_tracks(payloads: list[dict[str, object]]) -> list[QueueTrack]:
     return [QueueTrack.from_raw(payload) for payload in payloads]
 
 
+def _played_positions(mock_client: Mock) -> list[object]:
+    """Return the queue position of every play() call on the mocked client.
+
+    The queue download plays a track of the queue, the other callers a position.
+
+    Args:
+        mock_client: The mocked VolumioRESTAPIClient instance
+
+    Returns:
+        The played queue position of each call, in call order
+    """
+    positions: list[object] = []
+    for call in mock_client.play.call_args_list:
+        played = call.args[0] if call.args else None
+        positions.append(played.position if isinstance(played, QueueTrack) else played)
+    return positions
+
+
 def _attach_story(mock_client: Mock, envelope: dict[str, object]) -> None:
     """Make the story query methods marshal a raw envelope like the client does.
 
@@ -5698,7 +5716,7 @@ class TestQueueDownload:
         assert log["tracks"][0]["source_uri"] == "http://h/a.flac"
         # Stop at the start and at the end; play each track, then reposition to the first
         assert client.stop.call_count == 2
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 0]
         assert client.pause.call_count == 2
         assert "Downloaded 2, skipped 0, errors 0" in result.output
         assert f"Creating manifest file {log_path}" in result.output
@@ -6495,7 +6513,7 @@ class TestQueueDownload:
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
         # The retry replays position 1; the final reposition plays 0 again
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 1, 0]
 
     def test_download_metadata_never_current_marks_error(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6531,7 +6549,7 @@ class TestQueueDownload:
         _, log = self._read_log(tmp_path)
         assert "after 0 retries" in log["tracks"][1]["error"]
         # No retry: one play per track plus the final reposition
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 0]
 
     def test_download_no_check_next_track(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6549,7 +6567,7 @@ class TestQueueDownload:
         assert result.exit_code == 0
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 0]
 
     def test_download_duplicate_adjacent_tracks_accepted(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6571,7 +6589,7 @@ class TestQueueDownload:
         assert result.exit_code == 0
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "skipped"]
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 0]
 
     def test_download_album_volume_key(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """{album_volume} creates per-volume subdirectories for multi-volume albums."""
@@ -6950,7 +6968,7 @@ class TestQueueDownload:
         _, log = self._read_log(out)
         assert "after 0 retries" in log["tracks"][1]["error"]
         # No retry: one play per track plus the final reposition
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 0]
 
     def test_download_albumart_custom_template(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -7082,7 +7100,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
 
         assert result.exit_code == 0
-        assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
+        assert _played_positions(client) == [0, 1, 0]
 
 
 class TestPlaylistDownload:

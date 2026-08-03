@@ -73,8 +73,9 @@ for index, track in enumerate(client.queue, 1):
 # 5. Ratafià - Paolo Conte
 # ...
 
-# play the 4th track of the current queue
+# play the 4th track of the current queue, by track or by position
 # (positions start at index zero)
+client.play(client.queue[3])
 client.play(3)
 
 # read the seek position, then seek to 01:42 (both in seconds)
@@ -93,7 +94,7 @@ for playlist in client.playlists:
 # Rock
 # ...
 
-# play one, checking that it exists first
+# play one, by playlist or by name, checking that it exists first
 playlist_name = "Jazz Classics"
 if playlist_name in client.playlists:
     client.play_playlist(playlist_name)
@@ -155,6 +156,10 @@ typed and validated. A few things worth knowing:
 - `PlayerState` also offers the `is_playing`, `is_paused`, and `is_stopped` flags,
   computed from the state already fetched (unlike the client properties of the same
   name, which each perform a fresh request).
+- **A queue track knows its position.** The Volumio API reports the queue as an array,
+  so `Queue` gives each of its tracks the `position` it holds (starting from zero);
+  `client.play(queue[3])` plays it. A `QueueTrack` parsed on its own has no position.
+  Likewise, `client.play_playlist(playlist)` accepts one of the saved playlists.
 
 Units follow the Volumio API: `PlayerState.seek` is in **milliseconds**, while
 `duration` and the `seek` property of the client are in **seconds**.

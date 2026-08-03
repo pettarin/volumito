@@ -22,8 +22,10 @@ from volumito.clients.models import (
     CollectionStatistics,
     CommandResponse,
     PlayerState,
+    Playlist,
     Playlists,
     Queue,
+    QueueTrack,
     Story,
     SystemInfo,
     SystemVersion,
@@ -609,36 +611,53 @@ class VolumioRESTAPIClient:
         """
         return self._get_text("/api/v1/ping")
 
-    def play(self, position: int | None = None) -> CommandResponse:
+    def play(self, position: int | QueueTrack | None = None) -> CommandResponse:
         """Start playback.
 
+        The track to play can be given by its position in the queue, or as a track of
+        the queue itself (e.g., ``client.play(client.queue[3])``).
+
         Args:
-            position: Optional position in the queue to play (0-indexed)
+            position: Optional position in the queue to play (0-indexed), or a track
+                of the queue
 
         Returns:
             The response of the Volumio API
 
         Raises:
+            ValueError: If the given track does not know its position in the queue
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
+        if isinstance(position, QueueTrack):
+            if position.position is None:
+                raise ValueError("The track does not belong to a queue")
+            return self._send_command(f"play&N={position.position}")
         if position is not None:
             return self._send_command(f"play&N={position}")
         return self._send_command("play")
 
-    def play_playlist(self, name: str) -> CommandResponse:
+    def play_playlist(self, name: str | Playlist) -> CommandResponse:
         """Start playback of a saved playlist.
 
+        The playlist can be given by name, or as one of the saved playlists (e.g.,
+        ``client.play_playlist(client.playlists[0])``).
+
         Args:
-            name: The name of the playlist to play
+            name: The name of the playlist to play, or the playlist itself
 
         Returns:
             The response of the Volumio API
 
         Raises:
+            ValueError: If the given playlist has no name
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
+        if isinstance(name, Playlist):
+            if name.name is None:
+                raise ValueError("The playlist has no name")
+            name = name.name
         return self._send_command(f"playplaylist&name={quote(name, safe='')}")
 
     @property

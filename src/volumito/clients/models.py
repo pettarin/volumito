@@ -362,6 +362,13 @@ class QueueTrack(VolumioModel):
     name: str | None = None
     """The name of the track (usually the same as its title)."""
 
+    position: int | None = None
+    """The position of the track in the queue, starting from zero.
+
+    Assigned by the :class:`Queue` the track belongs to (the Volumio API reports the
+    queue as an array, without positions), and None for a track parsed on its own.
+    """
+
     samplerate: str | None = None
     """The sample rate of the track (e.g., ``"44 KHz"``)."""
 
@@ -394,11 +401,23 @@ class Queue(VolumioModel):
     """The playback queue of a Volumio instance.
 
     The queue is a sequence of its tracks: it can be iterated, indexed, and measured
-    with ``len()``.
+    with ``len()``. Each track is given its ``position`` in the queue, so it can be
+    played directly (see the ``play`` method of the REST API client).
     """
 
     tracks: list[QueueTrack] = Field(default_factory=list, alias="queue")
     """The tracks of the queue, in queue order."""
+
+    @model_validator(mode="after")
+    def _assign_positions(self) -> Self:
+        """Give each track its position in the queue.
+
+        Returns:
+            The queue, with the position of every track assigned
+        """
+        for position, track in enumerate(self.tracks):
+            track.position = position
+        return self
 
     def __getitem__(self, index: int) -> QueueTrack:
         """Return the track at the given position of the queue."""

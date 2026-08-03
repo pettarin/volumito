@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the payload it was parsed from in its `raw` attribute
 - Exception `VolumioStoryError`, raised when the Volumio host reports a failed story query
 - Flags `is_playing`, `is_paused`, and `is_stopped` on the playback state model
+- The queue tracks carry their position, so the client plays a `QueueTrack` (and a
+  `Playlist`) directly
 
 ### Changed
 

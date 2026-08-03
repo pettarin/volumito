@@ -15,7 +15,7 @@ from volumito.clients import (
     Place,
     VolumioHostConfiguration,
 )
-from volumito.clients.models import CommandResponse, Queue
+from volumito.clients.models import CommandResponse, Playlist, Playlists, Queue, QueueTrack
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -632,6 +632,28 @@ class TestVolumioRESTAPIClient:
         )
         assert data.response == "playPlaylist Response"
 
+    def test_play_playlist_with_a_playlist(self, mocker: MockerFixture):
+        """Test play_playlist() call with one of the saved playlists."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "playPlaylist"})
+        playlists = Playlists.from_names(["Jazz Classics", "Rock"])
+
+        result = client.play_playlist(playlists[0])
+
+        mock_send_command.assert_called_once_with("playplaylist&name=Jazz%20Classics")
+        assert result.response == "playPlaylist"
+
+    def test_play_playlist_with_a_nameless_playlist(self, mocker: MockerFixture):
+        """Test play_playlist() call with a playlist that has no name."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+
+        with pytest.raises(ValueError, match="no name"):
+            client.play_playlist(Playlist.from_raw({}))
+
+        mock_send_command.assert_not_called()
+
     def test_play_playlist_name_is_percent_encoded(self, mocker: MockerFixture):
         """Test play_playlist() percent-encodes the playlist name."""
         mock_response = mocker.Mock()
@@ -1126,6 +1148,28 @@ class TestVolumioRESTAPIClient:
 
         mock_send_command.assert_called_once_with("play&N=5")
         assert result.response == "play"
+
+    def test_play_with_queue_track(self, mocker: MockerFixture):
+        """Test play() method with a track of the queue."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "play"})
+        queue = Queue.from_raw({"queue": [{"title": "A"}, {"title": "B"}, {"title": "C"}]})
+
+        result = client.play(queue[2])
+
+        mock_send_command.assert_called_once_with("play&N=2")
+        assert result.response == "play"
+
+    def test_play_with_a_track_outside_a_queue(self, mocker: MockerFixture):
+        """Test play() method with a track that does not know its position."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        mock_send_command = mocker.patch.object(client, "_send_command")
+
+        with pytest.raises(ValueError, match="does not belong to a queue"):
+            client.play(QueueTrack.from_raw({"title": "A"}))
+
+        mock_send_command.assert_not_called()
 
     def test_pause(self, mocker: MockerFixture):
         """Test pause() method."""

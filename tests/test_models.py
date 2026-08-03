@@ -305,6 +305,23 @@ class TestQueue:
         assert queue[1].title == "Fuoco sui giocattoli"
         assert [track.tracknumber for track in queue] == [1, 2]
 
+    def test_the_queue_numbers_its_tracks(self):
+        """Every track knows its position in the queue, starting from zero."""
+        queue = Queue.from_raw(self._PAYLOAD)
+
+        assert [track.position for track in queue] == [0, 1]
+
+    def test_the_position_is_not_part_of_the_payload(self):
+        """The assigned position does not enter the raw payloads."""
+        queue = Queue.from_raw(self._PAYLOAD)
+
+        assert "position" not in queue.raw["queue"][0]
+        assert "position" not in queue[0].raw
+
+    def test_a_track_outside_a_queue_has_no_position(self):
+        """A track parsed on its own does not know any position."""
+        assert QueueTrack.from_raw({"title": "A Song"}).position is None
+
     def test_each_track_keeps_its_raw_payload(self):
         """Every nested track holds the payload it was parsed from."""
         queue = Queue.from_raw(self._PAYLOAD)

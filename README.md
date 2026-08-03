@@ -353,8 +353,9 @@ for index, track in enumerate(client.queue, 1):
 # 5. Ratafià - Paolo Conte
 # ...
 
-# play the 4th track of the current queue
+# play the 4th track of the current queue, by track or by position
 # (positions start at index zero)
+client.play(client.queue[3])
 client.play(3)
 
 # read the seek position, then seek to 01:42 (both in seconds)

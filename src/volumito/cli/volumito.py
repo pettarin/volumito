@@ -1180,7 +1180,7 @@ def queue_download(
                     )
                     attempt = 0
                     while True:
-                        client.play(index)
+                        client.play(tracks[index])
                         rest_api_sleep(ctx)
                         client.pause()
                         rest_api_sleep(ctx)
