@@ -309,28 +309,24 @@ host = VolumioHostConfiguration(host="volumio.local")
 client = VolumioRESTAPIClient(host)
 
 
-# retrieve and print the system information
-print(client.system_info)
-# {'id': 'REDACTED', 'host': 'http://192.168.1.122', 'name': 'volumio',
-# 'type': 'device', 'serviceName': 'Volumio', 'state': {'status': 'play',
-# 'volume': 39, 'mute': False, 'artist': 'Paolo Conte', 'track': 'Recitando',
-# 'albumart': 'https://static.qobuz.com/images/covers/jc/sa/m0kxbt4a8sajc_600.jpg'},
-# 'systemversion': '4.119', 'builddate': 'Tue Mar 24 17:20:52 UTC 2026',
-# 'variant': 'volumio', 'hardware': 'pi', 'os': '12', 'isPremiumDevice': False,
-# 'isVolumioProduct': False, 'hwUuid': 'REDACTED'}
+# retrieve the system information
+info = client.system_info
+print(info.name, info.system_version, info.is_premium_device)
+# volumio 4.119 False
 
 
-# retrieve and print the current playing state
-print(client.state)
-# {'status': 'play', 'position': 5, 'title': 'Recitando', 'artist': 'Paolo Conte',
-# 'album': "Paolo Conte Alla Scala - il Maestro è nell'anima",
-# 'albumart': 'https://static.qobuz.com/images/covers/jc/sa/m0kxbt4a8sajc_600.jpg',
-# 'uri': 'qobuz://song/264525074', 'trackType': 'qobuz', 'seek': 125029,
-# 'duration': 229, 'samplerate': '44.1 kHz', 'bitdepth': '24 bit',
-# 'channels': 2, 'bitrate': '1347 Kbps', 'random': False, 'repeat': False,
-# 'repeatSingle': False, 'consume': True, 'volume': 49, 'dbVolume': None,
-# 'mute': False, 'disableVolumeControl': False, 'stream': False,
-# 'updatedb': False, 'volatile': False, 'service': 'qobuz'}
+# retrieve the current playing state
+state = client.state
+print(state.title, "-", state.artist, "-", state.album)
+# Recitando - Paolo Conte - Paolo Conte Alla Scala - il Maestro è nell'anima
+print(state.status, state.volume, state.seek, state.duration)
+# play 49 125029 229
+print(state.is_playing, state.is_paused, state.is_stopped)
+# True False False
+
+# the payload the Volumio host returned is always available
+print(state.raw["trackType"], state.raw["samplerate"])
+# qobuz 44.1 kHz
 
 # pause/play/stop the current track (and check the playback status)
 client.pause()
@@ -347,10 +343,9 @@ client.mute()
 print(client.is_muted)
 client.unmute()
 
-# print the current queue
-queue = client.queue["queue"]
-for index, item in enumerate(queue, 1):
-    print(f"{index}. {item.get('title')} - {item.get('artist')}")
+# print the current queue (which is a sequence of its tracks)
+for index, track in enumerate(client.queue, 1):
+    print(f"{index}. {track.title} - {track.artist}")
 # 1. Aguaplano - Paolo Conte
 # 2. Sotto Le Stelle Del Jazz - Paolo Conte
 # 3. Come Di - Paolo Conte
@@ -371,7 +366,14 @@ client.previous()
 client.next()
 
 
-# list playlists and play one
+# list the saved playlists (which are a sequence of their playlists)
+for playlist in client.playlists:
+    print(playlist.name)
+# Jazz Classics
+# Rock
+# ...
+
+# play one, checking that it exists first
 playlist_name = "Jazz Classics"
 if playlist_name in client.playlists:
     client.play_playlist(playlist_name)

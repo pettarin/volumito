@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.30] - 2026-08-03
 
+### Added
+
+- Pydantic models of the Volumio API responses (`PlayerState`, `Queue`, `QueueTrack`,
+  `Playlists`, `Playlist`, `SystemInfo`, `SystemVersion`, `DeviceState`,
+  `CollectionStatistics`, `Zones`, `Zone`, `Story`, `CommandResponse`), each keeping
+  the payload it was parsed from in its `raw` attribute
+- Exception `VolumioStoryError`, raised when the Volumio host reports a failed story query
+- Flags `is_playing`, `is_paused`, and `is_stopped` on the playback state model
+
+### Changed
+
+- The REST API client returns the response models instead of the raw JSON (including
+  the playlists, which are now a `Playlists` collection instead of a list of names):
+  the model fields are snake_case (with the Volumio names as aliases), and a value
+  that does not fit its field is ignored instead of failing the whole response
+- The story query methods return the story itself, raising `VolumioStoryError` when the
+  Volumio host reports a failure
+
+### Fixed
+
+- A story query the Volumio host cannot answer exits 1 reporting the error, instead of
+  printing an empty result
+
 
 ## [0.0.29] - 2026-08-03
 

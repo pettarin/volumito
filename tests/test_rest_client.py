@@ -15,6 +15,7 @@ from volumito.clients import (
     Place,
     VolumioHostConfiguration,
 )
+from volumito.clients.models import CommandResponse, Queue
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -74,9 +75,11 @@ class TestVolumioRESTAPIClient:
         )
 
         # Verify the response
-        assert state["status"] == "play"
-        assert state["title"] == "Test Song"
-        assert state["artist"] == "Test Artist"
+        assert state.status == "play"
+        assert state.title == "Test Song"
+        assert state.artist == "Test Artist"
+        # The raw payload stays available on the model
+        assert state.raw["service"] == "mpd"
 
     def test_state_connection_error(self, mocker: MockerFixture):
         """Test the state property with connection error."""
@@ -212,10 +215,11 @@ class TestVolumioRESTAPIClient:
         )
 
         # Verify the response
-        assert "queue" in queue_data
-        assert len(queue_data["queue"]) == 2
-        assert queue_data["queue"][0]["title"] == "Song 1"
-        assert queue_data["queue"][1]["title"] == "Song 2"
+        assert isinstance(queue_data, Queue)
+        assert len(queue_data) == 2
+        assert queue_data[0].title == "Song 1"
+        assert queue_data.tracks[1].title == "Song 2"
+        assert queue_data.raw["queue"][0]["service"] == "qobuz"
 
     def test_queue_connection_error(self, mocker: MockerFixture):
         """Test the queue property with connection error."""
@@ -378,7 +382,7 @@ class TestVolumioRESTAPIClient:
         mock_get.assert_called_once_with(
             "http://volumio.local:3000/api/v1/getSystemVersion", timeout=5.0
         )
-        assert data["systemversion"] == "3.601"
+        assert data.system_version == "3.601"
 
     def test_system_version_timeout_error(self, mocker: MockerFixture):
         """Test the system_version property translates a timeout error."""
@@ -425,7 +429,7 @@ class TestVolumioRESTAPIClient:
         mock_get.assert_called_once_with(
             "http://volumio.local:3000/api/v1/getSystemInfo", timeout=5.0
         )
-        assert data["name"] == "volumio"
+        assert data.name == "volumio"
 
     def test_system_info_non_dict_response(self, mocker: MockerFixture):
         """Test the system_info property when the API returns non-dictionary JSON."""
@@ -473,7 +477,7 @@ class TestVolumioRESTAPIClient:
         mock_get.assert_called_once_with(
             "http://volumio.local:3000/api/v1/collectionstats", timeout=5.0
         )
-        assert data["songs"] == 105
+        assert data.songs == 105
 
     def test_collection_statistics_connection_error(self, mocker: MockerFixture):
         """Test the collection_statistics property translates a connection error."""
@@ -520,7 +524,8 @@ class TestVolumioRESTAPIClient:
         mock_get.assert_called_once_with(
             "http://volumio.local:3000/api/v1/getzones", timeout=5.0
         )
-        assert data["zones"][0]["name"] == "Volumio"
+        assert data[0].name == "Volumio"
+        assert data.zones[0].is_self is True
 
     def test_zones_connection_error(self, mocker: MockerFixture):
         """Test the zones property translates a connection error."""
@@ -563,7 +568,11 @@ class TestVolumioRESTAPIClient:
         mock_get.assert_called_once_with(
             "http://volumio.local:3000/api/v1/listplaylists", timeout=5.0
         )
-        assert data == ["Rock", "Jazz"]
+        assert data.names == ["Rock", "Jazz"]
+        assert data[0].name == "Rock"
+        assert "Jazz" in data
+        # The listed names stay available on the model
+        assert data.raw == ["Rock", "Jazz"]
 
     def test_playlists_connection_error(self, mocker: MockerFixture):
         """Test the playlists property translates a connection error."""
@@ -621,7 +630,7 @@ class TestVolumioRESTAPIClient:
             "http://volumio.local:3000/api/v1/commands/?cmd=playplaylist&name=Rock",
             timeout=5.0,
         )
-        assert data["response"] == "playPlaylist Response"
+        assert data.response == "playPlaylist Response"
 
     def test_play_playlist_name_is_percent_encoded(self, mocker: MockerFixture):
         """Test play_playlist() percent-encodes the playlist name."""
@@ -788,10 +797,13 @@ class TestVolumioRESTAPIClient:
         mock_post = self._mock_story_post(mocker)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
-        data = client.get_story(artist=Artist("Mango"))
+        story = client.get_story(artist=Artist("Mango"))
 
         self._assert_story_posted(mock_post, {"mode": "storyArtist", "artist": "Mango"})
-        assert data["success"] is True
+        assert story.type == "story"
+        assert story.value == "A story."
+        # The whole response envelope stays available on the model
+        assert story.raw == {"success": True, "data": {"type": "story", "value": "A story."}}
 
     def test_get_story_artist_mbid(self, mocker: MockerFixture):
         """Test get_story() with an artist by MBID."""
@@ -933,12 +945,12 @@ class TestVolumioRESTAPIClient:
         mock_post = self._mock_story_post(mocker)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
-        data = client.get_album_credits(Artist("Mango"), Album("Sirtaki"))
+        story = client.get_album_credits(Artist("Mango"), Album("Sirtaki"))
 
         self._assert_story_posted(
             mock_post, {"mode": "creditsAlbum", "artist": "Mango", "album": "Sirtaki"}
         )
-        assert data["success"] is True
+        assert story.value == "A story."
 
     def test_get_album_credits_mbid(self, mocker: MockerFixture):
         """Test get_album_credits() with an album by MBID."""
@@ -981,7 +993,8 @@ class TestVolumioRESTAPIClient:
         )
 
         # Verify the response
-        assert response["response"] == "play"
+        assert response.response == "play"
+        assert response.time == 1234567890
 
     def test_send_command_connection_error(self, mocker: MockerFixture):
         """Test _send_command() with connection error."""
@@ -1085,84 +1098,84 @@ class TestVolumioRESTAPIClient:
         """Test toggle() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "toggle"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "toggle"})
 
         result = client.toggle()
 
         mock_send_command.assert_called_once_with("toggle")
-        assert result["response"] == "toggle"
+        assert result.response == "toggle"
 
     def test_play(self, mocker: MockerFixture):
         """Test play() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "play"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "play"})
 
         result = client.play()
 
         mock_send_command.assert_called_once_with("play")
-        assert result["response"] == "play"
+        assert result.response == "play"
 
     def test_play_with_position(self, mocker: MockerFixture):
         """Test play() method with position parameter."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "play"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "play"})
 
         result = client.play(position=5)
 
         mock_send_command.assert_called_once_with("play&N=5")
-        assert result["response"] == "play"
+        assert result.response == "play"
 
     def test_pause(self, mocker: MockerFixture):
         """Test pause() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "pause"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "pause"})
 
         result = client.pause()
 
         mock_send_command.assert_called_once_with("pause")
-        assert result["response"] == "pause"
+        assert result.response == "pause"
 
     def test_stop(self, mocker: MockerFixture):
         """Test stop() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "stop"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "stop"})
 
         result = client.stop()
 
         mock_send_command.assert_called_once_with("stop")
-        assert result["response"] == "stop"
+        assert result.response == "stop"
 
     def test_next(self, mocker: MockerFixture):
         """Test next() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "next"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "next"})
 
         result = client.next()
 
         mock_send_command.assert_called_once_with("next")
-        assert result["response"] == "next"
+        assert result.response == "next"
 
     def test_previous(self, mocker: MockerFixture):
         """Test previous() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "prev"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "prev"})
 
         result = client.previous()
 
         mock_send_command.assert_called_once_with("prev")
-        assert result["response"] == "prev"
+        assert result.response == "prev"
 
     def test_volume_setter(self, mocker: MockerFixture):
         """Test setting the volume property to an absolute integer level."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "volume"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "volume"})
 
         client.volume = 50
 
@@ -1214,23 +1227,23 @@ class TestVolumioRESTAPIClient:
         """Test increase_volume() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "volume"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "volume"})
 
         result = client.increase_volume()
 
         mock_send_command.assert_called_once_with("volume&volume=plus")
-        assert result["response"] == "volume"
+        assert result.response == "volume"
 
     def test_decrease_volume(self, mocker: MockerFixture):
         """Test decrease_volume() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "volume"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "volume"})
 
         result = client.decrease_volume()
 
         mock_send_command.assert_called_once_with("volume&volume=minus")
-        assert result["response"] == "volume"
+        assert result.response == "volume"
 
     @pytest.mark.parametrize("value", [True, False])
     def test_is_muted(self, mocker: MockerFixture, value: bool):
@@ -1249,7 +1262,7 @@ class TestVolumioRESTAPIClient:
 
     @pytest.mark.parametrize(
         "state",
-        [{"status": "play"}, {"status": "play", "mute": "yes"}],
+        [{"status": "play"}, {"status": "play", "mute": "maybe"}],
         ids=["missing", "not-a-boolean"],
     )
     def test_is_muted_invalid_flag(self, mocker: MockerFixture, state: dict):
@@ -1316,29 +1329,29 @@ class TestVolumioRESTAPIClient:
         """Test mute() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "volume"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "volume"})
 
         result = client.mute()
 
         mock_send_command.assert_called_once_with("volume&volume=mute")
-        assert result["response"] == "volume"
+        assert result.response == "volume"
 
     def test_unmute(self, mocker: MockerFixture):
         """Test unmute() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "volume"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "volume"})
 
         result = client.unmute()
 
         mock_send_command.assert_called_once_with("volume&volume=unmute")
-        assert result["response"] == "volume"
+        assert result.response == "volume"
 
     def test_seek_setter(self, mocker: MockerFixture):
         """Test setting the seek property to a number of seconds."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "seek"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "seek"})
 
         client.seek = 252
 
@@ -1380,23 +1393,23 @@ class TestVolumioRESTAPIClient:
         """Test seek_backward() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "seek"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "seek"})
 
         result = client.seek_backward()
 
         mock_send_command.assert_called_once_with("seek&position=minus")
-        assert result["response"] == "seek"
+        assert result.response == "seek"
 
     def test_seek_forward(self, mocker: MockerFixture):
         """Test seek_forward() method."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "seek"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "seek"})
 
         result = client.seek_forward()
 
         mock_send_command.assert_called_once_with("seek&position=plus")
-        assert result["response"] == "seek"
+        assert result.response == "seek"
 
     def test_seek_connection_error(self, mocker: MockerFixture):
         """Test the seek setter translates a connection error."""
@@ -1416,29 +1429,29 @@ class TestVolumioRESTAPIClient:
         """Test clear() method sends the clearQueue command."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "clearQueue"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "clearQueue"})
 
         result = client.clear()
 
         mock_send_command.assert_called_once_with("clearQueue")
-        assert result["response"] == "clearQueue"
+        assert result.response == "clearQueue"
 
     def test_repeat_toggle(self, mocker: MockerFixture):
         """Test repeat() with no value sends the bare repeat command (toggle)."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "repeat"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "repeat"})
 
         result = client.repeat()
 
         mock_send_command.assert_called_once_with("repeat")
-        assert result["response"] == "repeat"
+        assert result.response == "repeat"
 
     def test_repeat_on(self, mocker: MockerFixture):
         """Test repeat(True) sends the repeat command with value=true."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "repeat"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "repeat"})
 
         client.repeat(True)
 
@@ -1448,7 +1461,7 @@ class TestVolumioRESTAPIClient:
         """Test repeat(False) sends the repeat command with value=false."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "repeat"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "repeat"})
 
         client.repeat(False)
 
@@ -1458,18 +1471,18 @@ class TestVolumioRESTAPIClient:
         """Test randomize() with no value sends the bare random command (toggle)."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "random"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "random"})
 
         result = client.randomize()
 
         mock_send_command.assert_called_once_with("random")
-        assert result["response"] == "random"
+        assert result.response == "random"
 
     def test_randomize_on(self, mocker: MockerFixture):
         """Test randomize(True) sends the random command with value=true."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "random"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "random"})
 
         client.randomize(True)
 
@@ -1479,7 +1492,7 @@ class TestVolumioRESTAPIClient:
         """Test randomize(False) sends the random command with value=false."""
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         mock_send_command = mocker.patch.object(client, "_send_command")
-        mock_send_command.return_value = {"response": "random"}
+        mock_send_command.return_value = CommandResponse.from_raw({"response": "random"})
 
         client.randomize(False)
 

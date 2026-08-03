@@ -9,8 +9,25 @@ from volumito.clients.errors import (
     VolumioAPIError,
     VolumioConnectionError,
     VolumioError,
+    VolumioStoryError,
 )
 from volumito.clients.host_configuration import Scheme, VolumioHostConfiguration
+from volumito.clients.models import (
+    CollectionStatistics,
+    CommandResponse,
+    DeviceState,
+    PlayerState,
+    Playlist,
+    Playlists,
+    Queue,
+    QueueTrack,
+    Story,
+    SystemInfo,
+    SystemVersion,
+    VolumioModel,
+    Zone,
+    Zones,
+)
 from volumito.clients.mpd import VolumioMPDClient
 from volumito.clients.rest import VolumioRESTAPIClient
 
@@ -20,10 +37,25 @@ __all__ = [
     "Label",
     "Place",
     "Scheme",
+    "CollectionStatistics",
+    "CommandResponse",
+    "DeviceState",
+    "PlayerState",
+    "Playlist",
+    "Playlists",
+    "Queue",
+    "QueueTrack",
+    "Story",
+    "SystemInfo",
+    "SystemVersion",
+    "VolumioModel",
+    "Zone",
+    "Zones",
     "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",
     "VolumioConnectionError",
     "VolumioAPIError",
+    "VolumioStoryError",
 ]

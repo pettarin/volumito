@@ -71,8 +71,10 @@ from volumito.clients import (
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
+    VolumioStoryError,
 )
 from volumito.clients.entities import MusicEntity
+from volumito.clients.models import Story
 
 
 class OnOffParamType(click.ParamType):
@@ -816,7 +818,8 @@ def fetch_or_exit[T](
         fetch: Function to call on the VolumioRESTAPIClient, returning the payload
 
     Returns:
-        Whatever ``fetch`` returns (a dict for the JSON endpoints, text for ping)
+        Whatever ``fetch`` returns (a response model for the JSON endpoints, text
+        for ping)
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -832,6 +835,10 @@ def fetch_or_exit[T](
     except VolumioConnectionError as e:
         if not machine_readable:
             click.echo(f"Connection error: {e}", err=True)
+        sys.exit(1)
+    except VolumioStoryError as e:
+        if not machine_readable:
+            click.echo(f"Story error: {e}", err=True)
         sys.exit(1)
     except VolumioAPIError as e:
         if not machine_readable:
@@ -852,7 +859,7 @@ def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
     Returns:
         The state dictionary returned by the client
     """
-    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.state)
+    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.state.raw)
     return state
 
 
@@ -1374,15 +1381,15 @@ def render_state(
 
 def render_story(
     ctx: click.Context,
-    fetch: Callable[[VolumioRESTAPIClient], dict[str, Any]],
+    fetch: Callable[[VolumioRESTAPIClient], Story],
     fields: str,
     output_format: str,
     heading: str,
 ) -> None:
-    """Fetch a metavolumio story payload and print it per the fields/format options.
+    """Fetch a metavolumio story and print it per the fields/format options.
 
-    A response whose "success" flag is not true is reported as an error (exit
-    code 1). The successful response envelope is rendered like the other query
+    A failed query is reported as an error (exit code 1) by ``fetch_or_exit``. The
+    response envelope of a successful query is rendered like the other query
     commands, honoring the fields and format options.
 
     Args:
@@ -1397,13 +1404,7 @@ def render_story(
     machine_readable = ctx.obj["machine_readable"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
-    response = fetch_or_exit(ctx, fetch)
-
-    if response.get("success") is not True:
-        if not machine_readable:
-            error = response.get("error", "unknown error")
-            click.echo(f"Story error: {error}", err=True)
-        sys.exit(1)
+    response = fetch_or_exit(ctx, fetch).raw
 
     if verbose and not machine_readable:
         click.echo("Successfully retrieved story", err=True)

@@ -21,3 +21,9 @@ class VolumioAPIError(VolumioError):
     """Exception raised when Volumio API returns an error."""
 
     pass
+
+
+class VolumioStoryError(VolumioAPIError):
+    """Exception raised when a Volumio plugin reports a failed story query."""
+
+    pass

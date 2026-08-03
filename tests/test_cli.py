@@ -56,6 +56,17 @@ from volumito.cli.pure_helpers import (
 )
 from volumito.cli.volumito import main
 from volumito.clients import Album, Artist, Label, Place
+from volumito.clients.models import (
+    CollectionStatistics,
+    PlayerState,
+    Playlists,
+    Queue,
+    Story,
+    SystemInfo,
+    SystemVersion,
+    VolumioModel,
+    Zones,
+)
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -84,6 +95,60 @@ def _isolate_config_probing(mocker: MockerFixture):
     )
 
 
+_RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
+    "collection_statistics": CollectionStatistics,
+    "playlists": Playlists,
+    "queue": Queue,
+    "state": PlayerState,
+    "system_info": SystemInfo,
+    "system_version": SystemVersion,
+    "zones": Zones,
+}
+"""The response model each mocked client property returns, keyed by property name."""
+
+
+def _as_model(name: str, value: object) -> object:
+    """Parse a raw payload into the model the named client property returns.
+
+    The tests express the mocked responses as the raw JSON payloads the Volumio API
+    returns; this marshals them exactly like the client does, leaving anything else
+    (scalars, exceptions) untouched.
+
+    Args:
+        name: The property name (e.g., "state")
+        value: The mocked value (a raw payload, or anything else)
+
+    Returns:
+        The parsed model, or the value unchanged
+    """
+    model = _RESPONSE_MODELS.get(name)
+    if model is None:
+        return value
+    if isinstance(value, dict):
+        return model.from_raw(value)
+    if isinstance(value, list) and issubclass(model, Playlists):
+        return model.from_names(value)
+    return value
+
+
+def _attach_story(mock_client: Mock, envelope: dict[str, object]) -> None:
+    """Make the story query methods marshal a raw envelope like the client does.
+
+    A failure envelope therefore raises VolumioStoryError, exactly as the client
+    does when the Volumio host reports a failed query.
+
+    Args:
+        mock_client: The mocked VolumioRESTAPIClient instance
+        envelope: The raw response envelope of the metavolumio query
+    """
+
+    def marshal(*args: object, **kwargs: object) -> Story:
+        return Story.from_envelope(envelope)
+
+    mock_client.get_story.side_effect = marshal
+    mock_client.get_album_credits.side_effect = marshal
+
+
 def _attach_property(mock_client: Mock, name: str, **kwargs: object) -> PropertyMock:
     """Attach a PropertyMock as the ``name`` property of the mocked client.
 
@@ -91,6 +156,8 @@ def _attach_property(mock_client: Mock, name: str, **kwargs: object) -> Property
     so this does not leak across tests). The PropertyMock is also stashed on the
     mock as the plain ``{name}_property`` attribute, so tests can assert on the
     property accesses (e.g., ``mock_client.state_property.assert_not_called()``).
+    Raw payloads given as ``return_value`` (or in a ``side_effect`` list) are parsed
+    into the response model of the property.
 
     Args:
         mock_client: The mocked VolumioRESTAPIClient instance
@@ -100,6 +167,11 @@ def _attach_property(mock_client: Mock, name: str, **kwargs: object) -> Property
     Returns:
         The attached PropertyMock
     """
+    if "return_value" in kwargs:
+        kwargs["return_value"] = _as_model(name, kwargs["return_value"])
+    side_effect = kwargs.get("side_effect")
+    if isinstance(side_effect, list):
+        kwargs["side_effect"] = [_as_model(name, item) for item in side_effect]
     prop = PropertyMock(**kwargs)
     setattr(type(mock_client), name, prop)
     setattr(mock_client, f"{name}_property", prop)
@@ -4896,8 +4968,7 @@ class TestStoryCommands:
             "success": True,
             "data": {"type": "story", "value": "A long story."},
         }
-        mock_client.get_story.return_value = envelope
-        mock_client.get_album_credits.return_value = envelope
+        _attach_story(mock_client, envelope)
         _attach_property(mock_client, "state", return_value={
             "status": "play",
             "title": "La rondine",
@@ -5214,10 +5285,7 @@ class TestStoryCommands:
     def test_failure_envelope(self, runner: CliRunner, mocker: MockerFixture):
         """A success=false response exits 1 with the reported error."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_story.return_value = {
-            "success": False,
-            "error": "Metavolumio not available",
-        }
+        _attach_story(mock_client, {"success": False, "error": "Metavolumio not available"})
 
         result = runner.invoke(main, ["story", "artist", "Mango"])
 
@@ -5227,7 +5295,7 @@ class TestStoryCommands:
     def test_failure_envelope_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """In machine-readable mode a success=false response exits 1 printing nothing."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_story.return_value = {"success": False, "error": "nope"}
+        _attach_story(mock_client, {"success": False, "error": "nope"})
 
         result = runner.invoke(main, ["-m", "story", "artist", "Mango"])
 
@@ -5237,7 +5305,7 @@ class TestStoryCommands:
     def test_failure_envelope_missing_success(self, runner: CliRunner, mocker: MockerFixture):
         """A response without the success flag exits 1 with the fallback error."""
         mock_client = self._mock_client(mocker)
-        mock_client.get_story.return_value = {"data": {"value": "A long story."}}
+        _attach_story(mock_client, {"data": {"value": "A long story."}})
 
         result = runner.invoke(main, ["story", "artist", "Mango"])
 

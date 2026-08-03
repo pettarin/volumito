@@ -76,8 +76,10 @@ volumito/
 │       │   │   └── volumito.yaml.template  # configuration file template
 │       │   └── volumito.py                 # Click-based CLI
 │       └── clients/
+│           ├── entities.py                 # music entity references for the story queries
 │           ├── errors.py                   # VolumioError and its subclasses
 │           ├── host_configuration.py       # VolumioHostConfiguration helper data class
+│           ├── models.py                   # pydantic models of the Volumio API responses
 │           ├── mpd/client.py               # MPD client (track URI)
 │           └── rest/client.py              # REST API client
 ├── tests/                                  # unit tests
@@ -85,6 +87,7 @@ volumito/
 │   ├── test_configuration.py
 │   ├── test_host_configuration.py
 │   ├── test_metadata.py
+│   ├── test_models.py
 │   ├── test_mpd_client.py
 │   └── test_rest_client.py
 ├── LICENSE                                 # full text of the license for this project

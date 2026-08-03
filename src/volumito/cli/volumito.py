@@ -748,7 +748,7 @@ def audio(
     try:
         # Get current track metadata (also validates REST connectivity)
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.state
+        state = client.state.raw
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -863,7 +863,7 @@ def albumart(
     try:
         # Get current state metadata
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.state
+        state = client.state.raw
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -953,7 +953,7 @@ def queue_list(
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        queue_data = client.queue
+        queue_data = client.queue.raw
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved queue", err=True)
@@ -1051,7 +1051,7 @@ def queue_download(
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        tracks = client.queue.get("queue", [])
+        tracks = client.queue.raw.get("queue", [])
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved queue", err=True)
@@ -1185,7 +1185,7 @@ def queue_download(
                         rest_api_sleep(ctx)
                         client.pause()
                         rest_api_sleep(ctx)
-                        state = client.state
+                        state = client.state.raw
                         uri = mpd_client.get_track_uri()
                         if not check_next_track or queue_track_metadata_current(
                             state, uri, tracks[index], index, previous_uri, expect_same_uri
@@ -1386,7 +1386,7 @@ def system_ping(ctx: click.Context) -> None:
 @option_format
 def system_version(ctx: click.Context, output_format: str) -> None:
     """Print the system version."""
-    data = fetch_or_exit(ctx, lambda c: c.system_version)
+    data = fetch_or_exit(ctx, lambda c: c.system_version.raw)
     render_payload(ctx, data, output_format, heading="Volumio System Version")
 
 
@@ -1395,7 +1395,7 @@ def system_version(ctx: click.Context, output_format: str) -> None:
 @option_format
 def system_info(ctx: click.Context, output_format: str) -> None:
     """Print the system information."""
-    data = fetch_or_exit(ctx, lambda c: c.system_info)
+    data = fetch_or_exit(ctx, lambda c: c.system_info.raw)
     render_payload(ctx, data, output_format, heading="Volumio System Info")
 
 
@@ -1411,7 +1411,7 @@ def collection(ctx: click.Context) -> None:
 @option_format
 def collection_statistics(ctx: click.Context, output_format: str) -> None:
     """Print the statistics of the music collection."""
-    data = fetch_or_exit(ctx, lambda c: c.collection_statistics)
+    data = fetch_or_exit(ctx, lambda c: c.collection_statistics.raw)
     render_payload(ctx, data, output_format, heading="Collection Statistics")
 
 
@@ -1428,7 +1428,7 @@ def zones(ctx: click.Context) -> None:
 @option_format
 def zones_list(ctx: click.Context, fields: str, output_format: str) -> None:
     """Print the multiroom zones seen by the Volumio instance."""
-    data = fetch_or_exit(ctx, lambda c: c.zones)
+    data = fetch_or_exit(ctx, lambda c: c.zones.raw)
 
     if output_format == "raw":
         # Raw JSON without formatting (ignores fields filter)
@@ -1457,7 +1457,7 @@ def playlist(ctx: click.Context) -> None:
 @option_format
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the Volumio playlists saved by the current user."""
-    names = fetch_or_exit(ctx, lambda c: c.playlists)
+    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
 
     if output_format == "raw":
         output = json.dumps(names)
@@ -1484,7 +1484,7 @@ def playlist_play(
 ) -> None:
     """Start playback of the playlist specified by NAME."""
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.playlists)
+        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
             if not ctx.obj["machine_readable"]:
                 click.echo(f"Error: playlist not found: {name}", err=True)
@@ -1537,7 +1537,7 @@ def playlist_download(
     verbose = ctx.obj["verbose"]
 
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.playlists)
+        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
             if not machine_readable:
                 click.echo(f"Error: playlist not found: {name}", err=True)
