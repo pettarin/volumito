@@ -132,6 +132,7 @@ from volumito.clients import (
 )
 @click.option(
     "--ignore-configuration-file",
+    "-i",
     is_flag=True,
     default=False,
     is_eager=True,

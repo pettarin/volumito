@@ -7692,6 +7692,8 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         assert "--configuration-file" in result.output
         assert "-c" in result.output
+        assert "--ignore-configuration-file" in result.output
+        assert "-i" in result.output
 
     def test_explicit_config_used_as_defaults(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -7761,6 +7763,24 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         # The probed config is not applied: the built-in default host is used
+        assert "http://volumio.local:3000" in result.output
+        assert "Ignoring configuration files" in result.output
+        assert "Using configuration file" not in result.output
+
+    def test_ignore_configuration_file_short_flag(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The -i shorthand behaves like --ignore-configuration-file."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  host: probed.local\n")
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths",
+            return_value=[config],
+        )
+
+        result = runner.invoke(main, ["-v", "-i", "playback", "status"])
+
+        assert result.exit_code == 0
         assert "http://volumio.local:3000" in result.output
         assert "Ignoring configuration files" in result.output
         assert "Using configuration file" not in result.output

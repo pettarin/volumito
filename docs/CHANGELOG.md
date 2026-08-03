@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.25] - 2026-08-03
 
+### Added
+
+- Shorthand `-i` for the global `--ignore-configuration-file` option
+
 ### Changed
 
 - Reviewed the help messages of all CLI commands for conciseness and uniform style
