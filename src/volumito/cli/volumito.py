@@ -51,6 +51,7 @@ from volumito.cli.click_helpers import (
     option_replace_characters_in_file_names_with,
     option_story_type,
     option_with_albumart,
+    read_queue_log,
     render_output_filename,
     render_payload,
     render_state,
@@ -91,6 +92,7 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     format_seek,
     format_zones_as_table,
+    manifest_matches_queue,
     queue_album_volumes,
     queue_track_metadata_current,
     rebase_queue_positions,
@@ -1031,7 +1033,8 @@ def queue_download(
     """Download every track of the current queue.
 
     The download manifest is written to --manifest-file, by default manifest.json
-    inside the output directory.
+    inside the output directory. If the manifest file already exists, only the
+    tracks not yet downloaded are retried.
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -1062,32 +1065,100 @@ def queue_download(
         run_directory = expand_timestamp_placeholder(output_directory, timestamp)
         log_path = expand_manifest_file(manifest_file, run_directory, timestamp)
 
-        entries: list[dict[str, Any]] = [
-            {
-                "album": track.get("album"),
-                "artist": track.get("artist"),
-                "position": display_position(index, position_starting_at_one),
-                "status": "pending",
-                "title": track.get("title"),
-                "track_number": track.get("tracknumber"),
-                "volume_number": track.get("volumeNumber"),
+        now = datetime.now(UTC).isoformat()
+        if os.path.exists(log_path):
+            existing = read_queue_log(log_path)
+            if existing is None:
+                if not machine_readable:
+                    click.echo(f"Error: cannot read the manifest file {log_path}", err=True)
+                sys.exit(1)
+            if not manifest_matches_queue(existing["tracks"], tracks):
+                if not machine_readable:
+                    click.echo(
+                        f"Error: the manifest file {log_path} does not match "
+                        "the current queue",
+                        err=True,
+                    )
+                sys.exit(1)
+            if not machine_readable:
+                click.echo(f"Reading manifest file {log_path}")
+            entries: list[dict[str, Any]] = existing["tracks"]
+            for entry in entries:
+                if entry.get("status") == "downloaded":
+                    continue
+                # A skipped track is kept when its file is still present (unless
+                # the files are to be overwritten); anything else is retried
+                output_file_path = entry.get("output_file_path")
+                if (
+                    entry.get("status") == "skipped"
+                    and not overwrite_existing_files
+                    and isinstance(output_file_path, str)
+                    and os.path.exists(output_file_path)
+                ):
+                    continue
+                entry["status"] = "pending"
+                entry.pop("error", None)
+            log: dict[str, Any] = {
+                "entity": "queue",
+                "first_download_date": existing.get(
+                    "first_download_date", existing.get("download_date", now)
+                ),
+                "kind": "download",
+                "last_update_date": now,
+                "output_directory": run_directory,
+                "tracks": entries,
+                "updates": existing.get("updates", 0) + 1,
+                "volumio_host": host_configuration.rest_base_url,
+                "volumito_version": __version__,
             }
-            for index, track in enumerate(tracks)
-        ]
-        log: dict[str, Any] = {
-            "download_date": datetime.now(UTC).isoformat(),
-            "entity": "queue",
-            "kind": "download",
-            "output_directory": run_directory,
-            "tracks": entries,
-            "volumio_host": host_configuration.rest_base_url,
-            "volumito_version": __version__,
-        }
+        else:
+            if not machine_readable:
+                click.echo(f"Creating manifest file {log_path}")
+            entries = [
+                {
+                    "album": track.get("album"),
+                    "artist": track.get("artist"),
+                    "position": display_position(index, position_starting_at_one),
+                    "status": "pending",
+                    "title": track.get("title"),
+                    "track_number": track.get("tracknumber"),
+                    "volume_number": track.get("volumeNumber"),
+                }
+                for index, track in enumerate(tracks)
+            ]
+            log = {
+                "entity": "queue",
+                "first_download_date": now,
+                "kind": "download",
+                "last_update_date": now,
+                "output_directory": run_directory,
+                "tracks": entries,
+                "updates": 1,
+                "volumio_host": host_configuration.rest_base_url,
+                "volumito_version": __version__,
+            }
         os.makedirs(run_directory, exist_ok=True)
         log_parent = os.path.dirname(log_path)
         if log_parent:
             os.makedirs(log_parent, exist_ok=True)
         write_queue_log(log_path, log)
+
+        if all(entry.get("status") in ("downloaded", "skipped") for entry in entries):
+            if machine_readable:
+                click.echo(json.dumps(log_path))
+            else:
+                for index, entry in enumerate(entries):
+                    click.echo(
+                        f"[{index + 1}/{len(entries)}] {entry['status']}: "
+                        f"{entry.get('output_file_path')} (kept)"
+                    )
+                downloaded = sum(1 for e in entries if e["status"] == "downloaded")
+                skipped = sum(1 for e in entries if e["status"] == "skipped")
+                click.echo(
+                    f"\nDownloaded {downloaded}, skipped {skipped}, errors 0; "
+                    f"manifest written to {log_path}"
+                )
+            return
 
         errors = 0
         previous_uri: str | None = None
@@ -1096,6 +1167,13 @@ def queue_download(
         client.stop()
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
             for index, entry in enumerate(entries):
+                if entry.get("status") in ("downloaded", "skipped"):
+                    if not machine_readable:
+                        click.echo(
+                            f"[{index + 1}/{len(entries)}] {entry['status']}: "
+                            f"{entry.get('output_file_path')} (kept)"
+                        )
+                    continue
                 destination: str | None = None
                 try:
                     expect_same_uri = (
@@ -1223,7 +1301,7 @@ def queue_download(
             skipped = sum(1 for e in entries if e["status"] == "skipped")
             click.echo(
                 f"\nDownloaded {downloaded}, skipped {skipped}, errors {errors}; "
-                f"log written to {log_path}"
+                f"manifest written to {log_path}"
             )
         if errors:
             sys.exit(1)

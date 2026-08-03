@@ -488,6 +488,31 @@ def is_mbid(text: str) -> bool:
     )
 
 
+def manifest_matches_queue(
+    manifest_tracks: list[dict[str, Any]], queue_tracks: list[dict[str, Any]]
+) -> bool:
+    """Check whether the manifest tracks describe the current queue.
+
+    The manifest matches when it holds one entry per queue track and, at every
+    position, the title, artist, and album are equal.
+
+    Args:
+        manifest_tracks: The "tracks" entries of an existing download manifest
+        queue_tracks: The tracks of the current queue, as returned by the API
+
+    Returns:
+        True if the manifest matches the queue, False otherwise
+    """
+    if len(manifest_tracks) != len(queue_tracks):
+        return False
+    return all(
+        entry.get("title") == track.get("title")
+        and entry.get("artist") == track.get("artist")
+        and entry.get("album") == track.get("album")
+        for entry, track in zip(manifest_tracks, queue_tracks, strict=True)
+    )
+
+
 def number_prefix_width(numbers: list[str]) -> int:
     """Return the width of the widest entry number of a numbered table block.
 

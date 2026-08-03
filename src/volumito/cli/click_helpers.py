@@ -1132,6 +1132,29 @@ def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def read_queue_log(path: str) -> dict[str, Any] | None:
+    """Read an existing download manifest file.
+
+    Args:
+        path: The manifest file path
+
+    Returns:
+        The parsed manifest mapping, or None if the file cannot be read or parsed,
+        or does not hold a mapping with a "tracks" list of mappings
+    """
+    try:
+        with open(path, encoding="utf-8") as log_file:
+            data = json.load(log_file)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    tracks = data.get("tracks")
+    if not isinstance(tracks, list) or not all(isinstance(track, dict) for track in tracks):
+        return None
+    return data
+
+
 def render_output_filename(
     template: str,
     uri: str,

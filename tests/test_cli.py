@@ -46,6 +46,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_queue_as_table,
     is_mbid,
+    manifest_matches_queue,
     parse_time_to_seconds,
     queue_album_volumes,
     queue_track_metadata_current,
@@ -5455,6 +5456,43 @@ class TestQueueTrackMetadataCurrent:
         assert queue_track_metadata_current(state, "u1", self._EXPECTED, 0, None, False) is True
 
 
+class TestManifestMatchesQueue:
+    """Test cases for the manifest_matches_queue function."""
+
+    _TRACKS = [
+        {"title": "Song A", "artist": "Artist", "album": "Album"},
+        {"title": "Song B", "artist": "Artist", "album": "Album"},
+    ]
+
+    def test_matching(self):
+        """Entries matching title, artist, and album at every position match."""
+        entries = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "status": "error"},
+            {"title": "Song B", "artist": "Artist", "album": "Album", "status": "pending"},
+        ]
+
+        assert manifest_matches_queue(entries, self._TRACKS) is True
+
+    def test_different_length(self):
+        """A different number of entries does not match."""
+        entries = [{"title": "Song A", "artist": "Artist", "album": "Album"}]
+
+        assert manifest_matches_queue(entries, self._TRACKS) is False
+
+    def test_different_title(self):
+        """A different title at some position does not match."""
+        entries = [
+            {"title": "Song A", "artist": "Artist", "album": "Album"},
+            {"title": "Other", "artist": "Artist", "album": "Album"},
+        ]
+
+        assert manifest_matches_queue(entries, self._TRACKS) is False
+
+    def test_missing_keys_on_both_sides_match(self):
+        """Keys missing on both sides compare as equal (None == None)."""
+        assert manifest_matches_queue([{"title": "X"}], [{"title": "X"}]) is True
+
+
 class TestQueueDownload:
     """Test cases for the queue download command."""
 
@@ -5529,6 +5567,10 @@ class TestQueueDownload:
         assert log["entity"] == "queue"
         assert log["kind"] == "download"
         assert log["output_directory"] == str(run)
+        assert log["updates"] == 1
+        assert "first_download_date" in log
+        assert "last_update_date" in log
+        assert "download_date" not in log
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
         assert [t["position"] for t in log["tracks"]] == [1, 2]
         assert log["tracks"][0]["output_file_path"] == str(run / "a.flac")
@@ -5538,6 +5580,7 @@ class TestQueueDownload:
         assert [c.args for c in client.play.call_args_list] == [(0,), (1,), (0,)]
         assert client.pause.call_count == 2
         assert "Downloaded 2, skipped 0, errors 0" in result.output
+        assert f"Creating manifest file {log_path}" in result.output
         assert str(log_path) in result.output
 
     def test_download_subdirectories(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
@@ -5737,6 +5780,373 @@ class TestQueueDownload:
         assert result.exit_code == 0
         assert (out / "from_config.json").exists()
         assert not (out / "manifest.json").exists()
+
+    def test_download_resume_retries_failed_track(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A re-run with an existing manifest retries only the errored track."""
+        tracks = self._queue_tracks()
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac", "http://h/b.flac", "http://h/a.flac"],
+            states=[
+                {**tracks[0], "position": 0},
+                {**tracks[1], "position": 1},
+                {**tracks[0], "position": 0},
+            ],
+        )
+        ok_response = mocker.Mock()
+        ok_response.iter_content.return_value = [b"data"]
+        mock_get = mocker.patch(
+            "volumito.cli.click_helpers.requests.get",
+            side_effect=[
+                requests.exceptions.RequestException("boom"),
+                ok_response,
+                ok_response,
+            ],
+        )
+
+        first = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert first.exit_code == 1
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["error", "downloaded"]
+        assert log["updates"] == 1
+        first_date = log["first_download_date"]
+
+        second = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert second.exit_code == 0
+        assert "(kept)" in second.output
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
+        assert "error" not in log["tracks"][0]
+        assert log["updates"] == 2
+        assert log["first_download_date"] == first_date
+        assert "last_update_date" in log
+        assert (tmp_path / "a.flac").read_bytes() == b"data"
+        assert (tmp_path / "b.flac").read_bytes() == b"data"
+        # Two fetches in the first run, only the retried track in the second
+        assert mock_get.call_count == 3
+
+    def test_download_resume_retries_pending_and_skipped(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Pending and skipped manifest entries are retried; downloaded ones are kept."""
+        tracks = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "tracknumber": 1},
+            {"title": "Song B", "artist": "Artist", "album": "Album", "tracknumber": 2},
+            {"title": "Song C", "artist": "Artist", "album": "Album", "tracknumber": 3},
+        ]
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/b.flac", "http://h/c.flac"],
+            states=[
+                {**tracks[1], "position": 1},
+                {**tracks[2], "position": 2},
+            ],
+        )
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "first_download_date": "2026-01-01T00:00:00+00:00",
+                    "updates": 3,
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "downloaded",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        },
+                        {
+                            "title": "Song B",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "skipped",
+                        },
+                        {
+                            "title": "Song C",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "pending",
+                        },
+                    ],
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded"] * 3
+        assert log["updates"] == 4
+        assert log["first_download_date"] == "2026-01-01T00:00:00+00:00"
+        # Only the skipped and pending tracks are played (plus the final reposition)
+        assert (tmp_path / "b.flac").read_bytes() == b"data"
+        assert (tmp_path / "c.flac").read_bytes() == b"data"
+        assert not (tmp_path / "a.flac").exists()
+
+    def test_download_resume_all_downloaded_leaves_playback_untouched(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With every track already downloaded, playback and MPD are not touched."""
+        client = self._mock_services(mocker, self._queue_tracks()[:1], [])
+        mpd_class = mocker.patch("volumito.cli.volumito.VolumioMPDClient")
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "first_download_date": "2026-01-01T00:00:00+00:00",
+                    "updates": 1,
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "downloaded",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        }
+                    ],
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "(kept)" in result.output
+        assert "Downloaded 1, skipped 0, errors 0" in result.output
+        assert f"Reading manifest file {manifest}" in result.output
+        client.stop.assert_not_called()
+        client.play.assert_not_called()
+        mpd_class.assert_not_called()
+        mock_get.assert_not_called()
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["updates"] == 2
+
+        machine = runner.invoke(main, ["-m", *self._BASE, "-d", str(tmp_path)])
+
+        assert machine.exit_code == 0
+        assert machine.output.strip() == json.dumps(str(manifest))
+
+    def test_download_resume_keeps_skipped_with_existing_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Skipped entries whose file still exists are kept without replaying."""
+        client = self._mock_services(mocker, self._queue_tracks(), [])
+        mpd_class = mocker.patch("volumito.cli.volumito.VolumioMPDClient")
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+        (tmp_path / "a.flac").write_bytes(b"old")
+        (tmp_path / "b.flac").write_bytes(b"old")
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "first_download_date": "2026-01-01T00:00:00+00:00",
+                    "updates": 2,
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "skipped",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        },
+                        {
+                            "title": "Song B",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "skipped",
+                            "output_file_path": str(tmp_path / "b.flac"),
+                        },
+                    ],
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "Downloaded 0, skipped 2, errors 0" in result.output
+        assert result.output.count("(kept)") == 2
+        client.stop.assert_not_called()
+        client.play.assert_not_called()
+        mpd_class.assert_not_called()
+        mock_get.assert_not_called()
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert [t["status"] for t in log["tracks"]] == ["skipped", "skipped"]
+        assert log["updates"] == 3
+
+    def test_download_resume_retries_skipped_with_missing_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A skipped entry whose file is gone is retried and downloaded."""
+        tracks = self._queue_tracks()[:1]
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac"],
+            states=[{**tracks[0], "position": 0}],
+        )
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "skipped",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        }
+                    ]
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert (tmp_path / "a.flac").read_bytes() == b"data"
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["tracks"][0]["status"] == "downloaded"
+
+    def test_download_resume_overwrite_retries_skipped(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With --overwrite-existing-files, skipped entries are retried and rewritten."""
+        tracks = self._queue_tracks()[:1]
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac"],
+            states=[{**tracks[0], "position": 0}],
+        )
+        (tmp_path / "a.flac").write_bytes(b"old")
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "skipped",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        }
+                    ]
+                }
+            )
+        )
+
+        result = runner.invoke(
+            main, [*self._BASE, "-d", str(tmp_path), "--overwrite-existing-files"]
+        )
+
+        assert result.exit_code == 0
+        assert (tmp_path / "a.flac").read_bytes() == b"data"
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["tracks"][0]["status"] == "downloaded"
+
+    def test_download_resume_mismatched_manifest(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A manifest that does not match the current queue is refused untouched."""
+        self._mock_services(mocker, self._queue_tracks(), [])
+        manifest = tmp_path / "manifest.json"
+        content = json.dumps(
+            {
+                "tracks": [
+                    {"title": "Other", "artist": "Artist", "album": "Album", "status": "error"}
+                ]
+            }
+        )
+        manifest.write_text(content)
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "does not match the current queue" in result.output
+        assert manifest.read_text() == content
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            "not json at all {",
+            "[1, 2]",
+            '{"tracks": "nope"}',
+            '{"tracks": [1, 2]}',
+        ],
+    )
+    def test_download_resume_unreadable_manifest(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path, content: str
+    ):
+        """An unparseable or malformed manifest file is refused with a clean error."""
+        self._mock_services(mocker, self._queue_tracks(), [])
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(content)
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 1
+        assert "cannot read the manifest file" in result.output
+
+    def test_download_resume_legacy_manifest(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A legacy manifest with download_date only is resumed with fallbacks."""
+        tracks = self._queue_tracks()
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac"],
+            states=[{**tracks[0], "position": 0}],
+        )
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "download_date": "2020-01-01T00:00:00+00:00",
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "error",
+                            "error": "boom",
+                        },
+                        {
+                            "title": "Song B",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "downloaded",
+                            "output_file_path": str(tmp_path / "b.flac"),
+                        },
+                    ],
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert log["first_download_date"] == "2020-01-01T00:00:00+00:00"
+        assert "download_date" not in log
+        assert log["updates"] == 1
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
 
     def test_download_machine_readable(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """In machine-readable mode only the quoted log path is printed."""
@@ -6748,6 +7158,42 @@ class TestPlaylistDownload:
             log = json.load(manifest_handle)
         assert log["tracks"][0]["status"] == "downloaded"
         assert not (tmp_path / "manifest.json").exists()
+
+    def test_download_resume_keeps_downloaded_tracks(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An existing manifest with all tracks downloaded skips every download."""
+        client = self._mock_services(mocker, self._queue_tracks()[:1], [])
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "first_download_date": "2026-01-01T00:00:00+00:00",
+                    "updates": 1,
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "downloaded",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        }
+                    ],
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "(kept)" in result.output
+        mock_get.assert_not_called()
+        # Nothing to download: the playback is left untouched
+        client.stop.assert_not_called()
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["updates"] == 2
 
     def test_download_connection_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """A connection failure while clearing the queue exits with an error."""

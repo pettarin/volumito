@@ -13,11 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Option `--manifest-file` for `queue download` and `playlist download`, setting the
   path of the download manifest with the `{output_directory}` and `{timestamp}`
   placeholders
+- The `queue download` and `playlist download` commands resume from an existing
+  manifest file: tracks already downloaded, or skipped with their file still present,
+  are kept without replaying them, and with nothing to retry the playback is left
+  untouched
+- The download commands print the path of the manifest file being created or read
 
 ### Changed
 
 - The download manifest of `queue download` and `playlist download` is written to
   `manifest.json` (was `queue.json`) inside the output directory by default
+- The manifest records `first_download_date`, `last_update_date`, and the `updates`
+  visit counter, instead of `download_date`
 
 
 ## [0.0.28] - 2026-08-03
