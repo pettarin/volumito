@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.27] - 2026-08-03
 
+### Added
+
+- The `configuration check` command reports the download subsections whose effective
+  values set both the output file and the output directory
+
+### Changed
+
+- The machine-readable error output of `configuration check` carries an `errors` list
+  instead of a single `error` string
+
 ### Fixed
 
 - An explicit `-o`/`--output-file` or `-d`/`--output-directory` option overrides the

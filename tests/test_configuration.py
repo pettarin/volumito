@@ -14,6 +14,7 @@ from volumito.cli.configuration import (
     build_click_default_map,
     configuration_paths,
     default_configuration_template,
+    find_destination_conflicts,
     flatten_configuration,
     load_configuration,
     probe_configuration_paths,
@@ -444,6 +445,66 @@ class TestDefaultConfigurationTemplate:
         config.write_text(default_configuration_template("1.2.3", MPD_PORT_VOLUMIO_3))
 
         assert load_configuration(str(config))["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
+
+
+class TestFindDestinationConflicts:
+    """Test cases for find_destination_conflicts."""
+
+    def test_no_downloads_section(self):
+        """A configuration without downloads has no conflicts."""
+        assert find_destination_conflicts({}) == []
+
+    def test_shared_both_destinations(self):
+        """Shared output-file and output-directory conflict for both track commands."""
+        config = {"downloads": {"output-directory": "/covers", "output-file": "/tmp/out.jpg"}}
+
+        assert find_destination_conflicts(config) == [
+            ("track-albumart", "downloads", "downloads"),
+            ("track-audio", "downloads", "downloads"),
+        ]
+
+    def test_shared_file_with_subsection_directory(self):
+        """A shared output-file conflicts with a subsection output-directory."""
+        config = {
+            "downloads": {
+                "output-file": "/tmp/out.flac",
+                "track-audio": {"output-directory": "/music"},
+            }
+        }
+
+        assert find_destination_conflicts(config) == [("track-audio", "downloads", "track-audio")]
+
+    def test_subsection_both_destinations(self):
+        """A subsection setting both destinations conflicts only for that command."""
+        config = {
+            "downloads": {
+                "track-albumart": {
+                    "output-directory": "/covers",
+                    "output-file": "/tmp/out.jpg",
+                }
+            }
+        }
+
+        assert find_destination_conflicts(config) == [
+            ("track-albumart", "track-albumart", "track-albumart")
+        ]
+
+    def test_null_values_do_not_conflict(self):
+        """Explicit nulls (as in the bundled template) do not count as set."""
+        config = {"downloads": {"output-directory": "/covers", "output-file": None}}
+
+        assert find_destination_conflicts(config) == []
+
+    def test_shared_file_does_not_reach_queue_download(self):
+        """A shared output-file never conflicts with a queue/playlist download directory."""
+        config = {
+            "downloads": {
+                "output-file": "/tmp/out.flac",
+                "queue-download": {"output-directory": "/music"},
+            }
+        }
+
+        assert find_destination_conflicts(config) == []
 
 
 class TestFlattenConfiguration:

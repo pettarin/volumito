@@ -63,6 +63,7 @@ from volumito.cli.click_helpers import (
 from volumito.cli.configuration import (
     CONFIGURATION_FILENAMES,
     default_configuration_template,
+    find_destination_conflicts,
     flatten_configuration,
     load_configuration,
     probe_configuration_paths,
@@ -353,10 +354,15 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     """
     machine_readable = ctx.obj["machine_readable"]
 
-    def fail(path_value: str | None, message: str) -> NoReturn:
+    def fail(path_value: str | None, message: str, errors: list[str] | None = None) -> NoReturn:
         if machine_readable:
             absolute = os.path.abspath(path_value) if path_value is not None else None
-            click.echo(json.dumps({"path": absolute, "valid": False, "error": message}))
+            payload = {
+                "path": absolute,
+                "valid": False,
+                "errors": errors if errors is not None else [message],
+            }
+            click.echo(json.dumps(payload))
         elif path_value is not None:
             click.echo(f"Configuration file {path_value} is NOT valid.\n", err=True)
             click.echo(message, err=True)
@@ -378,6 +384,29 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
         config = load_configuration(resolved)
     except click.BadParameter as error:
         fail(resolved, error.message)
+
+    conflicts = find_destination_conflicts(config)
+    if conflicts:
+
+        def describe(section: str) -> str:
+            if section == "downloads":
+                return "the shared 'downloads' section"
+            return f"the '{section}' subsection"
+
+        clauses = [
+            f"'{subsection}' takes output-file from {describe(file_origin)} "
+            f"and output-directory from {describe(directory_origin)}"
+            for subsection, file_origin, directory_origin in conflicts
+        ]
+        numbered = "\n".join(f"{index}. {clause}" for index, clause in enumerate(clauses, 1))
+        fail(
+            resolved,
+            f"output-file and output-directory are mutually exclusive:\n{numbered}",
+            errors=[
+                f"output-file and output-directory are mutually exclusive: {clause}"
+                for clause in clauses
+            ],
+        )
 
     if machine_readable:
         click.echo(

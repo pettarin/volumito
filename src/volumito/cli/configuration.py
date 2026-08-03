@@ -449,6 +449,36 @@ def default_configuration_template(version: str, mpd_port: int = MPD_PORT_VOLUMI
     return text
 
 
+def find_destination_conflicts(config: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """Return the download subsections whose effective values set both destinations.
+
+    The shared "downloads" keys are merged with each subsection exactly like
+    :func:`build_click_default_map` does; a subsection whose effective values set
+    both output-file and output-directory (to non-null values) would make its
+    command fail with a mutual-exclusivity error at runtime. Each conflict is
+    reported as ``(subsection, output-file origin, output-directory origin)``,
+    where an origin is either "downloads" (the shared section) or the subsection
+    name that supplied the key.
+    """
+    downloads = config.get("downloads", {})
+    shared = {key: value for key, value in downloads.items() if key in DOWNLOAD_SHARED_KEYS}
+    conflicts: list[tuple[str, str, str]] = []
+    for subsection in sorted(DOWNLOAD_SUBSECTIONS):
+        allowed = DOWNLOAD_SUBSECTION_KEYS[subsection]
+        subvalues = downloads.get(subsection, {})
+        merged = {
+            **{key: value for key, value in shared.items() if key in allowed},
+            **subvalues,
+        }
+        if merged.get("output-file") is not None and merged.get("output-directory") is not None:
+            file_origin = subsection if subvalues.get("output-file") is not None else "downloads"
+            directory_origin = (
+                subsection if subvalues.get("output-directory") is not None else "downloads"
+            )
+            conflicts.append((subsection, file_origin, directory_origin))
+    return conflicts
+
+
 def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     """Flatten a validated configuration into ordered ``(dotted-path, value)`` pairs.
 

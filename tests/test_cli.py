@@ -8598,8 +8598,49 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         envelope = json.loads(result.output)
         assert envelope["valid"] is False
-        assert "cannot read configuration file" in envelope["error"]
+        assert len(envelope["errors"]) == 1
+        assert "cannot read configuration file" in envelope["errors"][0]
         assert envelope["path"].endswith("notes.md")
+
+    def test_check_conflicting_destinations(self, runner: CliRunner, tmp_path):
+        """A config setting both download destinations makes check fail clearly."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  output-directory: /covers\n  output-file: /tmp/o.jpg\n")
+
+        result = runner.invoke(main, ["configuration", "check", str(config)])
+
+        assert result.exit_code == 1
+        lines = result.output.splitlines()
+        assert lines[0].endswith("is NOT valid.")
+        assert lines[1] == ""
+        assert "output-file and output-directory are mutually exclusive:" in result.output
+        assert (
+            "1. 'track-albumart' takes output-file from the shared 'downloads' section "
+            "and output-directory from the shared 'downloads' section" in result.output
+        )
+        assert (
+            "2. 'track-audio' takes output-file from the shared 'downloads' section "
+            "and output-directory from the shared 'downloads' section" in result.output
+        )
+
+    def test_check_conflicting_destinations_machine_readable(self, runner: CliRunner, tmp_path):
+        """With -m, the destination conflict is reported as a JSON envelope."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "downloads:\n  output-file: /tmp/o.flac\n"
+            "  track-audio:\n    output-directory: /music\n"
+        )
+
+        result = runner.invoke(main, ["-m", "configuration", "check", str(config)])
+
+        assert result.exit_code == 1
+        envelope = json.loads(result.output)
+        assert envelope["valid"] is False
+        assert envelope["errors"] == [
+            "output-file and output-directory are mutually exclusive: "
+            "'track-audio' takes output-file from the shared 'downloads' section "
+            "and output-directory from the 'track-audio' subsection"
+        ]
 
     def test_check_missing_path(self, runner: CliRunner, tmp_path):
         """A nonexistent explicit PATH makes check fail with a clean error."""
@@ -8784,4 +8825,5 @@ class TestConfigurationCommands:
         envelope = json.loads(result.output)
         assert envelope["valid"] is False
         assert envelope["path"] is None
-        assert "--ignore-configuration-file" in envelope["error"]
+        assert len(envelope["errors"]) == 1
+        assert "--ignore-configuration-file" in envelope["errors"][0]
