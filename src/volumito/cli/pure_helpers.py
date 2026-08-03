@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from volumito.cli.constants import (
+    OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER,
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
@@ -33,6 +34,22 @@ def display_position(api_position: int, starting_at_one: bool) -> int:
         The position to display
     """
     return api_position + 1 if starting_at_one else api_position
+
+
+def expand_timestamp_placeholder(path: str, timestamp: str) -> str:
+    """Replace the ``{timestamp}`` placeholder in an output directory path.
+
+    The replacement is a literal :meth:`str.replace`, not :meth:`str.format`,
+    so any other braces in the path are left untouched.
+
+    Args:
+        path: The output directory path, possibly containing the placeholder
+        timestamp: The timestamp string replacing each occurrence of the placeholder
+
+    Returns:
+        The path with every occurrence of the placeholder replaced
+    """
+    return path.replace(OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER, timestamp)
 
 
 def extract_filename_from_uri(uri: str) -> str:

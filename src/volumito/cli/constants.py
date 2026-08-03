@@ -51,6 +51,12 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 OUTPUT_DIRECTORY_REQUIRED_ERROR = "Option -d/--output-directory is required."
 """Error message when a command requiring the output directory is run without it."""
 
+OUTPUT_DIRECTORY_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
+"""strftime format of the value replacing the timestamp placeholder in output directories."""
+
+OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER = "{timestamp}"
+"""Placeholder in output directory paths replaced with the current UTC timestamp."""
+
 OUTPUT_FIELDS_ALL = "ALL"
 """The -L/--fields keyword selecting every field."""
 
@@ -66,10 +72,7 @@ OUTPUT_FORMATS = [
 """Accepted values of the -F/--format option."""
 
 QUEUE_LOG_FILENAME = "queue.json"
-"""File name of the queue download log, inside the per-run download directory."""
-
-QUEUE_LOG_TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
-"""strftime format of the timestamp naming the per-run queue download directory."""
+"""File name of the queue download log, inside the download directory."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",

@@ -288,7 +288,8 @@ subsections hold the same keys and override the shared value for that command (s
 `albumart-file-name-template` instead of
 `file-name-template` (matching the `--audio-file-name-template` and
 `--albumart-file-name-template` options), also accept `number-retries-next-track` and
-`with-albumart`, and have no `output-file`.
+`with-albumart`, and have no `output-file`. An `output-directory` value may contain a
+`{timestamp}` placeholder, replaced with the current UTC time when the command runs.
 
 The `configuration` command group helps manage these files:
 
@@ -503,10 +504,10 @@ volumito queue clear --no-print-resulting-status
 
 ### Downloading the Queue
 
-`queue download` downloads every track of the current queue. Each run creates a timestamped
-directory (e.g. `20260726121314`, UTC) inside `-d`/`--output-directory` (required) and downloads
-into it; an existing directory with the same timestamp is only reused with
-`--overwrite-existing-files`. Playback is stopped, then each queue position is played,
+`queue download` downloads every track of the current queue into `-d`/`--output-directory`
+(required), created if missing; a `{timestamp}` in the path is replaced with the current UTC
+time (e.g. `20260726121314`), giving a per-run directory. Existing files are skipped unless
+`--overwrite-existing-files` is given. Playback is stopped, then each queue position is played,
 paused after the configured `--rest-api-sleep-before-next-call` (default 1.0 s), and downloaded;
 at the end, playback is left stopped at the first track. The exit code is 1 if any track failed.
 
@@ -540,8 +541,8 @@ track.
 
 With `--with-albumart` (the default; disable with `--no-with-albumart`), each album's cover is
 saved under the name rendered from `--albumart-file-name-template` (default
-`{file_name_from_uri}`, same keys and sanitization as the audio template, relative to the run
-directory; the generated configuration file showcases
+`{file_name_from_uri}`, same keys and sanitization as the audio template, relative to the
+output directory; the generated configuration file showcases
 `{artist}/{album}/000___{album}.{extension}`, placing the cover next to its album's tracks).
 Every distinct cover is downloaded only once per run (when the same cover renders to several
 directories, e.g. one per volume of a multi-volume album — which also gets a copy in the album
@@ -550,7 +551,7 @@ and an existing cover file is reused
 unless `--overwrite-existing-files` is given; a failed cover download is reported as a warning
 and does not fail the track.
 
-Each run also writes a `queue.json` log into its timestamped directory, listing every track
+Each run also writes a `queue.json` log into the output directory, listing every track
 with its download status (`pending`, `downloaded`, `skipped`, or `error`); the log is updated
 after each track, so an interrupted run leaves a valid partial log. In machine-readable mode
 the log path is printed as a quoted string.
@@ -643,6 +644,8 @@ volumito -m track audio             # => "http://volumio.local:8000/music/..."
 ```
 
 The `-o`/`--output-file` and `-d`/`--output-directory` options are mutually exclusive.
+The `-d` directory is created if missing, and a `{timestamp}` in its path is replaced with
+the current UTC time (e.g. `20260726121314`).
 `track audio` accepts the same two download options:
 
 ```bash

@@ -13,10 +13,12 @@ downloads:
   # Write a JSON manifest next to the downloaded file (e.g. out.flac.json)
   create-download-manifest: true
 
-  # Directory to download into (mutually exclusive with output-file)
-  # output-directory: .                 # use the current working directory
-  # output-directory: /tmp/volumito     # use a fixed directory
-  output-directory: null                # no download by default
+  # Directory to download into, created if missing (mutually exclusive with output-file);
+  # "{timestamp}" in the path is replaced with the current UTC time (e.g. 20260726121314)
+  # output-directory: .                           # use the current working directory
+  # output-directory: /tmp/volumito               # use a fixed directory
+  # output-directory: /tmp/volumito/{timestamp}   # use a per-run timestamped directory
+  output-directory: null                          # no download by default
 
   # Exact file path to download to (mutually exclusive with output-directory)
   # output-file: /tmp/volumito.out      # use a fixed full path
@@ -45,8 +47,8 @@ downloads:
     with-albumart: true
 
     # Add your own overrides here
-    # output-directory: .                       # use the current working directory
-    # output-directory: /tmp/volumito/playlist  # use a fixed directory
+    # output-directory: /tmp/volumito/playlist              # use a fixed directory
+    # output-directory: /tmp/volumito/playlist/{timestamp}  # use a per-run directory
 
   queue-download:
     # Template (Python str.format) for the album art file names
@@ -62,24 +64,24 @@ downloads:
     with-albumart: true
 
     # Add your own overrides here
-    # output-directory: .                     # use the current working directory
-    # output-directory: /tmp/volumito/queue   # use a fixed directory
+    # output-directory: /tmp/volumito/queue                 # use a fixed directory
+    # output-directory: /tmp/volumito/queue/{timestamp}     # use a per-run directory
 
   track-albumart:
     # Template (Python str.format) for the -d output file name
     file-name-template: '000___{album}___{artist}.{extension}'
 
     # Add your own overrides here
-    # output-directory: .                     # use the current working directory
-    # output-directory: /tmp/volumito/covers  # use a fixed directory
+    # output-directory: /tmp/volumito/covers                # use a fixed directory
+    # output-directory: /tmp/volumito/covers/{timestamp}    # use a per-run directory
 
   track-audio:
     # Template (Python str.format) for the -d output file name
     file-name-template: '{position:03d}___{title}___{album}___{artist}.{extension}'
 
     # Add your own overrides here
-    # output-directory: .                     # use the current working directory
-    # output-directory: /tmp/volumito/audio   # use a fixed directory
+    # output-directory: /tmp/volumito/audio                 # use a fixed directory
+    # output-directory: /tmp/volumito/audio/{timestamp}     # use a per-run directory
 
 
 miscellaneous:

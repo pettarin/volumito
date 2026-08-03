@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from string import Formatter
-from typing import Any, get_args
+from typing import Any, get_args, overload
 
 import click
 import requests
@@ -32,6 +32,7 @@ from volumito.cli.constants import (
     FILE_WRITE_CHUNK_SIZE,
     MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR,
     MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR,
+    OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
     SHORT_FORMAT_FIELDS_STORY,
@@ -46,6 +47,7 @@ from volumito.cli.metadata import (
 )
 from volumito.cli.pure_helpers import (
     display_position,
+    expand_timestamp_placeholder,
     extract_filename_from_uri,
     filter_fields,
     format_as_json,
@@ -380,11 +382,11 @@ def download_queue_albumart(
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
 ) -> str | None:
-    """Download the current track's album art into the run directory.
+    """Download the current track's album art into the output directory.
 
     The cover is saved under the name rendered from ``albumart_file_name_template``
     (relative to ``run_directory``; the template may lay covers out in
-    subdirectories, which are created as needed but must stay inside the run
+    subdirectories, which are created as needed but must stay inside the output
     directory). Each distinct album-art URI is downloaded at most once per run
     (``downloaded_covers`` maps the URIs already downloaded to their file paths);
     when the same URI renders to further destinations (e.g. one per volume of a
@@ -397,7 +399,7 @@ def download_queue_albumart(
 
     Args:
         state: The current player state dictionary (source of the album-art URI)
-        run_directory: The per-run download directory
+        run_directory: The download output directory of the run
         albumart_file_name_template: Template for the cover file name
         host_configuration: The Volumio host configuration (to resolve relative URIs)
         timeout: Request timeout in seconds
@@ -413,7 +415,7 @@ def download_queue_albumart(
 
     Raises:
         click.UsageError: If the template is invalid or renders to a path escaping
-            the run directory
+            the output directory
     """
     albumart_uri = resolve_albumart_uri(state, host_configuration)
     if albumart_uri is None:
@@ -542,8 +544,8 @@ def download_uri_to(
 
     Exactly one of ``output_file`` / ``output_directory`` is expected to be set. With
     ``output_file`` the URI is saved to that exact path; with ``output_directory`` it is
-    saved into that directory under the file name produced by rendering
-    ``file_name_template`` against ``state`` (see ``render_output_filename``).
+    saved into that directory (created if missing) under the file name produced by
+    rendering ``file_name_template`` against ``state`` (see ``render_output_filename``).
     Unless ``overwrite`` is true, an existing destination file is left untouched.
 
     When ``create_manifest`` is true, a JSON manifest describing the download is written
@@ -604,6 +606,8 @@ def download_uri_to(
         click.echo(f"\nDownloading {label} to {destination}...", err=True)
 
     try:
+        if output_directory is not None:
+            os.makedirs(output_directory, exist_ok=True)
         fetch_uri_to_file(uri, destination, timeout)
 
         if not machine_readable:
@@ -750,6 +754,32 @@ def execute_conditionally(ctx: click.Context, enabled: bool, command: click.Comm
     if enabled:
         rest_api_sleep(ctx)
         ctx.invoke(command)
+
+
+@overload
+def expand_output_directory(output_directory: str) -> str: ...
+
+
+@overload
+def expand_output_directory(output_directory: None) -> None: ...
+
+
+def expand_output_directory(output_directory: str | None) -> str | None:
+    """Expand the ``{timestamp}`` placeholder in an output directory path.
+
+    Each occurrence of the placeholder is replaced with the current UTC time,
+    formatted as ``YYYYMMDDHHMMSS``.
+
+    Args:
+        output_directory: The output directory path, or None if not given
+
+    Returns:
+        The expanded path, or None if ``output_directory`` is None
+    """
+    if output_directory is None:
+        return None
+    timestamp = datetime.now(UTC).strftime(OUTPUT_DIRECTORY_TIMESTAMP_FORMAT)
+    return expand_timestamp_placeholder(output_directory, timestamp)
 
 
 def fetch_cover(
@@ -1001,7 +1031,8 @@ def option_output_directory(func: Callable[..., None]) -> Callable[..., None]:
         "--output-directory",
         type=str,
         default=None,
-        help="Download into this directory, using the file name from the template "
+        help="Download into this directory (created if missing), using the file name from "
+        "the template; {timestamp} in the path is replaced with the current UTC time "
         "(mutually exclusive with -o)",
     )(func)
 

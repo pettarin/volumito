@@ -27,6 +27,7 @@ from volumito.cli.click_helpers import (
     embed_track_tags,
     execute_command,
     execute_conditionally,
+    expand_output_directory,
     fetch_or_exit,
     fetch_state_or_exit,
     ignore_configuration_file_callback,
@@ -74,7 +75,6 @@ from volumito.cli.constants import (
     MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     QUEUE_LOG_FILENAME,
-    QUEUE_LOG_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
 )
@@ -725,6 +725,7 @@ def audio(
     """
     if output_file is not None and output_directory is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+    output_directory = expand_output_directory(output_directory)
 
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -846,6 +847,7 @@ def albumart(
     """
     if output_file is not None and output_directory is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+    output_directory = expand_output_directory(output_directory)
 
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -1029,11 +1031,13 @@ def queue_download(
 ) -> None:
     """Download every track of the current queue into a directory.
 
-    Each run creates a timestamped directory (e.g. 20260726121314) inside
-    -d/--output-directory (required) and downloads into it. Playback is stopped,
+    Each run downloads into -d/--output-directory (required), created if
+    missing; {timestamp} in the path is replaced with the current UTC time
+    (e.g. 20260726121314). Playback is stopped,
     then each queue position is played, paused after the configured sleep
     (--rest-api-sleep-before-next-call), and downloaded under the name rendered
-    from -f/--audio-file-name-template. The {tracknumber} template key renders the
+    from -f/--audio-file-name-template; existing files are skipped unless
+    --overwrite-existing-files is given. The {tracknumber} template key renders the
     track's number within its album (taken from the queue metadata), so with
     several albums queued every album keeps its own numbering, unlike
     {position} (the queue position); the {album_volume} key renders the album
@@ -1041,16 +1045,16 @@ def queue_download(
     the same album. Unlike the track downloads, the template may
     contain path separators to lay the files out in subdirectories (e.g.
     "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
-    must stay inside the run directory. Before each download, the fetched metadata
+    must stay inside the output directory. Before each download, the fetched metadata
     are checked against the queue listing (title, artist, album, and position must
     match the entry just played, retrying up to --number-retries-next-track times;
     disable with --no-check-next-track). With --with-albumart (the default), each
     album's cover is saved under the name rendered from
-    --albumart-file-name-template (relative to the run directory), downloading
+    --albumart-file-name-template (relative to the output directory), downloading
     every distinct cover only once.
     A queue.json log listing every track and
     its download status (pending, downloaded, skipped, or error) is written to
-    the run directory and updated after each track. At the end, playback is left
+    the output directory and updated after each track. At the end, playback is left
     stopped at the first track; the exit code is 1 if any track failed.
     """
     host_configuration = ctx.obj["host_configuration"]
@@ -1078,17 +1082,8 @@ def queue_download(
                 click.echo("The queue is empty, nothing to download")
             return
 
-        timestamp = datetime.now(UTC).strftime(QUEUE_LOG_TIMESTAMP_FORMAT)
-        run_directory = os.path.join(output_directory, timestamp)
+        run_directory = expand_output_directory(output_directory)
         log_path = os.path.join(run_directory, QUEUE_LOG_FILENAME)
-        if not overwrite_existing_files and os.path.exists(run_directory):
-            if not machine_readable:
-                click.echo(
-                    f"Error: directory already exists: {run_directory} "
-                    "(use --overwrite-existing-files to overwrite)",
-                    err=True,
-                )
-            sys.exit(1)
 
         entries: list[dict[str, Any]] = [
             {
@@ -1486,7 +1481,7 @@ def playlist_download(
     The queue is cleared and the playlist is played (its name is checked first,
     like playlist play does, unless --no-check-playlist-name is given), then the
     resulting queue is downloaded exactly like queue download does: see its help
-    for the run directory, the file-name templates, the metadata checks, the
+    for the output directory, the file-name templates, the metadata checks, the
     album covers, and the queue.json log.
     """
     machine_readable = ctx.obj["machine_readable"]

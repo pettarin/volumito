@@ -35,6 +35,7 @@ from volumito.cli.constants import (
 )
 from volumito.cli.pure_helpers import (
     display_position,
+    expand_timestamp_placeholder,
     extract_filename_from_uri,
     filter_fields,
     filter_queue_fields,
@@ -412,6 +413,35 @@ class TestFormatFunctions:
 
         assert "Album Story" in result
         assert f"{'Data Value':20}: A story." in result.splitlines()
+
+
+class TestExpandTimestampPlaceholder:
+    """Test cases for the expand_timestamp_placeholder function."""
+
+    def test_no_placeholder(self):
+        """A path without the placeholder is returned unchanged."""
+        assert expand_timestamp_placeholder("/tmp/volumito", "20260101000000") == "/tmp/volumito"
+
+    def test_placeholder_inside_path(self):
+        """The placeholder is replaced wherever it appears in the path."""
+        assert (
+            expand_timestamp_placeholder("/tmp/{timestamp}/queue", "20260101000000")
+            == "/tmp/20260101000000/queue"
+        )
+
+    def test_multiple_occurrences(self):
+        """Every occurrence of the placeholder is replaced."""
+        assert (
+            expand_timestamp_placeholder("/{timestamp}/{timestamp}", "20260101000000")
+            == "/20260101000000/20260101000000"
+        )
+
+    def test_other_braces_untouched(self):
+        """Braces other than the placeholder are left as they are."""
+        assert (
+            expand_timestamp_placeholder("/tmp/{artist}/{timestamp}", "20260101000000")
+            == "/tmp/{artist}/20260101000000"
+        )
 
 
 class TestExtractFilenameFromUri:
@@ -926,14 +956,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.23" in result.output
+        assert "volumito, version 0.0.24" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.23"'
+        assert result.output.strip() == '"0.0.24"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -942,7 +972,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.23"'
+        assert result.output.strip() == '"0.0.24"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -2533,6 +2563,7 @@ class TestCLICommands:
             "volumito.cli.click_helpers.requests.get", return_value=mock_response
         )
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -2567,6 +2598,7 @@ class TestCLICommands:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -3090,6 +3122,7 @@ class TestCLICommands:
             "volumito.cli.click_helpers.requests.get", return_value=mock_response
         )
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main, ["track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"]
@@ -3118,6 +3151,7 @@ class TestCLICommands:
         mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main, ["track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"]
@@ -3125,6 +3159,41 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/tmp/covers", "cover.jpg"), "wb")
+
+    def test_albumart_output_directory_timestamp_placeholder(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The {timestamp} placeholder in -d expands and the directory is created."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={
+            "albumart": "http://example.com/images/cover.jpg",
+        })
+
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"fake", b"image", b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mock_datetime = mocker.patch("volumito.cli.click_helpers.datetime")
+        mock_datetime.now.return_value.strftime.return_value = "20260101000000"
+
+        result = runner.invoke(
+            main,
+            [
+                "track",
+                "albumart",
+                "-d",
+                os.path.join(str(tmp_path), "{timestamp}"),
+                "--no-create-download-manifest",
+            ],
+        )
+
+        assert result.exit_code == 0
+        cover = tmp_path / "20260101000000" / "cover.jpg"
+        assert cover.read_bytes() == b"fakeimagedata"
 
     def test_albumart_output_directory_with_template(
         self, runner: CliRunner, mocker: MockerFixture
@@ -3146,6 +3215,7 @@ class TestCLICommands:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -3183,6 +3253,7 @@ class TestCLICommands:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -3216,6 +3287,7 @@ class TestCLICommands:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -3255,6 +3327,7 @@ class TestCLICommands:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -5394,15 +5467,9 @@ class TestQueueDownload:
         mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client
 
-    def _run_directory(self, base):
-        """Return the single timestamped per-run download directory under ``base``."""
-        directories = [path for path in base.iterdir() if path.is_dir()]
-        assert len(directories) == 1
-        return directories[0]
-
     def _read_log(self, base):
         """Return the run's queue.json log (path, parsed content)."""
-        log_path = self._run_directory(base) / "queue.json"
+        log_path = base / "queue.json"
         with open(log_path, encoding="utf-8") as log_file:
             return log_path, json.load(log_file)
 
@@ -5418,7 +5485,7 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         assert "Successfully retrieved queue" in result.output
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "a.flac").read_bytes() == b"data"
         assert (run / "b.flac").read_bytes() == b"data"
         log_path, log = self._read_log(tmp_path)
@@ -5451,7 +5518,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "AC_DC" / "Alb" / "Song.flac").read_bytes() == b"data"
         _, log = self._read_log(tmp_path)
         assert log["tracks"][0]["status"] == "downloaded"
@@ -5485,7 +5552,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["downloaded", "skipped"]
         assert log["tracks"][1]["output_file_path"] == str(run / "a.flac")
@@ -5507,23 +5574,42 @@ class TestQueueDownload:
         _, log = self._read_log(tmp_path)
         assert [t["status"] for t in log["tracks"]] == ["error", "downloaded"]
         assert "boom" in log["tracks"][0]["error"]
-        assert (self._run_directory(tmp_path) / "b.flac").exists()
+        assert (tmp_path / "b.flac").exists()
         assert "errors 1" in result.output
 
-    def test_download_run_directory_respects_overwrite_flag(
+    def test_download_into_existing_directory_skips_existing_files(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """An existing run directory with the same timestamp is refused without the flag."""
-        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
-        mock_datetime = mocker.patch("volumito.cli.volumito.datetime")
-        mock_datetime.now.return_value.strftime.return_value = "20260101000000"
-        (tmp_path / "20260101000000").mkdir()
+        """An existing output directory is reused; existing files are skipped."""
+        self._mock_services(mocker, self._queue_tracks(), ["http://h/a.flac", "http://h/b.flac"])
+        (tmp_path / "a.flac").write_bytes(b"old")
 
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
-        assert result.exit_code == 1
-        assert "directory already exists" in result.output
-        assert list((tmp_path / "20260101000000").iterdir()) == []
+        assert result.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["skipped", "downloaded"]
+        assert (tmp_path / "a.flac").read_bytes() == b"old"
+        assert (tmp_path / "b.flac").read_bytes() == b"data"
+        assert "skipped 1" in result.output
+
+    def test_download_output_directory_timestamp_placeholder(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The {timestamp} placeholder in -d expands to the current UTC time."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        mock_datetime = mocker.patch("volumito.cli.click_helpers.datetime")
+        mock_datetime.now.return_value.strftime.return_value = "20260101000000"
+
+        result = runner.invoke(
+            main, [*self._BASE, "-d", os.path.join(str(tmp_path), "{timestamp}")]
+        )
+
+        assert result.exit_code == 0
+        run = tmp_path / "20260101000000"
+        assert (run / "a.flac").read_bytes() == b"data"
+        _, log = self._read_log(run)
+        assert log["output_directory"] == str(run)
 
     def test_download_machine_readable(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """In machine-readable mode only the quoted log path is printed."""
@@ -5561,7 +5647,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["queue", "download", "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         with open(run / "a.flac.json", encoding="utf-8") as manifest_file:
             manifest = json.load(manifest_file)
         assert manifest["entity"] == "track"
@@ -5590,7 +5676,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE])
 
         assert result.exit_code == 0
-        assert (self._run_directory(out) / "Song.flac").read_bytes() == b"data"
+        assert (out / "Song.flac").read_bytes() == b"data"
 
     def test_download_position_starting_at_zero(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -5691,7 +5777,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "01_A.flac").exists()
         assert (run / "02_B.flac").exists()
         assert (run / "01_C.flac").exists()
@@ -5745,7 +5831,7 @@ class TestQueueDownload:
 
         assert result.exit_code == 0
         assert "retrying (1/5)" in result.output
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "a.flac").exists()
         assert (run / "b.flac").exists()
         _, log = self._read_log(tmp_path)
@@ -5898,7 +5984,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "Elegia" / "1" / "01_A.flac").exists()
         assert (run / "Elegia" / "2" / "01_B.flac").exists()
         assert (run / "Allegria" / "01_C.flac").exists()
@@ -5969,7 +6055,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "Elegia" / "1" / "cover.jpg").read_bytes() == b"data"
         assert (run / "Elegia" / "2" / "cover.jpg").read_bytes() == b"data"
         # The album directory itself also gets a copy of the cover
@@ -6018,7 +6104,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         # Default albumart template: the file name from the album-art URI
         assert (run / "c.jpg").read_bytes() == b"data"
         # Two audio downloads plus a single cover download
@@ -6064,7 +6150,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "c1.jpg").exists()
         assert (run / "c2.jpg").exists()
         assert http_get.call_count == 4
@@ -6101,7 +6187,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "cover.jpg").exists()
         # Two distinct URIs render the same name: the existing file is reused
         assert http_get.call_count == 3
@@ -6161,7 +6247,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "--no-with-albumart"])
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert not (run / "c.jpg").exists()
         assert http_get.call_count == 1
 
@@ -6186,7 +6272,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
 
         assert result.exit_code == 0
-        assert not (self._run_directory(out) / "c.jpg").exists()
+        assert not (out / "c.jpg").exists()
 
     def test_download_config_number_retries(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6235,7 +6321,7 @@ class TestQueueDownload:
         )
 
         assert result.exit_code == 0
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "Artist" / "Album" / "000___Album.jpg").read_bytes() == b"data"
         _, log = self._read_log(tmp_path)
         expected = str(run / "Artist" / "Album" / "000___Album.jpg")
@@ -6266,7 +6352,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE, "-d", str(out)])
 
         assert result.exit_code == 0
-        assert (self._run_directory(out) / "Album_cover.jpg").exists()
+        assert (out / "Album_cover.jpg").exists()
 
     def test_download_albumart_template_escape_rejected(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6397,15 +6483,9 @@ class TestPlaylistDownload:
         mocker.patch("volumito.cli.click_helpers.time.sleep")
         return mock_client
 
-    def _run_directory(self, base):
-        """Return the single timestamped per-run download directory under ``base``."""
-        directories = [path for path in base.iterdir() if path.is_dir()]
-        assert len(directories) == 1
-        return directories[0]
-
     def _read_log(self, base):
         """Return the run's queue.json log (path, parsed content)."""
-        log_path = self._run_directory(base) / "queue.json"
+        log_path = base / "queue.json"
         with open(log_path, encoding="utf-8") as log_file:
             return log_path, json.load(log_file)
 
@@ -6427,7 +6507,7 @@ class TestPlaylistDownload:
         # playback command — is the anchor visible in method_calls)
         calls = [name for name, _, _ in client.method_calls]
         assert calls.index("clear") < calls.index("play_playlist") < calls.index("stop")
-        run = self._run_directory(tmp_path)
+        run = tmp_path
         assert (run / "a.flac").read_bytes() == b"data"
         assert (run / "b.flac").read_bytes() == b"data"
         _, log = self._read_log(tmp_path)
@@ -6518,7 +6598,7 @@ class TestPlaylistDownload:
         result = runner.invoke(main, ["-c", str(config), *self._BASE])
 
         assert result.exit_code == 0
-        assert (self._run_directory(out) / "Song.flac").read_bytes() == b"data"
+        assert (out / "Song.flac").read_bytes() == b"data"
 
     def test_download_connection_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """A connection failure while clearing the queue exits with an error."""
@@ -7527,6 +7607,7 @@ class TestPositionIndexing:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -7563,6 +7644,7 @@ class TestPositionIndexing:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
             main,
@@ -7901,6 +7983,7 @@ class TestConfigurationFile:
         # Patch open only in the volumito module so the config file (read via the
         # configuration module) is still read for real.
         mock_open = mocker.patch("volumito.cli.click_helpers.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         config = self._write_config(
             tmp_path, "downloads:\n  track-audio:\n    output-directory: /music\n"
@@ -7935,6 +8018,7 @@ class TestConfigurationFile:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("volumito.cli.click_helpers.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         config = self._write_config(tmp_path, "downloads:\n  output-directory: /covers\n")
 
@@ -7984,6 +8068,7 @@ class TestConfigurationFile:
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
         mock_open = mocker.patch("volumito.cli.click_helpers.open", mocker.mock_open())
+        mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         config = self._write_config(
             tmp_path, 'downloads:\n  replace-characters-in-file-names: ""\n'
