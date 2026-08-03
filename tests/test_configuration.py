@@ -506,9 +506,9 @@ class TestBuildClickDefaultMap:
         assert result == {
             "playback": {"status": formatting},
             "track": {"info": formatting},
-            "queue": {"get": formatting},
+            "queue": {"list": formatting},
             "playlist": {"list": format_only},
-            "zones": {"get": formatting},
+            "zones": {"list": formatting},
             "system": {"version": format_only, "info": format_only},
             "collection": {"statistics": format_only},
             "story": {
@@ -551,8 +551,8 @@ class TestBuildClickDefaultMap:
         # playback-status override reaches the playback.status command.
         assert result["playback"]["status"] == {"output_format": "table"}
         assert result["track"]["info"] == {"output_format": "json"}
-        # queue-get has no override, so it keeps the shared value.
-        assert result["queue"]["get"] == {"output_format": "pretty"}
+        # queue-list has no override, so it keeps the shared value.
+        assert result["queue"]["list"] == {"output_format": "pretty"}
 
     def test_story_subsection_overrides_shared(self):
         """A per-command story subsection overrides the shared display value."""

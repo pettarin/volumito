@@ -67,9 +67,9 @@ FORMAT_KEYS: list[str] = [
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
-    "queue-get": DISPLAY_KEYS,
+    "queue-list": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
-    "zones-get": DISPLAY_KEYS,
+    "zones-list": DISPLAY_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
@@ -94,8 +94,8 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "playlist-list": [
         ["playlist", "list"],
     ],
-    "queue-get": [
-        ["queue", "get"],
+    "queue-list": [
+        ["queue", "list"],
     ],
     "story-album": [
         ["story", "album"],
@@ -122,8 +122,8 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "track-info": [
         ["track", "info"],
     ],
-    "zones-get": [
-        ["zones", "get"],
+    "zones-list": [
+        ["zones", "list"],
     ],
 }
 """Hierarchical subsection name -> the default_map path(s) of the command(s) it targets."""

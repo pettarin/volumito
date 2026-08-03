@@ -104,7 +104,7 @@ output:
   # - collection-statistics
   # - playback-status
   # - playlist-list
-  # - queue-get
+  # - queue-list
   # - story-album
   # - story-artist
   # - story-credits
@@ -113,7 +113,7 @@ output:
   # - system-info
   # - system-version
   # - track-info
-  # - zones-get
+  # - zones-list
 
   # Fields to display.
   # Specify one of: ALL, SHORT, or a comma-separated list of fields (e.g., "album,artist")
@@ -151,7 +151,7 @@ output:
   playlist-list:
     # Add your own overrides here
 
-  queue-get:
+  queue-list:
     # Add your own overrides here
 
   story-album:
@@ -178,7 +178,7 @@ output:
   track-info:
     # Add your own overrides here
 
-  zones-get:
+  zones-list:
     # Add your own overrides here
 
 

@@ -28,7 +28,7 @@ from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
-    SHORT_FORMAT_FIELDS_QUEUE_GET,
+    SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
     STORY_ARTIST_ARGUMENT_ERROR,
@@ -956,14 +956,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.25" in result.output
+        assert "volumito, version 0.0.26" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.25"'
+        assert result.output.strip() == '"0.0.26"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -972,7 +972,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.25"'
+        assert result.output.strip() == '"0.0.26"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3748,7 +3748,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "queue" in result.output.lower()
-        assert "get" in result.output.lower()
+        assert "list" in result.output.lower()
 
     def test_queue_no_subcommand(self, runner: CliRunner):
         """Test queue group without subcommand."""
@@ -3758,19 +3758,19 @@ class TestCLICommands:
         assert result.exit_code == 2
         assert "queue" in result.output.lower()
         # Should show usage/error information when no subcommand is provided
-        assert "get" in result.output.lower()
+        assert "list" in result.output.lower()
 
-    def test_queue_get_help(self, runner: CliRunner):
-        """Test queue get command with --help."""
-        result = runner.invoke(main, ["queue", "get", "--help"])
+    def test_queue_list_help(self, runner: CliRunner):
+        """Test queue list command with --help."""
+        result = runner.invoke(main, ["queue", "list", "--help"])
 
         assert result.exit_code == 0
-        assert "get" in result.output.lower()
+        assert "list" in result.output.lower()
         assert "--format" in result.output
         assert "--fields" in result.output
 
-    def test_queue_get_success_default(self, runner: CliRunner, mocker: MockerFixture):
-        """Test successful queue get command with default options."""
+    def test_queue_list_success_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Test successful queue list command with default options."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3796,14 +3796,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get"])
+        result = runner.invoke(main, ["queue", "list"])
 
         assert result.exit_code == 0
         assert "Song 1" in result.output
         assert "Song 2" in result.output
 
-    def test_queue_get_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with custom host."""
+    def test_queue_list_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with custom host."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3816,14 +3816,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "get"])
+        result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "list"])
 
         assert result.exit_code == 0
         host_configuration = mock_client_class.call_args[0][0]
         assert host_configuration.host == "192.168.1.100"
 
-    def test_queue_get_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --format json."""
+    def test_queue_list_with_format_json(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with --format json."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3836,7 +3836,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--format", "json"])
+        result = runner.invoke(main, ["queue", "list", "--format", "json"])
 
         assert result.exit_code == 0
         # Should be valid JSON
@@ -3846,8 +3846,8 @@ class TestCLICommands:
         assert output_data[0]["title"] == "Test Song"
         assert output_data[0]["position"] == 1
 
-    def test_queue_get_with_format_table(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --format table."""
+    def test_queue_list_with_format_table(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with --format table."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3860,14 +3860,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--format", "table"])
+        result = runner.invoke(main, ["queue", "list", "--format", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Queue" in result.output
         assert "Test Song" in result.output
 
-    def test_queue_get_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --fields all."""
+    def test_queue_list_with_fields_all(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with --fields all."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3884,14 +3884,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--fields", "ALL"])
+        result = runner.invoke(main, ["queue", "list", "--fields", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
         assert "extra_field" in output_data[0]
 
-    def test_queue_get_with_fields_short(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --fields short."""
+    def test_queue_list_with_fields_short(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with --fields short."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3908,7 +3908,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--fields", "SHORT"])
+        result = runner.invoke(main, ["queue", "list", "--fields", "SHORT"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3916,8 +3916,8 @@ class TestCLICommands:
         assert "artist" in output_data[0]
         assert "extra_field" not in output_data[0]
 
-    def test_queue_get_with_raw_format(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --format raw."""
+    def test_queue_list_with_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with --format raw."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3930,7 +3930,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--format", "raw"])
+        result = runner.invoke(main, ["queue", "list", "--format", "raw"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3938,8 +3938,8 @@ class TestCLICommands:
         assert "queue" in output_data
         assert "extra_field" in output_data["queue"][0]
 
-    def test_queue_get_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with --verbose flag."""
+    def test_queue_list_with_verbose(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with --verbose flag."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={
             "queue": [
@@ -3952,13 +3952,13 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "queue", "get"])
+        result = runner.invoke(main, ["--verbose", "queue", "list"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output or "Successfully retrieved" in result.output
 
-    def test_queue_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with connection error."""
+    def test_queue_list_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with connection error."""
         mock_client = mocker.Mock()
         _attach_property(
             mock_client, "queue", side_effect=VolumioConnectionError("Connection failed")
@@ -3969,13 +3969,13 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get"])
+        result = runner.invoke(main, ["queue", "list"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
 
-    def test_queue_get_api_error(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with API error."""
+    def test_queue_list_api_error(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with API error."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", side_effect=VolumioAPIError("API error"))
 
@@ -3984,15 +3984,15 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get"])
+        result = runner.invoke(main, ["queue", "list"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
 
-    def test_queue_get_machine_readable_suppresses_errors(
+    def test_queue_list_machine_readable_suppresses_errors(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """Test queue get command with --machine-readable flag suppresses errors."""
+        """Test queue list command with --machine-readable flag suppresses errors."""
         mock_client = mocker.Mock()
         _attach_property(
             mock_client, "queue", side_effect=VolumioConnectionError("Connection failed")
@@ -4003,14 +4003,14 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "queue", "get"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "list"])
 
         assert result.exit_code == 1
         # No error output with machine-readable flag
         assert result.output == ""
 
-    def test_queue_get_empty_queue(self, runner: CliRunner, mocker: MockerFixture):
-        """Test queue get command with empty queue."""
+    def test_queue_list_empty_queue(self, runner: CliRunner, mocker: MockerFixture):
+        """Test queue list command with empty queue."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "queue", return_value={"queue": []})
 
@@ -4019,7 +4019,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["queue", "get", "--format", "table"])
+        result = runner.invoke(main, ["queue", "list", "--format", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Queue" in result.output
@@ -4279,7 +4279,7 @@ class TestCollectionCommands:
 
 
 class TestZonesCommands:
-    """Test cases for the zones get command."""
+    """Test cases for the zones list command."""
 
     ZONES = {
         "zones": [
@@ -4318,10 +4318,10 @@ class TestZonesCommands:
         return mock_client
 
     def test_get_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get prints pretty JSON with the short fields, including the state."""
+        """zones list prints pretty JSON with the short fields, including the state."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get"])
+        result = runner.invoke(main, ["zones", "list"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -4335,10 +4335,10 @@ class TestZonesCommands:
         assert "albumart" not in output_data[0]["state"]
 
     def test_get_all_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get -L all keeps every field of each zone."""
+        """zones list -L all keeps every field of each zone."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get", "-L", "ALL"])
+        result = runner.invoke(main, ["zones", "list", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -4349,20 +4349,20 @@ class TestZonesCommands:
         assert output_data[0]["state"]["albumart"] == "/art1.png"
 
     def test_get_json_format(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get -F json prints JSON with 2-space indentation."""
+        """zones list -F json prints JSON with 2-space indentation."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get", "-F", "json"])
+        result = runner.invoke(main, ["zones", "list", "-F", "json"])
 
         assert result.exit_code == 0
         assert '\n    "' in result.output
         assert json.loads(result.output)[1]["name"] == "Volumio Studio"
 
     def test_get_table_format(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get -F table prints numbered blocks with aligned labels."""
+        """zones list -F table prints numbered blocks with aligned labels."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        result = runner.invoke(main, ["zones", "list", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -4379,7 +4379,7 @@ class TestZonesCommands:
         """The nested state is printed one key/value per line, also with the short fields."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        result = runner.invoke(main, ["zones", "list", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -4402,7 +4402,7 @@ class TestZonesCommands:
         }
         self._mock_client(mocker, zones=zones)
 
-        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        result = runner.invoke(main, ["zones", "list", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -4416,20 +4416,20 @@ class TestZonesCommands:
         assert f"      {'Status':15}: play" in lines
 
     def test_get_table_format_empty(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get -F table reports an empty zone list."""
+        """zones list -F table reports an empty zone list."""
         self._mock_client(mocker, zones={"zones": []})
 
-        result = runner.invoke(main, ["zones", "get", "-F", "table"])
+        result = runner.invoke(main, ["zones", "list", "-F", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Zones" in result.output
         assert "(empty)" in result.output
 
     def test_get_raw_format(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get -F raw prints the unfiltered payload as compact JSON."""
+        """zones list -F raw prints the unfiltered payload as compact JSON."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "get", "-F", "raw"])
+        result = runner.invoke(main, ["zones", "list", "-F", "raw"])
 
         assert result.exit_code == 0
         assert "\n" not in result.output.strip()
@@ -4438,22 +4438,22 @@ class TestZonesCommands:
         assert output_data["zones"][0]["state"]["volume"] == 43
 
     def test_get_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
-        """In machine-readable mode zones get still honors the format option."""
+        """In machine-readable mode zones list still honors the format option."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "zones", "get", "-F", "raw"])
+        result = runner.invoke(main, ["-m", "zones", "list", "-F", "raw"])
 
         assert result.exit_code == 0
         assert json.loads(result.output)["zones"][1]["name"] == "Volumio Studio"
 
     def test_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
-        """zones get exits 1 on a connection error."""
+        """zones list exits 1 on a connection error."""
         mock_client = self._mock_client(mocker)
         _attach_property(
             mock_client, "zones", side_effect=VolumioConnectionError("Connection failed")
         )
 
-        result = runner.invoke(main, ["zones", "get"])
+        result = runner.invoke(main, ["zones", "list"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -7205,8 +7205,8 @@ class TestQueueHelperFunctions:
 
         assert len(result) == 1
         assert result[0]["position"] == 1
-        # Should include only SHORT_FORMAT_FIELDS_QUEUE_GET
-        for field in SHORT_FORMAT_FIELDS_QUEUE_GET:
+        # Should include only SHORT_FORMAT_FIELDS_QUEUE_LIST
+        for field in SHORT_FORMAT_FIELDS_QUEUE_LIST:
             if field in queue_data["queue"][0]:
                 assert field in result[0]
         # Audio-quality fields are no longer part of the queue short field set
@@ -7496,36 +7496,36 @@ class TestPositionIndexing:
 
         assert json.loads(zero_based.output)["position"] == 1
 
-    def test_queue_get_pretty(self, runner: CliRunner, mocker: MockerFixture):
-        """queue get -F pretty rebases the synthetic positions."""
+    def test_queue_list_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """queue list -F pretty rebases the synthetic positions."""
         self._mock_queue_client(mocker)
 
-        one_based = runner.invoke(main, ["queue", "get", "-F", "pretty"])
+        one_based = runner.invoke(main, ["queue", "list", "-F", "pretty"])
         zero_based = runner.invoke(
-            main, ["--position-starting-at-zero", "queue", "get", "-F", "pretty"]
+            main, ["--position-starting-at-zero", "queue", "list", "-F", "pretty"]
         )
 
         assert [t["position"] for t in json.loads(one_based.output)] == [1, 2]
         assert [t["position"] for t in json.loads(zero_based.output)] == [0, 1]
 
-    def test_queue_get_table(self, runner: CliRunner, mocker: MockerFixture):
-        """queue get -F table rebases the synthetic positions."""
+    def test_queue_list_table(self, runner: CliRunner, mocker: MockerFixture):
+        """queue list -F table rebases the synthetic positions."""
         self._mock_queue_client(mocker)
 
-        one_based = runner.invoke(main, ["queue", "get", "-F", "table"])
+        one_based = runner.invoke(main, ["queue", "list", "-F", "table"])
         zero_based = runner.invoke(
-            main, ["--position-starting-at-zero", "queue", "get", "-F", "table"]
+            main, ["--position-starting-at-zero", "queue", "list", "-F", "table"]
         )
 
         assert "1. Song 1" in one_based.output
         assert "0. Song 1" in zero_based.output
 
-    def test_queue_get_json_unaffected(self, runner: CliRunner, mocker: MockerFixture):
-        """queue get -F json keeps its 1-indexed synthetic positions."""
+    def test_queue_list_json_unaffected(self, runner: CliRunner, mocker: MockerFixture):
+        """queue list -F json keeps its 1-indexed synthetic positions."""
         self._mock_queue_client(mocker)
 
         zero_based = runner.invoke(
-            main, ["--position-starting-at-zero", "queue", "get", "-F", "json"]
+            main, ["--position-starting-at-zero", "queue", "list", "-F", "json"]
         )
 
         assert [t["position"] for t in json.loads(zero_based.output)] == [1, 2]
@@ -8250,7 +8250,7 @@ class TestConfigurationCommands:
                     "collection-statistics": None,
                     "playback-status": None,
                     "playlist-list": None,
-                    "queue-get": None,
+                    "queue-list": None,
                     "story-album": None,
                     "story-artist": None,
                     "story-credits": None,
@@ -8259,7 +8259,7 @@ class TestConfigurationCommands:
                     "system-info": None,
                     "system-version": None,
                     "track-info": None,
-                    "zones-get": None,
+                    "zones-list": None,
                 },
                 "downloads": {
                     "create-download-manifest": True,

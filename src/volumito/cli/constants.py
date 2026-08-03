@@ -91,7 +91,7 @@ SHORT_FORMAT_FIELDS_PLAYER_STATE = [
 ]
 """Short fields list for the "playback status" command."""
 
-SHORT_FORMAT_FIELDS_QUEUE_GET = [
+SHORT_FORMAT_FIELDS_QUEUE_LIST = [
     "position",
     "title",
     "artist",
@@ -100,7 +100,7 @@ SHORT_FORMAT_FIELDS_QUEUE_GET = [
     "tracknumber",
     "duration",
 ]
-"""Short fields list for the "queue get" command."""
+"""Short fields list for the "queue list" command."""
 
 SHORT_FORMAT_FIELDS_STORY = [
     "data.value",
@@ -120,18 +120,18 @@ SHORT_FORMAT_FIELDS_TRACK_INFO = [
 ]
 """Short fields list for the "track info" command."""
 
-SHORT_FORMAT_FIELDS_ZONES_GET = [
+SHORT_FORMAT_FIELDS_ZONES_LIST = [
     "host",
     "name",
     "isSelf",
     "state",
 ]
-"""Short fields list for the "zones get" command."""
+"""Short fields list for the "zones list" command."""
 
-SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE = [
+SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE = [
     "albumart",
 ]
-"""Keys of the "state" subdictionary omitted by the short fields of "zones get"."""
+"""Keys of the "state" subdictionary omitted by the short fields of "zones list"."""
 
 STORY_ARGUMENT_TYPES = [
     "autodetect",

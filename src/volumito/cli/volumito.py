@@ -912,11 +912,11 @@ def queue(ctx: click.Context) -> None:
     pass
 
 
-@queue.command("get")
+@queue.command("list")
 @click.pass_context
 @option_fields
 @option_format
-def queue_get(
+def queue_list(
     ctx: click.Context,
     fields: str,
     output_format: str,
@@ -1316,11 +1316,11 @@ def zones(ctx: click.Context) -> None:
     pass
 
 
-@zones.command("get")
+@zones.command("list")
 @click.pass_context
 @option_fields
 @option_format
-def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
+def zones_list(ctx: click.Context, fields: str, output_format: str) -> None:
     """Print the multiroom zones seen by the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.zones)
 

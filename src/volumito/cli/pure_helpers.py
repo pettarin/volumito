@@ -14,9 +14,9 @@ from volumito.cli.constants import (
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
-    SHORT_FORMAT_FIELDS_QUEUE_GET,
-    SHORT_FORMAT_FIELDS_ZONES_GET,
-    SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE,
+    SHORT_FORMAT_FIELDS_QUEUE_LIST,
+    SHORT_FORMAT_FIELDS_ZONES_LIST,
+    SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE,
 )
 from volumito.clients import VolumioHostConfiguration
 
@@ -135,7 +135,7 @@ def filter_queue_fields(
         A list of filtered queue item dictionaries, in the requested order
     """
     queue = queue_data.get("queue", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_GET)
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_LIST)
     filtered_queue = []
 
     for index, item in enumerate(queue):
@@ -164,7 +164,7 @@ def filter_zones_fields(
         keyword the "state" subdictionary is trimmed too
     """
     zones = zones_data.get("zones", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_ZONES_GET)
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_ZONES_LIST)
     if selected is None:  # ALL
         return [zone.copy() for zone in zones]
 
@@ -177,7 +177,7 @@ def filter_zones_fields(
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
-                if key not in SHORT_FORMAT_FIELDS_ZONES_GET_EXCLUDED_FROM_STATE
+                if key not in SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE
             }
         filtered_zones.append(filtered_zone)
     return filtered_zones
