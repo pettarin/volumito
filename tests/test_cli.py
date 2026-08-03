@@ -4656,7 +4656,7 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "play", "Rock"])
 
         assert result.exit_code == 0
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
         mock_client.state_property.assert_called_once()
         assert "StatusMarkerArtist" in result.output
 
@@ -6367,7 +6367,7 @@ class TestQueueDownload:
         result = runner.invoke(main, ["-v", *self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "retrying (1/5)" in result.output
+        assert "retrying (1/10)" in result.output
         run = tmp_path
         assert (run / "a.flac").exists()
         assert (run / "b.flac").exists()
@@ -6381,8 +6381,8 @@ class TestQueueDownload:
     ):
         """A track whose metadata never update is recorded as an error after the retries."""
         stale = {"title": "Song A", "artist": "Artist", "album": "Album", "position": 0}
-        states = [dict(stale) for _ in range(7)]
-        uris = ["http://h/a.flac"] * 7
+        states = [dict(stale) for _ in range(12)]
+        uris = ["http://h/a.flac"] * 12
         self._mock_services(mocker, self._queue_tracks(), uris, states=states)
 
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
@@ -6391,7 +6391,7 @@ class TestQueueDownload:
         _, log = self._read_log(tmp_path)
         assert log["tracks"][0]["status"] == "downloaded"
         assert log["tracks"][1]["status"] == "error"
-        assert "after 5 retries" in log["tracks"][1]["error"]
+        assert "after 10 retries" in log["tracks"][1]["error"]
 
     def test_download_number_retries_option(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -7255,7 +7255,7 @@ class TestQueueActions:
         assert "StatusMarkerArtist" in result.output
         mock_client.clear.assert_called_once()
         mock_client.state_property.assert_called_once()
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
 
     def test_clear_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
         """--no-print-resulting-status skips the sleep and the status print."""
@@ -7362,7 +7362,7 @@ class TestQueueActions:
         assert result.exit_code == 0
         assert "StatusMarkerArtist" in result.output
         mock_client.state_property.assert_called_once()
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
 
     def test_machine_readable_suppresses_success_message(
         self, runner: CliRunner, mocker: MockerFixture
@@ -7513,7 +7513,7 @@ class TestSeekCommand:
         result = runner.invoke(main, ["playback", "seek", "42", "--no-check-seek-position"])
 
         assert result.exit_code == 0
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
         mock_client.state_property.assert_called_once()
         assert "StatusMarkerArtist" in result.output
 
@@ -7698,7 +7698,7 @@ class TestPrintResultingState:
         assert "Command 'pause' executed successfully" in result.output
         # The resulting status is printed after the command
         assert "Test Song" in result.output
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
         mock_client.state_property.assert_called_once()
 
     def test_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
@@ -7721,7 +7721,7 @@ class TestPrintResultingState:
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
 
     def test_command_with_argument_prints_resulting_status(
         self, runner: CliRunner, mocker: MockerFixture
@@ -7734,7 +7734,7 @@ class TestPrintResultingState:
         assert result.exit_code == 0
         assert "Test Song" in result.output
         mock_client.volume_property.assert_called_once_with(50)
-        mock_sleep.assert_called_once_with(1.0)
+        mock_sleep.assert_called_once_with(2.0)
 
     def test_custom_sleep_before_next_call(self, runner: CliRunner, mocker: MockerFixture):
         """--rest-api-sleep-before-next-call sets the pause before the resulting-status fetch."""
@@ -8931,7 +8931,7 @@ class TestConfigurationCommands:
                 "timeouts": {
                     "rest-api-timeout": 5.0,
                     "mpd-timeout": 5.0,
-                    "rest-api-sleep-before-next-call": 1.0,
+                    "rest-api-sleep-before-next-call": 2.0,
                 },
                 "miscellaneous": {
                     "add-cover-and-metadata": True,
@@ -8972,14 +8972,14 @@ class TestConfigurationCommands:
                         "albumart-file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                         "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
                         "manifest-file": "{output_directory}/manifest.json",
-                        "number-retries-next-track": 5,
+                        "number-retries-next-track": 10,
                         "with-albumart": True,
                     },
                     "queue-download": {
                         "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                         "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
                         "manifest-file": "{output_directory}/manifest.json",
-                        "number-retries-next-track": 5,
+                        "number-retries-next-track": 10,
                         "with-albumart": True,
                     },
                     "track-albumart": {

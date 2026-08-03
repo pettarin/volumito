@@ -7,7 +7,7 @@
 DEFAULT_MANIFEST_FILE = "{output_directory}/manifest.json"
 """Default path template of the queue/playlist download manifest file."""
 
-DEFAULT_NUMBER_RETRIES_NEXT_TRACK = 5
+DEFAULT_NUMBER_RETRIES_NEXT_TRACK = 10
 """Default number of retries waiting for a queue track's metadata to become current."""
 
 DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES = " :"

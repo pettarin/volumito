@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `manifest.json` (was `queue.json`) inside the output directory by default
 - The manifest records `first_download_date`, `last_update_date`, and the `updates`
   visit counter, instead of `download_date`
+- Increased the default of `--rest-api-sleep-before-next-call` to 2.0 seconds and of
+  `--number-retries-next-track` to 10
 
 
 ## [0.0.28] - 2026-08-03

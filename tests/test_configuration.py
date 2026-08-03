@@ -396,7 +396,7 @@ class TestDefaultConfigurationTemplate:
             "timeouts": {
                 "rest-api-timeout": 5.0,
                 "mpd-timeout": 5.0,
-                "rest-api-sleep-before-next-call": 1.0,
+                "rest-api-sleep-before-next-call": 2.0,
             },
             "miscellaneous": {
                 "add-cover-and-metadata": True,
@@ -423,14 +423,14 @@ class TestDefaultConfigurationTemplate:
                     "albumart-file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                     "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
                     "manifest-file": "{output_directory}/manifest.json",
-                    "number-retries-next-track": 5,
+                    "number-retries-next-track": 10,
                     "with-albumart": True,
                 },
                 "queue-download": {
                     "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                     "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
                     "manifest-file": "{output_directory}/manifest.json",
-                    "number-retries-next-track": 5,
+                    "number-retries-next-track": 10,
                     "with-albumart": True,
                 },
                 "track-albumart": {

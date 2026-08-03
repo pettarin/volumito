@@ -188,7 +188,7 @@ from volumito.clients import (
 @click.option(
     "--rest-api-sleep-before-next-call",
     type=float,
-    default=1.0,
+    default=2.0,
     show_default=True,
     help=(
         "When making multiple REST API calls, "
