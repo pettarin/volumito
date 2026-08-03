@@ -166,33 +166,41 @@ $ # print the list of tracks currently in the reproduction queue
 $ volumito queue get
 [
     {
-        "album": "Sirtaki",
-        "artist": "Mango",
-        "duration": "00:06:58",
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "duration": "00:03:15",
         "position": 1,
-        "title": "Nella mia città"
+        "title": "Va tutto bene",
+        "tracknumber": 1,
+        "volumeNumber": 1
     },
     {
-        "album": "Sirtaki",
-        "artist": "Mango",
-        "duration": "00:04:34",
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "duration": "00:03:56",
         "position": 2,
-        "title": "I giochi del vento sul lago salato"
+        "title": "Fuoco sui giocattoli",
+        "tracknumber": 2,
+        "volumeNumber": 1
     },
     {
-        "album": "Sirtaki",
-        "artist": "Mango",
-        "duration": "00:05:18",
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "duration": "00:04:07",
         "position": 3,
-        "title": "Terra bianca"
+        "title": "La Vie En Rouge",
+        "tracknumber": 1,
+        "volumeNumber": 1
     },
     ...
     {
-        "album": "Disincanto",
-        "artist": "Mango",
-        "duration": "00:03:37",
-        "position": 25,
-        "title": "Gli angeli non volano"
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "duration": "00:04:49",
+        "position": 11,
+        "title": "La Bandiera",
+        "tracknumber": 3,
+        "volumeNumber": 2
     }
 ]
 
