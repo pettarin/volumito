@@ -116,7 +116,7 @@ from volumito.clients import (
     callback=configuration_file_callback,
     help=(
         "Path to a YAML configuration file defining option defaults, "
-        "overriding the hardcoded defaults."
+        "overriding the hardcoded defaults. "
         "Explicit command line options override them. "
         "If omitted, configuration files are searched in the locations listed "
         "by the 'configuration search' command."
@@ -464,7 +464,7 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     default=None,
     help=(
         "Position in the queue to play (indexed according to "
-        "--position-starting-at-one/--position-starting-at-zero)"
+        "--position-starting-at-one/--position-starting-at-zero)."
     ),
 )
 @option_print_resulting_status
@@ -529,7 +529,7 @@ def previous(ctx: click.Context, print_resulting_status: bool) -> None:
     "--check-seek-position/--no-check-seek-position",
     default=True,
     show_default=True,
-    help="Check that the seek position is within the duration of the current track",
+    help="Check that the seek position is within the duration of the current track.",
 )
 @option_print_resulting_status
 def seek(
@@ -1599,7 +1599,7 @@ def story_label(
 ) -> None:
     """Print the story of a label.
 
-    The label can be specified by VALUE (free string) or single MBID."""
+    The label can be specified by VALUE (free string) or a single MBID."""
     label = resolve_story_entity(ctx, (value,), argument_type, Label)
     render_story(
         ctx,
@@ -1625,7 +1625,7 @@ def story_place(
 ) -> None:
     """Print the story of a place.
 
-    The label can be specified by VALUE (free string) or single MBID."""
+    The place can be specified by VALUE (free string) or a single MBID."""
     place = resolve_story_entity(ctx, (value,), argument_type, Place)
     render_story(
         ctx,
