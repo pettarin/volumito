@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that does not fit its field is ignored instead of failing the whole response
 - The story query methods return the story itself, raising `VolumioStoryError` when the
   Volumio host reports a failure
+- The CLI works on the response models, reading the raw payload only where the output
+  is the payload itself (the display formats and the download manifests)
 
 ### Fixed
 

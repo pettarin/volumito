@@ -61,6 +61,7 @@ from volumito.clients.models import (
     PlayerState,
     Playlists,
     Queue,
+    QueueTrack,
     Story,
     SystemInfo,
     SystemVersion,
@@ -129,6 +130,18 @@ def _as_model(name: str, value: object) -> object:
     if isinstance(value, list) and issubclass(model, Playlists):
         return model.from_names(value)
     return value
+
+
+def _queue_tracks(payloads: list[dict[str, object]]) -> list[QueueTrack]:
+    """Parse raw queue entries into the tracks the helpers work on.
+
+    Args:
+        payloads: The raw queue entries, as the Volumio API returns them
+
+    Returns:
+        The parsed queue tracks
+    """
+    return [QueueTrack.from_raw(payload) for payload in payloads]
 
 
 def _attach_story(mock_client: Mock, envelope: dict[str, object]) -> None:
@@ -578,23 +591,28 @@ class TestExtractFilenameFromUri:
 class TestRenderOutputFilename:
     """Test cases for the render_output_filename function."""
 
-    def _state(self):
-        return {
-            "position": 0,
-            "title": "La rondine",
-            "album": "Puccini",
-            "artist": "Anna",
-            "trackType": "flac",
-            "duration": 200,
-            "bitdepth": "16 bit",
-            "samplerate": "44.1 kHz",
-            "channels": 2,
-        }
+    def _state(self, **overrides):
+        """Return the player state the templates are rendered against."""
+        return PlayerState.from_raw(
+            {
+                "position": 0,
+                "title": "La rondine",
+                "album": "Puccini",
+                "artist": "Anna",
+                "trackType": "flac",
+                "duration": 200,
+                "bitdepth": "16 bit",
+                "samplerate": "44.1 kHz",
+                "channels": 2,
+                **overrides,
+            }
+        )
 
     def test_default_template(self):
         """The default template reproduces the URI basename."""
         uri = "http://volumio.local:8000/music/song.flac"
-        assert render_output_filename("{file_name_from_uri}", uri, {}, "flac") == "song.flac"
+        empty = PlayerState.from_raw({})
+        assert render_output_filename("{file_name_from_uri}", uri, empty, "flac") == "song.flac"
 
     def test_custom_template(self):
         """Custom template renders metadata; position starts at one; spaces -> underscores."""
@@ -628,8 +646,9 @@ class TestRenderOutputFilename:
 
     def test_extension_default_when_uri_has_none(self):
         """The default extension is used when the URI file has no extension."""
-        assert render_output_filename("{extension}", "http://x/song", {}, "flac") == "flac"
-        assert render_output_filename("{extension}", "http://x/albumart", {}, "jpg") == "jpg"
+        empty = PlayerState.from_raw({})
+        assert render_output_filename("{extension}", "http://x/song", empty, "flac") == "flac"
+        assert render_output_filename("{extension}", "http://x/albumart", empty, "jpg") == "jpg"
 
     def test_bad_template_unknown_key(self):
         """An unknown template key raises a UsageError."""
@@ -643,7 +662,7 @@ class TestRenderOutputFilename:
 
     def test_traversal_metadata_is_neutralized(self):
         """Path separators in metadata cannot escape the output directory."""
-        state = {**self._state(), "title": "../../../home/user/x"}
+        state = self._state(title="../../../home/user/x")
         result = render_output_filename("{title}.{extension}", "http://x/y.flac", state, "flac")
         assert "/" not in result
         assert "\\" not in result
@@ -651,7 +670,7 @@ class TestRenderOutputFilename:
 
     def test_separators_in_metadata_replaced(self):
         """Slashes and backslashes in metadata become the replacement string."""
-        state = {**self._state(), "title": "AC/DC", "album": "Back\\Slash"}
+        state = self._state(title="AC/DC", album="Back\\Slash")
         result = render_output_filename(
             "{title}_{album}.{extension}", "http://x/y.flac", state, "flac"
         )
@@ -659,18 +678,22 @@ class TestRenderOutputFilename:
 
     def test_control_characters_removed(self):
         """Control characters (including NUL) in metadata are removed."""
-        state = {**self._state(), "title": "a\x00b\nc"}
+        state = self._state(title="a\x00b\nc")
         result = render_output_filename("{title}.{extension}", "http://x/y.flac", state, "flac")
         assert result == "abc.flac"
 
     def test_uri_dot_dot_yields_empty_name(self):
         """A URI whose basename is '..' renders to an empty name (rejected by the caller)."""
-        assert render_output_filename("{file_name_from_uri}", "http://x/foo/..", {}, "flac") == ""
+        assert render_output_filename(
+            "{file_name_from_uri}", "http://x/foo/..", PlayerState.from_raw({}), "flac"
+        ) == ""
 
     def test_uri_backslashes_sanitized(self):
         """Backslashes from the URI path parameter cannot survive into the name."""
         uri = "http://x/albumart?path=..%5C..%5Cx.jpg"
-        result = render_output_filename("{file_name_from_uri}", uri, {}, "jpg")
+        result = render_output_filename(
+            "{file_name_from_uri}", uri, PlayerState.from_raw({}), "jpg"
+        )
         assert result == "_.._x.jpg"
 
     def test_attribute_access_rejected(self):
@@ -708,13 +731,13 @@ class TestRenderOutputFilename:
 
     def test_leading_dots_stripped(self):
         """Leading dots are stripped, so the rendered name cannot be a hidden file."""
-        state = {**self._state(), "title": "..hidden"}
+        state = self._state(title="..hidden")
         result = render_output_filename("{title}.{extension}", "http://x/y.flac", state, "flac")
         assert result == "hidden.flac"
 
     def test_custom_replace_characters(self):
         """The replace characters and the replacement string are configurable."""
-        state = {**self._state(), "title": "A (B) C"}
+        state = self._state(title="A (B) C")
         result = render_output_filename(
             "{title}.{extension}",
             "http://x/y.flac",
@@ -761,68 +784,89 @@ class TestRenderOutputFilename:
 
     def test_non_numeric_position_falls_back_to_base(self):
         """A malformed position in the state falls back to the indexing base."""
-        state = {**self._state(), "position": "abc"}
+        state = self._state(position="abc")
         result = render_output_filename("{position:03d}_{title}", "http://x/y.flac", state, "flac")
         assert result == "001_La_rondine"
 
     def test_tracknumber_key(self):
-        """The tracknumber key renders the state's tracknumber verbatim."""
-        state = {**self._state(), "tracknumber": 4}
-
-        result = render_output_filename("{tracknumber:03d}", "http://x/y.flac", state, "flac")
+        """The tracknumber key renders the given track number verbatim."""
+        result = render_output_filename(
+            "{tracknumber:03d}", "http://x/y.flac", self._state(), "flac", tracknumber=4
+        )
 
         assert result == "004"
 
+    def test_tracknumber_key_from_the_state(self):
+        """Without an explicit track number, the one of the state is rendered."""
+        state = self._state(tracknumber=7)
+
+        result = render_output_filename("{tracknumber:03d}", "http://x/y.flac", state, "flac")
+
+        assert result == "007"
+
     def test_tracknumber_key_missing_or_malformed(self):
         """A missing or malformed tracknumber falls back to zero."""
-        assert render_output_filename("{tracknumber}", "http://x/y.flac", {}, "flac") == "0"
-        state = {"tracknumber": "abc"}
-        assert render_output_filename("{tracknumber}", "http://x/y.flac", state, "flac") == "0"
+        empty = PlayerState.from_raw({})
+        assert render_output_filename("{tracknumber}", "http://x/y.flac", empty, "flac") == "0"
+        malformed = PlayerState.from_raw({"tracknumber": "abc"})
+        assert (
+            render_output_filename("{tracknumber}", "http://x/y.flac", malformed, "flac") == "0"
+        )
 
     def test_tracknumber_key_ignores_indexing_option(self):
         """The tracknumber key is absolute, not affected by the indexing base."""
-        state = {**self._state(), "tracknumber": 4}
-
         result = render_output_filename(
-            "{tracknumber}", "http://x/y.flac", state, "flac", position_starting_at_one=False
+            "{tracknumber}",
+            "http://x/y.flac",
+            self._state(),
+            "flac",
+            position_starting_at_one=False,
+            tracknumber=4,
         )
 
         assert result == "4"
 
     def test_album_volume_key(self):
         """The album_volume key keeps its deliberate separator under subdirectories."""
-        state = {**self._state(), "album_volume": "Elegia/2"}
-
         result = render_output_filename(
             "{album_volume}/{title}.{extension}",
             "http://x/y.flac",
-            state,
+            self._state(),
             "flac",
             allow_subdirectories=True,
+            album_volume="Elegia/2",
         )
 
         assert result == "Elegia/2/La_rondine.flac"
 
     def test_album_volume_key_missing(self):
         """A missing album_volume renders as an empty string."""
-        assert render_output_filename("x_{album_volume}", "http://x/y.flac", {}, "flac") == "x_"
+        empty = PlayerState.from_raw({})
+        assert render_output_filename("x_{album_volume}", "http://x/y.flac", empty, "flac") == "x_"
 
     def test_album_volume_key_components_sanitized(self):
         """Backslashes and control characters inside the components are neutralized."""
-        state = {**self._state(), "album_volume": "Ele\\gia/2\x01"}
-
         result = render_output_filename(
-            "{album_volume}", "http://x/y.flac", state, "flac", allow_subdirectories=True
+            "{album_volume}",
+            "http://x/y.flac",
+            self._state(),
+            "flac",
+            allow_subdirectories=True,
+            album_volume="Ele\\gia/2\x01",
         )
 
         assert result == "Ele_gia/2"
 
     def test_album_volume_key_requires_subdirectories(self):
         """A multi-volume value without subdirectory support is rejected."""
-        state = {**self._state(), "album_volume": "Elegia/2"}
-
         with pytest.raises(click.UsageError, match="plain file name"):
-            render_output_filename("{album_volume}.{extension}", "http://x/y.flac", state, "flac")
+            render_output_filename(
+                "{album_volume}.{extension}",
+                "http://x/y.flac",
+                self._state(),
+                "flac",
+                album_volume="Elegia/2",
+            )
 
 
 class TestSanitizeFilenameComponent:
@@ -5412,7 +5456,7 @@ class TestQueueAlbumVolumes:
             {"artist": "A", "album": "Allegria", "volumeNumber": 1},
         ]
 
-        assert queue_album_volumes(tracks, "_") == ["Allegria", "Allegria"]
+        assert queue_album_volumes(_queue_tracks(tracks), "_") == ["Allegria", "Allegria"]
 
     def test_multi_volume_album(self):
         """An album with several volumes gets per-volume components."""
@@ -5422,7 +5466,11 @@ class TestQueueAlbumVolumes:
             {"artist": "A", "album": "Allegria", "volumeNumber": 1},
         ]
 
-        assert queue_album_volumes(tracks, "_") == ["Elegia/1", "Elegia/2", "Allegria"]
+        assert queue_album_volumes(_queue_tracks(tracks), "_") == [
+            "Elegia/1",
+            "Elegia/2",
+            "Allegria",
+        ]
 
     def test_missing_volume_number(self):
         """A track without volumeNumber renders the album alone, even in a multi-volume album."""
@@ -5432,7 +5480,7 @@ class TestQueueAlbumVolumes:
             {"artist": "A", "album": "Elegia"},
         ]
 
-        assert queue_album_volumes(tracks, "_") == ["Elegia/1", "Elegia/2", "Elegia"]
+        assert queue_album_volumes(_queue_tracks(tracks), "_") == ["Elegia/1", "Elegia/2", "Elegia"]
 
     def test_same_album_name_different_artists(self):
         """Same-named albums by different artists are separate groups."""
@@ -5441,7 +5489,7 @@ class TestQueueAlbumVolumes:
             {"artist": "B", "album": "Live", "volumeNumber": 2},
         ]
 
-        assert queue_album_volumes(tracks, "_") == ["Live", "Live"]
+        assert queue_album_volumes(_queue_tracks(tracks), "_") == ["Live", "Live"]
 
     def test_album_name_separators_sanitized(self):
         """Path separators inside the album name are replaced; only ours survives."""
@@ -5450,21 +5498,24 @@ class TestQueueAlbumVolumes:
             {"artist": "A", "album": "AC/DC Live", "volumeNumber": 2},
         ]
 
-        assert queue_album_volumes(tracks, "_") == ["AC_DC Live/1", "AC_DC Live/2"]
+        assert queue_album_volumes(_queue_tracks(tracks), "_") == ["AC_DC Live/1", "AC_DC Live/2"]
 
     def test_missing_album_and_empty_queue(self):
         """A missing album yields an empty component; an empty queue an empty list."""
-        assert queue_album_volumes([{"volumeNumber": 1}], "_") == [""]
+        assert queue_album_volumes(_queue_tracks([{"volumeNumber": 1}]), "_") == [""]
         assert queue_album_volumes([], "_") == []
 
 
 class TestQueueTrackMetadataCurrent:
     """Test cases for the queue_track_metadata_current function."""
 
-    _EXPECTED = {"album": "X", "artist": "A", "title": "T"}
+    _EXPECTED = QueueTrack.from_raw({"album": "X", "artist": "A", "title": "T"})
 
     def _state(self, **overrides):
-        return {"album": "X", "artist": "A", "title": "T", "position": 2, **overrides}
+        """Return the player state fetched after playing the track."""
+        return PlayerState.from_raw(
+            {"album": "X", "artist": "A", "title": "T", "position": 2, **overrides}
+        )
 
     def test_current(self):
         """A state matching the queue entry and position, with a new URI, is accepted."""
@@ -5487,9 +5538,10 @@ class TestQueueTrackMetadataCurrent:
 
     def test_queue_entry_without_metadata_skips_fields(self):
         """Queue-entry fields that are absent are not compared."""
-        state = {"title": "Whatever", "position": 2}
+        state = PlayerState.from_raw({"title": "Whatever", "position": 2})
+        expected = QueueTrack.from_raw({})
 
-        assert queue_track_metadata_current(state, "u2", {}, 2, "u1", False) is True
+        assert queue_track_metadata_current(state, "u2", expected, 2, "u1", False) is True
 
     def test_wrong_position(self):
         """A stale position is rejected."""
@@ -5499,8 +5551,7 @@ class TestQueueTrackMetadataCurrent:
 
     def test_missing_or_malformed_position(self):
         """A missing or malformed position is rejected."""
-        state = self._state()
-        del state["position"]
+        state = PlayerState.from_raw({"album": "X", "artist": "A", "title": "T"})
         assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
         state = self._state(position="abc")
         assert queue_track_metadata_current(state, "u2", self._EXPECTED, 2, "u1", False) is False
@@ -5527,10 +5578,12 @@ class TestQueueTrackMetadataCurrent:
 class TestManifestMatchesQueue:
     """Test cases for the manifest_matches_queue function."""
 
-    _TRACKS = [
-        {"title": "Song A", "artist": "Artist", "album": "Album"},
-        {"title": "Song B", "artist": "Artist", "album": "Album"},
-    ]
+    _TRACKS = _queue_tracks(
+        [
+            {"title": "Song A", "artist": "Artist", "album": "Album"},
+            {"title": "Song B", "artist": "Artist", "album": "Album"},
+        ]
+    )
 
     def test_matching(self):
         """Entries matching title, artist, and album at every position match."""
@@ -5558,7 +5611,7 @@ class TestManifestMatchesQueue:
 
     def test_missing_keys_on_both_sides_match(self):
         """Keys missing on both sides compare as equal (None == None)."""
-        assert manifest_matches_queue([{"title": "X"}], [{"title": "X"}]) is True
+        assert manifest_matches_queue([{"title": "X"}], _queue_tracks([{"title": "X"}])) is True
 
 
 class TestQueueDownload:

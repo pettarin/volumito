@@ -317,8 +317,8 @@ print(info.name, info.system_version, info.is_premium_device)
 
 # retrieve the current playing state
 state = client.state
-print(state.title, "-", state.artist, "-", state.album)
-# Recitando - Paolo Conte - Paolo Conte Alla Scala - il Maestro è nell'anima
+print(state.title, "---", state.artist, "---", state.album)
+# Recitando --- Paolo Conte --- Paolo Conte Alla Scala - il Maestro è nell'anima
 print(state.status, state.volume, state.seek, state.duration)
 # play 49 125029 229
 print(state.is_playing, state.is_paused, state.is_stopped)

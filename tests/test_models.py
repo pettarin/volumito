@@ -162,6 +162,20 @@ class TestPlayerState:
         assert state.channels == 2
         assert state.service == "mpd"
 
+    def test_parses_the_optional_track_fields(self):
+        """The album artist and track number are parsed when the host reports them."""
+        state = PlayerState.from_raw({"albumartist": "Mango", "tracknumber": 3})
+
+        assert state.albumartist == "Mango"
+        assert state.tracknumber == 3
+
+    def test_optional_track_fields_default_to_none(self):
+        """The album artist and track number are absent from most payloads."""
+        state = PlayerState.from_raw({"title": "A Song"})
+
+        assert state.albumartist is None
+        assert state.tracknumber is None
+
     def test_stream_accepts_a_flag_or_a_name(self):
         """The stream field holds either a boolean flag or the kind of stream."""
         assert PlayerState.from_raw({"stream": False}).stream is False

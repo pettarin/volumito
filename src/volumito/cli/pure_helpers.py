@@ -20,6 +20,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE,
 )
 from volumito.clients import VolumioHostConfiguration
+from volumito.clients.models import PlayerState, QueueTrack
 
 
 def display_position(api_position: int, starting_at_one: bool) -> int:
@@ -489,7 +490,7 @@ def is_mbid(text: str) -> bool:
 
 
 def manifest_matches_queue(
-    manifest_tracks: list[dict[str, Any]], queue_tracks: list[dict[str, Any]]
+    manifest_tracks: list[dict[str, Any]], queue_tracks: list[QueueTrack]
 ) -> bool:
     """Check whether the manifest tracks describe the current queue.
 
@@ -498,7 +499,7 @@ def manifest_matches_queue(
 
     Args:
         manifest_tracks: The "tracks" entries of an existing download manifest
-        queue_tracks: The tracks of the current queue, as returned by the API
+        queue_tracks: The tracks of the current queue
 
     Returns:
         True if the manifest matches the queue, False otherwise
@@ -506,9 +507,9 @@ def manifest_matches_queue(
     if len(manifest_tracks) != len(queue_tracks):
         return False
     return all(
-        entry.get("title") == track.get("title")
-        and entry.get("artist") == track.get("artist")
-        and entry.get("album") == track.get("album")
+        entry.get("title") == track.title
+        and entry.get("artist") == track.artist
+        and entry.get("album") == track.album
         for entry, track in zip(manifest_tracks, queue_tracks, strict=True)
     )
 
@@ -557,11 +558,11 @@ def parse_time_to_seconds(text: str) -> int | None:
     return seconds
 
 
-def queue_album_volumes(tracks: list[dict[str, Any]], replacement: str) -> list[str]:
+def queue_album_volumes(tracks: list[QueueTrack], replacement: str) -> list[str]:
     """Return each queue track's album/volume path component, in queue order.
 
     A track's ``(artist, album)`` group is multi-volume when the queue holds more
-    than one distinct non-None ``volumeNumber`` for it. A multi-volume track renders
+    than one distinct volume number for it. A multi-volume track renders
     as ``<album>/<volumeNumber>`` (a per-volume subdirectory) and any other track as
     ``<album>`` alone. The album name and the volume number are sanitized separately
     with ``replacement`` (see ``sanitize_filename_component``), so only the deliberate
@@ -574,18 +575,18 @@ def queue_album_volumes(tracks: list[dict[str, Any]], replacement: str) -> list[
     Returns:
         The album/volume component of each track, in queue order
     """
-    volumes: dict[tuple[Any, Any], set[Any]] = {}
+    volumes: dict[tuple[str | None, str | None], set[int]] = {}
     for track in tracks:
-        key = (track.get("artist"), track.get("album"))
-        volume = track.get("volumeNumber")
+        key = (track.artist, track.album)
+        volume = track.volume_number
         if volume is not None:
             volumes.setdefault(key, set()).add(volume)
 
     components = []
     for track in tracks:
-        key = (track.get("artist"), track.get("album"))
-        album = sanitize_filename_component(str(track.get("album") or ""), replacement)
-        volume = track.get("volumeNumber")
+        key = (track.artist, track.album)
+        album = sanitize_filename_component(track.album or "", replacement)
+        volume = track.volume_number
         if volume is not None and len(volumes.get(key, set())) > 1:
             components.append(f"{album}/{sanitize_filename_component(str(volume), replacement)}")
         else:
@@ -594,9 +595,9 @@ def queue_album_volumes(tracks: list[dict[str, Any]], replacement: str) -> list[
 
 
 def queue_track_metadata_current(
-    state: dict[str, Any],
+    state: PlayerState,
     uri: str,
-    expected_track: dict[str, Any],
+    expected_track: QueueTrack,
     index: int,
     previous_uri: str | None,
     expect_same_uri: bool,
@@ -606,7 +607,7 @@ def queue_track_metadata_current(
     The state is compared against ``expected_track``, the corresponding entry of the
     queue listing: every ``album``/``artist``/``title`` value present in the queue
     entry must appear identically in the state. The state's ``position`` must equal
-    ``index`` (a missing or malformed position fails the check), and ``uri`` must
+    ``index`` (a missing position fails the check), and ``uri`` must
     differ from ``previous_uri`` (the URI of the previously fetched track) unless
     there is no previous track or the queue itself lists the same URI for both
     tracks (``expect_same_uri``).
@@ -622,18 +623,12 @@ def queue_track_metadata_current(
     Returns:
         True if the metadata are current, False if they look stale
     """
-    for field in ("album", "artist", "title"):
-        expected_value = expected_track.get(field)
-        if expected_value is not None and state.get(field) != expected_value:
+    expected_values = (expected_track.album, expected_track.artist, expected_track.title)
+    values = (state.album, state.artist, state.title)
+    for expected_value, value in zip(expected_values, values, strict=True):
+        if expected_value is not None and value != expected_value:
             return False
-    position_value = state.get("position")
-    if position_value is None:
-        return False
-    try:
-        position = int(position_value)
-    except (TypeError, ValueError):
-        return False
-    if position != index:
+    if state.position is None or state.position != index:
         return False
     if previous_uri is not None and not expect_same_uri and uri == previous_uri:
         return False
@@ -665,20 +660,20 @@ def rebase_queue_positions(
 
 
 def resolve_albumart_uri(
-    state: dict[str, Any], host_configuration: VolumioHostConfiguration
+    state: PlayerState, host_configuration: VolumioHostConfiguration
 ) -> str | None:
     """Return the absolute album-art URI for the current state, or None if absent.
 
     A relative URI (starting with "/") is made absolute by prepending the REST base URL.
 
     Args:
-        state: The current player state dictionary
+        state: The current player state
         host_configuration: The Volumio host configuration
 
     Returns:
         The absolute album-art URI, or None when the state has no album art
     """
-    albumart: str | None = state.get("albumart")
+    albumart = state.albumart
     if not albumart:
         return None
     if albumart.startswith("/"):

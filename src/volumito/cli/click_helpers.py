@@ -74,7 +74,7 @@ from volumito.clients import (
     VolumioStoryError,
 )
 from volumito.clients.entities import MusicEntity
-from volumito.clients.models import Story
+from volumito.clients.models import PlayerState, Story
 
 
 class OnOffParamType(click.ParamType):
@@ -324,7 +324,7 @@ def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tu
     state = fetch_state_or_exit(ctx)
     values = []
     for key in keys:
-        value = state.get(key)
+        value = getattr(state, key, None)
         if not isinstance(value, str) or not value.strip():
             if not ctx.obj["machine_readable"]:
                 click.echo(f"Error: {STORY_CURRENT_TRACK_METADATA_ERROR}", err=True)
@@ -375,7 +375,7 @@ def create_client(
 
 
 def download_queue_albumart(
-    state: dict[str, Any],
+    state: PlayerState,
     run_directory: str,
     albumart_file_name_template: str,
     host_configuration: VolumioHostConfiguration,
@@ -386,6 +386,8 @@ def download_queue_albumart(
     position_starting_at_one: bool,
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
+    album_volume: str = "",
+    tracknumber: int | None = None,
 ) -> str | None:
     """Download the current track's album art into the output directory.
 
@@ -403,7 +405,7 @@ def download_queue_albumart(
     warning and otherwise ignored.
 
     Args:
-        state: The current player state dictionary (source of the album-art URI)
+        state: The current player state (source of the album-art URI)
         run_directory: The download output directory of the run
         albumart_file_name_template: Template for the cover file name
         host_configuration: The Volumio host configuration (to resolve relative URIs)
@@ -414,6 +416,8 @@ def download_queue_albumart(
         position_starting_at_one: Whether the template ``position`` key starts at one
         replace_characters_in_file_names: Characters replaced in the rendered file name
         replace_characters_in_file_names_with: Replacement for the replaced characters
+        album_volume: The album/volume path component of the track being downloaded
+        tracknumber: The number of the track within its album
 
     Returns:
         The cover file path, or None if the track has no album art or the download failed
@@ -426,17 +430,19 @@ def download_queue_albumart(
     if albumart_uri is None:
         return None
 
-    def resolve_cover_path(cover_state: dict[str, Any]) -> str | None:
+    def resolve_cover_path(cover_album_volume: str) -> str | None:
         filename = render_output_filename(
             albumart_file_name_template,
             albumart_uri,
-            cover_state,
+            state,
             "jpg",
             position_starting_at_one,
             replace_characters_in_file_names,
             replace_characters_in_file_names_with,
             allow_subdirectories=True,
             option_label="--albumart-file-name-template",
+            album_volume=cover_album_volume,
+            tracknumber=tracknumber,
         )
         if not filename:
             return None
@@ -449,7 +455,7 @@ def download_queue_albumart(
             )
         return path
 
-    cover_path = resolve_cover_path(state)
+    cover_path = resolve_cover_path(album_volume)
     if cover_path is None:
         if not machine_readable:
             click.echo("\nWarning: cannot determine a file name for the album art", err=True)
@@ -459,10 +465,8 @@ def download_queue_albumart(
     )
 
     # For a multi-volume track, also place the cover in the album directory itself
-    album_volume = str(state.get("album_volume") or "")
     if result is not None and "/" in album_volume:
-        album_state = {**state, "album_volume": album_volume.split("/", 1)[0]}
-        album_cover_path = resolve_cover_path(album_state)
+        album_cover_path = resolve_cover_path(album_volume.split("/", 1)[0])
         if album_cover_path is not None and album_cover_path != cover_path:
             _materialize_albumart(
                 albumart_uri,
@@ -481,9 +485,10 @@ def download_queue_track(
     overwrite: bool,
     timeout: float,
     create_manifest: bool,
-    state: dict[str, Any],
+    state: PlayerState,
     host_configuration: VolumioHostConfiguration,
     add_cover_and_metadata: bool,
+    extra_state: dict[str, Any] | None = None,
 ) -> tuple[str, str | None]:
     """Download one queue track to ``destination``, reporting the outcome.
 
@@ -517,7 +522,7 @@ def download_queue_track(
         if create_manifest:
             write_download_manifest(
                 destination, uri, state, host_configuration, "track", "audio",
-                add_cover_and_metadata,
+                add_cover_and_metadata, extra_state,
             )
     except (requests.exceptions.RequestException, OSError) as e:
         return "error", str(e)
@@ -530,7 +535,7 @@ def download_uri_to(
     output_directory: str | None,
     file_name_template: str,
     default_extension: str,
-    state: dict[str, Any],
+    state: PlayerState,
     overwrite: bool,
     label: str,
     timeout: float,
@@ -562,7 +567,7 @@ def download_uri_to(
         output_directory: Destination directory (file name from the template), or None
         file_name_template: Template for the ``output_directory`` file name
         default_extension: Extension for the ``{extension}`` key when the URI has none
-        state: The current player state dictionary (source of template values)
+        state: The current player state (source of the template values)
         overwrite: Whether to overwrite the destination file if it already exists
         label: Human-readable noun for messages ("track" or "album art")
         timeout: Request timeout in seconds
@@ -639,40 +644,41 @@ def download_uri_to(
 
 def embed_track_tags(
     destination: str,
-    state: dict[str, Any],
+    state: PlayerState,
     host_configuration: VolumioHostConfiguration,
     timeout: float,
     position_starting_at_one: bool,
     verbose: bool,
     machine_readable: bool,
+    tracknumber: int | None = None,
 ) -> None:
     """Embed the current track metadata and cover art into a downloaded audio file.
 
-    The metadata and cover come from ``state``. The embedded track number comes from
-    the state's ``tracknumber`` key when present (the track number from the queue
-    metadata, used verbatim and injected by ``queue download``), falling back to
-    ``position`` (indexed according to ``position_starting_at_one``). Any problem
+    The metadata and cover come from ``state``. The embedded track number is the
+    ``tracknumber`` argument when given (the track number from the queue metadata,
+    used verbatim and passed by ``queue download``), then the one the state reports,
+    falling back to ``position`` (indexed according to ``position_starting_at_one``). Any problem
     (an unsupported format, a cover-download failure, or a tagging error) is
     reported as a warning and otherwise ignored: the already-downloaded file is
     left in place.
 
     Args:
         destination: The downloaded audio file to tag, modified in place
-        state: The current player state dictionary (source of the metadata)
+        state: The current player state (source of the metadata)
         host_configuration: The Volumio host configuration (to resolve the cover URI)
         timeout: Request timeout for fetching the cover image, in seconds
         position_starting_at_one: Whether the embedded track number starts at one
         verbose: Whether to print progress messages
         machine_readable: Whether machine-readable mode is active (suppresses messages)
+        tracknumber: The number of the track within its album, when known
     """
-    tracknumber = state.get("tracknumber")
-    if tracknumber is not None:
-        track_number: int | None = int(tracknumber)
+    number = tracknumber if tracknumber is not None else state.tracknumber
+    if number is not None:
+        track_number: int | None = number
     else:
-        position = state.get("position")
         track_number = (
-            display_position(int(position), position_starting_at_one)
-            if position is not None
+            display_position(state.position, position_starting_at_one)
+            if state.position is not None
             else None
         )
 
@@ -681,10 +687,10 @@ def embed_track_tags(
     try:
         embed_metadata_and_cover(
             destination,
-            title=state.get("title"),
-            artist=state.get("artist"),
-            album=state.get("album"),
-            albumartist=state.get("albumartist"),
+            title=state.title,
+            artist=state.artist,
+            album=state.album,
+            albumartist=state.albumartist,
             track_number=track_number,
             cover=cover,
         )
@@ -788,7 +794,7 @@ def expand_output_directory(output_directory: str | None) -> str | None:
 
 
 def fetch_cover(
-    state: dict[str, Any],
+    state: PlayerState,
     host_configuration: VolumioHostConfiguration,
     timeout: float,
     machine_readable: bool,
@@ -850,17 +856,16 @@ def fetch_or_exit[T](
         sys.exit(1)
 
 
-def fetch_state_or_exit(ctx: click.Context) -> dict[str, Any]:
+def fetch_state_or_exit(ctx: click.Context) -> PlayerState:
     """Fetch the current state, printing errors and exiting (1) on failure.
 
     Args:
         ctx: Click context object containing shared options
 
     Returns:
-        The state dictionary returned by the client
+        The playback state returned by the client
     """
-    state: dict[str, Any] = fetch_or_exit(ctx, lambda c: c.state.raw)
-    return state
+    return fetch_or_exit(ctx, lambda c: c.state)
 
 
 def fetch_uri_to_file(uri: str, destination: str, timeout: float) -> None:
@@ -1165,24 +1170,26 @@ def read_queue_log(path: str) -> dict[str, Any] | None:
 def render_output_filename(
     template: str,
     uri: str,
-    state: dict[str, Any],
+    state: PlayerState,
     default_extension: str,
     position_starting_at_one: bool = True,
     replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
     allow_subdirectories: bool = False,
     option_label: str = "--file-name-template",
+    album_volume: str = "",
+    tracknumber: int | None = None,
 ) -> str:
     """Render a safe output file name from a template, track metadata, and the URI.
 
     The template uses Python ``str.format`` syntax. Supported keys are:
     ``file_name_from_uri``, ``position`` (int, indexed according to
     ``position_starting_at_one``), ``tracknumber`` (int, the track number of the
-    track, taken verbatim from the state's ``tracknumber`` key and injected from the
-    queue metadata by ``queue download``), ``title``, ``album``, ``album_volume``
-    (the album name with ``/<volumeNumber>`` appended for multi-volume albums,
-    injected by ``queue download``; its path separator is preserved, so the key is
-    meant for subdirectory-capable templates), ``artist``,
+    track, taken verbatim from the ``tracknumber`` argument, which ``queue download``
+    fills from the queue metadata), ``title``, ``album``, ``album_volume``
+    (the album name with ``/<volumeNumber>`` appended for multi-volume albums, given
+    by the ``album_volume`` argument of ``queue download``; its path separator is
+    preserved, so the key is meant for subdirectory-capable templates), ``artist``,
     ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
     ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
@@ -1205,13 +1212,15 @@ def render_output_filename(
     Args:
         template: The file-name template (``str.format`` syntax)
         uri: The URI being downloaded (source of ``file_name_from_uri`` and ``extension``)
-        state: The current player state dictionary
+        state: The current player state (source of the metadata values)
         default_extension: Extension to use when the URI file has none (no leading dot)
         position_starting_at_one: Whether the ``position`` key starts at one
         replace_characters_in_file_names: Characters replaced in the rendered name
         replace_characters_in_file_names_with: Replacement for the replaced characters
         allow_subdirectories: Whether template-literal path separators are allowed
         option_label: Name of the template option, used in the error messages
+        album_volume: The album/volume path component of the track being downloaded
+        tracknumber: The number of the track within its album, when known
 
     Returns:
         The rendered, sanitized file name
@@ -1229,44 +1238,32 @@ def render_output_filename(
             "it must not contain path separators or control characters"
         )
 
-    def as_text(key: str) -> str:
-        value = state.get(key)
-        text = str(value).strip() if value is not None else ""
+    def as_text(value: str | None) -> str:
+        text = value.strip() if value is not None else ""
         return sanitize_filename_component(text, replacement)
 
-    try:
-        position = int(state.get("position") or 0)
-    except (TypeError, ValueError):
-        position = 0
-
-    try:
-        tracknumber = int(state.get("tracknumber") or 0)
-    except (TypeError, ValueError):
-        tracknumber = 0
-
+    number = tracknumber if tracknumber is not None else state.tracknumber
     file_name_from_uri = sanitize_filename_component(extract_filename_from_uri(uri), replacement)
     uri_extension = os.path.splitext(file_name_from_uri)[1].lstrip(".")
 
     # Sanitize the album/volume value per component, keeping its deliberate separator
-    album_volume = "/".join(
-        sanitize_filename_component(part, replacement)
-        for part in str(state.get("album_volume") or "").split("/")
+    album_volume_component = "/".join(
+        sanitize_filename_component(part, replacement) for part in album_volume.split("/")
     )
 
-    duration = state.get("duration")
     keys: dict[str, object] = {
         "file_name_from_uri": file_name_from_uri,
-        "position": display_position(position, position_starting_at_one),
-        "tracknumber": tracknumber,
-        "title": as_text("title"),
-        "album": as_text("album"),
-        "album_volume": album_volume,
-        "artist": as_text("artist"),
-        "trackType": as_text("trackType"),
-        "duration": format_duration(int(duration)) if isinstance(duration, int) else "",
-        "bitdepth": as_text("bitdepth"),
-        "samplerate": as_text("samplerate"),
-        "channels": int(state["channels"]) if isinstance(state.get("channels"), int) else 0,
+        "position": display_position(state.position or 0, position_starting_at_one),
+        "tracknumber": number or 0,
+        "title": as_text(state.title),
+        "album": as_text(state.album),
+        "album_volume": album_volume_component,
+        "artist": as_text(state.artist),
+        "trackType": as_text(state.track_type),
+        "duration": format_duration(state.duration) if state.duration is not None else "",
+        "bitdepth": as_text(state.bitdepth),
+        "samplerate": as_text(state.samplerate),
+        "channels": state.channels or 0,
         "extension": uri_extension or default_extension,
     }
 
@@ -1349,7 +1346,9 @@ def render_state(
     machine_readable = ctx.obj["machine_readable"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
-    state = fetch_state_or_exit(ctx)
+    # The display pipeline works on the payload the Volumio host returned, since the
+    # fields and formats are defined over its own field names
+    state = fetch_state_or_exit(ctx).raw
 
     if verbose and not machine_readable:
         click.echo("Successfully retrieved state", err=True)
@@ -1561,22 +1560,25 @@ def rest_api_sleep(ctx: click.Context) -> None:
 def write_download_manifest(
     destination: str,
     uri: str,
-    state: dict[str, Any],
+    state: PlayerState,
     host_configuration: VolumioHostConfiguration,
     entity: str,
     kind: str,
     add_cover_and_metadata: bool | None,
+    extra_state: dict[str, Any] | None = None,
 ) -> str:
     """Write the ``<destination>.json`` manifest describing a download.
 
     Args:
         destination: The path the URI was downloaded to
         uri: The downloaded URI
-        state: The current player state dictionary
+        state: The current player state, recorded as the payload the host returned
         host_configuration: The Volumio host configuration
         entity: The manifest ``entity`` value (e.g., "track")
         kind: The manifest ``kind`` value (e.g., "audio" or "albumart")
         add_cover_and_metadata: Recorded in the manifest when not None
+        extra_state: Values recorded in the state alongside the payload (the album
+            volume and track number computed by ``queue download``)
 
     Returns:
         The path of the written manifest file
@@ -1589,7 +1591,7 @@ def write_download_manifest(
         "output_file_name": os.path.basename(destination),
         "output_file_path": destination,
         "source_uri": uri,
-        "state": state,
+        "state": {**state.raw, **(extra_state or {})},
         "volumio_host": host_configuration.rest_base_url,
         "volumito_version": __version__,
     }

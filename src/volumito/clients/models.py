@@ -168,6 +168,9 @@ class PlayerState(VolumioModel):
     albumart: str | None = None
     """The album art URI, absolute or relative to the host."""
 
+    albumartist: str | None = None
+    """The album artist of the track playing, when the host reports one."""
+
     artist: str | None = None
     """The artist of the track playing."""
 
@@ -227,6 +230,9 @@ class PlayerState(VolumioModel):
 
     track_type: str | None = Field(default=None, alias="trackType")
     """The type of the track playing (e.g., ``"qobuz"``)."""
+
+    tracknumber: int | None = None
+    """The number of the track within its album, when the host reports it."""
 
     updatedb: bool | None = None
     """Whether the music collection database is being updated."""

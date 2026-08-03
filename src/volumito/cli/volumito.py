@@ -571,11 +571,10 @@ def seek(
     against the duration of the current track.
     """
     if value is None:
-        # Read the raw state (not the seek property, which rounds to whole seconds)
-        # to keep the millisecond precision of the printed position
-        state = fetch_state_or_exit(ctx)
-        current = state.get("seek")
-        if not isinstance(current, int):
+        # Read the state seek position (not the seek property, which rounds to whole
+        # seconds) to keep the millisecond precision of the printed position
+        current = fetch_state_or_exit(ctx).seek
+        if current is None:
             if not ctx.obj["machine_readable"]:
                 click.echo("Error: no seek position found in current state", err=True)
             sys.exit(1)
@@ -584,9 +583,9 @@ def seek(
         return
 
     if check_seek_position and isinstance(value, int):
-        duration = fetch_state_or_exit(ctx).get("duration")
+        duration = fetch_state_or_exit(ctx).duration
         # The duration is unknown for web radios and streams: skip the check
-        if isinstance(duration, int) and duration > 0 and value > duration:
+        if duration is not None and duration > 0 and value > duration:
             if not ctx.obj["machine_readable"]:
                 click.echo(
                     f"Error: seek position out of range: {format_duration(value)} "
@@ -748,7 +747,7 @@ def audio(
     try:
         # Get current track metadata (also validates REST connectivity)
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.state.raw
+        state = client.state
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -863,7 +862,7 @@ def albumart(
     try:
         # Get current state metadata
         client = create_client(host_configuration, rest_api_timeout)
-        state = client.state.raw
+        state = client.state
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved state", err=True)
@@ -1051,7 +1050,7 @@ def queue_download(
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        tracks = client.queue.raw.get("queue", [])
+        tracks = client.queue.tracks
 
         if verbose and not machine_readable:
             click.echo("Successfully retrieved queue", err=True)
@@ -1116,13 +1115,13 @@ def queue_download(
                 click.echo(f"Creating manifest file {log_path}")
             entries = [
                 {
-                    "album": track.get("album"),
-                    "artist": track.get("artist"),
+                    "album": track.album,
+                    "artist": track.artist,
                     "position": display_position(index, position_starting_at_one),
                     "status": "pending",
-                    "title": track.get("title"),
-                    "track_number": track.get("tracknumber"),
-                    "volume_number": track.get("volumeNumber"),
+                    "title": track.title,
+                    "track_number": track.tracknumber,
+                    "volume_number": track.volume_number,
                 }
                 for index, track in enumerate(tracks)
             ]
@@ -1177,7 +1176,7 @@ def queue_download(
                 destination: str | None = None
                 try:
                     expect_same_uri = (
-                        index > 0 and tracks[index].get("uri") == tracks[index - 1].get("uri")
+                        index > 0 and tracks[index].uri == tracks[index - 1].uri
                     )
                     attempt = 0
                     while True:
@@ -1185,7 +1184,7 @@ def queue_download(
                         rest_api_sleep(ctx)
                         client.pause()
                         rest_api_sleep(ctx)
-                        state = client.state.raw
+                        state = client.state
                         uri = mpd_client.get_track_uri()
                         if not check_next_track or queue_track_metadata_current(
                             state, uri, tracks[index], index, previous_uri, expect_same_uri
@@ -1211,10 +1210,12 @@ def queue_download(
                         )
                     else:
                         previous_uri = uri
-                        state = {
-                            **state,
-                            "album_volume": album_volumes[index],
-                            "tracknumber": tracks[index].get("tracknumber"),
+                        album_volume = album_volumes[index]
+                        tracknumber = tracks[index].tracknumber
+                        # The values computed here are also recorded in the manifest
+                        extra_state = {
+                            "album_volume": album_volume,
+                            "tracknumber": tracknumber,
                         }
                         filename = render_output_filename(
                             audio_file_name_template,
@@ -1226,6 +1227,8 @@ def queue_download(
                             replace_characters_in_file_names_with,
                             allow_subdirectories=True,
                             option_label="--audio-file-name-template",
+                            album_volume=album_volume,
+                            tracknumber=tracknumber,
                         )
                         if not filename:
                             status = "error"
@@ -1248,6 +1251,7 @@ def queue_download(
                                 state,
                                 host_configuration,
                                 add_cover_and_metadata,
+                                extra_state,
                             )
                             if status == "downloaded" and add_cover_and_metadata:
                                 embed_track_tags(
@@ -1258,6 +1262,7 @@ def queue_download(
                                     position_starting_at_one,
                                     verbose,
                                     machine_readable,
+                                    tracknumber,
                                 )
                             if with_albumart and status != "error":
                                 cover_path = download_queue_albumart(
@@ -1272,6 +1277,8 @@ def queue_download(
                                     position_starting_at_one,
                                     replace_characters_in_file_names,
                                     replace_characters_in_file_names_with,
+                                    album_volume,
+                                    tracknumber,
                                 )
                                 if cover_path is not None:
                                     entry["albumart_file_path"] = cover_path
