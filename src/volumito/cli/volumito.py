@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, NoReturn
 
 import click
 
@@ -353,26 +353,38 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     """
     machine_readable = ctx.obj["machine_readable"]
 
-    if ctx.obj.get("ignore_configuration_file"):
-        if not machine_readable:
-            click.echo("Error: the --ignore-configuration-file option is selected", err=True)
+    def fail(path_value: str | None, message: str) -> NoReturn:
+        if machine_readable:
+            absolute = os.path.abspath(path_value) if path_value is not None else None
+            click.echo(json.dumps({"path": absolute, "valid": False, "error": message}))
+        elif path_value is not None:
+            click.echo(f"Configuration file {path_value} is NOT valid.\n", err=True)
+            click.echo(message, err=True)
+        else:
+            click.echo(f"Error: {message}", err=True)
         sys.exit(1)
 
-    if path is not None:
-        resolved = resolve_configuration_path(path)
-    else:
-        resolved = resolve_configuration_path(None)
-        if resolved is None:
-            if not machine_readable:
-                click.echo("Error: no configuration file found", err=True)
-            sys.exit(1)
+    if ctx.obj.get("ignore_configuration_file"):
+        fail(None, "the --ignore-configuration-file option is selected")
 
-    config = load_configuration(resolved)  # type: ignore[arg-type]
+    try:
+        resolved = resolve_configuration_path(path)
+    except click.BadParameter as error:
+        fail(path, error.message)
+    if resolved is None:
+        fail(None, "no configuration file found")
+
+    try:
+        config = load_configuration(resolved)
+    except click.BadParameter as error:
+        fail(resolved, error.message)
 
     if machine_readable:
-        click.echo(json.dumps(config))
+        click.echo(
+            json.dumps({"path": os.path.abspath(resolved), "valid": True, "configuration": config})
+        )
     else:
-        click.echo(f"Configuration file {resolved} is valid.")
+        click.echo(f"Configuration file {resolved} is valid.\n")
         for dotted, value in flatten_configuration(config):
             click.echo(f"{dotted} = {value}")
 

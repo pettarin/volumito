@@ -8447,16 +8447,66 @@ class TestConfigurationCommands:
         assert "output.playback-status.format = json" in result.output
         assert "downloads.output-directory = /shared" in result.output
         assert "downloads.track-audio.file-name-template = a.flac" in result.output
+        # The validity line is separated from the key lines by a blank line,
+        # and the keys are printed in lexicographic order
+        lines = result.output.splitlines()
+        assert lines[0].endswith("is valid.")
+        assert lines[1] == ""
+        assert lines[2:] == sorted(lines[2:])
 
     def test_check_invalid_content(self, runner: CliRunner, tmp_path):
-        """An unrecognized key makes check exit 2."""
+        """An unrecognized key makes check fail with a clean error."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n  bogus: 1\n")
 
         result = runner.invoke(main, ["configuration", "check", str(config)])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 1
+        lines = result.output.splitlines()
+        assert lines[0].endswith("is NOT valid.")
+        assert lines[1] == ""
         assert "unknown key 'bogus'" in result.output
+        assert "Usage:" not in result.output
+
+    def test_check_invalid_yaml(self, runner: CliRunner, tmp_path):
+        """A non-YAML file makes check fail with a clean error."""
+        config = tmp_path / "notes.md"
+        config.write_text("# Title\n\n- a list\nkey: [\n")
+
+        result = runner.invoke(main, ["configuration", "check", str(config)])
+
+        assert result.exit_code == 1
+        lines = result.output.splitlines()
+        assert lines[0].endswith("is NOT valid.")
+        assert lines[1] == ""
+        assert "cannot read configuration file" in result.output
+        assert "Usage:" not in result.output
+
+    def test_check_invalid_yaml_machine_readable(self, runner: CliRunner, tmp_path):
+        """With -m, an invalid file is reported as a JSON envelope."""
+        config = tmp_path / "notes.md"
+        config.write_text("# Title\n\n- a list\nkey: [\n")
+
+        result = runner.invoke(main, ["-m", "configuration", "check", str(config)])
+
+        assert result.exit_code == 1
+        envelope = json.loads(result.output)
+        assert envelope["valid"] is False
+        assert "cannot read configuration file" in envelope["error"]
+        assert envelope["path"].endswith("notes.md")
+
+    def test_check_missing_path(self, runner: CliRunner, tmp_path):
+        """A nonexistent explicit PATH makes check fail with a clean error."""
+        result = runner.invoke(
+            main, ["configuration", "check", str(tmp_path / "missing.yaml")]
+        )
+
+        assert result.exit_code == 1
+        lines = result.output.splitlines()
+        assert lines[0].endswith("is NOT valid.")
+        assert lines[1] == ""
+        assert "configuration file not found" in result.output
+        assert "Usage:" not in result.output
 
     def test_check_probe(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
         """Without a path, check probes and validates the file that would be used."""
@@ -8480,14 +8530,18 @@ class TestConfigurationCommands:
         assert "no configuration file found" in result.output
 
     def test_check_machine_readable(self, runner: CliRunner, tmp_path):
-        """In machine-readable mode check prints the grouped values as JSON."""
+        """In machine-readable mode check prints an envelope with path and values."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n  host: myhost.local\n")
 
         result = runner.invoke(main, ["-m", "configuration", "check", str(config)])
 
         assert result.exit_code == 0
-        assert json.loads(result.output) == {"volumio": {"host": "myhost.local"}}
+        assert json.loads(result.output) == {
+            "path": os.path.abspath(config),
+            "valid": True,
+            "configuration": {"volumio": {"host": "myhost.local"}},
+        }
 
     def test_search_lists_all_paths_with_status(
         self, runner: CliRunner, tmp_path, mocker: MockerFixture
@@ -8615,10 +8669,13 @@ class TestConfigurationCommands:
         assert "the --ignore-configuration-file option is selected" in with_path.output
 
     def test_check_fails_when_ignoring_machine_readable(self, runner: CliRunner):
-        """In machine-readable mode the ignoring check failure is silent."""
+        """In machine-readable mode the ignoring check failure is a JSON envelope."""
         result = runner.invoke(
             main, ["-m", "--ignore-configuration-file", "configuration", "check"]
         )
 
         assert result.exit_code == 1
-        assert result.output.strip() == ""
+        envelope = json.loads(result.output)
+        assert envelope["valid"] is False
+        assert envelope["path"] is None
+        assert "--ignore-configuration-file" in envelope["error"]

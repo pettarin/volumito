@@ -453,7 +453,7 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     """Flatten a validated configuration into ordered ``(dotted-path, value)`` pairs.
 
     Used to display the values read from a configuration file. Only present keys are
-    included, in canonical section/key order.
+    included, in lexicographic order of the dotted path.
     """
     pairs: list[tuple[str, Any]] = []
     for section, keys in SECTION_KEYS.items():
@@ -479,7 +479,7 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
             for key in DOWNLOAD_SUBSECTION_KEYS[subsection]
             if key in subvalues
         )
-    return pairs
+    return sorted(pairs)
 
 
 def load_configuration(path: str) -> dict[str, Any]:

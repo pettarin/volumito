@@ -467,15 +467,15 @@ class TestFlattenConfiguration:
         }
 
         assert flatten_configuration(config) == [
-            ("volumio.host", "myhost.local"),
-            ("volumio.rest-api-port", 9999),
-            ("output.verbose", True),
+            ("downloads.output-directory", "/shared"),
+            ("downloads.queue-download.audio-file-name-template", "{album}/{title}.{extension}"),
+            ("downloads.track-albumart.file-name-template", "{title}.{extension}"),
+            ("downloads.track-audio.output-directory", "/music"),
             ("output.format", "table"),
             ("output.playback-status.format", "json"),
-            ("downloads.output-directory", "/shared"),
-            ("downloads.track-audio.output-directory", "/music"),
-            ("downloads.track-albumart.file-name-template", "{title}.{extension}"),
-            ("downloads.queue-download.audio-file-name-template", "{album}/{title}.{extension}"),
+            ("output.verbose", True),
+            ("volumio.host", "myhost.local"),
+            ("volumio.rest-api-port", 9999),
         ]
 
     def test_empty_config_yields_empty(self):

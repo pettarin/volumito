@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Reviewed the help messages of all CLI commands for conciseness and uniform style
+- The machine-readable output of `configuration check` is an envelope with the file
+  path, the validity flag, and the configuration or the error
+
+### Fixed
+
+- The `configuration check` command prints the keys in lexicographic order, separated
+  from the validity line by a blank line
+- The `configuration check` command reports an invalid or missing configuration file
+  with a "NOT valid" message and exit code 1, instead of a usage error
 
 
 ## [0.0.24] - 2026-08-03
