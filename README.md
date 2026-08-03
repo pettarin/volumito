@@ -35,7 +35,7 @@ host.
 
 ### From PyPI (Recommended)
 
-`volumito` is published on PyPI by @pettarin as the same-name package
+`volumito` is published on PyPI as the same-name package
 [volumito](https://pypi.org/project/volumito/)
 , and this is the recommended way of installing it for most users.
 
