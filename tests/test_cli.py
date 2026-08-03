@@ -88,12 +88,12 @@ def _attach_property(mock_client: Mock, name: str, **kwargs: object) -> Property
     The property must live on the mock's type (each Mock instance has its own type,
     so this does not leak across tests). The PropertyMock is also stashed on the
     mock as the plain ``{name}_property`` attribute, so tests can assert on the
-    property accesses (e.g. ``mock_client.state_property.assert_not_called()``).
+    property accesses (e.g., ``mock_client.state_property.assert_not_called()``).
 
     Args:
         mock_client: The mocked VolumioRESTAPIClient instance
-        name: The property name (e.g. "state")
-        **kwargs: Passed to PropertyMock (e.g. return_value, side_effect)
+        name: The property name (e.g., "state")
+        **kwargs: Passed to PropertyMock (e.g., return_value, side_effect)
 
     Returns:
         The attached PropertyMock
@@ -956,14 +956,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.24" in result.output
+        assert "volumito, version 0.0.25" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.24"'
+        assert result.output.strip() == '"0.0.25"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -972,7 +972,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.24"'
+        assert result.output.strip() == '"0.0.25"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""

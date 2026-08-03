@@ -56,8 +56,8 @@ def extract_filename_from_uri(uri: str) -> str:
     """Extract the file-name component of a URI.
 
     Returns the basename of the URI's ``path`` query parameter if present
-    (e.g. ``/albumart?path=/mnt/x/cover.jpg`` -> ``cover.jpg``), otherwise the
-    basename of the URI path (e.g. ``.../music/song.flac`` -> ``song.flac``).
+    (e.g., ``/albumart?path=/mnt/x/cover.jpg`` -> ``cover.jpg``), otherwise the
+    basename of the URI path (e.g., ``.../music/song.flac`` -> ``song.flac``).
 
     Args:
         uri: The URI to extract the file name from
@@ -87,7 +87,7 @@ def filter_fields(
     """Filter the state dictionary based on the fields option.
 
     A requested field that is not a top-level key but contains ``.`` is resolved as a
-    dotted path into nested dictionaries (e.g. ``data.value``); when the full path
+    dotted path into nested dictionaries (e.g., ``data.value``); when the full path
     resolves, the value appears in the output keyed by the dotted string. Fields that
     cannot be resolved are silently omitted.
 
@@ -171,7 +171,7 @@ def filter_zones_fields(
     filtered_zones = []
     for zone in zones:
         filtered_zone = {key: zone[key] for key in selected if key in zone}
-        # The SHORT keyword also trims the state subdictionary (e.g. drops albumart)
+        # The SHORT keyword also trims the state subdictionary (e.g., drops albumart)
         state = filtered_zone.get("state")
         if fields == OUTPUT_FIELDS_SHORT and isinstance(state, dict):
             filtered_zone["state"] = {
@@ -561,7 +561,7 @@ def queue_track_metadata_current(
     queue listing: every ``album``/``artist``/``title`` value present in the queue
     entry must appear identically in the state. The state's ``position`` must equal
     ``index`` (a missing or malformed position fails the check), and ``uri`` must
-    differ from ``previous_uri`` — the URI of the previously fetched track — unless
+    differ from ``previous_uri`` (the URI of the previously fetched track) unless
     there is no previous track or the queue itself lists the same URI for both
     tracks (``expect_same_uri``).
 
@@ -665,7 +665,7 @@ def sanitize_filename_component(text: str, replacement: str) -> str:
     """Neutralize path separators and control characters in a file-name component.
 
     Replaces ``/`` and ``\\`` with ``replacement`` and removes control characters
-    (ASCII codes below 32, and 127), so an untrusted value (e.g. track metadata or a
+    (ASCII codes below 32, and 127), so an untrusted value (e.g., track metadata or a
     URI-derived name) cannot introduce new path components or unprintable characters
     into a file name.
 

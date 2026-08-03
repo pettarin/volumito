@@ -282,7 +282,7 @@ class VolumioRESTAPIClient:
         """Return the playback status string from the current playback state.
 
         Returns:
-            The playback status (e.g. "play", "pause", "stop")
+            The playback status (e.g., "play", "pause", "stop")
 
         Raises:
             VolumioConnectionError: If connection to the Volumio instance fails

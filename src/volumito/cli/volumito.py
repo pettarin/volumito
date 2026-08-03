@@ -115,9 +115,11 @@ from volumito.clients import (
     expose_value=False,
     callback=configuration_file_callback,
     help=(
-        "Path to a YAML configuration file whose values are used as option defaults "
-        "(explicit options still override them); if omitted, standard locations in the "
-        "current directory and the home directory are tried (see the documentation)"
+        "Path to a YAML configuration file defining option defaults, "
+        "overriding the hardcoded defaults."
+        "Explicit command line options override them. "
+        "If omitted, configuration files are searched in the locations listed "
+        "by the 'configuration search' command."
     ),
 )
 @click.option(
@@ -126,7 +128,7 @@ from volumito.clients import (
     type=str,
     default="volumio.local",
     show_default=True,
-    help="Hostname or IP address of the Volumio instance",
+    help="Hostname or IP address of the Volumio instance.",
 )
 @click.option(
     "--ignore-configuration-file",
@@ -135,7 +137,7 @@ from volumito.clients import (
     is_eager=True,
     expose_value=False,
     callback=ignore_configuration_file_callback,
-    help="Ignore any configuration file (skip the lookup and apply the built-in defaults)",
+    help="Ignore any configuration file found.",
 )
 @click.option(
     "--machine-readable",
@@ -143,8 +145,8 @@ from volumito.clients import (
     is_flag=True,
     default=False,
     help=(
-        "Produce machine-readable output only "
-        "(superseding the --verbose option if also specified)"
+        "Produce machine-readable output only, "
+        "superseding the --verbose option if also specified."
     ),
 )
 @click.option(
@@ -153,20 +155,20 @@ from volumito.clients import (
     type=int,
     default=6600,
     show_default=True,
-    help="MPD port of the Volumio instance",
+    help="MPD port of the Volumio instance.",
 )
 @click.option(
     "--mpd-timeout",
     type=float,
     default=5.0,
     show_default=True,
-    help="MPD connection timeout in seconds",
+    help="MPD connection timeout, in seconds.",
 )
 @click.option(
     "--position-starting-at-one/--position-starting-at-zero",
     default=True,
     show_default=True,
-    help="Index queue positions starting at one (or at zero)",
+    help="Index queue positions starting at one (or at zero).",
 )
 @click.option(
     "--rest-api-port",
@@ -174,35 +176,38 @@ from volumito.clients import (
     type=int,
     default=3000,
     show_default=True,
-    help="REST API port of the Volumio instance",
+    help="REST API port of the Volumio instance.",
 )
 @click.option(
     "--rest-api-sleep-before-next-call",
     type=float,
     default=1.0,
     show_default=True,
-    help="Seconds to sleep before making the next REST API call",
+    help=(
+        "When making multiple REST API calls, "
+        "sleep these many seconds between two consecutive calls."
+    ),
 )
 @click.option(
     "--rest-api-timeout",
     type=float,
     default=5.0,
     show_default=True,
-    help="REST API request timeout in seconds",
+    help="REST API request timeout, in seconds.",
 )
 @click.option(
     "--scheme",
     type=SchemeParamType(),
     default="http",
     show_default=True,
-    help="URL scheme to use for connecting to Volumio instance",
+    help="URL scheme for connecting to the Volumio instance.",
 )
 @click.option(
     "--verbose",
     "-v",
     is_flag=True,
     default=False,
-    help="Enable verbose output",
+    help="Enable verbose output.",
 )
 @click.pass_context
 def main(
@@ -244,11 +249,7 @@ def main(
 @main.command()
 @click.pass_context
 def version(ctx: click.Context) -> None:
-    """Show the volumito version.
-
-    In machine-readable mode the version string is printed quoted (e.g. ``"0.0.10"``)
-    so it can be consumed by jq/yq; otherwise the program name is included.
-    """
+    """Print the volumito version."""
     if ctx.obj["machine_readable"]:
         msg = f'"{__version__}"'
     else:
@@ -270,14 +271,14 @@ def configuration(ctx: click.Context) -> None:
     "-d",
     type=str,
     default=None,
-    help="Directory in which to create a volumito.yaml file",
+    help="Directory in which to create a 'volumito.yaml' file.",
 )
 @click.option(
     "--output-file",
     "-f",
     type=str,
     default=None,
-    help="Exact path of the configuration file to create",
+    help="Exact path of the configuration file to create.",
 )
 @click.option(
     "--volumio-version",
@@ -286,8 +287,9 @@ def configuration(ctx: click.Context) -> None:
     default=DEFAULT_VOLUMIO_VERSION,
     show_default=True,
     help=(
-        "Target Volumio version (e.g. 4, 4.119, 3, 3.123); selects the MPD port "
-        "(6599 for versions below 4, otherwise 6600)"
+        "Target Volumio version (e.g., 4.119, 4, 3.123, or 3), "
+        "used to determine the MPD port to be set in the configuration file "
+        "(6600 for Volumio >= 4, 6599 otherwise)."
     ),
 )
 @option_overwrite_existing_files
@@ -343,11 +345,10 @@ def configuration_create(
 @click.pass_context
 @click.argument("path", required=False, type=str)
 def configuration_check(ctx: click.Context, path: str | None) -> None:
-    """Verify that a configuration file is correct and print the values read from it.
+    """Check that a configuration file is correct and print the values read from it.
 
-    If PATH is omitted, the standard locations are probed and the file that would
-    be used is checked. With --ignore-configuration-file the command fails, since
-    no configuration file would be applied.
+    Without PATH, check the file that would be used after probing the standard
+    locations. With --ignore-configuration-file, the command fails.
     """
     machine_readable = ctx.obj["machine_readable"]
 
@@ -380,8 +381,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
 def configuration_search(ctx: click.Context) -> None:
     """List every probed configuration path, marking those found and the one used.
 
-    With --ignore-configuration-file, no file is used: the found files are marked
-    as ignored instead.
+    With --ignore-configuration-file, the found files are marked as ignored.
     """
     machine_readable = ctx.obj["machine_readable"]
     ignore = ctx.obj.get("ignore_configuration_file", False)
@@ -416,7 +416,7 @@ def configuration_search(ctx: click.Context) -> None:
 @main.group()
 @click.pass_context
 def playback(ctx: click.Context) -> None:
-    """Commands for controlling the playback of the Volumio instance."""
+    """Control the playback."""
     pass
 
 
@@ -429,11 +429,7 @@ def playback_status(
     fields: str,
     output_format: str,
 ) -> None:
-    """Get the current playback status from a Volumio instance.
-
-    Retrieves and displays the current state of a Volumio music player instance,
-    including playback status, volume, track information, and more.
-    """
+    """Print the playback status."""
     render_state(ctx, fields, output_format, SHORT_FORMAT_FIELDS_PLAYER_STATE)
 
 
@@ -441,7 +437,7 @@ def playback_status(
 @click.pass_context
 @option_print_resulting_status
 def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Toggle between play and pause states of the Volumio instance."""
+    """Toggle between play and pause states."""
     execute_command(ctx, "toggle", lambda c: c.toggle())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -460,9 +456,9 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
 )
 @option_print_resulting_status
 def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
-    """Start playback of the Volumio instance.
+    """Start playback.
 
-    Optionally specify a position to play a specific track in the queue.
+    With -p/--position, play the track at that position of the queue.
     """
     if position is not None:
         starting_at_one = ctx.obj["position_starting_at_one"]
@@ -481,7 +477,7 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
 @click.pass_context
 @option_print_resulting_status
 def pause(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Pause playback of the Volumio instance."""
+    """Pause playback."""
     execute_command(ctx, "pause", lambda c: c.pause())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -490,7 +486,7 @@ def pause(ctx: click.Context, print_resulting_status: bool) -> None:
 @click.pass_context
 @option_print_resulting_status
 def stop(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Stop playback of the Volumio instance."""
+    """Stop playback."""
     execute_command(ctx, "stop", lambda c: c.stop())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -499,7 +495,7 @@ def stop(ctx: click.Context, print_resulting_status: bool) -> None:
 @click.pass_context
 @option_print_resulting_status
 def next(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Skip to the next track of the Volumio instance."""
+    """Skip to the next track."""
     execute_command(ctx, "next", lambda c: c.next())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -508,7 +504,7 @@ def next(ctx: click.Context, print_resulting_status: bool) -> None:
 @click.pass_context
 @option_print_resulting_status
 def previous(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Skip to the previous track of the Volumio instance."""
+    """Skip to the previous track."""
     execute_command(ctx, "previous", lambda c: c.previous())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -529,15 +525,15 @@ def seek(
     check_seek_position: bool,
     print_resulting_status: bool,
 ) -> None:
-    """Print, set, or adjust the seek position of the Volumio instance.
+    """Print, set, or adjust the seek position.
 
     Without VALUE, print the current position as HH:MM:SS.mmm. Otherwise VALUE is
-    the position to seek to, as a number of seconds or as a HH:MM:SS (or MM:SS)
-    time, or one of "plus" (also "increase"/"up"/"forward") and "minus" (also
-    "decrease"/"down"/"backward") to seek relatively to the current position.
+    a number of seconds, a HH:MM:SS (or MM:SS) time, or one of "plus" (also
+    "increase"/"up"/"forward") and "minus" (also "decrease"/"down"/"backward")
+    to seek relative to the current position.
 
     Unless --no-check-seek-position is given, an absolute position is checked
-    against the duration of the current track, when the latter is known.
+    against the duration of the current track.
     """
     if value is None:
         # Read the raw state (not the seek property, which rounds to whole seconds)
@@ -583,11 +579,11 @@ def seek(
 @click.argument("value", required=False, default=None, type=VolumeParamType())
 @option_print_resulting_status
 def volume(ctx: click.Context, value: int | str | None, print_resulting_status: bool) -> None:
-    """Set, adjust, or show the volume of the Volumio instance.
+    """Print, set, or adjust the volume.
 
     Without VALUE, print the current volume. Otherwise VALUE is an integer
-    between 0 and 100 (inclusive) to set an absolute level, or one of "mute",
-    "unmute", "plus" (also "increase"/"up"), "minus" (also "decrease"/"down").
+    between 0 and 100, or one of "mute", "unmute", "plus" (also "increase"/"up"),
+    and "minus" (also "decrease"/"down").
     """
     if value is None:
         click.echo(fetch_or_exit(ctx, lambda c: c.volume))
@@ -614,7 +610,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
 @click.pass_context
 @option_print_resulting_status
 def mute(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Mute the volume of the Volumio instance (synonym for `playback volume mute`)."""
+    """Mute the volume."""
     execute_command(ctx, "volume mute", lambda c: c.mute())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -623,7 +619,7 @@ def mute(ctx: click.Context, print_resulting_status: bool) -> None:
 @click.pass_context
 @option_print_resulting_status
 def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Unmute the volume of the Volumio instance (synonym for `playback volume unmute`)."""
+    """Unmute the volume."""
     execute_command(ctx, "volume unmute", lambda c: c.unmute())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -631,11 +627,7 @@ def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
 @playback.command("is_muted")
 @click.pass_context
 def is_muted(ctx: click.Context) -> None:
-    """Print whether the volume of the Volumio instance is muted.
-
-    In machine-readable mode the value is printed as a JSON boolean
-    (``true``/``false``).
-    """
+    """Print whether the volume is muted."""
     muted = fetch_or_exit(ctx, lambda c: c.is_muted)
     click.echo(json.dumps(muted) if ctx.obj["machine_readable"] else muted)
 
@@ -643,11 +635,7 @@ def is_muted(ctx: click.Context) -> None:
 @playback.command("is_paused")
 @click.pass_context
 def is_paused(ctx: click.Context) -> None:
-    """Print whether the playback of the Volumio instance is paused.
-
-    In machine-readable mode the value is printed as a JSON boolean
-    (``true``/``false``).
-    """
+    """Print whether the playback is paused."""
     paused = fetch_or_exit(ctx, lambda c: c.is_paused)
     click.echo(json.dumps(paused) if ctx.obj["machine_readable"] else paused)
 
@@ -655,11 +643,7 @@ def is_paused(ctx: click.Context) -> None:
 @playback.command("is_playing")
 @click.pass_context
 def is_playing(ctx: click.Context) -> None:
-    """Print whether the Volumio instance is playing.
-
-    In machine-readable mode the value is printed as a JSON boolean
-    (``true``/``false``).
-    """
+    """Print whether the playback is playing."""
     playing = fetch_or_exit(ctx, lambda c: c.is_playing)
     click.echo(json.dumps(playing) if ctx.obj["machine_readable"] else playing)
 
@@ -667,11 +651,7 @@ def is_playing(ctx: click.Context) -> None:
 @playback.command("is_stopped")
 @click.pass_context
 def is_stopped(ctx: click.Context) -> None:
-    """Print whether the playback of the Volumio instance is stopped.
-
-    In machine-readable mode the value is printed as a JSON boolean
-    (``true``/``false``).
-    """
+    """Print whether the playback is stopped."""
     stopped = fetch_or_exit(ctx, lambda c: c.is_stopped)
     click.echo(json.dumps(stopped) if ctx.obj["machine_readable"] else stopped)
 
@@ -679,7 +659,7 @@ def is_stopped(ctx: click.Context) -> None:
 @main.group()
 @click.pass_context
 def track(ctx: click.Context) -> None:
-    """Retrieve information, audio, and album art of the current track of the Volumio instance."""
+    """Query the current track (information, audio, album art)."""
     pass
 
 
@@ -717,12 +697,7 @@ def audio(
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
 ) -> None:
-    """Print the URI of the audio of the current track.
-
-    Optionally download the track to a file with -o/--output-file (an exact file
-    path) or into a directory with -d/--output-directory (the file name is rendered from
-    -f/--file-name-template); the -o and -d options are mutually exclusive.
-    """
+    """Print the URI of and/or download the audio of the current track."""
     if output_file is not None and output_directory is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
     output_directory = expand_output_directory(output_directory)
@@ -839,12 +814,7 @@ def albumart(
     replace_characters_in_file_names: str,
     replace_characters_in_file_names_with: str,
 ) -> None:
-    """Print the URI of the album art of the current track.
-
-    Optionally download the image to a file with -o/--output-file (an exact file
-    path) or into a directory with -d/--output-directory (the file name is rendered from
-    -f/--file-name-template); the -o and -d options are mutually exclusive.
-    """
+    """Print the URI of and/or download the album art of the current track."""
     if output_file is not None and output_directory is not None:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
     output_directory = expand_output_directory(output_directory)
@@ -925,7 +895,7 @@ def albumart(
 @main.group()
 @click.pass_context
 def queue(ctx: click.Context) -> None:
-    """Commands for managing the playback queue of the Volumio instance."""
+    """Manage the playback queue."""
     pass
 
 
@@ -938,11 +908,7 @@ def queue_get(
     fields: str,
     output_format: str,
 ) -> None:
-    """Get the playback queue.
-
-    This command retrieves and prints the current playback queue,
-    showing all queued tracks with their metadata.
-    """
+    """Print the playback queue."""
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     verbose = ctx.obj["verbose"]
@@ -1029,34 +995,7 @@ def queue_download(
     replace_characters_in_file_names_with: str,
     with_albumart: bool,
 ) -> None:
-    """Download every track of the current queue into a directory.
-
-    Each run downloads into -d/--output-directory (required), created if
-    missing; {timestamp} in the path is replaced with the current UTC time
-    (e.g. 20260726121314). Playback is stopped,
-    then each queue position is played, paused after the configured sleep
-    (--rest-api-sleep-before-next-call), and downloaded under the name rendered
-    from -f/--audio-file-name-template; existing files are skipped unless
-    --overwrite-existing-files is given. The {tracknumber} template key renders the
-    track's number within its album (taken from the queue metadata), so with
-    several albums queued every album keeps its own numbering, unlike
-    {position} (the queue position); the {album_volume} key renders the album
-    name with /<volumeNumber> appended when the queue holds several volumes of
-    the same album. Unlike the track downloads, the template may
-    contain path separators to lay the files out in subdirectories (e.g.
-    "{artist}/{album}/{tracknumber:03d}_{title}.{extension}"); the resulting path
-    must stay inside the output directory. Before each download, the fetched metadata
-    are checked against the queue listing (title, artist, album, and position must
-    match the entry just played, retrying up to --number-retries-next-track times;
-    disable with --no-check-next-track). With --with-albumart (the default), each
-    album's cover is saved under the name rendered from
-    --albumart-file-name-template (relative to the output directory), downloading
-    every distinct cover only once.
-    A queue.json log listing every track and
-    its download status (pending, downloaded, skipped, or error) is written to
-    the output directory and updated after each track. At the end, playback is left
-    stopped at the first track; the exit code is 1 if any track failed.
-    """
+    """Download every track of the current queue."""
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     mpd_timeout = ctx.obj["mpd_timeout"]
@@ -1270,7 +1209,7 @@ def queue_download(
 @click.pass_context
 @option_print_resulting_status
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
-    """Clear the playback queue of the Volumio instance."""
+    """Clear the playback queue."""
     execute_command(ctx, "clear", lambda c: c.clear())
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -1280,7 +1219,7 @@ def clear(ctx: click.Context, print_resulting_status: bool) -> None:
 @click.argument("value", required=False, default=None, type=OnOffParamType())
 @option_print_resulting_status
 def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the repeat mode of the Volumio instance.
+    """Set or toggle the repeat mode.
 
     Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
     or "off"/"false"/"no"/"0".
@@ -1295,7 +1234,7 @@ def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool)
 @click.argument("value", required=False, default=None, type=OnOffParamType())
 @option_print_resulting_status
 def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the random (shuffle) mode of the Volumio instance.
+    """Set or toggle the random (shuffle) mode.
 
     Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
     or "off"/"false"/"no"/"0".
@@ -1308,14 +1247,14 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
 @main.group()
 @click.pass_context
 def system(ctx: click.Context) -> None:
-    """Query system utilities of the Volumio instance."""
+    """Query Volumio system utilities."""
     pass
 
 
 @system.command("ping")
 @click.pass_context
 def system_ping(ctx: click.Context) -> None:
-    """Ping the Volumio instance (prints pong on success)."""
+    """Ping the Volumio instance, printing 'pong' on success."""
     text = fetch_or_exit(ctx, lambda c: c.ping()).strip()
     if ctx.obj["machine_readable"]:
         click.echo(json.dumps(text))
@@ -1327,7 +1266,7 @@ def system_ping(ctx: click.Context) -> None:
 @click.pass_context
 @option_format
 def system_version(ctx: click.Context, output_format: str) -> None:
-    """Get the system version of the Volumio instance."""
+    """Print the system version."""
     data = fetch_or_exit(ctx, lambda c: c.system_version)
     render_payload(ctx, data, output_format, heading="Volumio System Version")
 
@@ -1336,7 +1275,7 @@ def system_version(ctx: click.Context, output_format: str) -> None:
 @click.pass_context
 @option_format
 def system_info(ctx: click.Context, output_format: str) -> None:
-    """Get the system information of the Volumio instance."""
+    """Print the system information."""
     data = fetch_or_exit(ctx, lambda c: c.system_info)
     render_payload(ctx, data, output_format, heading="Volumio System Info")
 
@@ -1344,7 +1283,7 @@ def system_info(ctx: click.Context, output_format: str) -> None:
 @main.group()
 @click.pass_context
 def collection(ctx: click.Context) -> None:
-    """Query the music collection of the Volumio instance."""
+    """Query the local music collection managed by Volumio."""
     pass
 
 
@@ -1352,7 +1291,7 @@ def collection(ctx: click.Context) -> None:
 @click.pass_context
 @option_format
 def collection_statistics(ctx: click.Context, output_format: str) -> None:
-    """Get the statistics of the music collection of the Volumio instance."""
+    """Print the statistics of the music collection."""
     data = fetch_or_exit(ctx, lambda c: c.collection_statistics)
     render_payload(ctx, data, output_format, heading="Collection Statistics")
 
@@ -1360,7 +1299,7 @@ def collection_statistics(ctx: click.Context, output_format: str) -> None:
 @main.group()
 @click.pass_context
 def zones(ctx: click.Context) -> None:
-    """Query the multiroom zones of the Volumio instance."""
+    """Query the multiroom zones."""
     pass
 
 
@@ -1369,7 +1308,7 @@ def zones(ctx: click.Context) -> None:
 @option_fields
 @option_format
 def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
-    """Get the multiroom zones seen by the Volumio instance."""
+    """Print the multiroom zones seen by the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.zones)
 
     if output_format == "raw":
@@ -1390,7 +1329,7 @@ def zones_get(ctx: click.Context, fields: str, output_format: str) -> None:
 @main.group()
 @click.pass_context
 def playlist(ctx: click.Context) -> None:
-    """Query and play the saved playlists of the Volumio instance."""
+    """Query, play, and download the saved playlists."""
     pass
 
 
@@ -1398,7 +1337,7 @@ def playlist(ctx: click.Context) -> None:
 @click.pass_context
 @option_format
 def playlist_list(ctx: click.Context, output_format: str) -> None:
-    """List the playlists saved on the Volumio instance."""
+    """List the Volumio playlists saved by the current user."""
     names = fetch_or_exit(ctx, lambda c: c.playlists)
 
     if output_format == "raw":
@@ -1424,11 +1363,7 @@ def playlist_play(
     check_playlist_name: bool,
     print_resulting_status: bool,
 ) -> None:
-    """Start playback of the playlist named NAME.
-
-    The Volumio API does not report an error for a name matching no playlist, so
-    unless --no-check-playlist-name is given, the name is looked up first.
-    """
+    """Start playback of the playlist specified by NAME."""
     if check_playlist_name:
         names = fetch_or_exit(ctx, lambda c: c.playlists)
         if name not in names:
@@ -1476,14 +1411,7 @@ def playlist_download(
     replace_characters_in_file_names_with: str,
     with_albumart: bool,
 ) -> None:
-    """Download every track of the playlist named NAME into a directory.
-
-    The queue is cleared and the playlist is played (its name is checked first,
-    like playlist play does, unless --no-check-playlist-name is given), then the
-    resulting queue is downloaded exactly like queue download does: see its help
-    for the output directory, the file-name templates, the metadata checks, the
-    album covers, and the queue.json log.
-    """
+    """Download every track of the playlist specified by NAME."""
     machine_readable = ctx.obj["machine_readable"]
     verbose = ctx.obj["verbose"]
 
@@ -1539,9 +1467,9 @@ def playlist_download(
 @main.group()
 @click.pass_context
 def story(ctx: click.Context) -> None:
-    """Query album, artist, credits, label, and place stories.
+    """Retrieve stories about albums, artists, labels, or places.
 
-    Requires the Volumio host to be running with a Premium (or better) subscription.
+    Requires a Premium (or better) subscription on the Volumio instance.
     """
     pass
 
@@ -1561,7 +1489,11 @@ def story_album(
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the story of the album given as ARTIST ALBUM, a single MBID, or the current track."""
+    """Print the story of an album.
+
+    The album can be specified by ARTIST ALBUM (free strings),
+    a single MBID, or detected from the current track
+    if --current-track is specified."""
     artist, album = resolve_story_album_entities(
         ctx, arguments, argument_type, current_track=current_track
     )
@@ -1589,7 +1521,11 @@ def story_artist(
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the story of the artist given as a NAME or MBID argument, or of the current track."""
+    """Print the story of an artist.
+
+    The artist can be specified by VALUE (free string),
+    a single MBID, or detected from the current track
+    if --current-track is specified."""
     arguments = () if value is None else (value,)
     artist = resolve_story_entity(
         ctx, arguments, argument_type, Artist, current_track=current_track
@@ -1618,7 +1554,11 @@ def story_credits(
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the credits of the album given as ARTIST ALBUM, a single MBID, or the current track."""
+    """Print the credits of an album.
+
+    The album can be specified by ARTIST ALBUM (free strings),
+    a single MBID, or detected from the current track
+    if --current-track is specified."""
     artist, album = resolve_story_album_entities(
         ctx, arguments, argument_type, current_track=current_track
     )
@@ -1644,7 +1584,9 @@ def story_label(
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the story of the label given as a name or MBID argument."""
+    """Print the story of a label.
+
+    The label can be specified by VALUE (free string) or single MBID."""
     label = resolve_story_entity(ctx, (value,), argument_type, Label)
     render_story(
         ctx,
@@ -1668,7 +1610,9 @@ def story_place(
     output_format: str,
     argument_type: str,
 ) -> None:
-    """Get the story of the place given as a name or MBID argument."""
+    """Print the story of a place.
+
+    The label can be specified by VALUE (free string) or single MBID."""
     place = resolve_story_entity(ctx, (value,), argument_type, Place)
     render_story(
         ctx,

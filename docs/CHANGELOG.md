@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.0.24] - unreleased
+## [0.0.25] - 2026-08-03
+
+### Changed
+
+- Reviewed the help messages of all CLI commands for conciseness and uniform style
+
+
+## [0.0.24] - 2026-08-03
 
 ### Added
 
@@ -65,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Option `--current-track` for `story album`, `story artist`, and `story credits`,
   taking the values from the currently playing track
 - Subsections for the `story` subcommands of the `output` section of the configuration file
-- Dotted field names (e.g. `data.value`) in the `--fields` option, selecting fields nested
+- Dotted field names (e.g., `data.value`) in the `--fields` option, selecting fields nested
   inside the response
 
 
@@ -80,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The album art is saved in every directory it renders to (e.g. one per volume of a
+- The album art is saved in every directory it renders to (e.g., one per volume of a
   multi-volume album, plus the album directory itself), copying the already-downloaded
   cover instead of re-downloading it
 
@@ -305,7 +312,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Sort the CLI options alphabetically in `--help` (global options and every subcommand)
-- In machine-readable mode, `version` now prints the version as a quoted string (e.g. `"0.0.8"`)
+- In machine-readable mode, `version` now prints the version as a quoted string (e.g., `"0.0.8"`)
   so it can be consumed by tools like `jq` and `yq`
 
 
@@ -340,7 +347,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Split the single `--timeout` CLI option into `--rest-api-timeout` and `--mpd-timeout`
 - Rename the `--quiet` CLI option to `--machine-readable` (with `-m` shorthand)
 - Show the version via a `version` subcommand instead of a `--version` option; `--machine-readable
-  version` prints only the bare version string (e.g. `0.0.6`)
+  version` prints only the bare version string (e.g., `0.0.6`)
 
 
 ## [0.0.5] - 2026-07-16

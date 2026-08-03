@@ -234,7 +234,7 @@ class VolumioVersionParamType(click.ParamType):
     """Click parameter type for a Volumio version string.
 
     Parses the version with :class:`packaging.version.Version` and returns its integer
-    major version (e.g. "4" -> 4, "3.123" -> 3). Anything that is not a valid version
+    major version (e.g., "4" -> 4, "3.123" -> 3). Anything that is not a valid version
     is a usage error.
     """
 
@@ -251,7 +251,7 @@ class VolumioVersionParamType(click.ParamType):
             return Version(text).major
         except InvalidVersion:
             self.fail(
-                f"{text!r} is not a valid Volumio version (e.g. 4, 3, 4.119, 3.123)",
+                f"{text!r} is not a valid Volumio version (e.g., 4, 3, 4.119, 3.123)",
                 param,
                 ctx,
             )
@@ -310,7 +310,7 @@ def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tu
 
     Args:
         ctx: Click context object containing shared options
-        keys: The state keys to read (e.g. ("artist", "album"))
+        keys: The state keys to read (e.g., ("artist", "album"))
 
     Returns:
         The (stripped) state values, one per key; a missing, non-string, or blank
@@ -389,10 +389,10 @@ def download_queue_albumart(
     subdirectories, which are created as needed but must stay inside the output
     directory). Each distinct album-art URI is downloaded at most once per run
     (``downloaded_covers`` maps the URIs already downloaded to their file paths);
-    when the same URI renders to further destinations (e.g. one per volume of a
+    when the same URI renders to further destinations (e.g., one per volume of a
     multi-volume album), the already-downloaded file is copied there locally. For
     a multi-volume track, the cover is also placed at the path rendered with the
-    album-only ``album_volume`` component (e.g. ``Elegia/cover.jpg`` next to
+    album-only ``album_volume`` component (e.g., ``Elegia/cover.jpg`` next to
     ``Elegia/1/cover.jpg`` and ``Elegia/2/cover.jpg``). An existing cover file is
     reused unless ``overwrite`` is true. A download failure is reported as a
     warning and otherwise ignored.
@@ -565,8 +565,8 @@ def download_uri_to(
         machine_readable: Whether machine-readable mode is active (suppresses messages)
         create_manifest: Whether to write a ``<destination>.json`` download manifest
         host_configuration: The Volumio host configuration (recorded in the manifest)
-        entity: The manifest ``entity`` value (e.g. "track")
-        kind: The manifest ``kind`` value (e.g. "audio" or "albumart")
+        entity: The manifest ``entity`` value (e.g., "track")
+        kind: The manifest ``kind`` value (e.g., "audio" or "albumart")
         position_starting_at_one: Whether the template ``position`` key starts at one
         add_cover_and_metadata: Recorded in the manifest when not None (audio downloads only)
         replace_characters_in_file_names: Characters replaced in the rendered file name
@@ -645,7 +645,7 @@ def embed_track_tags(
 
     The metadata and cover come from ``state``. The embedded track number comes from
     the state's ``tracknumber`` key when present (the track number from the queue
-    metadata, used verbatim — injected by ``queue download``), falling back to
+    metadata, used verbatim and injected by ``queue download``), falling back to
     ``position`` (indexed according to ``position_starting_at_one``). Any problem
     (an unsupported format, a cover-download failure, or a tagging error) is
     reported as a warning and otherwise ignored: the already-downloaded file is
@@ -896,8 +896,7 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
         "--add-cover-and-metadata/--no-add-cover-and-metadata",
         default=True,
         show_default=True,
-        help="Embed track metadata and cover art into the downloaded file "
-        "(FLAC, MP3, MP4/M4A)",
+        help="Embed track metadata and cover art into the downloaded file.",
     )(func)
 
 
@@ -908,10 +907,7 @@ def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..
         type=str,
         default="{file_name_from_uri}",
         show_default=True,
-        help="Template (Python str.format syntax) for the album art file names. Keys: "
-        "file_name_from_uri, position, tracknumber, title, album, album_volume, "
-        "artist, trackType, duration, bitdepth, samplerate, channels, extension. "
-        "Some characters are replaced (see --replace-characters-in-file-names).",
+        help="Template, in Python str.format syntax, for the album art file names.",
     )(func)
 
 
@@ -923,10 +919,7 @@ def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., 
         type=str,
         default="{file_name_from_uri}",
         show_default=True,
-        help="Template (Python str.format syntax) for the audio file names. Keys: "
-        "file_name_from_uri, position, tracknumber, title, album, album_volume, "
-        "artist, trackType, duration, bitdepth, samplerate, channels, extension. "
-        "Some characters are replaced (see --replace-characters-in-file-names).",
+        help="Template, in Python str.format syntax, for the audio file names.",
     )(func)
 
 
@@ -936,7 +929,7 @@ def option_check_next_track(func: Callable[..., None]) -> Callable[..., None]:
         "--check-next-track/--no-check-next-track",
         default=True,
         show_default=True,
-        help="Check that each track's metadata are current before downloading it",
+        help="Check that the next track is selected before downloading it.",
     )(func)
 
 
@@ -946,7 +939,7 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
         "--check-playlist-name/--no-check-playlist-name",
         default=True,
         show_default=True,
-        help="Check that the playlist name exists before playing it",
+        help="Check that the playlist name exists before playing it.",
     )(func)
 
 
@@ -956,7 +949,7 @@ def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., 
         "--create-download-manifest/--no-create-download-manifest",
         default=True,
         show_default=True,
-        help="Write a JSON manifest next to the downloaded file (e.g. out.flac.json)",
+        help="Write a JSON manifest next to the downloaded file (e.g., out.flac.json).",
     )(func)
 
 
@@ -967,8 +960,8 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help=(
-            "Use the currently playing track's metadata instead of the "
-            "positional argument(s)"
+            "Use the metadata of the current track "
+            "instead of the positional argument(s)."
         ),
     )(func)
 
@@ -981,7 +974,7 @@ def option_fields(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=OUTPUT_FIELDS_SHORT,
         show_default=True,
-        help="Fields to display: ALL, SHORT, or a comma-separated list of field names",
+        help="Fields to display: ALL, SHORT, or a comma-separated list of field names.",
     )(func)
 
 
@@ -993,10 +986,7 @@ def option_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default="{file_name_from_uri}",
         show_default=True,
-        help="Template (Python str.format syntax) for the -d output file name. Keys: "
-        "file_name_from_uri, position, tracknumber, title, album, album_volume, "
-        "artist, trackType, duration, bitdepth, samplerate, channels, extension. "
-        "Some characters are replaced (see --replace-characters-in-file-names).",
+        help="Template, in Python str.format syntax, for the output file names.",
     )(func)
 
 
@@ -1009,7 +999,7 @@ def option_format(func: Callable[..., None]) -> Callable[..., None]:
         type=click.Choice(OUTPUT_FORMATS, case_sensitive=True),
         default="pretty",
         show_default=True,
-        help="Output format",
+        help="Output format.",
     )(func)
 
 
@@ -1020,7 +1010,7 @@ def option_number_retries_next_track(func: Callable[..., None]) -> Callable[...,
         type=int,
         default=DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
         show_default=True,
-        help="Number of retries waiting for a track's metadata to become current",
+        help="Number of retries to attempt to make sure the next track is selected.",
     )(func)
 
 
@@ -1031,9 +1021,11 @@ def option_output_directory(func: Callable[..., None]) -> Callable[..., None]:
         "--output-directory",
         type=str,
         default=None,
-        help="Download into this directory (created if missing), using the file name from "
-        "the template; {timestamp} in the path is replaced with the current UTC time "
-        "(mutually exclusive with -o)",
+        help=(
+            "Download into this directory, created if missing. "
+            "Directory and file name templates will be interpolated. "
+            "Mutually exclusive with -o."
+        ),
     )(func)
 
 
@@ -1044,7 +1036,10 @@ def option_output_file(func: Callable[..., None]) -> Callable[..., None]:
         "--output-file",
         type=str,
         default=None,
-        help="Download to this exact file path (mutually exclusive with -d)",
+        help=(
+            "Download to this exact file path. "
+            "Mutually exclusive with -d."
+        ),
     )(func)
 
 
@@ -1054,7 +1049,7 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
         "--overwrite-existing-files/--no-overwrite-existing-files",
         default=False,
         show_default=True,
-        help="Overwrite the destination file if it already exists",
+        help="Overwrite the destination file if it already exists.",
     )(func)
 
 
@@ -1065,7 +1060,7 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
         "-r",
         default=True,
         show_default=True,
-        help="After the command, wait 1 second and print the resulting playback status",
+        help="After executing the command, print the resulting playback status.",
     )(func)
 
 
@@ -1076,7 +1071,7 @@ def option_replace_characters_in_file_names(func: Callable[..., None]) -> Callab
         type=str,
         default=DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
         show_default=True,
-        help="Characters to replace in the file name generated from -f/--file-name-template",
+        help="Characters to replace in the file name generated from -f/--file-name-template.",
     )(func)
 
 
@@ -1091,7 +1086,7 @@ def option_replace_characters_in_file_names_with(
         show_default=True,
         help=(
             "Replacement string for the characters selected by "
-            "--replace-characters-in-file-names"
+            "--replace-characters-in-file-names."
         ),
     )(func)
 
@@ -1106,8 +1101,8 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
         default=DEFAULT_STORY_ARGUMENT_TYPE,
         show_default=True,
         help=(
-            "How to interpret the positional argument(s): name, mbid, or "
-            "autodetect (mbid iff a single UUID-shaped argument)"
+            "How to interpret the positional argument(s): "
+            "autodetect, mbid, or name (free string)."
         ),
     )(func)
 
@@ -1118,8 +1113,7 @@ def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
         "--with-albumart/--no-with-albumart",
         default=True,
         show_default=True,
-        help="Download each album's cover, named from --albumart-file-name-template "
-        "(once per cover)",
+        help="Download the album art of each album in the queue/playlist.",
     )(func)
 
 
@@ -1139,7 +1133,7 @@ def render_output_filename(
     The template uses Python ``str.format`` syntax. Supported keys are:
     ``file_name_from_uri``, ``position`` (int, indexed according to
     ``position_starting_at_one``), ``tracknumber`` (int, the track number of the
-    track, taken verbatim from the state's ``tracknumber`` key — injected from the
+    track, taken verbatim from the state's ``tracknumber`` key and injected from the
     queue metadata by ``queue download``), ``title``, ``album``, ``album_volume``
     (the album name with ``/<volumeNumber>`` appended for multi-volume albums,
     injected by ``queue download``; its path separator is preserved, so the key is
@@ -1153,7 +1147,7 @@ def render_output_filename(
     untrusted: template fields must be exactly the supported keys (no attribute or
     index access), path separators in the interpolated values are replaced and
     control characters removed, leading dots are stripped from the result, and the
-    rendered name must be a plain file name without path separators — unless
+    rendered name must be a plain file name without path separators, unless
     ``allow_subdirectories`` is true, in which case separators coming from the
     template literals are kept (so the template can lay files out in
     subdirectories) and the caller is expected to verify that the final path stays
@@ -1355,7 +1349,7 @@ def render_story(
 
     Args:
         ctx: Click context object containing shared options
-        fetch: Function querying the story on the VolumioRESTAPIClient (e.g. calling
+        fetch: Function querying the story on the VolumioRESTAPIClient (e.g., calling
             its get_story or get_album_credits method)
         fields: The fields option ("short" or "all")
         output_format: The output format ("json", "pretty", "raw", or "table")
@@ -1462,7 +1456,7 @@ def resolve_story_entity[E: MusicEntity](
         ctx: Click context object containing shared options
         arguments: The positional arguments of the command
         argument_type: How to interpret the arguments ("autodetect", "mbid", or "name")
-        entity_class: The entity class (e.g. Artist, Label, or Place)
+        entity_class: The entity class (e.g., Artist, Label, or Place)
         current_track: Whether to take the entity value from the current track
 
     Returns:
@@ -1509,8 +1503,8 @@ def write_download_manifest(
         uri: The downloaded URI
         state: The current player state dictionary
         host_configuration: The Volumio host configuration
-        entity: The manifest ``entity`` value (e.g. "track")
-        kind: The manifest ``kind`` value (e.g. "audio" or "albumart")
+        entity: The manifest ``entity`` value (e.g., "track")
+        kind: The manifest ``kind`` value (e.g., "audio" or "albumart")
         add_cover_and_metadata: Recorded in the manifest when not None
 
     Returns:

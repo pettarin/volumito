@@ -404,7 +404,7 @@ def configuration_directories() -> list[str]:
     The order is: the current working directory, the current user's home directory,
     ``~/.volumito``, and ``~/.config/volumito``. On POSIX systems (Linux, macOS) the
     system directories ``/etc`` and ``/etc/volumito`` are appended as the lowest-priority
-    locations; they are omitted on non-POSIX systems (e.g. Windows) where they make no sense.
+    locations; they are omitted on non-POSIX systems (e.g., Windows) where they make no sense.
     """
     home = os.path.expanduser("~")
     directories = [

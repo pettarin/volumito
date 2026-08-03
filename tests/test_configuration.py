@@ -57,7 +57,7 @@ class TestConfigurationPaths:
         ]
 
     def test_etc_omitted_on_non_posix(self, mocker: MockerFixture):
-        """On non-POSIX systems (e.g. Windows) the /etc directories are not probed."""
+        """On non-POSIX systems (e.g., Windows) the /etc directories are not probed."""
         mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/work")
         mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
         mocker.patch("volumito.cli.configuration.os.name", "nt")
@@ -357,7 +357,7 @@ class TestLoadDefaultMap:
             load_configuration(str(config))
 
     def test_non_utf8_file_raises(self, tmp_path):
-        """A non-UTF-8 (e.g. binary) file raises BadParameter, not UnicodeDecodeError."""
+        """A non-UTF-8 (e.g., binary) file raises BadParameter, not UnicodeDecodeError."""
         config = tmp_path / "volumito.yaml"
         config.write_bytes(b"\xff\xfe\x00\x01")
 
