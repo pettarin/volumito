@@ -37,8 +37,8 @@ print(info.state.artist, "-", info.state.track)
 
 # retrieve the current playing state
 state = client.state
-print(state.title, "-", state.artist, "-", state.album)
-# Recitando - Paolo Conte - Paolo Conte Alla Scala - il Maestro è nell'anima
+print(state.title, "---", state.artist, "---", state.album)
+# Recitando --- Paolo Conte --- Paolo Conte Alla Scala - il Maestro è nell'anima
 print(state.status, state.volume, state.seek, state.duration)
 # play 49 125029 229
 print(state.is_playing, state.is_paused, state.is_stopped)
@@ -123,18 +123,18 @@ except VolumioStoryError as e:
 
 Every query returns a model instead of a raw dictionary:
 
-| Client member                                       | Model                     |
-| --------------------------------------------------- | ------------------------- |
-| `state`                                             | `PlayerState`             |
-| `queue`                                             | `Queue` (of `QueueTrack`) |
-| `system_info`                                       | `SystemInfo`              |
-| `system_version`                                    | `SystemVersion`           |
-| `collection_statistics`                             | `CollectionStatistics`    |
-| `zones`                                             | `Zones` (of `Zone`)       |
-| `get_story`, `get_album_credits`                    | `Story`                   |
-| `play`, `pause`, `stop`, and the other commands     | `CommandResponse`         |
+| Client member                                       | Model                       |
+| --------------------------------------------------- | --------------------------- |
+| `collection_statistics`                             | `CollectionStatistics`      |
+| `get_album_credits`, `get_story`                    | `Story`                     |
+| `pause`, `play`, `stop`, and the other commands     | `CommandResponse`           |
+| `ping`                                              | `str`                       |
 | `playlists`                                         | `Playlists` (of `Playlist`) |
-| `ping`                                              | `str`                     |
+| `queue`                                             | `Queue` (of `QueueTrack`)   |
+| `state`                                             | `PlayerState`               |
+| `system_info`                                       | `SystemInfo`                |
+| `system_version`                                    | `SystemVersion`             |
+| `zones`                                             | `Zones` (of `Zone`)         |
 
 The models are [pydantic](https://docs.pydantic.dev/) models, so their fields are
 typed and validated. A few things worth knowing:
