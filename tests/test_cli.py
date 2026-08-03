@@ -8613,15 +8613,52 @@ class TestConfigurationCommands:
         lines = result.output.splitlines()
         assert lines[0].endswith("is NOT valid.")
         assert lines[1] == ""
-        assert "output-file and output-directory are mutually exclusive:" in result.output
         assert (
-            "1. 'track-albumart' takes output-file from the shared 'downloads' section "
+            "1. output-file and output-directory are mutually exclusive: "
+            "'track-albumart' takes output-file from the shared 'downloads' section "
             "and output-directory from the shared 'downloads' section" in result.output
         )
         assert (
-            "2. 'track-audio' takes output-file from the shared 'downloads' section "
+            "2. output-file and output-directory are mutually exclusive: "
+            "'track-audio' takes output-file from the shared 'downloads' section "
             "and output-directory from the shared 'downloads' section" in result.output
         )
+
+    def test_check_reports_all_problems(self, runner: CliRunner, tmp_path):
+        """Unknown keys and destination conflicts are reported together, numbered."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "volumio:\n  foo: bar\n"
+            "downloads:\n  output-directory: /covers\n"
+            "  track-audio:\n    output-file: /tmp/out.flac\n"
+        )
+
+        result = runner.invoke(main, ["configuration", "check", str(config)])
+
+        assert result.exit_code == 1
+        lines = result.output.splitlines()
+        assert lines[0].endswith("is NOT valid.")
+        assert lines[1] == ""
+        assert "1. unknown key 'foo' in section 'volumio'" in result.output
+        assert (
+            "2. output-file and output-directory are mutually exclusive: "
+            "'track-audio' takes output-file from the 'track-audio' subsection "
+            "and output-directory from the shared 'downloads' section" in result.output
+        )
+
+    def test_check_reports_all_unknown_keys(self, runner: CliRunner, tmp_path):
+        """Every unknown key is reported, not only the first one."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  foo: 1\n  bar: 2\n")
+
+        result = runner.invoke(main, ["-m", "configuration", "check", str(config)])
+
+        assert result.exit_code == 1
+        envelope = json.loads(result.output)
+        assert envelope["valid"] is False
+        assert len(envelope["errors"]) == 2
+        assert "unknown key 'foo'" in envelope["errors"][0]
+        assert "unknown key 'bar'" in envelope["errors"][1]
 
     def test_check_conflicting_destinations_machine_readable(self, runner: CliRunner, tmp_path):
         """With -m, the destination conflict is reported as a JSON envelope."""

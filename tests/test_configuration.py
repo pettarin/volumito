@@ -17,6 +17,7 @@ from volumito.cli.configuration import (
     find_destination_conflicts,
     flatten_configuration,
     load_configuration,
+    load_configuration_with_errors,
     probe_configuration_paths,
     resolve_configuration_path,
 )
@@ -445,6 +446,62 @@ class TestDefaultConfigurationTemplate:
         config.write_text(default_configuration_template("1.2.3", MPD_PORT_VOLUMIO_3))
 
         assert load_configuration(str(config))["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
+
+
+class TestLoadConfigurationWithErrors:
+    """Test cases for load_configuration_with_errors."""
+
+    def test_collects_all_errors(self, tmp_path):
+        """Every problem is collected; the valid parts are still returned."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "volumio:\n  host: myhost.local\n  foo: 1\n"
+            "bogus-section:\n  key: 1\n"
+            "downloads:\n  bar: 2\n  output-directory: /music\n"
+        )
+
+        result, errors = load_configuration_with_errors(str(config))
+
+        assert result == {
+            "volumio": {"host": "myhost.local", "foo": 1},
+            "downloads": {"output-directory": "/music"},
+        }
+        assert len(errors) == 3
+        assert "unknown key 'foo'" in errors[0]
+        assert "unknown section 'bogus-section'" in errors[1]
+        assert "unknown key 'bar'" in errors[2]
+
+    def test_valid_file_has_no_errors(self, tmp_path):
+        """A valid file yields the mapping and an empty error list."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: myhost.local\n")
+
+        assert load_configuration_with_errors(str(config)) == (
+            {"volumio": {"host": "myhost.local"}},
+            [],
+        )
+
+    def test_unreadable_file_is_a_single_error(self, tmp_path):
+        """A file that does not parse yields an empty mapping and one error."""
+        config = tmp_path / "notes.md"
+        config.write_text("# Title\n\n- a list\nkey: [\n")
+
+        result, errors = load_configuration_with_errors(str(config))
+
+        assert result == {}
+        assert len(errors) == 1
+        assert "cannot read configuration file" in errors[0]
+
+    def test_non_mapping_subsection_is_skipped(self, tmp_path):
+        """A non-mapping subsection is reported and the rest is kept."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("downloads:\n  track-audio: 5\n  output-directory: /music\n")
+
+        result, errors = load_configuration_with_errors(str(config))
+
+        assert result == {"downloads": {"output-directory": "/music"}}
+        assert len(errors) == 1
+        assert "must be a mapping" in errors[0]
 
 
 class TestFindDestinationConflicts:

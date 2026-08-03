@@ -65,7 +65,7 @@ from volumito.cli.configuration import (
     default_configuration_template,
     find_destination_conflicts,
     flatten_configuration,
-    load_configuration,
+    load_configuration_with_errors,
     probe_configuration_paths,
     resolve_configuration_path,
 )
@@ -380,33 +380,24 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     if resolved is None:
         fail(None, "no configuration file found")
 
-    try:
-        config = load_configuration(resolved)
-    except click.BadParameter as error:
-        fail(resolved, error.message)
+    config, problems = load_configuration_with_errors(resolved)
 
-    conflicts = find_destination_conflicts(config)
-    if conflicts:
+    def describe(section: str) -> str:
+        if section == "downloads":
+            return "the shared 'downloads' section"
+        return f"the '{section}' subsection"
 
-        def describe(section: str) -> str:
-            if section == "downloads":
-                return "the shared 'downloads' section"
-            return f"the '{section}' subsection"
-
-        clauses = [
-            f"'{subsection}' takes output-file from {describe(file_origin)} "
-            f"and output-directory from {describe(directory_origin)}"
-            for subsection, file_origin, directory_origin in conflicts
-        ]
-        numbered = "\n".join(f"{index}. {clause}" for index, clause in enumerate(clauses, 1))
-        fail(
-            resolved,
-            f"output-file and output-directory are mutually exclusive:\n{numbered}",
-            errors=[
-                f"output-file and output-directory are mutually exclusive: {clause}"
-                for clause in clauses
-            ],
-        )
+    problems.extend(
+        f"output-file and output-directory are mutually exclusive: "
+        f"'{subsection}' takes output-file from {describe(file_origin)} "
+        f"and output-directory from {describe(directory_origin)}"
+        for subsection, file_origin, directory_origin in find_destination_conflicts(config)
+    )
+    if len(problems) == 1:
+        fail(resolved, problems[0], errors=problems)
+    if problems:
+        numbered = "\n".join(f"{index}. {problem}" for index, problem in enumerate(problems, 1))
+        fail(resolved, numbered, errors=problems)
 
     if machine_readable:
         click.echo(

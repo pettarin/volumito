@@ -320,12 +320,12 @@ def _param_name(key: str) -> str:
 
 
 def _validate_flat_keys(
-    section: str, values: dict[str, Any], allowed: list[str], path: str
+    section: str, values: dict[str, Any], allowed: list[str], path: str, errors: list[str]
 ) -> None:
-    """Raise BadParameter if any key in a flat mapping is not allowed."""
+    """Append an error message for every key in a flat mapping that is not allowed."""
     for key in values:
         if key not in allowed:
-            raise click.BadParameter(
+            errors.append(
                 f"unknown key {key!r} in section {section!r} of configuration file {path}"
             )
 
@@ -336,23 +336,28 @@ def _validate_hierarchical(
     scalar_keys: list[str],
     subsection_keys: dict[str, list[str]],
     path: str,
+    errors: list[str],
 ) -> dict[str, Any]:
-    """Validate a hierarchical section (shared scalars + per-command subsections)."""
+    """Validate a hierarchical section (shared scalars + per-command subsections).
+
+    Invalid keys are reported in ``errors`` and skipped; the valid ones are returned.
+    """
     result: dict[str, Any] = {}
     for key, value in values.items():
         if key in subsection_keys:
             if value is None:
                 continue
             if not isinstance(value, dict):
-                raise click.BadParameter(
+                errors.append(
                     f"section '{name}.{key}' in configuration file {path} must be a mapping"
                 )
-            _validate_flat_keys(f"{name}.{key}", value, subsection_keys[key], path)
+                continue
+            _validate_flat_keys(f"{name}.{key}", value, subsection_keys[key], path, errors)
             result[key] = dict(value)
         elif key in scalar_keys:
             result[key] = value
         else:
-            raise click.BadParameter(
+            errors.append(
                 f"unknown key {key!r} in section {name!r} of configuration file {path}"
             )
     return result
@@ -519,46 +524,56 @@ def load_configuration(path: str) -> dict[str, Any]:
     (hyphenated), holding only present keys, e.g.
     ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``.
     Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
-    :class:`click.BadParameter`. An empty file yields an empty mapping.
+    :class:`click.BadParameter` with the first problem found. An empty file yields
+    an empty mapping.
+    """
+    config, errors = load_configuration_with_errors(path)
+    if errors:
+        raise click.BadParameter(errors[0])
+    return config
+
+
+def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]]:
+    """Read and validate a configuration file, collecting every problem found.
+
+    Like :func:`load_configuration`, but instead of raising on the first problem,
+    the invalid parts are skipped and all the error messages are returned together
+    with the mapping built from the valid parts. A file that cannot be read or
+    parsed at all yields an empty mapping and a single error message.
     """
     try:
         with open(path, encoding="utf-8") as config_file:
             data = yaml.safe_load(config_file)
-    except UnicodeDecodeError as error:
-        raise click.BadParameter(
-            f"configuration file {path} is not a valid YAML file"
-        ) from error
+    except UnicodeDecodeError:
+        return {}, [f"configuration file {path} is not a valid YAML file"]
     except (OSError, yaml.YAMLError) as error:
-        raise click.BadParameter(f"cannot read configuration file {path}: {error}") from error
+        return {}, [f"cannot read configuration file {path}: {error}"]
 
     if data is None:
-        return {}
+        return {}, []
     if not isinstance(data, dict):
-        raise click.BadParameter(
-            f"configuration file {path} must contain a mapping at the top level"
-        )
+        return {}, [f"configuration file {path} must contain a mapping at the top level"]
 
     config: dict[str, Any] = {}
+    errors: list[str] = []
     for section, values in data.items():
         if section not in RECOGNIZED_SECTIONS:
-            raise click.BadParameter(
-                f"unknown section {section!r} in configuration file {path}"
-            )
+            errors.append(f"unknown section {section!r} in configuration file {path}")
+            continue
         if values is None:
             continue
         if not isinstance(values, dict):
-            raise click.BadParameter(
-                f"section {section!r} in configuration file {path} must be a mapping"
-            )
+            errors.append(f"section {section!r} in configuration file {path} must be a mapping")
+            continue
         if section in HIERARCHICAL_SPECS:
             scalar_keys, subsection_keys = HIERARCHICAL_SPECS[section]
             config[section] = _validate_hierarchical(
-                section, values, scalar_keys, subsection_keys, path
+                section, values, scalar_keys, subsection_keys, path, errors
             )
         else:
-            _validate_flat_keys(section, values, SECTION_KEYS[section], path)
+            _validate_flat_keys(section, values, SECTION_KEYS[section], path, errors)
             config[section] = dict(values)
-    return config
+    return config, errors
 
 
 def probe_configuration_paths() -> list[tuple[str, bool, bool]]:

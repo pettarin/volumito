@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `configuration check` command reports the download subsections whose effective
   values set both the output file and the output directory
+- The `configuration check` command reports every problem found in the file as a
+  numbered list, instead of stopping at the first one
 
 ### Changed
 
