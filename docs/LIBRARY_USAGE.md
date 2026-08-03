@@ -75,7 +75,7 @@ for index, item in enumerate(queue, 1):
 # ...
 
 # play the 4th track of the current queue
-# (positions start at zero, see Units And Conventions below)
+# (positions start at index zero)
 client.play(3)
 
 # read the seek position, then seek to 01:42 (both in seconds)
