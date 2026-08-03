@@ -956,14 +956,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.26" in result.output
+        assert "volumito, version 0.0.27" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.26"'
+        assert result.output.strip() == '"0.0.27"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -972,7 +972,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.26"'
+        assert result.output.strip() == '"0.0.27"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -8048,6 +8048,112 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         mock_open.assert_called_once_with(os.path.join("/covers", "cover.jpg"), "wb")
+
+    def test_explicit_output_file_overrides_configured_directory(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An explicit -o wins over a configured output-directory (no exclusivity error)."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/images/cover.jpg"}
+        )
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+
+        config = self._write_config(tmp_path, "downloads:\n  output-directory: /covers\n")
+        out = tmp_path / "out.jpg"
+
+        result = runner.invoke(
+            main,
+            ["-c", config, "track", "albumart", "-o", str(out), "--no-create-download-manifest"],
+        )
+
+        assert result.exit_code == 0
+        assert "mutually exclusive" not in result.output
+        assert out.read_bytes() == b"data"
+
+    def test_explicit_output_file_overrides_configured_directory_for_audio(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An explicit -o wins over a configured output-directory for track audio."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
+
+        mpd = mocker.Mock()
+        mpd.get_track_uri.return_value = "http://volumio.local:8000/music/test.flac"
+        mpd_class = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__enter__ = mocker.Mock(return_value=mpd)
+        mpd_class.return_value.__exit__ = mocker.Mock(return_value=None)
+        mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mpd_class)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+
+        config = self._write_config(tmp_path, "downloads:\n  output-directory: /music\n")
+        out = tmp_path / "out.flac"
+
+        result = runner.invoke(
+            main,
+            [
+                "-c",
+                config,
+                "track",
+                "audio",
+                "-o",
+                str(out),
+                "--no-create-download-manifest",
+                "--no-add-cover-and-metadata",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "mutually exclusive" not in result.output
+        assert out.read_bytes() == b"data"
+
+    def test_explicit_output_directory_overrides_configured_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An explicit -d wins over a configured output-file (no exclusivity error)."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client, "state", return_value={"albumart": "http://example.com/images/cover.jpg"}
+        )
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
+
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"data"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+
+        config = self._write_config(tmp_path, "downloads:\n  output-file: /tmp/elsewhere.jpg\n")
+        out = tmp_path / "covers"
+
+        result = runner.invoke(
+            main,
+            ["-c", config, "track", "albumart", "-d", str(out), "--no-create-download-manifest"],
+        )
+
+        assert result.exit_code == 0
+        assert "mutually exclusive" not in result.output
+        assert (out / "cover.jpg").read_bytes() == b"data"
+
+    def test_configured_output_file_and_directory_conflict(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """Both destinations set in the configuration file still raise the usage error."""
+        config = self._write_config(
+            tmp_path,
+            "downloads:\n  output-directory: /covers\n  output-file: /tmp/out.jpg\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "track", "albumart"])
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
 
     def test_downloads_shared_create_download_manifest_false(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path

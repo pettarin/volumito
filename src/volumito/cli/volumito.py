@@ -54,6 +54,7 @@ from volumito.cli.click_helpers import (
     render_payload,
     render_state,
     render_story,
+    resolve_output_conflict,
     resolve_story_album_entities,
     resolve_story_entity,
     rest_api_sleep,
@@ -72,7 +73,6 @@ from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
-    MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     QUEUE_LOG_FILENAME,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
@@ -711,8 +711,7 @@ def audio(
     replace_characters_in_file_names_with: str,
 ) -> None:
     """Print the URI of and/or download the audio of the current track."""
-    if output_file is not None and output_directory is not None:
-        raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+    output_file, output_directory = resolve_output_conflict(ctx, output_file, output_directory)
     output_directory = expand_output_directory(output_directory)
 
     host_configuration = ctx.obj["host_configuration"]
@@ -828,8 +827,7 @@ def albumart(
     replace_characters_in_file_names_with: str,
 ) -> None:
     """Print the URI of and/or download the album art of the current track."""
-    if output_file is not None and output_directory is not None:
-        raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+    output_file, output_directory = resolve_output_conflict(ctx, output_file, output_directory)
     output_directory = expand_output_directory(output_directory)
 
     host_configuration = ctx.obj["host_configuration"]

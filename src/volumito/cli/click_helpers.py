@@ -16,6 +16,7 @@ from typing import Any, get_args, overload
 
 import click
 import requests
+from click.core import ParameterSource
 from packaging.version import InvalidVersion, Version
 
 from volumito import __version__
@@ -32,6 +33,7 @@ from volumito.cli.constants import (
     FILE_WRITE_CHUNK_SIZE,
     MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR,
     MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR,
+    MUTUALLY_EXCLUSIVE_OUTPUT_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
@@ -1392,6 +1394,38 @@ def render_story(
             output = format_as_pretty(filtered_response, position_starting_at_one)
 
     click.echo(output)
+
+
+def resolve_output_conflict(
+    ctx: click.Context, output_file: str | None, output_directory: str | None
+) -> tuple[str | None, str | None]:
+    """Resolve -o/--output-file vs -d/--output-directory, honoring precedence.
+
+    When both are set but only one was given explicitly on the command line
+    (the other coming from the configuration file), the explicit one wins and
+    the configured one is dropped. When both are explicit, or both come from
+    the configuration file, raise the usual mutual-exclusivity UsageError.
+
+    Args:
+        ctx: Click context object (source of the parameter provenance)
+        output_file: The -o/--output-file value, or None
+        output_directory: The -d/--output-directory value, or None
+
+    Returns:
+        The (output_file, output_directory) pair with at most one value set
+
+    Raises:
+        click.UsageError: If both destinations are explicit, or both configured
+    """
+    if output_file is None or output_directory is None:
+        return output_file, output_directory
+    file_explicit = ctx.get_parameter_source("output_file") == ParameterSource.COMMANDLINE
+    directory_explicit = ctx.get_parameter_source("output_directory") == ParameterSource.COMMANDLINE
+    if file_explicit and not directory_explicit:
+        return output_file, None
+    if directory_explicit and not file_explicit:
+        return None, output_directory
+    raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
 
 
 def resolve_story_album_entities(
