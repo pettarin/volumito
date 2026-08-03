@@ -956,14 +956,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.27" in result.output
+        assert "volumito, version 0.0.28" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.27"'
+        assert result.output.strip() == '"0.0.28"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -972,7 +972,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.27"'
+        assert result.output.strip() == '"0.0.28"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -1179,7 +1179,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["playback", "play", "-p", "3"])
+        result = runner.invoke(main, ["playback", "play", "3"])
 
         assert result.exit_code == 0
         # Position is 1-indexed on the CLI, 0-indexed to the client
@@ -7539,7 +7539,7 @@ class TestPositionIndexing:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["playback", "play", "-p", "1", "--no-print-resulting-status"])
+        result = runner.invoke(main, ["playback", "play", "1", "--no-print-resulting-status"])
 
         assert result.exit_code == 0
         mock_client.play.assert_called_once_with(0)
@@ -7559,7 +7559,6 @@ class TestPositionIndexing:
                 "--position-starting-at-zero",
                 "playback",
                 "play",
-                "-p",
                 "0",
                 "--no-print-resulting-status",
             ],
@@ -7576,9 +7575,9 @@ class TestPositionIndexing:
             return_value=mock_client,
         )
 
-        one_based = runner.invoke(main, ["playback", "play", "-p", "0"])
+        one_based = runner.invoke(main, ["playback", "play", "0"])
         zero_based = runner.invoke(
-            main, ["--position-starting-at-zero", "playback", "play", "-p", "-1"]
+            main, ["--position-starting-at-zero", "playback", "play", "--", "-1"]
         )
 
         assert one_based.exit_code != 0

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.28] - 2026-08-03
+
+### Changed
+
+- The `playback play` command takes the queue position as an optional positional
+  argument, instead of the `-p`/`--position` option
+
+
 ## [0.0.27] - 2026-08-03
 
 ### Added

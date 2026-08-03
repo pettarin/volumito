@@ -477,21 +477,18 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
 
 @playback.command()
 @click.pass_context
-@click.option(
-    "--position",
-    "-p",
-    type=int,
+@click.argument(
+    "position",
+    required=False,
     default=None,
-    help=(
-        "Position in the queue to play (indexed according to "
-        "--position-starting-at-one/--position-starting-at-zero)."
-    ),
+    type=int,
 )
 @option_print_resulting_status
 def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
     """Start playback.
 
-    With -p/--position, play the track at that position of the queue.
+    With POSITION, play the track at that position of the queue (indexed according
+    to --position-starting-at-one/--position-starting-at-zero).
     """
     if position is not None:
         starting_at_one = ctx.obj["position_starting_at_one"]
