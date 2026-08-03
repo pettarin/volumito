@@ -4,6 +4,9 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+DEFAULT_MANIFEST_FILE = "{output_directory}/manifest.json"
+"""Default path template of the queue/playlist download manifest file."""
+
 DEFAULT_NUMBER_RETRIES_NEXT_TRACK = 5
 """Default number of retries waiting for a queue track's metadata to become current."""
 
@@ -48,6 +51,9 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 )
 """Error message when the download destination options are combined."""
 
+OUTPUT_DIRECTORY_PLACEHOLDER = "{output_directory}"
+"""Placeholder in manifest file paths replaced with the expanded output directory."""
+
 OUTPUT_DIRECTORY_REQUIRED_ERROR = "Option -d/--output-directory is required."
 """Error message when a command requiring the output directory is run without it."""
 
@@ -70,9 +76,6 @@ OUTPUT_FORMATS = [
     "table",
 ]
 """Accepted values of the -F/--format option."""
-
-QUEUE_LOG_FILENAME = "queue.json"
-"""File name of the queue download log, inside the download directory."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",

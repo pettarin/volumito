@@ -40,6 +40,9 @@ downloads:
     # Template (Python str.format) for the audio file names
     audio-file-name-template: '{position:03d}___{title}___{album}___{artist}.{extension}'
 
+    # Path of the download manifest ({output_directory} and {timestamp} are expanded)
+    manifest-file: '{output_directory}/manifest.json'
+
     # Number of retries waiting for the next track's metadata to become current
     number-retries-next-track: 5
 
@@ -56,6 +59,9 @@ downloads:
 
     # Template (Python str.format) for the audio file names
     audio-file-name-template: '{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}'
+
+    # Path of the download manifest ({output_directory} and {timestamp} are expanded)
+    manifest-file: '{output_directory}/manifest.json'
 
     # Number of retries waiting for the next track's metadata to become current
     number-retries-next-track: 5

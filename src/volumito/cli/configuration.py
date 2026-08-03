@@ -146,6 +146,7 @@ QUEUE_DOWNLOAD_KEYS: list[str] = [
     "albumart-file-name-template",
     "audio-file-name-template",
     "create-download-manifest",
+    "manifest-file",
     "number-retries-next-track",
     "output-directory",
     "overwrite-existing-files",

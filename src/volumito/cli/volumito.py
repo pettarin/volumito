@@ -41,6 +41,7 @@ from volumito.cli.click_helpers import (
     option_fields,
     option_file_name_template,
     option_format,
+    option_manifest_file,
     option_number_retries_next_track,
     option_output_directory,
     option_output_file,
@@ -75,12 +76,14 @@ from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
-    QUEUE_LOG_FILENAME,
+    OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
 )
 from volumito.cli.pure_helpers import (
     display_position,
+    expand_manifest_file,
+    expand_timestamp_placeholder,
     filter_queue_fields,
     filter_zones_fields,
     format_duration,
@@ -1003,6 +1006,7 @@ def queue_list(
 @option_audio_file_name_template
 @option_check_next_track
 @option_create_download_manifest
+@option_manifest_file
 @option_number_retries_next_track
 @option_output_directory
 @option_overwrite_existing_files
@@ -1016,6 +1020,7 @@ def queue_download(
     audio_file_name_template: str,
     check_next_track: bool,
     create_download_manifest: bool,
+    manifest_file: str,
     number_retries_next_track: int,
     output_directory: str | None,
     overwrite_existing_files: bool,
@@ -1023,7 +1028,11 @@ def queue_download(
     replace_characters_in_file_names_with: str,
     with_albumart: bool,
 ) -> None:
-    """Download every track of the current queue."""
+    """Download every track of the current queue.
+
+    The download manifest is written to --manifest-file, by default manifest.json
+    inside the output directory.
+    """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
     mpd_timeout = ctx.obj["mpd_timeout"]
@@ -1049,8 +1058,9 @@ def queue_download(
                 click.echo("The queue is empty, nothing to download")
             return
 
-        run_directory = expand_output_directory(output_directory)
-        log_path = os.path.join(run_directory, QUEUE_LOG_FILENAME)
+        timestamp = datetime.now(UTC).strftime(OUTPUT_DIRECTORY_TIMESTAMP_FORMAT)
+        run_directory = expand_timestamp_placeholder(output_directory, timestamp)
+        log_path = expand_manifest_file(manifest_file, run_directory, timestamp)
 
         entries: list[dict[str, Any]] = [
             {
@@ -1074,6 +1084,9 @@ def queue_download(
             "volumito_version": __version__,
         }
         os.makedirs(run_directory, exist_ok=True)
+        log_parent = os.path.dirname(log_path)
+        if log_parent:
+            os.makedirs(log_parent, exist_ok=True)
         write_queue_log(log_path, log)
 
         errors = 0
@@ -1415,6 +1428,7 @@ def playlist_play(
 @option_check_next_track
 @option_check_playlist_name
 @option_create_download_manifest
+@option_manifest_file
 @option_number_retries_next_track
 @option_output_directory
 @option_overwrite_existing_files
@@ -1431,6 +1445,7 @@ def playlist_download(
     check_next_track: bool,
     check_playlist_name: bool,
     create_download_manifest: bool,
+    manifest_file: str,
     number_retries_next_track: int,
     output_directory: str | None,
     overwrite_existing_files: bool,
@@ -1482,6 +1497,7 @@ def playlist_download(
         audio_file_name_template=audio_file_name_template,
         check_next_track=check_next_track,
         create_download_manifest=create_download_manifest,
+        manifest_file=manifest_file,
         number_retries_next_track=number_retries_next_track,
         output_directory=output_directory,
         overwrite_existing_files=overwrite_existing_files,

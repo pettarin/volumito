@@ -422,12 +422,14 @@ class TestDefaultConfigurationTemplate:
                 "playlist-download": {
                     "albumart-file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                     "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
+                    "manifest-file": "{output_directory}/manifest.json",
                     "number-retries-next-track": 5,
                     "with-albumart": True,
                 },
                 "queue-download": {
                     "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                     "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
+                    "manifest-file": "{output_directory}/manifest.json",
                     "number-retries-next-track": 5,
                     "with-albumart": True,
                 },
@@ -671,6 +673,19 @@ class TestBuildClickDefaultMap:
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-list has no override, so it keeps the shared value.
         assert result["queue"]["list"] == {"output_format": "pretty"}
+
+    def test_shared_manifest_file_reaches_only_queue_and_playlist_download(self):
+        """A shared downloads.manifest-file flows to the queue/playlist downloads only."""
+        result = build_click_default_map(
+            {"downloads": {"manifest-file": "/reports/run.json"}}
+        )
+
+        assert result["queue"]["download"]["manifest_file"] == "/reports/run.json"
+        assert result["playlist"]["download"]["manifest_file"] == "/reports/run.json"
+        # The key never reaches the track commands (nothing else is shared here,
+        # so their default-map entries are not even created).
+        assert "manifest_file" not in result.get("track", {}).get("audio", {})
+        assert "manifest_file" not in result.get("track", {}).get("albumart", {})
 
     def test_story_subsection_overrides_shared(self):
         """A per-command story subsection overrides the shared display value."""

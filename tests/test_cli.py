@@ -35,6 +35,7 @@ from volumito.cli.constants import (
 )
 from volumito.cli.pure_helpers import (
     display_position,
+    expand_manifest_file,
     expand_timestamp_placeholder,
     extract_filename_from_uri,
     filter_fields,
@@ -413,6 +414,42 @@ class TestFormatFunctions:
 
         assert "Album Story" in result
         assert f"{'Data Value':20}: A story." in result.splitlines()
+
+
+class TestExpandManifestFile:
+    """Test cases for the expand_manifest_file function."""
+
+    def test_no_placeholders(self):
+        """A path without placeholders is returned unchanged."""
+        assert (
+            expand_manifest_file("/tmp/run.json", "/music", "20260101000000")
+            == "/tmp/run.json"
+        )
+
+    def test_output_directory_placeholder(self):
+        """The {output_directory} placeholder is replaced with the given directory."""
+        assert (
+            expand_manifest_file("{output_directory}/myqueue.json", "/music", "20260101000000")
+            == "/music/myqueue.json"
+        )
+
+    def test_both_placeholders(self):
+        """Both placeholders are replaced in the same path."""
+        assert (
+            expand_manifest_file(
+                "{output_directory}/{timestamp}.json", "/music", "20260101000000"
+            )
+            == "/music/20260101000000.json"
+        )
+
+    def test_expanded_output_directory_flows_in(self):
+        """A timestamp-expanded output directory is injected as-is."""
+        assert (
+            expand_manifest_file(
+                "{output_directory}/manifest.json", "/music/20260101000000", "20260101000000"
+            )
+            == "/music/20260101000000/manifest.json"
+        )
 
 
 class TestExpandTimestampPlaceholder:
@@ -956,14 +993,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.28" in result.output
+        assert "volumito, version 0.0.29" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.28"'
+        assert result.output.strip() == '"0.0.29"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -972,7 +1009,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.28"'
+        assert result.output.strip() == '"0.0.29"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5468,8 +5505,8 @@ class TestQueueDownload:
         return mock_client
 
     def _read_log(self, base):
-        """Return the run's queue.json log (path, parsed content)."""
-        log_path = base / "queue.json"
+        """Return the run's download manifest (path, parsed content)."""
+        log_path = base / "manifest.json"
         with open(log_path, encoding="utf-8") as log_file:
             return log_path, json.load(log_file)
 
@@ -5598,8 +5635,9 @@ class TestQueueDownload:
     ):
         """The {timestamp} placeholder in -d expands to the current UTC time."""
         self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
-        mock_datetime = mocker.patch("volumito.cli.click_helpers.datetime")
+        mock_datetime = mocker.patch("volumito.cli.volumito.datetime")
         mock_datetime.now.return_value.strftime.return_value = "20260101000000"
+        mock_datetime.now.return_value.isoformat.return_value = "2026-01-01T00:00:00+00:00"
 
         result = runner.invoke(
             main, [*self._BASE, "-d", os.path.join(str(tmp_path), "{timestamp}")]
@@ -5610,6 +5648,95 @@ class TestQueueDownload:
         assert (run / "a.flac").read_bytes() == b"data"
         _, log = self._read_log(run)
         assert log["output_directory"] == str(run)
+
+    def test_download_manifest_file_custom_path(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--manifest-file writes the manifest to the given path, creating parents."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        out = tmp_path / "out"
+        manifest = tmp_path / "reports" / "run.json"
+
+        result = runner.invoke(
+            main, ["-m", *self._BASE, "-d", str(out), "--manifest-file", str(manifest)]
+        )
+
+        assert result.exit_code == 0
+        assert result.output.strip() == json.dumps(str(manifest))
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["tracks"][0]["status"] == "downloaded"
+        assert not (out / "manifest.json").exists()
+
+    def test_download_manifest_file_output_directory_placeholder(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The {output_directory} placeholder in --manifest-file expands to the -d path."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                str(tmp_path),
+                "--manifest-file",
+                "{output_directory}/myqueue.json",
+            ],
+        )
+
+        assert result.exit_code == 0
+        with open(tmp_path / "myqueue.json", encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["tracks"][0]["status"] == "downloaded"
+        assert not (tmp_path / "manifest.json").exists()
+
+    def test_download_manifest_file_timestamp_placeholder(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """{timestamp} expands to the same value in -d and --manifest-file."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        mock_datetime = mocker.patch("volumito.cli.volumito.datetime")
+        mock_datetime.now.return_value.strftime.return_value = "20260101000000"
+        mock_datetime.now.return_value.isoformat.return_value = "2026-01-01T00:00:00+00:00"
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                os.path.join(str(tmp_path), "{timestamp}"),
+                "--manifest-file",
+                os.path.join(str(tmp_path), "{timestamp}", "{timestamp}.json"),
+            ],
+        )
+
+        assert result.exit_code == 0
+        run = tmp_path / "20260101000000"
+        assert (run / "a.flac").read_bytes() == b"data"
+        with open(run / "20260101000000.json", encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["output_directory"] == str(run)
+
+    def test_download_manifest_file_from_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The queue-download configuration subsection supplies the manifest path."""
+        self._mock_services(mocker, self._queue_tracks()[:1], ["http://h/a.flac"])
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "downloads:\n"
+            "  queue-download:\n"
+            f"    output-directory: {out}\n"
+            "    manifest-file: '{output_directory}/from_config.json'\n"
+        )
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE])
+
+        assert result.exit_code == 0
+        assert (out / "from_config.json").exists()
+        assert not (out / "manifest.json").exists()
 
     def test_download_machine_readable(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """In machine-readable mode only the quoted log path is printed."""
@@ -6484,8 +6611,8 @@ class TestPlaylistDownload:
         return mock_client
 
     def _read_log(self, base):
-        """Return the run's queue.json log (path, parsed content)."""
-        log_path = base / "queue.json"
+        """Return the run's download manifest (path, parsed content)."""
+        log_path = base / "manifest.json"
         with open(log_path, encoding="utf-8") as log_file:
             return log_path, json.load(log_file)
 
@@ -6599,6 +6726,28 @@ class TestPlaylistDownload:
 
         assert result.exit_code == 0
         assert (out / "Song.flac").read_bytes() == b"data"
+
+    def test_download_manifest_file_forwarded(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--manifest-file is forwarded to the queue download logic."""
+        self._mock_services(
+            mocker,
+            [{"title": "Song", "artist": "A", "album": "B"}],
+            ["http://h/a.flac"],
+            states=[{"title": "Song", "artist": "A", "album": "B", "position": 0}],
+        )
+        manifest = tmp_path / "reports" / "playlist.json"
+
+        result = runner.invoke(
+            main, [*self._BASE, "-d", str(tmp_path), "--manifest-file", str(manifest)]
+        )
+
+        assert result.exit_code == 0
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert log["tracks"][0]["status"] == "downloaded"
+        assert not (tmp_path / "manifest.json").exists()
 
     def test_download_connection_error(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """A connection failure while clearing the queue exits with an error."""
@@ -8376,12 +8525,14 @@ class TestConfigurationCommands:
                     "playlist-download": {
                         "albumart-file-name-template": _ALBUMART_FILE_NAME_TEMPLATE,
                         "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
+                        "manifest-file": "{output_directory}/manifest.json",
                         "number-retries-next-track": 5,
                         "with-albumart": True,
                     },
                     "queue-download": {
                         "albumart-file-name-template": _QUEUE_ALBUMART_FILE_NAME_TEMPLATE,
                         "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
+                        "manifest-file": "{output_directory}/manifest.json",
                         "number-retries-next-track": 5,
                         "with-albumart": True,
                     },

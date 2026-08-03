@@ -10,6 +10,7 @@ import re
 from typing import Any
 
 from volumito.cli.constants import (
+    OUTPUT_DIRECTORY_PLACEHOLDER,
     OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER,
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
@@ -34,6 +35,26 @@ def display_position(api_position: int, starting_at_one: bool) -> int:
         The position to display
     """
     return api_position + 1 if starting_at_one else api_position
+
+
+def expand_manifest_file(path: str, output_directory: str, timestamp: str) -> str:
+    """Replace the placeholders in a download manifest file path.
+
+    Each occurrence of ``{output_directory}`` is replaced with ``output_directory``,
+    and each occurrence of ``{timestamp}`` with ``timestamp``. The replacements are
+    literal :meth:`str.replace` calls, so any other braces in the path are left
+    untouched.
+
+    Args:
+        path: The manifest file path, possibly containing the placeholders
+        output_directory: The (expanded) output directory replacing its placeholder
+        timestamp: The timestamp string replacing its placeholder
+
+    Returns:
+        The path with every occurrence of the placeholders replaced
+    """
+    expanded = path.replace(OUTPUT_DIRECTORY_PLACEHOLDER, output_directory)
+    return expand_timestamp_placeholder(expanded, timestamp)
 
 
 def expand_timestamp_placeholder(path: str, timestamp: str) -> str:

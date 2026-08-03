@@ -26,6 +26,7 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
+    DEFAULT_MANIFEST_FILE,
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
@@ -1002,6 +1003,18 @@ def option_format(func: Callable[..., None]) -> Callable[..., None]:
         default="pretty",
         show_default=True,
         help="Output format.",
+    )(func)
+
+
+def option_manifest_file(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--manifest-file`` option to a queue/playlist download subcommand."""
+    return click.option(
+        "--manifest-file",
+        type=str,
+        default=DEFAULT_MANIFEST_FILE,
+        show_default=True,
+        help="Write the download manifest to this file path; {output_directory} is "
+        "replaced with the output directory, {timestamp} with the current UTC time.",
     )(func)
 
 
