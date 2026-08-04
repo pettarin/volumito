@@ -424,6 +424,7 @@ class TestDefaultConfigurationTemplate:
                     "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
                     "manifest-file": "{output_directory}/manifest.json",
                     "number-retries-next-track": 10,
+                    "only-tracks": None,
                     "with-albumart": True,
                 },
                 "queue-download": {
@@ -431,6 +432,7 @@ class TestDefaultConfigurationTemplate:
                     "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
                     "manifest-file": "{output_directory}/manifest.json",
                     "number-retries-next-track": 10,
+                    "only-tracks": None,
                     "with-albumart": True,
                 },
                 "track-albumart": {

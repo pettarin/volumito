@@ -43,6 +43,7 @@ from volumito.cli.click_helpers import (
     option_format,
     option_manifest_file,
     option_number_retries_next_track,
+    option_only_tracks,
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
@@ -1000,6 +1001,27 @@ def queue_list(
         sys.exit(1)
 
 
+def _download_summary(entries: list[dict[str, Any]], selected: set[int], errors: int) -> str:
+    """Return the summary line of a queue download run.
+
+    Args:
+        entries: The manifest entries of every track of the queue
+        selected: The indices of the tracks selected for the run
+        errors: The number of tracks that could not be downloaded
+
+    Returns:
+        The counts of the run, mentioning the tracks left out when there are any
+    """
+    statuses = [entries[index].get("status") for index in selected]
+    downloaded = sum(1 for status in statuses if status == "downloaded")
+    skipped = sum(1 for status in statuses if status == "skipped")
+    summary = f"Downloaded {downloaded}, skipped {skipped}, errors {errors}"
+    not_selected = len(entries) - len(selected)
+    if not_selected:
+        summary += f", not selected {not_selected}"
+    return summary
+
+
 @queue.command("download")
 @click.pass_context
 @option_add_cover_and_metadata
@@ -1009,6 +1031,7 @@ def queue_list(
 @option_create_download_manifest
 @option_manifest_file
 @option_number_retries_next_track
+@option_only_tracks
 @option_output_directory
 @option_overwrite_existing_files
 @option_replace_characters_in_file_names
@@ -1023,6 +1046,7 @@ def queue_download(
     create_download_manifest: bool,
     manifest_file: str,
     number_retries_next_track: int,
+    only_tracks: set[int] | None,
     output_directory: str | None,
     overwrite_existing_files: bool,
     replace_characters_in_file_names: str,
@@ -1031,9 +1055,11 @@ def queue_download(
 ) -> None:
     """Download every track of the current queue.
 
-    The download manifest is written to --manifest-file, by default manifest.json
-    inside the output directory. If the manifest file already exists, only the
-    tracks not yet downloaded are retried.
+    With -T/--only-tracks, only the tracks at the given queue positions are
+    downloaded, leaving the other ones for a later run. The download manifest is
+    written to --manifest-file, by default manifest.json inside the output
+    directory. If the manifest file already exists, only the tracks not yet
+    downloaded are retried.
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
@@ -1060,6 +1086,23 @@ def queue_download(
                 click.echo("The queue is empty, nothing to download")
             return
 
+        # The selected positions follow the indexing of the displayed ones
+        offset = 1 if position_starting_at_one else 0
+        if only_tracks is None:
+            selected = set(range(len(tracks)))
+        else:
+            selected = {
+                position - offset
+                for position in only_tracks
+                if 0 <= position - offset < len(tracks)
+            }
+            if not selected:
+                if not machine_readable:
+                    click.echo("Error: no track of the queue is selected", err=True)
+                sys.exit(1)
+            if not machine_readable:
+                click.echo(f"Downloading {len(selected)} of {len(tracks)} tracks")
+
         timestamp = datetime.now(UTC).strftime(OUTPUT_DIRECTORY_TIMESTAMP_FORMAT)
         run_directory = expand_timestamp_placeholder(output_directory, timestamp)
         log_path = expand_manifest_file(manifest_file, run_directory, timestamp)
@@ -1082,8 +1125,9 @@ def queue_download(
             if not machine_readable:
                 click.echo(f"Reading manifest file {log_path}")
             entries: list[dict[str, Any]] = existing["tracks"]
-            for entry in entries:
-                if entry.get("status") == "downloaded":
+            for index, entry in enumerate(entries):
+                # A track left out of this run keeps the status it already had
+                if index not in selected or entry.get("status") == "downloaded":
                     continue
                 # A skipped track is kept when its file is still present (unless
                 # the files are to be overwritten); anything else is retried
@@ -1142,30 +1186,34 @@ def queue_download(
             os.makedirs(log_parent, exist_ok=True)
         write_queue_log(log_path, log)
 
-        if all(entry.get("status") in ("downloaded", "skipped") for entry in entries):
+        if all(
+            entries[index].get("status") in ("downloaded", "skipped") for index in selected
+        ):
             if machine_readable:
                 click.echo(json.dumps(log_path))
             else:
-                for index, entry in enumerate(entries):
+                for index in sorted(selected):
+                    entry = entries[index]
                     click.echo(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
                         f"{entry.get('output_file_path')} (kept)"
                     )
-                downloaded = sum(1 for e in entries if e["status"] == "downloaded")
-                skipped = sum(1 for e in entries if e["status"] == "skipped")
                 click.echo(
-                    f"\nDownloaded {downloaded}, skipped {skipped}, errors 0; "
+                    f"\n{_download_summary(entries, selected, 0)}; "
                     f"manifest written to {log_path}"
                 )
             return
 
         errors = 0
+        previous_index: int | None = None
         previous_uri: str | None = None
         downloaded_covers: dict[str, str] = {}
         album_volumes = queue_album_volumes(tracks, replace_characters_in_file_names_with)
         client.stop()
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
             for index, entry in enumerate(entries):
+                if index not in selected:
+                    continue
                 if entry.get("status") in ("downloaded", "skipped"):
                     if not machine_readable:
                         click.echo(
@@ -1176,7 +1224,8 @@ def queue_download(
                 destination: str | None = None
                 try:
                     expect_same_uri = (
-                        index > 0 and tracks[index].uri == tracks[index - 1].uri
+                        previous_index is not None
+                        and tracks[index].uri == tracks[previous_index].uri
                     )
                     attempt = 0
                     while True:
@@ -1209,6 +1258,7 @@ def queue_download(
                             f"{number_retries_next_track} retries"
                         )
                     else:
+                        previous_index = index
                         previous_uri = uri
                         album_volume = album_volumes[index]
                         tracknumber = tracks[index].tracknumber
@@ -1304,10 +1354,8 @@ def queue_download(
         if machine_readable:
             click.echo(json.dumps(log_path))
         else:
-            downloaded = sum(1 for e in entries if e["status"] == "downloaded")
-            skipped = sum(1 for e in entries if e["status"] == "skipped")
             click.echo(
-                f"\nDownloaded {downloaded}, skipped {skipped}, errors {errors}; "
+                f"\n{_download_summary(entries, selected, errors)}; "
                 f"manifest written to {log_path}"
             )
         if errors:
@@ -1515,6 +1563,7 @@ def playlist_play(
 @option_create_download_manifest
 @option_manifest_file
 @option_number_retries_next_track
+@option_only_tracks
 @option_output_directory
 @option_overwrite_existing_files
 @option_print_resulting_status
@@ -1532,6 +1581,7 @@ def playlist_download(
     create_download_manifest: bool,
     manifest_file: str,
     number_retries_next_track: int,
+    only_tracks: set[int] | None,
     output_directory: str | None,
     overwrite_existing_files: bool,
     print_resulting_status: bool,
@@ -1584,6 +1634,7 @@ def playlist_download(
         create_download_manifest=create_download_manifest,
         manifest_file=manifest_file,
         number_retries_next_track=number_retries_next_track,
+        only_tracks=only_tracks,
         output_directory=output_directory,
         overwrite_existing_files=overwrite_existing_files,
         replace_characters_in_file_names=replace_characters_in_file_names,

@@ -148,6 +148,7 @@ QUEUE_DOWNLOAD_KEYS: list[str] = [
     "create-download-manifest",
     "manifest-file",
     "number-retries-next-track",
+    "only-tracks",
     "output-directory",
     "overwrite-existing-files",
     "replace-characters-in-file-names",

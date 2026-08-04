@@ -530,6 +530,43 @@ def number_prefix_width(numbers: list[str]) -> int:
     return max(len(number) for number in numbers)
 
 
+def parse_track_selection(value: str) -> set[int]:
+    """Parse a track selection such as ``"1-3,6-8,12"`` into its positions.
+
+    The selection is a comma-separated list of items, each a positive integer or an
+    inclusive ``start-end`` range; blanks around the items are ignored, and a position
+    listed more than once is kept once. The positions are returned as written: it is
+    up to the caller to interpret them (see ``display_position`` for the indexing).
+
+    Args:
+        value: The track selection to parse
+
+    Returns:
+        The selected positions
+
+    Raises:
+        ValueError: If the selection is empty or malformed
+    """
+    positions: set[int] = set()
+    items = [item.strip() for item in value.split(",")]
+    if not any(items):
+        raise ValueError("the track selection is empty")
+    for item in items:
+        if not item:
+            raise ValueError(f"empty item in the track selection {value!r}")
+        first, separator, last = item.partition("-")
+        first, last = first.strip(), last.strip()
+        if not first.isdigit() or (separator and not last.isdigit()):
+            raise ValueError(f"invalid item {item!r} in the track selection {value!r}")
+        if not separator:
+            positions.add(int(first))
+            continue
+        if int(last) < int(first):
+            raise ValueError(f"reversed range {item!r} in the track selection {value!r}")
+        positions.update(range(int(first), int(last) + 1))
+    return positions
+
+
 def parse_time_to_seconds(text: str) -> int | None:
     """Convert a colon time to the corresponding number of seconds.
 

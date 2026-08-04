@@ -4,21 +4,17 @@ Rough plan, broken down by milestone:
 
 ## v0.1.0
 
-- DONE!
+- REST API client, CLI: support browsing, playlist add/replace-and-play, and notifications
 
 ## v0.2.0
 
-- REST API client, CLI: support browsing, playlist add/replace-and-play, and notifications
+- Library: add async REST API client
 
 ## v0.3.0
 
-- Library: add async REST API client
-
-## v0.4.0
-
 - Library: add WebSocket client
 
-## v0.5.0
+## v0.4.0
 
 - CLI: allow choosing any of the implemented clients
 

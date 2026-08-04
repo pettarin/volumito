@@ -58,6 +58,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_duration,
     parse_time_to_seconds,
+    parse_track_selection,
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
@@ -187,6 +188,31 @@ class SeekParamType(click.ParamType):
         if seconds < 0:
             self.fail(f"seek position must be 0 or greater, got {seconds}", param, ctx)
         return seconds
+
+
+class TrackSelectionParamType(click.ParamType):
+    """Click parameter type for a selection of queue tracks.
+
+    Accepts a comma-separated list of queue positions, each a positive integer or an
+    inclusive ``start-end`` range (e.g., ``"1-3,6-8,12"``); anything else is a usage
+    error.
+    """
+
+    name = "selection"
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> set[int]:
+        try:
+            return parse_track_selection(str(value))
+        except ValueError as e:
+            self.fail(str(e), param, ctx)
+
+    def get_metavar(self, param: click.Parameter, ctx: click.Context) -> str:
+        return "[SELECTION]"
 
 
 class VolumeParamType(click.ParamType):
@@ -1038,6 +1064,18 @@ def option_number_retries_next_track(func: Callable[..., None]) -> Callable[...,
         default=DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
         show_default=True,
         help="Number of retries to attempt to make sure the next track is selected.",
+    )(func)
+
+
+def option_only_tracks(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-T``/``--only-tracks`` option to a queue/playlist download subcommand."""
+    return click.option(
+        "--only-tracks",
+        "-T",
+        type=TrackSelectionParamType(),
+        default=None,
+        help="Download only the tracks at these queue positions (e.g., '1-3,6-8,12'); "
+        "by default every track of the queue is downloaded.",
     )(func)
 
 
