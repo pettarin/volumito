@@ -23,6 +23,10 @@ class VolumioAPIError(VolumioError):
     pass
 
 
+class VolumioSCPError(VolumioError):
+    """Raised when a file cannot be copied from the Volumio host over SCP."""
+
+
 class VolumioStoryError(VolumioAPIError):
     """Exception raised when a Volumio plugin reports a failed story query."""
 

@@ -9,6 +9,7 @@ from volumito.clients.errors import (
     VolumioAPIError,
     VolumioConnectionError,
     VolumioError,
+    VolumioSCPError,
     VolumioStoryError,
 )
 from volumito.clients.host_configuration import Scheme, VolumioHostConfiguration
@@ -34,6 +35,13 @@ from volumito.clients.models import (
     Zones,
 )
 from volumito.clients.mpd import VolumioMPDClient
+from volumito.clients.remote_files import (
+    VOLUMIO_INTERNAL_ROOT,
+    VOLUMIO_MNT_ROOT,
+    copy_file_from_host,
+    is_local_file_uri,
+    remote_music_path,
+)
 from volumito.clients.rest import VolumioRESTAPIClient
 
 __all__ = [
@@ -62,11 +70,17 @@ __all__ = [
     "Zones",
     "NotificationListener",
     "receiver_url",
+    "VOLUMIO_INTERNAL_ROOT",
+    "VOLUMIO_MNT_ROOT",
+    "copy_file_from_host",
+    "is_local_file_uri",
+    "remote_music_path",
     "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",
     "VolumioConnectionError",
     "VolumioAPIError",
+    "VolumioSCPError",
     "VolumioStoryError",
 ]

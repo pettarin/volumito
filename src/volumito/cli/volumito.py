@@ -188,6 +188,20 @@ from volumito.clients import (
     help="MPD port of the Volumio instance.",
 )
 @click.option(
+    "--ssh-port",
+    type=int,
+    default=22,
+    show_default=True,
+    help="SSH port of the Volumio instance, used to copy the files it stores.",
+)
+@click.option(
+    "--ssh-username",
+    type=str,
+    default="volumio",
+    show_default=True,
+    help="SSH user name on the Volumio instance.",
+)
+@click.option(
     "--mpd-timeout",
     type=float,
     default=5.0,
@@ -251,6 +265,8 @@ def main(
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     scheme: Scheme,
+    ssh_port: int,
+    ssh_username: str,
     verbose: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""
@@ -261,6 +277,8 @@ def main(
         host=host,
         rest_api_port=rest_api_port,
         mpd_port=mpd_port,
+        ssh_port=ssh_port,
+        ssh_username=ssh_username,
     )
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["mpd_timeout"] = mpd_timeout

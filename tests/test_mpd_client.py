@@ -178,51 +178,27 @@ class TestVolumioMPDClient:
 
         assert "MPD error" in str(exc_info.value)
 
-    def test_get_track_uri_with_localhost(self, mocker: MockerFixture):
-        """Test get_track_uri() replaces localhost with actual host."""
+    def test_get_track_uri_of_a_local_file(self, mocker: MockerFixture):
+        """The URI of a track of the host library is returned as reported."""
         mock_mpd = mocker.Mock()
-        mock_mpd.currentsong.return_value = {
-            "file": "http://localhost:8000/music/test.flac"
-        }
+        mock_mpd.currentsong.return_value = {"file": "INTERNAL/music/album/01-track.flac"}
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
         client = VolumioMPDClient(VolumioHostConfiguration(host="volumio.local"))
         client.connect()
-        uri = client.get_track_uri()
 
-        assert uri == "http://volumio.local:8000/music/test.flac"
-        assert "localhost" not in uri
+        assert client.get_track_uri() == "INTERNAL/music/album/01-track.flac"
 
-    def test_get_track_uri_with_127_0_0_1(self, mocker: MockerFixture):
-        """Test get_track_uri() replaces 127.0.0.1 with actual host."""
+    def test_get_track_uri_is_not_rewritten(self, mocker: MockerFixture):
+        """A URI naming the loopback address is returned as reported, not rewritten."""
         mock_mpd = mocker.Mock()
-        mock_mpd.currentsong.return_value = {
-            "file": "http://127.0.0.1:8000/music/test.flac"
-        }
+        mock_mpd.currentsong.return_value = {"file": "http://127.0.0.1:8000/music/test.flac"}
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
 
         client = VolumioMPDClient(VolumioHostConfiguration(host="192.168.1.100"))
         client.connect()
-        uri = client.get_track_uri()
 
-        assert uri == "http://192.168.1.100:8000/music/test.flac"
-        assert "127.0.0.1" not in uri
-
-    def test_get_track_uri_with_both_localhost_and_ip(self, mocker: MockerFixture):
-        """Test get_track_uri() replaces both localhost and 127.0.0.1."""
-        mock_mpd = mocker.Mock()
-        mock_mpd.currentsong.return_value = {
-            "file": "http://localhost:8000/music/test.flac?host=127.0.0.1"
-        }
-        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
-
-        client = VolumioMPDClient(VolumioHostConfiguration(host="myhost.local"))
-        client.connect()
-        uri = client.get_track_uri()
-
-        assert "localhost" not in uri
-        assert "127.0.0.1" not in uri
-        assert "myhost.local" in uri
+        assert client.get_track_uri() == "http://127.0.0.1:8000/music/test.flac"
 
     def test_context_manager_success(self, mocker: MockerFixture):
         """Test context manager with successful connection."""
@@ -232,8 +208,7 @@ class TestVolumioMPDClient:
 
         with VolumioMPDClient(VolumioHostConfiguration()) as client:
             assert client._connected is True
-            uri = client.get_track_uri()
-            assert "volumio.local" in uri
+            assert client.get_track_uri() == "http://localhost:8000/test.flac"
 
         # Should be disconnected after exiting context
         assert client._connected is False

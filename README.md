@@ -50,6 +50,13 @@ $ micromamba activate volumito_env
 (volumito_env) $ pip install volumito
 ```
 
+To download the tracks stored on the Volumio host, which are copied over SCP,
+install the `scp` extra as well:
+
+```bash
+(volumito_env) $ pip install volumito[scp]
+```
+
 You should be able to run:
 
 ```bash

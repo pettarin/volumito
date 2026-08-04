@@ -5,6 +5,8 @@
 """
 
 from volumito.clients import (
+    VOLUMIO_INTERNAL_ROOT,
+    VOLUMIO_MNT_ROOT,
     Album,
     Artist,
     CollectionStatistics,
@@ -32,10 +34,14 @@ from volumito.clients import (
     VolumioModel,
     VolumioMPDClient,
     VolumioRESTAPIClient,
+    VolumioSCPError,
     VolumioStoryError,
     Zone,
     Zones,
+    copy_file_from_host,
+    is_local_file_uri,
     receiver_url,
+    remote_music_path,
 )
 
 __version__ = "0.0.34"
@@ -67,11 +73,17 @@ __all__ = [
     "Zones",
     "NotificationListener",
     "receiver_url",
+    "VOLUMIO_INTERNAL_ROOT",
+    "VOLUMIO_MNT_ROOT",
+    "copy_file_from_host",
+    "is_local_file_uri",
+    "remote_music_path",
     "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",
     "VolumioConnectionError",
     "VolumioAPIError",
+    "VolumioSCPError",
     "VolumioStoryError",
 ]

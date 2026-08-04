@@ -256,3 +256,9 @@ volumio:
 
   # URL scheme used to connect, one of http or https
   scheme: http
+
+  # SSH port of the Volumio host, used to copy the files it stores
+  ssh-port: 22
+
+  # SSH user name on the Volumio host (the keys of the current user authenticate)
+  ssh-username: volumio

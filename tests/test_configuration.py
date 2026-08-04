@@ -473,6 +473,8 @@ class TestDefaultConfigurationTemplate:
                 "scheme": "http",
                 "rest-api-port": 3000,
                 "mpd-port": 6600,
+                "ssh-port": 22,
+                "ssh-username": "volumio",
             },
             "timeouts": {
                 "rest-api-timeout": 5.0,

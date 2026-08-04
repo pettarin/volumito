@@ -308,6 +308,8 @@ SECTION_KEYS: dict[str, list[str]] = {
         "scheme",
         "rest-api-port",
         "mpd-port",
+        "ssh-port",
+        "ssh-username",
     ],
     "timeouts": [
         "rest-api-timeout",

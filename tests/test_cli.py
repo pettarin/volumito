@@ -61,6 +61,7 @@ from volumito.cli.pure_helpers import (
 )
 from volumito.cli.volumito import main
 from volumito.clients import Album, Artist, Label, Place
+from volumito.clients.errors import VolumioSCPError
 from volumito.clients.models import (
     CollectionStatistics,
     Notifications,
@@ -3082,6 +3083,82 @@ class TestCLICommands:
         assert "successfully downloaded" in result.output
         mock_get.assert_called_once()
         mock_open.assert_called_once_with("/tmp/my_track.flac", "wb")
+
+    def test_audio_of_a_file_of_the_host_library(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A URI without a scheme is copied from the Volumio host over SCP."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+
+        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+
+        assert result.exit_code == 0
+        assert "successfully downloaded to /tmp/track.flac" in result.output
+        mock_get.assert_not_called()
+        assert copy.call_args.args[1:3] == (
+            "/mnt/INTERNAL/music/album/01-track.flac",
+            "/tmp/track.flac",
+        )
+        assert copy.call_args.args[0].ssh_username == "volumio"
+
+    def test_audio_of_a_file_of_the_host_library_failing(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A failed copy exits 1, reporting what went wrong."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
+        mocker.patch(
+            "volumito.cli.click_helpers.copy_file_from_host",
+            side_effect=VolumioSCPError("Authentication failed"),
+        )
+
+        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+
+        assert result.exit_code == 1
+        assert "Download error: Authentication failed" in result.output
+
+    def test_audio_with_the_ssh_options(self, runner: CliRunner, mocker: MockerFixture):
+        """The SSH options reach the copy through the host configuration."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+
+        result = runner.invoke(
+            main,
+            [
+                "--ssh-port",
+                "2222",
+                "--ssh-username",
+                "pi",
+                "track",
+                "audio",
+                "-o",
+                "/tmp/track.flac",
+            ],
+        )
+
+        assert result.exit_code == 0
+        host_configuration = copy.call_args.args[0]
+        assert host_configuration.ssh_port == 2222
+        assert host_configuration.ssh_username == "pi"
 
     def test_audio_with_output_file_verbose(
         self, runner: CliRunner, mocker: MockerFixture
@@ -10217,6 +10294,8 @@ class TestConfigurationCommands:
                     "scheme": "http",
                     "rest-api-port": 3000,
                     "mpd-port": 6600,
+                    "ssh-port": 22,
+                    "ssh-username": "volumio",
                 },
                 "timeouts": {
                     "rest-api-timeout": 5.0,

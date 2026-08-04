@@ -23,12 +23,16 @@ class VolumioHostConfiguration:
         host: The hostname or IP address of the Volumio instance
         rest_api_port: The REST API port (default: 3000)
         mpd_port: The MPD port (default: 6600)
+        ssh_port: The SSH port, used to copy the files of the host (default: 22)
+        ssh_username: The SSH user name (default: volumio, the default user of a host)
     """
 
     scheme: Scheme = "http"
     host: str = "volumio.local"
     rest_api_port: int = 3000
     mpd_port: int = 6600
+    ssh_port: int = 22
+    ssh_username: str = "volumio"
 
     @property
     def rest_base_url(self) -> str:
