@@ -9636,7 +9636,11 @@ class TestConfigurationFile:
         mock_client.register_notification.return_value = outcome
         mock_client.unregister_notification.return_value = outcome
         fake = mocker.Mock()
-        fake.listen.return_value = iter([])
+        fake.idle_timed_out = False
+        # As many notifications as the count the configuration asks for
+        fake.listen.return_value = iter(
+            [PushNotification.from_raw({"item": "state", "data": {}}) for _ in range(4)]
+        )
         listener_class = mocker.patch(
             "volumito.cli.volumito.NotificationListener", return_value=fake
         )
@@ -9645,9 +9649,13 @@ class TestConfigurationFile:
             "notifications:\n"
             "  endpoint: /hook\n"
             "  port: 9000\n"
-            "  register-url: true\n"
-            f"  register-url-full: {advertised}\n"
-            "  unregister-url-on-exit: false\n",
+            "  listen:\n"
+            "    count: 4\n"
+            "    idle-timeout: 5.0\n"
+            "    register-url: true\n"
+            f"    register-url-full: {advertised}\n"
+            "    timeout: 30.0\n"
+            "    unregister-url-on-exit: false\n",
         )
 
         result = runner.invoke(main, ["-c", config, "notifications", "listen"])
@@ -9655,6 +9663,7 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         assert advertised in result.output
         listener_class.assert_called_once_with(port=9000, endpoint="/hook")
+        fake.listen.assert_called_once_with(4, 30.0, 5.0)
         mock_client.register_notification.assert_called_once_with(advertised)
         mock_client.unregister_notification.assert_not_called()
 
@@ -10163,9 +10172,14 @@ class TestConfigurationCommands:
                 "notifications": {
                     "endpoint": "/volumionotifications",
                     "port": 3003,
-                    "register-url": False,
-                    "register-url-full": None,
-                    "unregister-url-on-exit": True,
+                    "listen": {
+                        "count": None,
+                        "idle-timeout": None,
+                        "register-url": False,
+                        "register-url-full": None,
+                        "timeout": None,
+                        "unregister-url-on-exit": True,
+                    },
                 },
                 "output": {
                     "fields": "SHORT",

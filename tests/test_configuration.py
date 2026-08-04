@@ -348,6 +348,27 @@ class TestLoadDefaultMap:
         with pytest.raises(click.BadParameter, match="'downloads.track-audio'.*must be a mapping"):
             load_configuration(str(config))
 
+    def test_notifications_listen_unknown_key_raises(self, tmp_path):
+        """An unrecognized key in the listen subsection raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("notifications:\n  listen:\n    bogus: 1\n")
+
+        with pytest.raises(
+            click.BadParameter, match="unknown key 'bogus' in section 'notifications.listen'"
+        ):
+            load_configuration(str(config))
+
+    def test_notifications_listen_key_at_the_section_level_raises(self, tmp_path):
+        """A key of the listen subsection is not accepted at the section level."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("notifications:\n  register-url: true\n")
+
+        with pytest.raises(
+            click.BadParameter,
+            match="unknown key 'register-url' in section 'notifications'",
+        ):
+            load_configuration(str(config))
+
     def test_empty_file(self, tmp_path):
         """An empty file yields an empty mapping."""
         config = tmp_path / "volumito.yaml"
@@ -467,9 +488,14 @@ class TestDefaultConfigurationTemplate:
             "notifications": {
                 "endpoint": "/volumionotifications",
                 "port": 3003,
-                "register-url": False,
-                "register-url-full": None,
-                "unregister-url-on-exit": True,
+                "listen": {
+                    "count": None,
+                    "idle-timeout": None,
+                    "register-url": False,
+                    "register-url-full": None,
+                    "timeout": None,
+                    "unregister-url-on-exit": True,
+                },
             },
             "output": {
                 "fields": "SHORT",
@@ -710,6 +736,30 @@ class TestBuildClickDefaultMap:
             },
             # "info" is the top-level synonym of "system info"
             "info": format_only,
+        }
+
+    def test_notifications_keys_reach_their_commands(self):
+        """The scalars reach the three subcommands, the listen keys only that one."""
+        result = build_click_default_map(
+            {
+                "notifications": {
+                    "endpoint": "/hook",
+                    "port": 9000,
+                    "listen": {"count": 4, "idle-timeout": 5.0, "register-url": True},
+                }
+            }
+        )
+
+        assert result["notifications"] == {
+            "listen": {
+                "endpoint": "/hook",
+                "port": 9000,
+                "count": 4,
+                "idle_timeout": 5.0,
+                "register_url": True,
+            },
+            "register": {"endpoint": "/hook", "port": 9000},
+            "unregister": {"endpoint": "/hook", "port": 9000},
         }
 
     def test_format_only_subsection_overrides_shared(self):
