@@ -25,6 +25,9 @@ DEFAULT_VOLUMIO_VERSION = "4"
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
 
+LISTEN_ENDPOINT_ERROR = "The endpoint must start with a slash."
+"""Error message when "notifications listen" is given an endpoint without a leading slash."""
+
 MPD_PORT_VOLUMIO_3 = 6599
 """MPD port used by Volumio 3 (major version below 4)."""
 
@@ -55,6 +58,9 @@ MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR = (
     "Option -a/--all and the URL argument are mutually exclusive."
 )
 """Error message when "notifications unregister" combines --all with a URL."""
+
+NOTIFICATION_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+"""strftime format of the UTC time a notification was received, trimmed to milliseconds."""
 
 OUTPUT_DIRECTORY_PLACEHOLDER = "{output_directory}"
 """Placeholder in manifest file paths replaced with the expanded output directory."""

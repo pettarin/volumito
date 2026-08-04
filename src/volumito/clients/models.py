@@ -400,6 +400,16 @@ class Playlists(VolumioModel):
         return len(self.playlists)
 
 
+class PushNotification(VolumioModel):
+    """A notification a Volumio instance pushes to a registered URL."""
+
+    data: Any = None
+    """The updated information: a mapping for a state, an array for a queue or the zones."""
+
+    item: str | None = None
+    """The kind of event (``"state"``, ``"queue"``, or ``"zones"``)."""
+
+
 class QueueTrack(VolumioModel):
     """A track of the playback queue of a Volumio instance."""
 

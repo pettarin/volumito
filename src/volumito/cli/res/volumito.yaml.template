@@ -109,12 +109,28 @@ miscellaneous:
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
 
+  # URL the Volumio host pushes the notifications to, instead of the detected one
+  listen-advertise-url: null
+
+  # Path served by the local notification listener
+  listen-endpoint: /volumionotifications
+
+  # Port the local notification listener binds to
+  listen-port: 3003
+
+  # Register the listened URL on the Volumio host when it is not registered yet
+  listen-register-url: false
+
+  # On exit, unregister the URL registered by the listener
+  listen-unregister-url-on-exit: true
+
 
 output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
   # - collection-statistics
   # - notifications-list
+  # - notifications-listen
   # - playback-status
   # - playlist-list
   # - queue-list
@@ -159,6 +175,9 @@ output:
     # Add your own overrides here
 
   notifications-list:
+    # Add your own overrides here
+
+  notifications-listen:
     # Add your own overrides here
 
   playback-status:

@@ -16,6 +16,7 @@ from volumito.clients.models import (
     PlayerState,
     Playlist,
     Playlists,
+    PushNotification,
     Queue,
     QueueTrack,
     Story,
@@ -324,6 +325,52 @@ class TestPlaylists:
 
         assert playlist.name == "Rock"
         assert playlist.raw == "Rock"
+
+
+class TestPushNotification:
+    """Test cases for the PushNotification model."""
+
+    def test_parses_a_state_notification(self):
+        """A state notification carries the playback state as a mapping."""
+        payload = {"item": "state", "data": {"status": "play", "title": "Caterina"}}
+
+        notification = PushNotification.from_raw(payload)
+
+        assert notification.item == "state"
+        assert notification.data == {"status": "play", "title": "Caterina"}
+        assert notification.raw == payload
+
+    def test_parses_a_queue_notification(self):
+        """A queue notification carries the queue as an array."""
+        payload = {"item": "queue", "data": [{"title": "Caterina"}, {"title": "Titanic"}]}
+
+        notification = PushNotification.from_raw(payload)
+
+        assert notification.item == "queue"
+        assert notification.data == payload["data"]
+
+    def test_parses_a_zones_notification(self):
+        """A zones notification carries the zones as an array."""
+        payload = {"item": "zones", "data": [{"name": "volumio"}]}
+
+        notification = PushNotification.from_raw(payload)
+
+        assert notification.item == "zones"
+        assert notification.data == payload["data"]
+
+    def test_missing_values_default_to_none(self):
+        """A payload reporting neither an item nor data parses to a bare notification."""
+        notification = PushNotification.from_raw({})
+
+        assert notification.item is None
+        assert notification.data is None
+
+    def test_an_unusable_item_is_ignored(self):
+        """An item that is not a string is ignored, and stays in raw."""
+        notification = PushNotification.from_raw({"item": 42, "data": {}})
+
+        assert notification.item is None
+        assert notification.raw == {"item": 42, "data": {}}
 
 
 class TestQueue:

@@ -75,6 +75,7 @@ from volumito.clients import (
     VolumioStoryError,
 )
 from volumito.clients.entities import MusicEntity
+from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
 from volumito.clients.models import PlayerState, Story
 
 
@@ -941,6 +942,16 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_advertise_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--advertise-url`` option to the notifications listen subcommand."""
+    return click.option(
+        "--advertise-url",
+        type=str,
+        default=None,
+        help="URL the Volumio host pushes to, instead of the detected one.",
+    )(func)
+
+
 def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--albumart-file-name-template`` option to the queue download subcommand."""
     return click.option(
@@ -996,6 +1007,17 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
     )(func)
 
 
+def option_count(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-n``/``--count`` option to the notifications listen subcommand."""
+    return click.option(
+        "--count",
+        "-n",
+        type=int,
+        default=None,
+        help="Stop after receiving this number of notifications.",
+    )(func)
+
+
 def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--create-download-manifest`` option to a track download subcommand."""
     return click.option(
@@ -1016,6 +1038,18 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
             "Use the metadata of the current track "
             "instead of the positional argument(s)."
         ),
+    )(func)
+
+
+def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-e``/``--endpoint`` option to the notifications listen subcommand."""
+    return click.option(
+        "--endpoint",
+        "-e",
+        type=str,
+        default=DEFAULT_ENDPOINT,
+        show_default=True,
+        help="Path served by the local listener.",
     )(func)
 
 
@@ -1053,6 +1087,28 @@ def option_format(func: Callable[..., None]) -> Callable[..., None]:
         default="pretty",
         show_default=True,
         help="Output format.",
+    )(func)
+
+
+def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--idle-timeout`` option to the notifications listen subcommand."""
+    return click.option(
+        "--idle-timeout",
+        type=float,
+        default=None,
+        help="Stop after this number of seconds without receiving a notification.",
+    )(func)
+
+
+def option_listen_port(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--port`` option to the notifications listen subcommand."""
+    return click.option(
+        "--port",
+        "-p",
+        type=int,
+        default=DEFAULT_PORT,
+        show_default=True,
+        help="Port the local listener binds to.",
     )(func)
 
 
@@ -1141,6 +1197,16 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--register-url`` option to the notifications listen subcommand."""
+    return click.option(
+        "--register-url/--no-register-url",
+        default=False,
+        show_default=True,
+        help="Register the URL on the Volumio host when it is not registered yet.",
+    )(func)
+
+
 def option_replace_characters_in_file_names(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--replace-characters-in-file-names`` option to a track download subcommand."""
     return click.option(
@@ -1181,6 +1247,26 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
             "How to interpret the positional argument(s): "
             "autodetect, mbid, or name (free string)."
         ),
+    )(func)
+
+
+def option_timeout(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--timeout`` option to the notifications listen subcommand."""
+    return click.option(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Stop after listening for this number of seconds.",
+    )(func)
+
+
+def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--unregister-url-on-exit`` option to the notifications listen subcommand."""
+    return click.option(
+        "--unregister-url-on-exit/--no-unregister-url-on-exit",
+        default=True,
+        show_default=True,
+        help="On exit, unregister the URL registered by this run.",
     )(func)
 
 

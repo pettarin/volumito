@@ -32,16 +32,21 @@ from volumito.cli.click_helpers import (
     fetch_state_or_exit,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
+    option_advertise_url,
     option_albumart_file_name_template,
     option_all_notifications,
     option_audio_file_name_template,
     option_check_next_track,
     option_check_playlist_name,
+    option_count,
     option_create_download_manifest,
     option_current_track,
+    option_endpoint,
     option_fields,
     option_file_name_template,
     option_format,
+    option_idle_timeout,
+    option_listen_port,
     option_manifest_file,
     option_number_retries_next_track,
     option_only_tracks,
@@ -49,9 +54,12 @@ from volumito.cli.click_helpers import (
     option_output_file,
     option_overwrite_existing_files,
     option_print_resulting_status,
+    option_register_url,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
     option_story_type,
+    option_timeout,
+    option_unregister_url_on_exit,
     option_with_albumart,
     read_queue_log,
     render_output_filename,
@@ -75,10 +83,12 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.constants import (
     DEFAULT_VOLUMIO_VERSION,
+    LISTEN_ENDPOINT_ERROR,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR,
+    NOTIFICATION_TIMESTAMP_FORMAT,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
@@ -93,6 +103,7 @@ from volumito.cli.pure_helpers import (
     filter_zones_fields,
     format_duration,
     format_names_as_table,
+    format_notification_as_line,
     format_queue_as_table,
     format_seek,
     format_zones_as_table,
@@ -105,7 +116,9 @@ from volumito.cli.pure_helpers import (
 from volumito.clients import (
     Artist,
     Label,
+    NotificationListener,
     Place,
+    PushNotification,
     Scheme,
     SuccessResponse,
     VolumioAPIError,
@@ -113,6 +126,7 @@ from volumito.clients import (
     VolumioHostConfiguration,
     VolumioMPDClient,
     VolumioRESTAPIClient,
+    receiver_url,
 )
 
 
@@ -1807,6 +1821,30 @@ def story_place(
     )
 
 
+def _echo_notification(
+    ctx: click.Context, notification: PushNotification, output_format: str
+) -> None:
+    """Print a received notification per the format option.
+
+    Args:
+        ctx: Click context object containing shared options
+        notification: The notification received
+        output_format: The output format ("json", "pretty", "raw", or "table")
+    """
+    if ctx.obj["machine_readable"] or output_format == "raw":
+        output = json.dumps(notification.raw)
+    elif output_format == "json":
+        output = json.dumps(notification.raw, indent=2)
+    elif output_format == "table":
+        # The microseconds of the format are trimmed to milliseconds
+        received = f"{datetime.now(UTC).strftime(NOTIFICATION_TIMESTAMP_FORMAT)[:-3]}Z"
+        output = format_notification_as_line(notification.item, notification.data, received)
+    else:  # pretty
+        output = json.dumps(notification.raw, indent=4, sort_keys=True, ensure_ascii=False)
+
+    click.echo(output)
+
+
 def _exit_on_notification_failure(
     ctx: click.Context, response: SuccessResponse, action: str, url: str
 ) -> None:
@@ -1825,6 +1863,62 @@ def _exit_on_notification_failure(
         detail = f" ({response.error})" if response.error else ""
         click.echo(f"Error: the Volumio host did not {action} the URL: {url}{detail}", err=True)
     sys.exit(1)
+
+
+def _listen_and_print(
+    ctx: click.Context,
+    port: int,
+    endpoint: str,
+    url: str,
+    count: int | None,
+    timeout: float | None,
+    idle_timeout: float | None,
+    output_format: str,
+) -> None:
+    """Serve the endpoint, printing the notifications until a limit or an interruption.
+
+    Args:
+        ctx: Click context object containing shared options
+        port: The port to listen on
+        endpoint: The path to serve
+        url: The URL the Volumio host pushes to
+        count: Number of notifications to print before returning, or None
+        timeout: Seconds to listen for in total, or None
+        idle_timeout: Seconds to wait for each notification, or None
+        output_format: The output format ("json", "pretty", "raw", or "table")
+    """
+    machine_readable = ctx.obj["machine_readable"]
+    listener = NotificationListener(port=port, endpoint=endpoint)
+
+    try:
+        listener.start()
+    except OSError as e:
+        if not machine_readable:
+            click.echo(f"Error: cannot listen on port {port}: {e}", err=True)
+        sys.exit(1)
+
+    if not machine_readable:
+        click.echo(f"Listening on port {port} for the notifications sent to {url}")
+
+    received = 0
+    try:
+        for notification in listener.listen(count, timeout, idle_timeout):
+            _echo_notification(ctx, notification, output_format)
+            received += 1
+    except KeyboardInterrupt:
+        return
+    finally:
+        listener.stop()
+
+    if count is not None and received >= count:
+        return
+
+    expired = timeout if timeout is not None else idle_timeout
+    if expired is not None:
+        if not machine_readable:
+            click.echo(f"Timed out after {expired:g} seconds")
+        if count is not None:
+            sys.exit(1)
 
 
 @main.group()
@@ -1851,6 +1945,70 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
         output = json.dumps(urls, indent=4, ensure_ascii=False)
 
     click.echo(output)
+
+
+@notifications.command("listen")
+@click.pass_context
+@option_listen_port
+@option_endpoint
+@option_advertise_url
+@option_register_url
+@option_unregister_url_on_exit
+@option_count
+@option_timeout
+@option_idle_timeout
+@option_format
+def notifications_listen(
+    ctx: click.Context,
+    port: int,
+    endpoint: str,
+    advertise_url: str | None,
+    register_url: bool,
+    unregister_url_on_exit: bool,
+    count: int | None,
+    timeout: float | None,
+    idle_timeout: float | None,
+    output_format: str,
+) -> None:
+    """Print the notifications the Volumio host pushes to this machine.
+
+    The URL the host pushes to must be registered: with --register-url it is
+    registered if missing, and unregistered again on exit. A host pushes a burst
+    of state notifications per change, often identical."""
+    if not endpoint.startswith("/"):
+        raise click.UsageError(LISTEN_ENDPOINT_ERROR)
+
+    machine_readable = ctx.obj["machine_readable"]
+    url = advertise_url or fetch_or_exit(
+        ctx, lambda c: receiver_url(c.host_configuration, port, endpoint)
+    )
+
+    registered = fetch_or_exit(ctx, lambda c: url in c.notifications)
+    if not registered and not register_url:
+        if not machine_readable:
+            click.echo(
+                f"Error: the URL is not registered on the Volumio host: {url} "
+                f"(use --register-url to register it)",
+                err=True,
+            )
+        sys.exit(1)
+
+    if not registered:
+        response = fetch_or_exit(ctx, lambda c: c.register_notification(url))
+        _exit_on_notification_failure(ctx, response, "register", url)
+        if not machine_readable:
+            click.echo(f"Registered notification URL: {url}")
+
+    try:
+        _listen_and_print(
+            ctx, port, endpoint, url, count, timeout, idle_timeout, output_format
+        )
+    finally:
+        if not registered and unregister_url_on_exit:
+            response = fetch_or_exit(ctx, lambda c: c.unregister_notification(url))
+            _exit_on_notification_failure(ctx, response, "unregister", url)
+            if not machine_readable:
+                click.echo(f"Unregistered notification URL: {url}")
 
 
 @notifications.command("register")

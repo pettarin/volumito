@@ -70,6 +70,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "queue-list": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
     "notifications-list": FORMAT_KEYS,
+    "notifications-listen": FORMAT_KEYS,
     "zones-list": DISPLAY_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
@@ -91,6 +92,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "notifications-list": [
         ["notifications", "list"],
+    ],
+    "notifications-listen": [
+        ["notifications", "listen"],
     ],
     "playback-status": [
         ["playback", "status"],
@@ -232,6 +236,11 @@ Used for validation of the "output" and "downloads" sections.
 
 KEY_PARAM_OVERRIDES: dict[str, str] = {
     "format": "output_format",
+    "listen-advertise-url": "advertise_url",
+    "listen-endpoint": "endpoint",
+    "listen-port": "port",
+    "listen-register-url": "register_url",
+    "listen-unregister-url-on-exit": "unregister_url_on_exit",
 }
 """Config keys whose CLI parameter name differs from key.replace("-", "_")."""
 
@@ -251,6 +260,21 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     ],
     "check-seek-position": [
         ["playback", "seek"],
+    ],
+    "listen-advertise-url": [
+        ["notifications", "listen"],
+    ],
+    "listen-endpoint": [
+        ["notifications", "listen"],
+    ],
+    "listen-port": [
+        ["notifications", "listen"],
+    ],
+    "listen-register-url": [
+        ["notifications", "listen"],
+    ],
+    "listen-unregister-url-on-exit": [
+        ["notifications", "listen"],
     ],
 }
 """The "miscellaneous" section holds the keys of options living on a specific command:

@@ -10,11 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Command group `notifications`, with the `list`, `register`, and `unregister` subcommands
-  (`unregister -a` clears every registered URL)
+- Command group `notifications`, with the `list`, `listen`, `register`, and `unregister`
+  subcommands (`listen` receives the notifications the Volumio host pushes to this machine,
+  and `unregister -a` clears every registered URL)
 - Property `notifications` and methods `register_notification` and
   `unregister_notification` on the REST API client, returning the new `Notifications`
   (of `Notification`) and `SuccessResponse` models
+- Class `NotificationListener`, a local HTTP server receiving the pushed notifications as
+  `PushNotification` models, with the `receiver_url` helper building the URL to register
 
 
 ## [0.0.31] - 2026-08-03

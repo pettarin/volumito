@@ -17,9 +17,11 @@ For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
 from volumito import (
     Album,
     Artist,
+    NotificationListener,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
     VolumioStoryError,
+    receiver_url,
 )
 
 # replace with your Volumio host
@@ -113,6 +115,20 @@ for notification in client.notifications:
 client.register_notification("http://192.168.1.100/receiver")
 client.unregister_notification(client.notifications[0])
 
+# receive the notifications the host pushes: the listener serves the endpoint,
+# and receiver_url is the URL the host has to be told to push to
+# (a host pushes a burst of state notifications per change, often identical)
+url = receiver_url(host, port=3003, endpoint="/volumionotifications")
+client.register_notification(url)
+try:
+    with NotificationListener(port=3003, endpoint="/volumionotifications") as listener:
+        for notification in listener.listen(count=3, idle_timeout=60):
+            print(notification.item, notification.data)
+    # state {'status': 'play', 'title': 'Caterina', ...}
+    # queue [{'title': 'Caterina', ...}, ...]
+finally:
+    client.unregister_notification(url)
+
 
 # get stories and album credits
 # (requires a Premium subscription on the Volumio host;
@@ -141,6 +157,7 @@ Every query returns a model instead of a raw dictionary:
 | `collection_statistics`                             | `CollectionStatistics`              |
 | `get_album_credits`, `get_story`                    | `Story`                             |
 | `notifications`                                     | `Notifications` (of `Notification`) |
+| `NotificationListener.listen`                       | `PushNotification`                  |
 | `pause`, `play`, `stop`, and the other commands     | `CommandResponse`                   |
 | `ping`                                              | `str`                               |
 | `playlists`                                         | `Playlists` (of `Playlist`)         |
