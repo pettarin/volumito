@@ -55,6 +55,7 @@ from volumito.cli.click_helpers import (
     option_overwrite_existing_files,
     option_port,
     option_print_resulting_status,
+    option_recursive,
     option_register_url,
     option_register_url_full,
     option_replace_characters_in_file_names,
@@ -132,6 +133,9 @@ from volumito.clients import (
     VolumioHostConfiguration,
     VolumioMPDClient,
     VolumioRESTAPIClient,
+    VolumioSCPError,
+    copy_from_host,
+    copy_to_host,
     is_local_file_uri,
     receiver_url,
 )
@@ -2179,6 +2183,61 @@ def notifications_unregister(
         _exit_on_notification_failure(ctx, response, "unregister", target)
         if not machine_readable:
             click.echo(f"Unregistered notification URL: {target}")
+
+
+@main.group("scp")
+@click.pass_context
+def scp(ctx: click.Context) -> None:
+    """Copy files and directories from and to the Volumio host.
+
+    IMPORTANT: copying to the Volumio host may damage its integrity;
+    please proceed with caution."""
+    pass
+
+
+@scp.command("get")
+@click.pass_context
+@click.argument("remote_path", type=str)
+@click.argument("local_path", type=str)
+@option_recursive
+def scp_get(ctx: click.Context, remote_path: str, local_path: str, recursive: bool) -> None:
+    """Copy REMOTE_PATH of the Volumio host to LOCAL_PATH."""
+    host_configuration = ctx.obj["host_configuration"]
+    machine_readable = ctx.obj["machine_readable"]
+
+    try:
+        copy_from_host(host_configuration, remote_path, local_path, recursive=recursive)
+    except VolumioSCPError as e:
+        if not machine_readable:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    if not machine_readable:
+        click.echo(f"Copied {remote_path} from the Volumio host to {local_path}")
+
+
+@scp.command("put")
+@click.pass_context
+@click.argument("local_path", type=str)
+@click.argument("remote_path", type=str)
+@option_recursive
+def scp_put(ctx: click.Context, local_path: str, remote_path: str, recursive: bool) -> None:
+    """Copy LOCAL_PATH to REMOTE_PATH of the Volumio host.
+
+    IMPORTANT: this command writes to the Volumio host and may damage its
+    integrity; please proceed with caution."""
+    host_configuration = ctx.obj["host_configuration"]
+    machine_readable = ctx.obj["machine_readable"]
+
+    try:
+        copy_to_host(host_configuration, local_path, remote_path, recursive=recursive)
+    except VolumioSCPError as e:
+        if not machine_readable:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    if not machine_readable:
+        click.echo(f"Copied {local_path} to {remote_path} on the Volumio host")
 
 
 # "info" is a top-level synonym for "system info"

@@ -38,13 +38,14 @@ from volumito.clients import (
     VolumioStoryError,
     Zone,
     Zones,
-    copy_file_from_host,
+    copy_from_host,
+    copy_to_host,
     is_local_file_uri,
     receiver_url,
     remote_music_path,
 )
 
-__version__ = "0.0.34"
+__version__ = "0.0.35"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
@@ -75,7 +76,8 @@ __all__ = [
     "receiver_url",
     "VOLUMIO_INTERNAL_ROOT",
     "VOLUMIO_MNT_ROOT",
-    "copy_file_from_host",
+    "copy_from_host",
+    "copy_to_host",
     "is_local_file_uri",
     "remote_music_path",
     "VolumioHostConfiguration",

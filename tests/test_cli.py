@@ -1318,14 +1318,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.34" in result.output
+        assert "volumito, version 0.0.35" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.34"'
+        assert result.output.strip() == '"0.0.35"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1334,7 +1334,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.34"'
+        assert result.output.strip() == '"0.0.35"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3124,7 +3124,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
-        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
 
         result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
@@ -3149,7 +3149,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/elegy/08-Luiza.mp3")
-        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
 
         result = runner.invoke(main, ["--verbose", "track", "audio", "-d", str(tmp_path)])
@@ -3173,7 +3173,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/elegy/08-Luiza.mp3")
-        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
 
         result = runner.invoke(
@@ -3230,7 +3230,7 @@ class TestCLICommands:
         )
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
         mocker.patch(
-            "volumito.cli.click_helpers.copy_file_from_host",
+            "volumito.cli.click_helpers.copy_from_host",
             side_effect=VolumioSCPError("Authentication failed"),
         )
 
@@ -3248,7 +3248,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
-        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
 
         result = runner.invoke(
             main,
@@ -5260,6 +5260,157 @@ class TestPlaylistCommands:
         assert "Connection error" in result.output
 
 
+class TestScpCommands:
+    """Test cases for the scp get and scp put commands."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def test_group_help(self, runner: CliRunner):
+        """The scp group lists both of its commands, and warns about the host."""
+        result = runner.invoke(main, ["scp", "--help"])
+
+        assert result.exit_code == 0
+        assert "get" in result.output
+        assert "put" in result.output
+        # The help is wrapped, so the note is matched on the joined text
+        assert "copying to the Volumio host may damage its integrity" in " ".join(
+            result.output.split()
+        )
+
+    def test_put_help(self, runner: CliRunner):
+        """The warning about the host is on the writing command too."""
+        result = runner.invoke(main, ["scp", "put", "--help"])
+
+        assert result.exit_code == 0
+        assert "writes to the Volumio host and may damage its integrity" in " ".join(
+            result.output.split()
+        )
+
+    def test_get_help(self, runner: CliRunner):
+        """The reading command carries no such warning."""
+        result = runner.invoke(main, ["scp", "get", "--help"])
+
+        assert result.exit_code == 0
+        assert "damage" not in result.output
+
+    def test_get(self, runner: CliRunner, mocker: MockerFixture):
+        """scp get copies a path of the host to a local one."""
+        copy = mocker.patch("volumito.cli.volumito.copy_from_host")
+
+        result = runner.invoke(main, ["scp", "get", "/tmp/remote_file", "./local_file"])
+
+        assert result.exit_code == 0
+        assert (
+            result.output.strip()
+            == "Copied /tmp/remote_file from the Volumio host to ./local_file"
+        )
+        assert copy.call_args.args[1:] == ("/tmp/remote_file", "./local_file")
+        assert copy.call_args.kwargs == {"recursive": False}
+
+    def test_get_recursive(self, runner: CliRunner, mocker: MockerFixture):
+        """-r/--recursive is forwarded."""
+        copy = mocker.patch("volumito.cli.volumito.copy_from_host")
+
+        result = runner.invoke(main, ["scp", "get", "-r", "/mnt/INTERNAL/music", "./music"])
+
+        assert result.exit_code == 0
+        assert copy.call_args.kwargs == {"recursive": True}
+
+    def test_get_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """scp get prints nothing in machine-readable mode."""
+        mocker.patch("volumito.cli.volumito.copy_from_host")
+
+        result = runner.invoke(main, ["-m", "scp", "get", "/tmp/a", "./a"])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_get_failing(self, runner: CliRunner, mocker: MockerFixture):
+        """A failed copy exits 1, reporting what went wrong."""
+        mocker.patch(
+            "volumito.cli.volumito.copy_from_host",
+            side_effect=VolumioSCPError("No such file"),
+        )
+
+        result = runner.invoke(main, ["scp", "get", "/tmp/nope", "./nope"])
+
+        assert result.exit_code == 1
+        assert "Error: No such file" in result.output
+
+    def test_get_failing_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """A failed copy prints nothing in machine-readable mode."""
+        mocker.patch(
+            "volumito.cli.volumito.copy_from_host",
+            side_effect=VolumioSCPError("No such file"),
+        )
+
+        result = runner.invoke(main, ["-m", "scp", "get", "/tmp/nope", "./nope"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+
+    def test_put(self, runner: CliRunner, mocker: MockerFixture):
+        """scp put copies a local path to one of the host."""
+        copy = mocker.patch("volumito.cli.volumito.copy_to_host")
+
+        result = runner.invoke(
+            main, ["scp", "put", "/tmp/local_file", "/mnt/INTERNAL/remote_file"]
+        )
+
+        assert result.exit_code == 0
+        assert (
+            result.output.strip()
+            == "Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
+        )
+        assert copy.call_args.args[1:] == ("/tmp/local_file", "/mnt/INTERNAL/remote_file")
+        assert copy.call_args.kwargs == {"recursive": False}
+
+    def test_put_recursive(self, runner: CliRunner, mocker: MockerFixture):
+        """-r/--recursive is forwarded, with the SSH options of the host configuration."""
+        copy = mocker.patch("volumito.cli.volumito.copy_to_host")
+
+        result = runner.invoke(
+            main,
+            [
+                "--ssh-username",
+                "pi",
+                "scp",
+                "put",
+                "--recursive",
+                "/tmp/local_directory",
+                "/mnt/INTERNAL/remote_directory",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert copy.call_args.kwargs == {"recursive": True}
+        assert copy.call_args.args[0].ssh_username == "pi"
+
+    def test_put_failing(self, runner: CliRunner, mocker: MockerFixture):
+        """A failed copy exits 1, reporting what went wrong."""
+        mocker.patch(
+            "volumito.cli.volumito.copy_to_host",
+            side_effect=VolumioSCPError("Permission denied"),
+        )
+
+        result = runner.invoke(main, ["scp", "put", "/tmp/a", "/mnt/a"])
+
+        assert result.exit_code == 1
+        assert "Error: Permission denied" in result.output
+
+    def test_put_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """scp put prints nothing in machine-readable mode."""
+        mocker.patch("volumito.cli.volumito.copy_to_host")
+
+        result = runner.invoke(main, ["-m", "scp", "put", "/tmp/a", "/mnt/a"])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+
+
 class TestNotificationsCommands:
     """Test cases for the notifications list, listen, register, and unregister commands."""
 
@@ -6972,7 +7123,7 @@ class TestQueueDownload:
         """A track copied from the host keeps its name, under the template directories."""
         tracks = [{"title": "8 - Luiza", "artist": "Aeon Trio", "album": "Elegy"}]
         self._mock_services(mocker, tracks, ["INTERNAL/music/elegy/08-Luiza.mp3"])
-        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
 
         result = runner.invoke(
@@ -7010,7 +7161,7 @@ class TestQueueDownload:
         """--allow-local-file-rename names the copy after the template."""
         tracks = [{"title": "8 - Luiza", "artist": "Aeon Trio", "album": "Elegy"}]
         self._mock_services(mocker, tracks, ["INTERNAL/music/elegy/08-Luiza.mp3"])
-        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
 
         result = runner.invoke(
             main,

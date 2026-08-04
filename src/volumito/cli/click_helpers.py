@@ -75,7 +75,7 @@ from volumito.clients import (
     VolumioRESTAPIClient,
     VolumioSCPError,
     VolumioStoryError,
-    copy_file_from_host,
+    copy_from_host,
     is_local_file_uri,
     remote_music_path,
 )
@@ -937,7 +937,9 @@ def fetch_uri_to_file(
         OSError: If the destination file cannot be written
     """
     if is_local_file_uri(uri):
-        copy_file_from_host(host_configuration, remote_music_path(uri), destination, timeout)
+        copy_from_host(
+            host_configuration, remote_music_path(uri), destination, timeout=timeout
+        )
         return
 
     response = requests.get(uri, timeout=timeout, stream=True)
@@ -1258,6 +1260,17 @@ def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="URL to register, overriding the one composed from --port and --endpoint.",
+    )(func)
+
+
+def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--recursive`` option to an scp subcommand."""
+    return click.option(
+        "--recursive",
+        "-r",
+        is_flag=True,
+        default=False,
+        help="Copy a directory and its content.",
     )(func)
 
 
