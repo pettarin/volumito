@@ -1977,26 +1977,26 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
 
 @notifications.command("listen")
 @click.pass_context
-@option_port
+@option_count
 @option_endpoint
+@option_format
+@option_idle_timeout
+@option_port
 @option_register_url
 @option_register_url_full
-@option_unregister_url_on_exit
-@option_count
 @option_timeout
-@option_idle_timeout
-@option_format
+@option_unregister_url_on_exit
 def notifications_listen(
     ctx: click.Context,
-    port: int,
+    count: int | None,
     endpoint: str,
+    output_format: str,
+    idle_timeout: float | None,
+    port: int,
     register_url: bool,
     register_url_full: str | None,
-    unregister_url_on_exit: bool,
-    count: int | None,
     timeout: float | None,
-    idle_timeout: float | None,
-    output_format: str,
+    unregister_url_on_exit: bool,
 ) -> None:
     """Print the notifications the Volumio host pushes to this machine.
 
@@ -2038,14 +2038,14 @@ def notifications_listen(
 @click.pass_context
 @click.argument("url", required=False, default=None, type=str)
 @option_autocompose_url
-@option_port
 @option_endpoint
+@option_port
 def notifications_register(
     ctx: click.Context,
     url: str | None,
     autocompose_url: bool,
-    port: int,
     endpoint: str,
+    port: int,
 ) -> None:
     """Register URL to receive the push notifications.
 
@@ -2071,15 +2071,15 @@ def notifications_register(
 @click.argument("url", required=False, default=None, type=str)
 @option_all_notifications
 @option_autocompose_url
-@option_port
 @option_endpoint
+@option_port
 def notifications_unregister(
     ctx: click.Context,
     url: str | None,
     all_notifications: bool,
     autocompose_url: bool,
-    port: int,
     endpoint: str,
+    port: int,
 ) -> None:
     """Stop pushing the notifications to URL.
 
