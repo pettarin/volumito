@@ -6,6 +6,8 @@
 
 import json
 import os
+import re
+from datetime import UTC, datetime
 from unittest.mock import Mock, PropertyMock
 
 import click
@@ -44,6 +46,7 @@ from volumito.cli.pure_helpers import (
     format_as_json,
     format_as_pretty,
     format_as_table,
+    format_notification_as_line,
     format_queue_as_table,
     is_mbid,
     manifest_matches_queue,
@@ -59,11 +62,14 @@ from volumito.cli.volumito import main
 from volumito.clients import Album, Artist, Label, Place
 from volumito.clients.models import (
     CollectionStatistics,
+    Notifications,
     PlayerState,
     Playlists,
+    PushNotification,
     Queue,
     QueueTrack,
     Story,
+    SuccessResponse,
     SystemInfo,
     SystemVersion,
     VolumioModel,
@@ -99,6 +105,7 @@ def _isolate_config_probing(mocker: MockerFixture):
 
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "collection_statistics": CollectionStatistics,
+    "notifications": Notifications,
     "playlists": Playlists,
     "queue": Queue,
     "state": PlayerState,
@@ -128,8 +135,11 @@ def _as_model(name: str, value: object) -> object:
         return value
     if isinstance(value, dict):
         return model.from_raw(value)
-    if isinstance(value, list) and issubclass(model, Playlists):
-        return model.from_names(value)
+    if isinstance(value, list):
+        if issubclass(model, Notifications):
+            return model.from_urls(value)
+        if issubclass(model, Playlists):
+            return model.from_names(value)
     return value
 
 
@@ -519,6 +529,58 @@ class TestFormatFunctions:
 
         assert "Album Story" in result
         assert f"{'Data Value':20}: A story." in result.splitlines()
+
+
+class TestFormatNotificationAsLine:
+    """Test cases for the format_notification_as_line function."""
+
+    def test_a_state_notification(self):
+        """A state notification shows its status and its track."""
+        line = format_notification_as_line(
+            "state",
+            {"status": "play", "title": "Caterina", "artist": "Francesco De Gregori"},
+            "2026-08-04T10:15:32.123Z",
+        )
+
+        assert line == (
+            "[2026-08-04T10:15:32.123Z] state    play | Caterina - Francesco De Gregori"
+        )
+
+    def test_a_state_notification_without_a_track(self):
+        """The track part is omitted when the state carries no title nor artist."""
+        line = format_notification_as_line(
+            "state", {"status": "stop"}, "2026-08-04T10:15:32.123Z"
+        )
+
+        assert line == "[2026-08-04T10:15:32.123Z] state    stop"
+
+    def test_a_state_notification_without_a_status(self):
+        """The status part is omitted when the state carries none."""
+        line = format_notification_as_line(
+            "state", {"title": "Caterina"}, "2026-08-04T10:15:32.123Z"
+        )
+
+        assert line == "[2026-08-04T10:15:32.123Z] state    Caterina"
+
+    def test_a_mapping_without_any_known_key(self):
+        """A mapping carrying none of the known keys is shown as JSON."""
+        line = format_notification_as_line("state", {"volume": 42}, "2026-08-04T10:15:32.123Z")
+
+        assert line == '[2026-08-04T10:15:32.123Z] state    {"volume": 42}'
+
+    def test_an_array_notification(self):
+        """An array is summarized by its length."""
+        line = format_notification_as_line(
+            "queue", [{"title": "A"}, {"title": "B"}], "2026-08-04T10:15:32.123Z"
+        )
+
+        assert line == "[2026-08-04T10:15:32.123Z] queue    2 items"
+
+    def test_a_notification_without_an_item(self):
+        """A notification the host sent without an item is still readable."""
+        line = format_notification_as_line(None, None, "2026-08-04T10:15:32.123Z")
+
+        assert line == "[2026-08-04T10:15:32.123Z] ?        null"
 
 
 class TestExpandManifestFile:
@@ -1174,14 +1236,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.31" in result.output
+        assert "volumito, version 0.0.32" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.31"'
+        assert result.output.strip() == '"0.0.32"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1190,7 +1252,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.31"'
+        assert result.output.strip() == '"0.0.32"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4955,6 +5017,695 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
+
+
+class TestNotificationsCommands:
+    """Test cases for the notifications list, listen, register, and unregister commands."""
+
+    LISTEN_URL = "http://192.168.1.50:3003/volumionotifications"
+
+    NOTIFICATIONS = [
+        {
+            "item": "state",
+            "data": {
+                "status": "play",
+                "title": "Caterina",
+                "artist": "Francesco De Gregori",
+            },
+        },
+        {"item": "queue", "data": [{"title": "Caterina"}]},
+    ]
+
+    URLS = ["http://192.168.1.100/receiver", "http://192.168.1.101/other"]
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, urls=None, response=None):
+        """Mock VolumioRESTAPIClient with usable notification members."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client,
+            "notifications",
+            return_value=self.URLS if urls is None else urls,
+        )
+        outcome = SuccessResponse.from_raw({"success": True} if response is None else response)
+        mock_client.register_notification.return_value = outcome
+        mock_client.unregister_notification.return_value = outcome
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_group_help(self, runner: CliRunner):
+        """The notifications group lists its three commands."""
+        result = runner.invoke(main, ["notifications", "--help"])
+
+        assert result.exit_code == 0
+        assert "list" in result.output
+        assert "register" in result.output
+        assert "unregister" in result.output
+
+    def test_list_default_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications list prints the URLs as pretty JSON by default."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.URLS
+        # Pretty uses 4-space indentation
+        assert '\n    "http://192.168.1.100/receiver"' in result.output
+
+    def test_list_json_format(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications list -F json prints JSON with 2-space indentation."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "list", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.URLS
+        assert '\n  "http://192.168.1.100/receiver"' in result.output
+
+    def test_list_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications list -F raw prints the array as the host returns it."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "list", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == json.dumps(self.URLS)
+
+    def test_list_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications list -F table prints a numbered list."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "list", "-F", "table"])
+        lines = result.output.splitlines()
+
+        assert result.exit_code == 0
+        assert "Volumio Notification URLs" in lines
+        assert "1. http://192.168.1.100/receiver" in lines
+        assert "2. http://192.168.1.101/other" in lines
+
+    def test_list_empty(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications list reports an empty registration list."""
+        self._mock_client(mocker, urls=[])
+
+        result = runner.invoke(main, ["notifications", "list", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "(empty)" in result.output
+
+    def test_list_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications list exits 1 when the host cannot be reached."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client, "notifications", side_effect=VolumioConnectionError("Connection failed")
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["notifications", "list"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+    def test_register(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications register registers the URL and names it."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == f"Registered notification URL: {self.URLS[0]}"
+        mock_client.register_notification.assert_called_once_with(self.URLS[0])
+
+    def test_register_autocompose_url(self, runner: CliRunner, mocker: MockerFixture):
+        """--autocompose-url registers the URL of the local listener."""
+        mock_client = self._mock_client(mocker)
+        composed = mocker.patch(
+            "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
+        )
+
+        result = runner.invoke(main, ["notifications", "register", "--autocompose-url"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == f"Registered notification URL: {self.LISTEN_URL}"
+        mock_client.register_notification.assert_called_once_with(self.LISTEN_URL)
+        assert composed.call_args.args[1:] == (3003, "/volumionotifications")
+
+    def test_register_autocompose_url_with_a_port_and_an_endpoint(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The composed URL follows the given port and endpoint."""
+        self._mock_client(mocker)
+        composed = mocker.patch(
+            "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
+        )
+
+        result = runner.invoke(
+            main, ["notifications", "register", "-A", "-p", "9000", "-e", "/hook"]
+        )
+
+        assert result.exit_code == 0
+        assert composed.call_args.args[1:] == (9000, "/hook")
+
+    def test_register_autocompose_url_with_a_url(self, runner: CliRunner, mocker: MockerFixture):
+        """A URL cannot be combined with --autocompose-url."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["notifications", "register", "--autocompose-url", self.URLS[0]]
+        )
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
+        mock_client.register_notification.assert_not_called()
+
+    def test_register_without_a_url(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a URL and without --autocompose-url, the command says what it expects."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "register"])
+
+        assert result.exit_code == 2
+        assert "Expected a URL argument, or the -A/--autocompose-url option." in result.output
+        mock_client.register_notification.assert_not_called()
+
+    def test_register_autocompose_url_invalid_endpoint(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """An endpoint without a leading slash is a usage error."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["notifications", "register", "-A", "-e", "volumionotifications"]
+        )
+
+        assert result.exit_code == 2
+        assert "The endpoint must start with a slash." in result.output
+
+    def test_register_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications register prints nothing in machine-readable mode."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "notifications", "register", self.URLS[0]])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+        mock_client.register_notification.assert_called_once_with(self.URLS[0])
+
+    def test_register_refused(self, runner: CliRunner, mocker: MockerFixture):
+        """A refused registration exits 1, reporting what the host said."""
+        self._mock_client(mocker, response={"error": "Missing URL parameter"})
+
+        result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
+
+        assert result.exit_code == 1
+        assert (
+            f"Error: the Volumio host did not register the URL: {self.URLS[0]} "
+            "(Missing URL parameter)" in result.output
+        )
+
+    def test_register_refused_without_an_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A registration denied without an error message is still reported."""
+        self._mock_client(mocker, response={"success": False})
+
+        result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
+
+        assert result.exit_code == 1
+        assert (
+            result.output.strip()
+            == f"Error: the Volumio host did not register the URL: {self.URLS[0]}"
+        )
+
+    def test_register_refused_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """A refused registration prints nothing in machine-readable mode."""
+        self._mock_client(mocker, response={"success": False})
+
+        result = runner.invoke(main, ["-m", "notifications", "register", self.URLS[0]])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+
+    def test_unregister(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications unregister unregisters the URL and names it."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "unregister", self.URLS[1]])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == f"Unregistered notification URL: {self.URLS[1]}"
+        mock_client.unregister_notification.assert_called_once_with(self.URLS[1])
+
+    def test_unregister_refused(self, runner: CliRunner, mocker: MockerFixture):
+        """Unregistering a URL the host does not know exits 1, reporting its error."""
+        self._mock_client(mocker, response={"error": "No such URL is present"})
+
+        result = runner.invoke(main, ["notifications", "unregister", self.URLS[1]])
+
+        assert result.exit_code == 1
+        assert (
+            f"Error: the Volumio host did not unregister the URL: {self.URLS[1]} "
+            "(No such URL is present)" in result.output
+        )
+
+    def test_unregister_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications unregister prints nothing in machine-readable mode."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "notifications", "unregister", self.URLS[1]])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def _mock_listener(
+        self,
+        mocker: MockerFixture,
+        notifications=None,
+        interrupt=False,
+        start_error=None,
+        idle_timed_out=False,
+    ):
+        """Patch the notification listener used by the listen command."""
+        fake = mocker.Mock()
+        fake.idle_timed_out = idle_timed_out
+        if start_error is not None:
+            fake.start.side_effect = start_error
+        if interrupt:
+            fake.listen.side_effect = KeyboardInterrupt
+        else:
+            fake.listen.return_value = iter(
+                [PushNotification.from_raw(payload) for payload in notifications or []]
+            )
+        mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
+        mocker.patch("volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL)
+        return fake
+
+    def test_listen_prints_the_notifications(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications listen prints each notification as pretty JSON by default."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS)
+
+        result = runner.invoke(main, ["notifications", "listen"])
+
+        assert result.exit_code == 0
+        assert f"Listening on port 3003 for the notifications sent to {self.LISTEN_URL}" in (
+            result.output
+        )
+        assert '\n    "item": "state"' in result.output
+        assert '"item": "queue"' in result.output
+
+    def test_listen_json_format(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications listen -F json prints JSON with 2-space indentation."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS[:1])
+
+        result = runner.invoke(main, ["notifications", "listen", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert '\n  "item": "state"' in result.output
+
+    def test_listen_raw_format(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications listen -F raw prints each payload as the host sent it."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS[:1])
+
+        result = runner.invoke(main, ["notifications", "listen", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert json.dumps(self.NOTIFICATIONS[0]) in result.output
+
+    def test_listen_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications listen -F table prints one line per notification."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS)
+
+        result = runner.invoke(main, ["notifications", "listen", "-F", "table"])
+        lines = [line for line in result.output.splitlines() if line.startswith("[")]
+
+        assert result.exit_code == 0
+        assert lines[0].endswith("state    play | Caterina - Francesco De Gregori")
+        assert lines[1].endswith("queue    1 items")
+        # The time of arrival is the UTC date and time, to the millisecond
+        stamped = re.match(r"\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\] ", lines[0])
+        assert stamped is not None
+        received = datetime.strptime(stamped.group(1), "%Y-%m-%dT%H:%M:%S.%fZ").replace(
+            tzinfo=UTC
+        )
+        assert abs((datetime.now(UTC) - received).total_seconds()) < 60
+
+    def test_listen_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode only the payloads are printed, one per line."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS)
+
+        result = runner.invoke(main, ["-m", "notifications", "listen"])
+
+        assert result.exit_code == 0
+        assert result.output.splitlines() == [
+            json.dumps(payload) for payload in self.NOTIFICATIONS
+        ]
+
+    def test_listen_url_not_registered(self, runner: CliRunner, mocker: MockerFixture):
+        """Listening on a URL the host does not push to exits 1, naming the option."""
+        mock_client = self._mock_client(mocker, urls=[])
+        self._mock_listener(mocker)
+
+        result = runner.invoke(main, ["notifications", "listen"])
+
+        assert result.exit_code == 1
+        assert (
+            f"Error: the URL is not registered on the Volumio host: {self.LISTEN_URL} "
+            "(use --register-url to register it)" in result.output
+        )
+        mock_client.register_notification.assert_not_called()
+
+    def test_listen_url_not_registered_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The not-registered error prints nothing in machine-readable mode."""
+        self._mock_client(mocker, urls=[])
+        self._mock_listener(mocker)
+
+        result = runner.invoke(main, ["-m", "notifications", "listen"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+
+    def test_listen_registers_and_unregisters(self, runner: CliRunner, mocker: MockerFixture):
+        """--register-url registers the missing URL, and the exit unregisters it."""
+        mock_client = self._mock_client(mocker, urls=[])
+        self._mock_listener(mocker, self.NOTIFICATIONS[:1])
+
+        result = runner.invoke(main, ["notifications", "listen", "--register-url"])
+
+        assert result.exit_code == 0
+        assert f"Registered notification URL: {self.LISTEN_URL}" in result.output
+        assert f"Unregistered notification URL: {self.LISTEN_URL}" in result.output
+        mock_client.register_notification.assert_called_once_with(self.LISTEN_URL)
+        mock_client.unregister_notification.assert_called_once_with(self.LISTEN_URL)
+
+    def test_listen_keeps_the_registered_url(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-unregister-url-on-exit leaves the URL registered."""
+        mock_client = self._mock_client(mocker, urls=[])
+        self._mock_listener(mocker, self.NOTIFICATIONS[:1])
+
+        result = runner.invoke(
+            main,
+            ["notifications", "listen", "--register-url", "--no-unregister-url-on-exit"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.register_notification.assert_called_once_with(self.LISTEN_URL)
+        mock_client.unregister_notification.assert_not_called()
+
+    def test_listen_never_unregisters_a_preexisting_url(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A URL registered before the run is left alone on exit."""
+        mock_client = self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS[:1])
+
+        result = runner.invoke(main, ["notifications", "listen"])
+
+        assert result.exit_code == 0
+        mock_client.register_notification.assert_not_called()
+        mock_client.unregister_notification.assert_not_called()
+
+    def test_listen_advertise_url(self, runner: CliRunner, mocker: MockerFixture):
+        """--advertise-url replaces the detected URL."""
+        advertised = "http://receiver.lan:9000/hook"
+        self._mock_client(mocker, urls=[advertised])
+        listener_url = mocker.patch(
+            "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
+        )
+        fake = mocker.Mock()
+        fake.listen.return_value = iter([])
+        mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
+
+        result = runner.invoke(
+            main, ["notifications", "listen", "--advertise-url", advertised]
+        )
+
+        assert result.exit_code == 0
+        assert advertised in result.output
+        listener_url.assert_not_called()
+
+    def test_listen_invalid_endpoint(self, runner: CliRunner, mocker: MockerFixture):
+        """An endpoint without a leading slash is a usage error."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+
+        result = runner.invoke(main, ["notifications", "listen", "-e", "notifications"])
+
+        assert result.exit_code == 2
+        assert "The endpoint must start with a slash." in result.output
+
+    def test_listen_port_in_use(self, runner: CliRunner, mocker: MockerFixture):
+        """A port that cannot be bound exits 1, reporting the reason."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, start_error=OSError("Address already in use"))
+
+        result = runner.invoke(main, ["notifications", "listen", "-p", "80"])
+
+        assert result.exit_code == 1
+        assert "Error: cannot listen on port 80: Address already in use" in result.output
+
+    def test_listen_port_in_use_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """The port error prints nothing in machine-readable mode."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, start_error=OSError("Address already in use"))
+
+        result = runner.invoke(main, ["-m", "notifications", "listen", "-p", "80"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+
+    def test_listen_interrupted(self, runner: CliRunner, mocker: MockerFixture):
+        """Ctrl-C ends the listening cleanly."""
+        fake = self._mock_listener(mocker, interrupt=True)
+
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+
+        result = runner.invoke(main, ["notifications", "listen"])
+
+        assert result.exit_code == 0
+        fake.stop.assert_called_once()
+
+    def test_listen_count_is_forwarded(self, runner: CliRunner, mocker: MockerFixture):
+        """--count is passed to the listener, and reaching it is not a timeout."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        fake = self._mock_listener(mocker, self.NOTIFICATIONS)
+
+        result = runner.invoke(
+            main, ["notifications", "listen", "-n", "2", "--timeout", "30"]
+        )
+
+        assert result.exit_code == 0
+        assert "Timed out" not in result.output
+        fake.listen.assert_called_once_with(2, 30.0, None)
+
+    def test_listen_timeout(self, runner: CliRunner, mocker: MockerFixture):
+        """A timeout expiring without a requested count is reported, and exits 0."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker)
+
+        result = runner.invoke(main, ["notifications", "listen", "--timeout", "2"])
+
+        assert result.exit_code == 0
+        assert "Timed out after 2 seconds" in result.output
+
+    def test_listen_idle_timeout(self, runner: CliRunner, mocker: MockerFixture):
+        """The idle timeout is reported as such, with the number of seconds given."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        fake = self._mock_listener(mocker, idle_timed_out=True)
+
+        result = runner.invoke(main, ["notifications", "listen", "--idle-timeout", "1.5"])
+
+        assert result.exit_code == 0
+        assert "Timed out after 1.5 seconds without notifications" in result.output
+        fake.listen.assert_called_once_with(None, None, 1.5)
+
+    def test_listen_idle_timeout_with_a_total_timeout(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With both limits set, the idle one that expired is the one reported."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, idle_timed_out=True)
+
+        result = runner.invoke(
+            main, ["notifications", "listen", "--timeout", "60", "--idle-timeout", "3"]
+        )
+
+        assert result.exit_code == 0
+        assert "Timed out after 3 seconds without notifications" in result.output
+        assert "60 seconds" not in result.output
+
+    def test_listen_timeout_before_the_count(self, runner: CliRunner, mocker: MockerFixture):
+        """A timeout expiring before the requested count exits 1."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker, self.NOTIFICATIONS[:1])
+
+        result = runner.invoke(
+            main, ["notifications", "listen", "-n", "3", "--timeout", "2"]
+        )
+
+        assert result.exit_code == 1
+        assert "Timed out after 2 seconds" in result.output
+
+    def test_listen_timeout_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """The timeout message is suppressed in machine-readable mode."""
+        self._mock_client(mocker, urls=[self.LISTEN_URL])
+        self._mock_listener(mocker)
+
+        result = runner.invoke(main, ["-m", "notifications", "listen", "--timeout", "2"])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_unregister_autocompose_url(self, runner: CliRunner, mocker: MockerFixture):
+        """--autocompose-url unregisters the URL of the local listener."""
+        mock_client = self._mock_client(mocker)
+        composed = mocker.patch(
+            "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
+        )
+
+        result = runner.invoke(main, ["notifications", "unregister", "--autocompose-url"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == f"Unregistered notification URL: {self.LISTEN_URL}"
+        mock_client.unregister_notification.assert_called_once_with(self.LISTEN_URL)
+        assert composed.call_args.args[1:] == (3003, "/volumionotifications")
+
+    def test_unregister_autocompose_url_with_a_port_and_an_endpoint(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The composed URL follows the given port and endpoint."""
+        self._mock_client(mocker)
+        composed = mocker.patch(
+            "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
+        )
+
+        result = runner.invoke(
+            main, ["notifications", "unregister", "-A", "-p", "9000", "-e", "/hook"]
+        )
+
+        assert result.exit_code == 0
+        assert composed.call_args.args[1:] == (9000, "/hook")
+
+    def test_unregister_autocompose_url_with_all(self, runner: CliRunner, mocker: MockerFixture):
+        """--autocompose-url cannot be combined with --all."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["notifications", "unregister", "--autocompose-url", "--all"]
+        )
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
+        mock_client.unregister_notification.assert_not_called()
+
+    def test_unregister_all(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications unregister --all unregisters every registered URL."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "unregister", "--all"])
+
+        assert result.exit_code == 0
+        assert result.output.splitlines() == [
+            f"Unregistered notification URL: {url}" for url in self.URLS
+        ]
+        assert [
+            call.args[0] for call in mock_client.unregister_notification.call_args_list
+        ] == self.URLS
+
+    def test_unregister_all_shorthand(self, runner: CliRunner, mocker: MockerFixture):
+        """The -a shorthand selects every registered URL as well."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "unregister", "-a"])
+
+        assert result.exit_code == 0
+        assert mock_client.unregister_notification.call_count == len(self.URLS)
+
+    def test_unregister_all_without_registered_urls(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """notifications unregister --all reports that there is nothing to unregister."""
+        mock_client = self._mock_client(mocker, urls=[])
+
+        result = runner.invoke(main, ["notifications", "unregister", "--all"])
+
+        assert result.exit_code == 0
+        assert "No notification URL is registered, nothing to unregister" in result.output
+        mock_client.unregister_notification.assert_not_called()
+
+    def test_unregister_all_without_registered_urls_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The nothing-to-unregister message is suppressed in machine-readable mode."""
+        self._mock_client(mocker, urls=[])
+
+        result = runner.invoke(main, ["-m", "notifications", "unregister", "--all"])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+
+    def test_unregister_all_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """notifications unregister --all prints nothing in machine-readable mode."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "notifications", "unregister", "--all"])
+
+        assert result.exit_code == 0
+        assert result.output == ""
+        assert mock_client.unregister_notification.call_count == len(self.URLS)
+
+    def test_unregister_all_refused(self, runner: CliRunner, mocker: MockerFixture):
+        """A URL the host refuses exits 1, after the URLs already unregistered."""
+        mock_client = self._mock_client(mocker)
+        mock_client.unregister_notification.side_effect = [
+            SuccessResponse.from_raw({"success": True}),
+            SuccessResponse.from_raw({"error": "No such URL is present"}),
+        ]
+
+        result = runner.invoke(main, ["notifications", "unregister", "--all"])
+
+        assert result.exit_code == 1
+        assert f"Unregistered notification URL: {self.URLS[0]}" in result.output
+        assert (
+            f"Error: the Volumio host did not unregister the URL: {self.URLS[1]} "
+            "(No such URL is present)" in result.output
+        )
+
+    def test_unregister_all_with_a_url(self, runner: CliRunner, mocker: MockerFixture):
+        """A URL cannot be combined with --all."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "unregister", "--all", self.URLS[0]])
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.output
+        mock_client.unregister_notification.assert_not_called()
+
+    def test_unregister_without_a_url(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a URL and without --all, the command reports what it expects."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["notifications", "unregister"])
+
+        assert result.exit_code == 2
+        assert (
+            "Expected a URL argument, or one of the -a/--all and -A/--autocompose-url options."
+            in result.output
+        )
+        mock_client.unregister_notification.assert_not_called()
 
 
 class TestIsMbid:
@@ -8839,6 +9590,100 @@ class TestConfigurationFile:
         assert "Volumio Playlists" in result.output
         assert "1. Rock" in result.output
 
+    def test_output_subsection_sets_format_for_notifications_list(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The notifications-list subsection sets the format of the command."""
+        mock_client = self._mock_rest_client(mocker)
+        _attach_property(mock_client, "notifications", return_value=["http://host/receiver"])
+        config = self._write_config(
+            tmp_path, "output:\n  format: json\n  notifications-list:\n    format: table\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "notifications", "list"])
+
+        assert result.exit_code == 0
+        assert "Volumio Notification URLs" in result.output
+        assert "1. http://host/receiver" in result.output
+
+    def test_output_subsection_sets_format_for_notifications_listen(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The notifications-listen subsection sets the format of the command."""
+        mock_client = self._mock_rest_client(mocker)
+        _attach_property(mock_client, "notifications", return_value=["http://host/receiver"])
+        fake = mocker.Mock()
+        fake.listen.return_value = iter([PushNotification.from_raw({"item": "state", "data": {}})])
+        mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
+        mocker.patch("volumito.cli.volumito.receiver_url", return_value="http://host/receiver")
+        config = self._write_config(
+            tmp_path, "output:\n  format: json\n  notifications-listen:\n    format: table\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "notifications", "listen"])
+
+        assert result.exit_code == 0
+        assert "] state" in result.output
+
+    def test_notifications_section_configures_the_listener(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The notifications section configures the notifications listen command."""
+        advertised = "http://receiver.lan:9000/hook"
+        mock_client = self._mock_rest_client(mocker)
+        _attach_property(mock_client, "notifications", return_value=[])
+        outcome = SuccessResponse.from_raw({"success": True})
+        mock_client.register_notification.return_value = outcome
+        mock_client.unregister_notification.return_value = outcome
+        fake = mocker.Mock()
+        fake.listen.return_value = iter([])
+        listener_class = mocker.patch(
+            "volumito.cli.volumito.NotificationListener", return_value=fake
+        )
+        config = self._write_config(
+            tmp_path,
+            "notifications:\n"
+            f"  advertise-url: {advertised}\n"
+            "  endpoint: /hook\n"
+            "  port: 9000\n"
+            "  register-url: true\n"
+            "  unregister-url-on-exit: false\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "notifications", "listen"])
+
+        assert result.exit_code == 0
+        assert advertised in result.output
+        listener_class.assert_called_once_with(port=9000, endpoint="/hook")
+        mock_client.register_notification.assert_called_once_with(advertised)
+        mock_client.unregister_notification.assert_not_called()
+
+    def test_notifications_section_configures_register_and_unregister(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The port and the endpoint of the notifications section reach the two commands."""
+        mock_client = self._mock_rest_client(mocker)
+        outcome = SuccessResponse.from_raw({"success": True})
+        mock_client.register_notification.return_value = outcome
+        mock_client.unregister_notification.return_value = outcome
+        composed = mocker.patch(
+            "volumito.cli.volumito.receiver_url", return_value="http://receiver.lan:9000/hook"
+        )
+        config = self._write_config(
+            tmp_path, "notifications:\n  endpoint: /hook\n  port: 9000\n"
+        )
+
+        for command in ("register", "unregister"):
+            result = runner.invoke(main, ["-c", config, "notifications", command, "-A"])
+
+            assert result.exit_code == 0
+            assert composed.call_args.args[1:] == (9000, "/hook")
+
+        mock_client.register_notification.assert_called_once_with("http://receiver.lan:9000/hook")
+        mock_client.unregister_notification.assert_called_once_with(
+            "http://receiver.lan:9000/hook"
+        )
+
     def test_output_section_sets_position_indexing(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -9315,6 +10160,13 @@ class TestConfigurationCommands:
                     "check-playlist-name": True,
                     "check-seek-position": True,
                 },
+                "notifications": {
+                    "advertise-url": None,
+                    "endpoint": "/volumionotifications",
+                    "port": 3003,
+                    "register-url": False,
+                    "unregister-url-on-exit": True,
+                },
                 "output": {
                     "fields": "SHORT",
                     "format": "pretty",
@@ -9324,6 +10176,8 @@ class TestConfigurationCommands:
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders.
                     "collection-statistics": None,
+                    "notifications-list": None,
+                    "notifications-listen": None,
                     "playback-status": None,
                     "playlist-list": None,
                     "queue-list": None,

@@ -69,6 +69,8 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
+    "notifications-list": FORMAT_KEYS,
+    "notifications-listen": FORMAT_KEYS,
     "zones-list": DISPLAY_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
@@ -87,6 +89,12 @@ DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
 DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "collection-statistics": [
         ["collection", "statistics"],
+    ],
+    "notifications-list": [
+        ["notifications", "list"],
+    ],
+    "notifications-listen": [
+        ["notifications", "listen"],
     ],
     "playback-status": [
         ["playback", "status"],
@@ -253,6 +261,31 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
 key -> the default_map path(s) of the command(s) it targets.
 """
 
+NOTIFICATIONS_KEY_PATHS: dict[str, list[list[str]]] = {
+    "advertise-url": [
+        ["notifications", "listen"],
+    ],
+    "endpoint": [
+        ["notifications", "listen"],
+        ["notifications", "register"],
+        ["notifications", "unregister"],
+    ],
+    "port": [
+        ["notifications", "listen"],
+        ["notifications", "register"],
+        ["notifications", "unregister"],
+    ],
+    "register-url": [
+        ["notifications", "listen"],
+    ],
+    "unregister-url-on-exit": [
+        ["notifications", "listen"],
+    ],
+}
+"""The "notifications" section holds the keys of the options of its subcommands:
+key -> the default_map path(s) of the command(s) it targets.
+"""
+
 SECTION_KEYS: dict[str, list[str]] = {
     "volumio": [
         "host",
@@ -266,6 +299,7 @@ SECTION_KEYS: dict[str, list[str]] = {
         "rest-api-sleep-before-next-call",
     ],
     "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
+    "notifications": list(NOTIFICATIONS_KEY_PATHS),
 }
 """Recognized flat section names and their allowed (hyphenated) keys, in display order.
 Keys mirror the CLI long options minus the leading "--".
@@ -382,6 +416,10 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
     # options of the top-level group
     for key, value in config.get("miscellaneous", {}).items():
         for command_path in MISCELLANEOUS_KEY_PATHS[key]:
+            _assign_nested(result, command_path, _param_name(key), value)
+
+    for key, value in config.get("notifications", {}).items():
+        for command_path in NOTIFICATIONS_KEY_PATHS[key]:
             _assign_nested(result, command_path, _param_name(key), value)
 
     output = config.get("output", {})

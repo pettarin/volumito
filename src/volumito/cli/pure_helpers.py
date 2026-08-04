@@ -332,17 +332,18 @@ def format_duration(seconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
-def format_playlists_as_table(names: list[Any]) -> str:
-    """Format the playlists as a readable table.
+def format_names_as_table(names: list[Any], heading: str) -> str:
+    """Format a list of names as a readable, numbered table.
 
     Args:
-        names: List of playlist names
+        names: List of names (e.g., the playlist names)
+        heading: The heading line of the table
 
     Returns:
-        A formatted string representation of the playlists
+        A formatted string representation of the names
     """
     lines = []
-    lines.append("Volumio Playlists")
+    lines.append(heading)
     lines.append("=" * 50)
 
     if not names:
@@ -355,6 +356,34 @@ def format_playlists_as_table(names: list[Any]) -> str:
         lines.append(f"{index:>{width}}. {name}")
 
     return "\n".join(lines)
+
+
+def format_notification_as_line(item: str | None, data: object, timestamp: str) -> str:
+    """Format a received push notification as a single readable line.
+
+    Args:
+        item: The kind of event (e.g., "state"), or None when the host reported none
+        data: The information carried by the notification
+        timestamp: The UTC time the notification was received, already formatted
+
+    Returns:
+        A line such as
+        ``[2026-08-04T10:15:32.123Z] state    play | Caterina - Francesco De Gregori``
+    """
+    if isinstance(data, list):
+        summary = f"{len(data)} items"
+    elif isinstance(data, dict):
+        status = str(data["status"]) if data.get("status") is not None else ""
+        track = " - ".join(
+            str(data[key]) for key in ("title", "artist") if data.get(key) is not None
+        )
+        summary = " | ".join(part for part in (status, track) if part)
+        if not summary:
+            summary = json.dumps(data, ensure_ascii=False)
+    else:
+        summary = json.dumps(data, ensure_ascii=False)
+
+    return f"[{timestamp}] {item or '?':<8} {summary}"
 
 
 def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
