@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.31] - 2026-08-03
+
+### Added
+
+- Option `-T`/`--only-tracks` for `queue download` and `playlist download`, downloading
+  only the tracks at the given queue positions (e.g., `1-3,6-8,12`)
+
+### Fixed
+
+- The stale-metadata check compares the fetched track with the previously played one,
+  instead of the queue entry before it
+
+
 ## [0.0.30] - 2026-08-03
 
 ### Added

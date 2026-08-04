@@ -32,7 +32,7 @@ from volumito.clients import (
     Zones,
 )
 
-__version__ = "0.0.30"
+__version__ = "0.0.31"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 

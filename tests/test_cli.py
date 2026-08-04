@@ -48,6 +48,7 @@ from volumito.cli.pure_helpers import (
     is_mbid,
     manifest_matches_queue,
     parse_time_to_seconds,
+    parse_track_selection,
     queue_album_volumes,
     queue_track_metadata_current,
     rebase_queue_positions,
@@ -933,6 +934,51 @@ class TestParseTimeToSeconds:
         assert parse_time_to_seconds(text) is None
 
 
+class TestParseTrackSelection:
+    """Test cases for the parse_track_selection function."""
+
+    def test_single_positions(self):
+        """A comma-separated list of positions is parsed."""
+        assert parse_track_selection("5") == {5}
+        assert parse_track_selection("2,4,7") == {2, 4, 7}
+
+    def test_ranges(self):
+        """A start-end range is inclusive on both ends."""
+        assert parse_track_selection("1-3") == {1, 2, 3}
+        assert parse_track_selection("4-4") == {4}
+
+    def test_mixed_selection(self):
+        """Positions and ranges can be mixed."""
+        assert parse_track_selection("1-3,6-8,12") == {1, 2, 3, 6, 7, 8, 12}
+
+    def test_blanks_are_ignored(self):
+        """Blanks around the items and the range separator are ignored."""
+        assert parse_track_selection(" 2 , 5 - 6 ") == {2, 5, 6}
+
+    def test_repeated_positions_are_kept_once(self):
+        """A position listed twice appears once in the selection."""
+        assert parse_track_selection("3,1-3,3") == {1, 2, 3}
+
+    @pytest.mark.parametrize(
+        "value",
+        ["", "   ", "1,,2", "abc", "1-a", "1-", "-3", "3-1"],
+        ids=[
+            "empty",
+            "blank",
+            "empty-item",
+            "not-a-number",
+            "range-end-not-a-number",
+            "range-without-end",
+            "range-without-start",
+            "reversed-range",
+        ],
+    )
+    def test_invalid_selection(self, value):
+        """A malformed selection is rejected."""
+        with pytest.raises(ValueError):
+            parse_track_selection(value)
+
+
 class TestSeekParamType:
     """Test cases for the SeekParamType Click parameter type."""
 
@@ -1128,14 +1174,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.30" in result.output
+        assert "volumito, version 0.0.31" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.30"'
+        assert result.output.strip() == '"0.0.31"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1144,7 +1190,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.30"'
+        assert result.output.strip() == '"0.0.31"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5920,6 +5966,176 @@ class TestQueueDownload:
         assert (out / "from_config.json").exists()
         assert not (out / "manifest.json").exists()
 
+    def test_download_only_tracks_help(self, runner: CliRunner):
+        """The selection option is listed in the help, with its metavar."""
+        result = runner.invoke(main, ["queue", "download", "--help"])
+
+        assert result.exit_code == 0
+        assert "--only-tracks" in result.output
+        assert "[SELECTION]" in result.output
+
+    def test_download_only_tracks(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """Only the selected tracks are played and downloaded."""
+        tracks = [
+            {"title": "Song A", "artist": "Artist", "album": "Album", "tracknumber": 1},
+            {"title": "Song B", "artist": "Artist", "album": "Album", "tracknumber": 2},
+            {"title": "Song C", "artist": "Artist", "album": "Album", "tracknumber": 3},
+        ]
+        client = self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/b.flac", "http://h/c.flac"],
+            states=[{**tracks[1], "position": 1}, {**tracks[2], "position": 2}],
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "2-3"])
+
+        assert result.exit_code == 0
+        assert "Downloading 2 of 3 tracks" in result.output
+        assert "Downloaded 2, skipped 0, errors 0, not selected 1" in result.output
+        # Only the selected tracks are played (plus the final reposition)
+        assert _played_positions(client) == [1, 2, 0]
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["pending", "downloaded", "downloaded"]
+
+    def test_download_only_tracks_completes_in_a_later_run(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A second run with another selection downloads the tracks left out."""
+        tracks = self._queue_tracks()
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac"],
+            states=[{**tracks[0], "position": 0}],
+        )
+
+        first = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "1"])
+
+        assert first.exit_code == 0
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "pending"]
+
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/b.flac"],
+            states=[{**tracks[1], "position": 1}],
+        )
+        second = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "2"])
+
+        assert second.exit_code == 0
+        assert "Reading manifest file" in second.output
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "downloaded"]
+        assert log["updates"] == 2
+
+    def test_download_only_tracks_position_starting_at_zero(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With the zero base, the selected positions are the zero-indexed ones."""
+        tracks = self._queue_tracks()
+        client = self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/a.flac"],
+            states=[{**tracks[0], "position": 0}],
+        )
+
+        result = runner.invoke(
+            main, ["--position-starting-at-zero", *self._BASE, "-d", str(tmp_path), "-T", "0"]
+        )
+
+        assert result.exit_code == 0
+        assert _played_positions(client) == [0, 0]
+        _, log = self._read_log(tmp_path)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "pending"]
+
+    def test_download_only_tracks_keeps_the_selected_downloaded_ones(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A selection whose tracks are all downloaded leaves the playback untouched."""
+        client = self._mock_services(mocker, self._queue_tracks(), [])
+        mpd_class = mocker.patch("volumito.cli.volumito.VolumioMPDClient")
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "updates": 1,
+                    "tracks": [
+                        {
+                            "title": "Song A",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "downloaded",
+                            "output_file_path": str(tmp_path / "a.flac"),
+                        },
+                        {
+                            "title": "Song B",
+                            "artist": "Artist",
+                            "album": "Album",
+                            "status": "pending",
+                        },
+                    ],
+                }
+            )
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "1"])
+
+        assert result.exit_code == 0
+        assert "(kept)" in result.output
+        assert "Downloaded 1, skipped 0, errors 0, not selected 1" in result.output
+        client.stop.assert_not_called()
+        mpd_class.assert_not_called()
+        with open(manifest, encoding="utf-8") as manifest_handle:
+            log = json.load(manifest_handle)
+        assert [t["status"] for t in log["tracks"]] == ["downloaded", "pending"]
+
+    def test_download_only_tracks_outside_the_queue(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A selection matching no queue position is refused."""
+        self._mock_services(mocker, self._queue_tracks(), [])
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "7-9"])
+
+        assert result.exit_code == 1
+        assert "no track of the queue is selected" in result.output
+
+    def test_download_only_tracks_invalid_selection(self, runner: CliRunner):
+        """A malformed selection is a usage error."""
+        result = runner.invoke(main, [*self._BASE, "-d", "/tmp", "-T", "3-1"])
+
+        assert result.exit_code == 2
+        assert "reversed range" in result.output
+
+    def test_download_only_tracks_from_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The queue-download configuration subsection supplies the selection."""
+        tracks = self._queue_tracks()
+        self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/b.flac"],
+            states=[{**tracks[1], "position": 1}],
+        )
+        out = tmp_path / "out"
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "downloads:\n"
+            "  queue-download:\n"
+            f"    output-directory: {out}\n"
+            "    only-tracks: '2'\n"
+        )
+
+        result = runner.invoke(main, ["-c", str(config), *self._BASE])
+
+        assert result.exit_code == 0
+        assert "Downloading 1 of 2 tracks" in result.output
+        assert (out / "b.flac").read_bytes() == b"data"
+
     def test_download_resume_retries_failed_track(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -7297,6 +7513,27 @@ class TestPlaylistDownload:
             log = json.load(manifest_handle)
         assert log["tracks"][0]["status"] == "downloaded"
         assert not (tmp_path / "manifest.json").exists()
+
+    def test_download_only_tracks_forwarded(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--only-tracks is forwarded to the queue download logic."""
+        tracks = [
+            {"title": "Song A", "artist": "A", "album": "B"},
+            {"title": "Song B", "artist": "A", "album": "B"},
+        ]
+        client = self._mock_services(
+            mocker,
+            tracks,
+            ["http://h/b.flac"],
+            states=[{**tracks[1], "position": 1}],
+        )
+
+        result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "2"])
+
+        assert result.exit_code == 0
+        assert "Downloading 1 of 2 tracks" in result.output
+        assert _played_positions(client) == [1, 0]
 
     def test_download_resume_keeps_downloaded_tracks(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -9112,6 +9349,7 @@ class TestConfigurationCommands:
                         "audio-file-name-template": _AUDIO_FILE_NAME_TEMPLATE,
                         "manifest-file": "{output_directory}/manifest.json",
                         "number-retries-next-track": 10,
+                        "only-tracks": None,
                         "with-albumart": True,
                     },
                     "queue-download": {
@@ -9119,6 +9357,7 @@ class TestConfigurationCommands:
                         "audio-file-name-template": _QUEUE_AUDIO_FILE_NAME_TEMPLATE,
                         "manifest-file": "{output_directory}/manifest.json",
                         "number-retries-next-track": 10,
+                        "only-tracks": None,
                         "with-albumart": True,
                     },
                     "track-albumart": {
