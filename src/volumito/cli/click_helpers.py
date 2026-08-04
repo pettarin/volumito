@@ -73,7 +73,7 @@ from volumito.clients import (
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
-    VolumioSCPError,
+    VolumioSSHError,
     VolumioStoryError,
     copy_from_host,
     is_local_file_uri,
@@ -336,7 +336,7 @@ def _materialize_albumart(
             shutil.copyfile(cached, cover_path)
         else:
             fetch_uri_to_file(albumart_uri, cover_path, timeout, host_configuration)
-    except (requests.exceptions.RequestException, VolumioSCPError, OSError) as e:
+    except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
         if not machine_readable:
             click.echo(f"\nWarning: cannot download album art to {cover_path} ({e})", err=True)
         return None
@@ -565,7 +565,7 @@ def download_queue_track(
                 destination, uri, state, host_configuration, "track", "audio",
                 add_cover_and_metadata, extra_state,
             )
-    except (requests.exceptions.RequestException, VolumioSCPError, OSError) as e:
+    except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
         return "error", str(e)
     return "downloaded", None
 
@@ -676,7 +676,7 @@ def download_uri_to(
             if verbose and not machine_readable:
                 click.echo(f"\nManifest written to {manifest_path}...", err=True)
 
-    except (requests.exceptions.RequestException, VolumioSCPError) as e:
+    except (requests.exceptions.RequestException, VolumioSSHError) as e:
         if not machine_readable:
             click.echo(f"\nDownload error: {e}", err=True)
         sys.exit(1)
@@ -933,7 +933,7 @@ def fetch_uri_to_file(
 
     Raises:
         requests.exceptions.RequestException: If the HTTP request fails
-        VolumioSCPError: If the file cannot be copied from the Volumio host
+        VolumioSSHError: If the file cannot be copied from the Volumio host
         OSError: If the destination file cannot be written
     """
     if is_local_file_uri(uri):
@@ -1263,6 +1263,16 @@ def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_propagate_remote_exit_code(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--propagate-remote-exit-code`` option to the system execute subcommand."""
+    return click.option(
+        "--propagate-remote-exit-code/--no-propagate-remote-exit-code",
+        default=True,
+        show_default=True,
+        help="Exit with the code the command returned on the Volumio host.",
+    )(func)
+
+
 def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--recursive`` option to an scp subcommand."""
     return click.option(
@@ -1344,6 +1354,17 @@ def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
         default=True,
         show_default=True,
         help="Download the album art of each album in the queue/playlist.",
+    )(func)
+
+
+def option_yes(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-y``/``--yes`` option to the system execute subcommand."""
+    return click.option(
+        "--yes/--no-yes",
+        "-y",
+        default=False,
+        show_default=True,
+        help="Really execute the command on the Volumio host.",
     )(func)
 
 

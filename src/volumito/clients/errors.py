@@ -23,8 +23,12 @@ class VolumioAPIError(VolumioError):
     pass
 
 
-class VolumioSCPError(VolumioError):
-    """Raised when a file cannot be copied from the Volumio host over SCP."""
+class VolumioSSHError(VolumioError):
+    """Raised when an SSH connection to the Volumio host fails."""
+
+
+class VolumioSCPError(VolumioSSHError):
+    """Raised when a file cannot be copied from or to the Volumio host over SCP."""
 
 
 class VolumioStoryError(VolumioAPIError):

@@ -23,6 +23,7 @@ from volumito.clients import (
     PushNotification,
     Queue,
     QueueTrack,
+    RemoteCommandResult,
     Story,
     SuccessResponse,
     SystemInfo,
@@ -35,17 +36,19 @@ from volumito.clients import (
     VolumioMPDClient,
     VolumioRESTAPIClient,
     VolumioSCPError,
+    VolumioSSHError,
     VolumioStoryError,
     Zone,
     Zones,
     copy_from_host,
     copy_to_host,
+    execute_on_host,
     is_local_file_uri,
     receiver_url,
     remote_music_path,
 )
 
-__version__ = "0.0.35"
+__version__ = "0.0.36"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
@@ -76,8 +79,10 @@ __all__ = [
     "receiver_url",
     "VOLUMIO_INTERNAL_ROOT",
     "VOLUMIO_MNT_ROOT",
+    "RemoteCommandResult",
     "copy_from_host",
     "copy_to_host",
+    "execute_on_host",
     "is_local_file_uri",
     "remote_music_path",
     "VolumioHostConfiguration",
@@ -87,5 +92,6 @@ __all__ = [
     "VolumioConnectionError",
     "VolumioAPIError",
     "VolumioSCPError",
+    "VolumioSSHError",
     "VolumioStoryError",
 ]

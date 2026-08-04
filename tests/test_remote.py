@@ -12,14 +12,17 @@ from pytest_mock import MockerFixture
 from volumito.clients import (
     VOLUMIO_INTERNAL_ROOT,
     VOLUMIO_MNT_ROOT,
+    RemoteCommandResult,
     VolumioHostConfiguration,
     VolumioSCPError,
+    VolumioSSHError,
     copy_from_host,
     copy_to_host,
+    execute_on_host,
     is_local_file_uri,
     remote_music_path,
 )
-from volumito.clients.remote_files import _load_scp
+from volumito.clients.remote import _load_paramiko, _load_scp
 
 URI = "INTERNAL/music/album/01-track.flac"
 """A URI of the shape a Volumio host reports for a track of its library."""
@@ -80,13 +83,22 @@ class TestLoadScp:
         assert hasattr(paramiko, "SSHClient")
         assert scp_client_class.__name__ == "SCPClient"
 
-    @pytest.mark.parametrize("missing", ["paramiko", "scp"])
-    def test_a_missing_package(self, mocker: MockerFixture, missing):
-        """A missing package is reported with the way to install it."""
-        mocker.patch.dict(sys.modules, {missing: None})
+    def test_a_missing_scp_package(self, mocker: MockerFixture):
+        """A missing scp package is reported with the way to install it."""
+        mocker.patch.dict(sys.modules, {"scp": None})
 
         with pytest.raises(VolumioSCPError) as exc_info:
             _load_scp()
+
+        assert "needs the scp package" in str(exc_info.value)
+        assert "pip install volumito[scp]" in str(exc_info.value)
+
+    def test_a_missing_paramiko_package(self, mocker: MockerFixture):
+        """A missing paramiko is reported by the loader the SSH session uses."""
+        mocker.patch.dict(sys.modules, {"paramiko": None})
+
+        with pytest.raises(VolumioSSHError) as exc_info:
+            _load_paramiko()
 
         assert "needs the scp package" in str(exc_info.value)
         assert "pip install volumito[scp]" in str(exc_info.value)
@@ -99,8 +111,9 @@ class TestCopyFromHost:
         """Patch the optional dependencies with mocks, returning them."""
         paramiko = mocker.MagicMock()
         scp_client_class = mocker.MagicMock()
+        mocker.patch("volumito.clients.remote._load_paramiko", return_value=paramiko)
         mocker.patch(
-            "volumito.clients.remote_files._load_scp",
+            "volumito.clients.remote._load_scp",
             return_value=(paramiko, scp_client_class),
         )
         return paramiko, scp_client_class
@@ -166,7 +179,7 @@ class TestCopyFromHost:
     def test_a_missing_package(self, mocker: MockerFixture):
         """The error of the lazy import is reported as it is."""
         mocker.patch(
-            "volumito.clients.remote_files._load_scp",
+            "volumito.clients.remote._load_scp",
             side_effect=VolumioSCPError("needs the scp package"),
         )
 
@@ -200,8 +213,9 @@ class TestCopyToHost:
         """Patch the optional dependencies with mocks, returning them."""
         paramiko = mocker.MagicMock()
         scp_client_class = mocker.MagicMock()
+        mocker.patch("volumito.clients.remote._load_paramiko", return_value=paramiko)
         mocker.patch(
-            "volumito.clients.remote_files._load_scp",
+            "volumito.clients.remote._load_scp",
             return_value=(paramiko, scp_client_class),
         )
         return paramiko, scp_client_class
@@ -251,11 +265,96 @@ class TestCopyToHost:
     def test_a_missing_package(self, mocker: MockerFixture):
         """The error of the lazy import is reported as it is."""
         mocker.patch(
-            "volumito.clients.remote_files._load_scp",
+            "volumito.clients.remote._load_scp",
             side_effect=VolumioSCPError("needs the scp package"),
         )
 
         with pytest.raises(VolumioSCPError) as exc_info:
             copy_to_host(VolumioHostConfiguration(), "/tmp/a.flac", "/mnt/a.flac")
+
+        assert str(exc_info.value) == "needs the scp package"
+
+
+class TestExecuteOnHost:
+    """Test cases for the execute_on_host function."""
+
+    def _mock_paramiko(self, mocker: MockerFixture, stdout=b"", stderr=b"", exit_code=0):
+        """Patch paramiko with a client whose exec_command returns the given streams."""
+        paramiko = mocker.MagicMock()
+        ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
+        out, err = mocker.MagicMock(), mocker.MagicMock()
+        out.read.return_value = stdout
+        out.channel.recv_exit_status.return_value = exit_code
+        err.read.return_value = stderr
+        ssh_client.exec_command.return_value = (mocker.MagicMock(), out, err)
+        mocker.patch("volumito.clients.remote._load_paramiko", return_value=paramiko)
+        return paramiko, ssh_client
+
+    def test_executes_the_command(self, mocker: MockerFixture):
+        """The command is executed, and its outcome is returned."""
+        _, ssh_client = self._mock_paramiko(
+            mocker, stdout=b"up 3 days\n", stderr=b"a warning\n", exit_code=0
+        )
+
+        result = execute_on_host(VolumioHostConfiguration(host="volumio.local"), "uptime")
+
+        ssh_client.exec_command.assert_called_once_with("uptime")
+        assert result == RemoteCommandResult(
+            command="uptime", exit_code=0, stdout="up 3 days\n", stderr="a warning\n"
+        )
+
+    def test_the_exit_code_of_the_command(self, mocker: MockerFixture):
+        """The exit code the command returned on the host is reported."""
+        self._mock_paramiko(mocker, stdout=b"inactive\n", exit_code=3)
+
+        result = execute_on_host(VolumioHostConfiguration(), "systemctl is-active mpd")
+
+        assert result.exit_code == 3
+        assert result.stdout == "inactive\n"
+
+    def test_the_ssh_parameters(self, mocker: MockerFixture):
+        """The connection uses the SSH parameters of the host configuration."""
+        _, ssh_client = self._mock_paramiko(mocker)
+
+        execute_on_host(
+            VolumioHostConfiguration(host="volumio.local", ssh_port=2222, ssh_username="pi"),
+            "uptime",
+            timeout=7.0,
+        )
+
+        ssh_client.connect.assert_called_once_with(
+            "volumio.local", port=2222, username="pi", password=None, timeout=7.0
+        )
+
+    def test_an_undecodable_byte(self, mocker: MockerFixture):
+        """Bytes that are not UTF-8 are replaced instead of failing the command."""
+        self._mock_paramiko(mocker, stdout=b"\xff\xfe")
+
+        result = execute_on_host(VolumioHostConfiguration(), "cat /dev/urandom")
+
+        assert result.stdout == "\ufffd\ufffd"
+
+    def test_a_failed_execution(self, mocker: MockerFixture):
+        """A failure of the connection or of the execution is reported."""
+        paramiko, _ = self._mock_paramiko(mocker)
+        paramiko.SSHClient.return_value.__enter__.return_value.connect.side_effect = OSError(
+            "No route to host"
+        )
+
+        with pytest.raises(VolumioSSHError) as exc_info:
+            execute_on_host(VolumioHostConfiguration(host="volumio.local"), "uptime")
+
+        assert "Failed to execute 'uptime' on the Volumio host" in str(exc_info.value)
+        assert "No route to host" in str(exc_info.value)
+
+    def test_a_missing_package(self, mocker: MockerFixture):
+        """The error of the lazy import is reported as it is."""
+        mocker.patch(
+            "volumito.clients.remote._load_paramiko",
+            side_effect=VolumioSSHError("needs the scp package"),
+        )
+
+        with pytest.raises(VolumioSSHError) as exc_info:
+            execute_on_host(VolumioHostConfiguration(), "uptime")
 
         assert str(exc_info.value) == "needs the scp package"

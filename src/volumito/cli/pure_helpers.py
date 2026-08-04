@@ -21,7 +21,7 @@ from volumito.cli.constants import (
 )
 from volumito.clients import VolumioHostConfiguration
 from volumito.clients.models import PlayerState, QueueTrack
-from volumito.clients.remote_files import is_local_file_uri
+from volumito.clients.remote import is_local_file_uri
 
 
 def display_position(api_position: int, starting_at_one: bool) -> int:

@@ -113,6 +113,10 @@ miscellaneous:
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
 
+  # After running the "system execute" command,
+  # return the same exit code generated on the Volumio host
+  propagate-remote-exit-code: true
+
 
 notifications:
   # A key here applies to the listen, register, and unregister commands;
@@ -158,6 +162,7 @@ output:
   # - story-credits
   # - story-label
   # - story-place
+  # - system-execute
   # - system-info
   # - system-version
   # - track-info
@@ -221,6 +226,9 @@ output:
     # Add your own overrides here
 
   story-place:
+    # Add your own overrides here
+
+  system-execute:
     # Add your own overrides here
 
   system-info:

@@ -72,6 +72,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "notifications-list": FORMAT_KEYS,
     "notifications-listen": FORMAT_KEYS,
     "zones-list": DISPLAY_KEYS,
+    "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
@@ -119,6 +120,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "story-place": [
         ["story", "place"],
+    ],
+    "system-execute": [
+        ["system", "execute"],
     ],
     "system-info": [
         ["system", "info"],
@@ -301,6 +305,9 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     ],
     "check-seek-position": [
         ["playback", "seek"],
+    ],
+    "propagate-remote-exit-code": [
+        ["system", "execute"],
     ],
 }
 """The "miscellaneous" section holds the keys of options living on a specific command:
