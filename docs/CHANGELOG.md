@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.32] - 2026-08-04
+
+### Added
+
+- Command group `notifications`, with the `list`, `register`, and `unregister` subcommands
+  (`unregister -a` clears every registered URL)
+- Property `notifications` and methods `register_notification` and
+  `unregister_notification` on the REST API client, returning the new `Notifications`
+  (of `Notification`) and `SuccessResponse` models
+
+
 ## [0.0.31] - 2026-08-03
 
 ### Added

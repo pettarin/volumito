@@ -159,6 +159,77 @@ class DeviceState(VolumioModel):
     """The volume level, between 0 and 100."""
 
 
+class Notification(VolumioModel):
+    """A URL registered on a Volumio instance to receive push notifications."""
+
+    url: str | None = None
+    """The URL the Volumio instance pushes its notifications to."""
+
+    @classmethod
+    def from_url(cls, url: str) -> Self:
+        """Build the notification listed by the Volumio instance under a URL.
+
+        Args:
+            url: The URL, as listed by the Volumio instance
+
+        Returns:
+            The notification, holding the URL it was listed as in its ``raw`` attribute
+        """
+        return cls.model_validate({"url": url, "raw": url})
+
+
+class Notifications(VolumioModel):
+    """The URLs registered on a Volumio instance to receive push notifications.
+
+    The collection is a sequence of its notifications: it can be iterated, indexed, and
+    measured with ``len()``; testing for membership accepts either a notification or the
+    URL of one (``"http://192.168.1.100/receiver" in notifications``).
+    """
+
+    notifications: list[Notification] = Field(default_factory=list)
+    """The registered notifications, in the order reported by the Volumio instance."""
+
+    @classmethod
+    def from_urls(cls, urls: list[str]) -> Self:
+        """Build the collection from the URLs listed by the Volumio instance.
+
+        Args:
+            urls: The registered URLs
+
+        Returns:
+            The collection, holding the listed URLs in its ``raw`` attribute
+        """
+        notifications = [{"url": url, "raw": url} for url in urls]
+        return cls.model_validate({"notifications": notifications, "raw": urls})
+
+    @property
+    def urls(self) -> list[str]:
+        """The registered URLs, in the order reported."""
+        return [
+            notification.url
+            for notification in self.notifications
+            if notification.url is not None
+        ]
+
+    def __contains__(self, item: object) -> bool:
+        """Return whether a notification, or one with the given URL, is registered."""
+        if isinstance(item, str):
+            return item in self.urls
+        return item in self.notifications
+
+    def __getitem__(self, index: int) -> Notification:
+        """Return the notification at the given position."""
+        return self.notifications[index]
+
+    def __iter__(self) -> Iterator[Notification]:  # type: ignore[override]
+        """Iterate over the registered notifications."""
+        return iter(self.notifications)
+
+    def __len__(self) -> int:
+        """Return the number of registered notifications."""
+        return len(self.notifications)
+
+
 class PlayerState(VolumioModel):
     """The playback state of a Volumio instance."""
 
@@ -468,6 +539,26 @@ class Story(VolumioModel):
             raise VolumioStoryError(str(data.get("error", "unknown error")))
         # The story text comes from the data, while raw keeps the whole envelope
         return cls.from_raw({**data, "raw": envelope})
+
+
+class SuccessResponse(VolumioModel):
+    """The outcome a Volumio instance reports as a success flag."""
+
+    error: str | None = None
+    """The reason the Volumio instance gives for not carrying the request out."""
+
+    success: bool | None = None
+    """Whether the Volumio instance carried the request out."""
+
+    @property
+    def is_success(self) -> bool:
+        """Whether the request was carried out, as far as the instance reports.
+
+        A Volumio instance can answer a request it refuses with an HTTP 200 carrying
+        an error, so a reported error means failure even without a success flag; an
+        answer reporting neither is read as a success.
+        """
+        return self.success is not False and self.error is None
 
 
 class SystemInfo(VolumioModel):

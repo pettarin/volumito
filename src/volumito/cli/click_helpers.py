@@ -952,6 +952,18 @@ def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..
     )(func)
 
 
+def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-a``/``--all`` option to the notifications unregister subcommand."""
+    return click.option(
+        "--all",
+        "-a",
+        "all_notifications",
+        is_flag=True,
+        default=False,
+        help="Unregister every URL registered on the Volumio host.",
+    )(func)
+
+
 def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-f``/``--audio-file-name-template`` option to the queue download subcommand."""
     return click.option(

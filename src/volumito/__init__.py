@@ -11,6 +11,8 @@ from volumito.clients import (
     CommandResponse,
     DeviceState,
     Label,
+    Notification,
+    Notifications,
     Place,
     PlayerState,
     Playlist,
@@ -18,6 +20,7 @@ from volumito.clients import (
     Queue,
     QueueTrack,
     Story,
+    SuccessResponse,
     SystemInfo,
     SystemVersion,
     VolumioAPIError,
@@ -32,7 +35,7 @@ from volumito.clients import (
     Zones,
 )
 
-__version__ = "0.0.31"
+__version__ = "0.0.32"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
@@ -44,12 +47,15 @@ __all__ = [
     "CollectionStatistics",
     "CommandResponse",
     "DeviceState",
+    "Notification",
+    "Notifications",
     "PlayerState",
     "Playlist",
     "Playlists",
     "Queue",
     "QueueTrack",
     "Story",
+    "SuccessResponse",
     "SystemInfo",
     "SystemVersion",
     "VolumioModel",

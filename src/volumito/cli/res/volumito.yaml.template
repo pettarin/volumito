@@ -114,6 +114,7 @@ output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
   # - collection-statistics
+  # - notifications-list
   # - playback-status
   # - playlist-list
   # - queue-list
@@ -155,6 +156,9 @@ output:
   verbose: false
 
   collection-statistics:
+    # Add your own overrides here
+
+  notifications-list:
     # Add your own overrides here
 
   playback-status:

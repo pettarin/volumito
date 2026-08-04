@@ -15,7 +15,14 @@ from volumito.clients import (
     Place,
     VolumioHostConfiguration,
 )
-from volumito.clients.models import CommandResponse, Playlist, Playlists, Queue, QueueTrack
+from volumito.clients.models import (
+    CommandResponse,
+    Notification,
+    Playlist,
+    Playlists,
+    Queue,
+    QueueTrack,
+)
 from volumito.clients.rest import (
     VolumioAPIError,
     VolumioConnectionError,
@@ -1541,6 +1548,234 @@ class TestVolumioRESTAPIClient:
         client.randomize(False)
 
         mock_send_command.assert_called_once_with("random&value=false")
+
+
+    def test_notifications_success(self, mocker: MockerFixture):
+        """Test successful notifications property access."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = ["http://192.168.1.100/receiver"]
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        data = client.notifications
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pushNotificationUrls", timeout=5.0
+        )
+        assert data.urls == ["http://192.168.1.100/receiver"]
+        assert data[0].url == "http://192.168.1.100/receiver"
+        assert "http://192.168.1.100/receiver" in data
+        # The listed URLs stay available on the model
+        assert data.raw == ["http://192.168.1.100/receiver"]
+
+    def test_notifications_connection_error(self, mocker: MockerFixture):
+        """Test the notifications property translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            _ = client.notifications
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_notifications_invalid_json(self, mocker: MockerFixture):
+        """Test the notifications property with an invalid JSON response."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.side_effect = ValueError("Invalid JSON")
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            _ = client.notifications
+
+        assert "Failed to parse JSON" in str(exc_info.value)
+
+    def test_notifications_non_list_response(self, mocker: MockerFixture):
+        """Test the notifications property rejects a payload that is not a JSON array."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"urls": []}
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            _ = client.notifications
+
+        assert "Expected JSON array from Volumio API, got dict" in str(exc_info.value)
+
+    def test_register_notification_success(self, mocker: MockerFixture):
+        """Test register_notification() posts the URL and reads the outcome."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"success": True}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.register_notification("http://192.168.1.100/receiver")
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pushNotificationUrls",
+            json={"url": "http://192.168.1.100/receiver"},
+            timeout=5.0,
+        )
+        assert result.success is True
+        assert result.is_success
+
+    def test_register_notification_accepts_a_notification(self, mocker: MockerFixture):
+        """Test register_notification() accepts a notification instead of a URL."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"success": True}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.register_notification(Notification.from_url("http://192.168.1.100/receiver"))
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pushNotificationUrls",
+            json={"url": "http://192.168.1.100/receiver"},
+            timeout=5.0,
+        )
+
+    def test_register_notification_without_a_url(self, mocker: MockerFixture):
+        """Test register_notification() rejects a notification carrying no URL."""
+        mock_post = mocker.patch("requests.post")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError) as exc_info:
+            client.register_notification(Notification())
+
+        assert "The notification has no URL" in str(exc_info.value)
+        mock_post.assert_not_called()
+
+    def test_register_notification_connection_error(self, mocker: MockerFixture):
+        """Test register_notification() translates a connection error."""
+        mocker.patch(
+            "requests.post",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.register_notification("http://192.168.1.100/receiver")
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_unregister_notification_success(self, mocker: MockerFixture):
+        """Test unregister_notification() deletes the URL and reads the outcome."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = '{"success": true}'
+        mock_response.json.return_value = {"success": True}
+        mock_delete = mocker.patch("requests.delete", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.unregister_notification("http://192.168.1.100/receiver")
+
+        mock_delete.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pushNotificationUrls",
+            json={"url": "http://192.168.1.100/receiver"},
+            timeout=5.0,
+        )
+        assert result.success is True
+
+    def test_unregister_notification_accepts_a_notification(self, mocker: MockerFixture):
+        """Test unregister_notification() accepts a notification instead of a URL."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = '{"success": true}'
+        mock_response.json.return_value = {"success": True}
+        mock_delete = mocker.patch("requests.delete", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.unregister_notification(Notification.from_url("http://192.168.1.100/receiver"))
+
+        mock_delete.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/pushNotificationUrls",
+            json={"url": "http://192.168.1.100/receiver"},
+            timeout=5.0,
+        )
+
+    def test_unregister_notification_refused(self, mocker: MockerFixture):
+        """Test unregister_notification() reads the error of a refused request."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = '{"error": "No such URL is present"}'
+        mock_response.json.return_value = {"error": "No such URL is present"}
+        mocker.patch("requests.delete", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.unregister_notification("http://192.168.1.100/receiver")
+
+        assert result.error == "No such URL is present"
+        assert not result.is_success
+
+    def test_unregister_notification_empty_response(self, mocker: MockerFixture):
+        """Test unregister_notification() accepts a response without a body."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = ""
+        mocker.patch("requests.delete", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.unregister_notification("http://192.168.1.100/receiver")
+
+        assert result.success is None
+        assert result.is_success
+        assert result.raw == {}
+
+    def test_unregister_notification_without_a_url(self, mocker: MockerFixture):
+        """Test unregister_notification() rejects a notification carrying no URL."""
+        mock_delete = mocker.patch("requests.delete")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError) as exc_info:
+            client.unregister_notification(Notification())
+
+        assert "The notification has no URL" in str(exc_info.value)
+        mock_delete.assert_not_called()
+
+    def test_unregister_notification_http_error(self, mocker: MockerFixture):
+        """Test unregister_notification() translates an HTTP error."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 500
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "500 Server Error"
+        )
+        mocker.patch("requests.delete", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.unregister_notification("http://192.168.1.100/receiver")
+
+        assert "HTTP error 500" in str(exc_info.value)
+
+    def test_unregister_notification_non_dict_response(self, mocker: MockerFixture):
+        """Test unregister_notification() rejects a payload that is not a JSON object."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.text = "[]"
+        mock_response.json.return_value = []
+        mocker.patch("requests.delete", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.unregister_notification("http://192.168.1.100/receiver")
+
+        assert "Expected JSON object from Volumio API, got list" in str(exc_info.value)
 
 
 class TestVolumioExceptions:

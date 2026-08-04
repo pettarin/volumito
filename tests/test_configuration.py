@@ -629,6 +629,7 @@ class TestBuildClickDefaultMap:
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"list": formatting},
+            "notifications": {"list": format_only},
             "playlist": {"list": format_only},
             "zones": {"list": formatting},
             "system": {"version": format_only, "info": format_only},

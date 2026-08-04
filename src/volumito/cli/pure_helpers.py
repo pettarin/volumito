@@ -332,17 +332,18 @@ def format_duration(seconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
-def format_playlists_as_table(names: list[Any]) -> str:
-    """Format the playlists as a readable table.
+def format_names_as_table(names: list[Any], heading: str) -> str:
+    """Format a list of names as a readable, numbered table.
 
     Args:
-        names: List of playlist names
+        names: List of names (e.g., the playlist names)
+        heading: The heading line of the table
 
     Returns:
-        A formatted string representation of the playlists
+        A formatted string representation of the names
     """
     lines = []
-    lines.append("Volumio Playlists")
+    lines.append(heading)
     lines.append("=" * 50)
 
     if not names:

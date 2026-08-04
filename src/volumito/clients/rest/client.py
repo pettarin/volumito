@@ -4,6 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
 
@@ -21,12 +22,15 @@ from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
     CollectionStatistics,
     CommandResponse,
+    Notification,
+    Notifications,
     PlayerState,
     Playlist,
     Playlists,
     Queue,
     QueueTrack,
     Story,
+    SuccessResponse,
     SystemInfo,
     SystemVersion,
     Zones,
@@ -50,6 +54,30 @@ class VolumioRESTAPIClient:
         self.host_configuration = host_configuration
         self.timeout = timeout
 
+    def _delete_json(
+        self, path: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """DELETE ``path`` and parse the response as a JSON object.
+
+        The Volumio API answers some DELETE requests with an empty body, which is
+        read as an empty JSON object.
+
+        Args:
+            path: The URL path (including any query string) to request
+            payload: The JSON body to send, for the requests carrying one
+
+        Returns:
+            The parsed JSON object, empty if the response has no body
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error or a non-object response
+        """
+        response = self._request(requests.delete, path, payload)
+        if not response.text.strip():
+            return {}
+        return self._json_object(response)
+
     def _get(self, path: str) -> requests.Response:
         """GET ``{rest_base_url}{path}``, translating request failures to Volumio errors.
 
@@ -63,33 +91,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an HTTP error response
         """
-        url = f"{self.host_configuration.rest_base_url}{path}"
-
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError as e:
-            raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at "
-                f"{self.host_configuration.rest_base_url}: {e}"
-            ) from e
-        except requests.exceptions.Timeout as e:
-            raise VolumioConnectionError(
-                f"Connection to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} "
-                f"timed out after {self.timeout} seconds: {e}"
-            ) from e
-        except requests.exceptions.HTTPError as e:
-            raise VolumioAPIError(
-                f"Volumio API returned HTTP error {response.status_code}: {e}"
-            ) from e
-        except requests.exceptions.RequestException as e:
-            raise VolumioConnectionError(
-                f"Request to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} failed: {e}"
-            ) from e
-
-        return response
+        return self._request(requests.get, path)
 
     def _get_json(self, path: str) -> dict[str, Any]:
         """GET ``path`` and parse the response as a JSON object.
@@ -104,21 +106,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error or a non-object response
         """
-        response = self._get(path)
-
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, dict):
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
+        return self._json_object(self._get(path))
 
     def _get_json_list(self, path: str) -> list[Any]:
         """GET ``path`` and parse the response as a JSON array.
@@ -133,21 +121,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error or a non-array response
         """
-        response = self._get(path)
-
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, list):
-            raise VolumioAPIError(
-                f"Expected JSON array from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
+        return self._json_array(self._get(path))
 
     def _get_text(self, path: str) -> str:
         """GET ``path`` and return the response body as text.
@@ -163,6 +137,89 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an HTTP error response
         """
         return self._get(path).text
+
+    @staticmethod
+    def _json_array(response: requests.Response) -> list[Any]:
+        """Parse a response body as a JSON array.
+
+        Args:
+            response: The response to parse
+
+        Returns:
+            The parsed JSON array
+
+        Raises:
+            VolumioAPIError: If the body is not parsable, or is not an array
+        """
+        data = VolumioRESTAPIClient._json_payload(response)
+
+        if not isinstance(data, list):
+            raise VolumioAPIError(
+                f"Expected JSON array from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
+    @staticmethod
+    def _json_object(response: requests.Response) -> dict[str, Any]:
+        """Parse a response body as a JSON object.
+
+        Args:
+            response: The response to parse
+
+        Returns:
+            The parsed JSON object
+
+        Raises:
+            VolumioAPIError: If the body is not parsable, or is not an object
+        """
+        data = VolumioRESTAPIClient._json_payload(response)
+
+        if not isinstance(data, dict):
+            raise VolumioAPIError(
+                f"Expected JSON object from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
+    @staticmethod
+    def _json_payload(response: requests.Response) -> object:
+        """Parse a response body as JSON, whatever its shape.
+
+        Args:
+            response: The response to parse
+
+        Returns:
+            The parsed JSON value
+
+        Raises:
+            VolumioAPIError: If the body is not parsable as JSON
+        """
+        try:
+            return response.json()
+        except ValueError as e:
+            raise VolumioAPIError(
+                f"Failed to parse JSON response from Volumio API: {e}"
+            ) from e
+
+    @staticmethod
+    def _notification_url(url: "str | Notification") -> str:
+        """Return the URL of a notification given as a string or as a model.
+
+        Args:
+            url: The URL, or the notification holding it
+
+        Returns:
+            The URL
+
+        Raises:
+            ValueError: If the given notification has no URL
+        """
+        if isinstance(url, Notification):
+            if url.url is None:
+                raise ValueError("The notification has no URL")
+            return url.url
+        return url
 
     def _plugin_endpoint(self, endpoint: str, data: dict[str, Any]) -> dict[str, Any]:
         """POST a plugin endpoint request to the Volumio instance.
@@ -198,10 +255,35 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error or a non-object response
         """
+        return self._json_object(self._request(requests.post, path, payload))
+
+    def _request(
+        self,
+        send: Callable[..., requests.Response],
+        path: str,
+        payload: dict[str, Any] | None = None,
+    ) -> requests.Response:
+        """Request ``{rest_base_url}{path}``, translating failures to Volumio errors.
+
+        Args:
+            send: The requests function performing the request (e.g., ``requests.get``)
+            path: The URL path (including any query string) to request
+            payload: The JSON body to send, for the requests carrying one
+
+        Returns:
+            The successful :class:`requests.Response`
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an HTTP error response
+        """
         url = f"{self.host_configuration.rest_base_url}{path}"
+        arguments: dict[str, Any] = {"timeout": self.timeout}
+        if payload is not None:
+            arguments["json"] = payload
 
         try:
-            response = requests.post(url, json=payload, timeout=self.timeout)
+            response = send(url, **arguments)
             response.raise_for_status()
         except requests.exceptions.ConnectionError as e:
             raise VolumioConnectionError(
@@ -224,19 +306,7 @@ class VolumioRESTAPIClient:
                 f"{self.host_configuration.rest_base_url} failed: {e}"
             ) from e
 
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, dict):
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
+        return response
 
     def _send_command(self, cmd: str) -> CommandResponse:
         """Send a playback control command to the Volumio instance.
@@ -251,45 +321,7 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        url = f"{self.host_configuration.rest_base_url}/api/v1/commands/?cmd={cmd}"
-
-        try:
-            response = requests.get(url, timeout=self.timeout)
-            response.raise_for_status()
-        except requests.exceptions.ConnectionError as e:
-            raise VolumioConnectionError(
-                f"Failed to connect to Volumio instance at "
-                f"{self.host_configuration.rest_base_url}: {e}"
-            ) from e
-        except requests.exceptions.Timeout as e:
-            raise VolumioConnectionError(
-                f"Connection to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} "
-                f"timed out after {self.timeout} seconds: {e}"
-            ) from e
-        except requests.exceptions.HTTPError as e:
-            raise VolumioAPIError(
-                f"Volumio API returned HTTP error {response.status_code}: {e}"
-            ) from e
-        except requests.exceptions.RequestException as e:
-            raise VolumioConnectionError(
-                f"Request to Volumio instance at "
-                f"{self.host_configuration.rest_base_url} failed: {e}"
-            ) from e
-
-        try:
-            data = response.json()
-        except ValueError as e:
-            raise VolumioAPIError(
-                f"Failed to parse JSON response from Volumio API: {e}"
-            ) from e
-
-        if not isinstance(data, dict):
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return CommandResponse.from_raw(data)
+        return CommandResponse.from_raw(self._get_json(f"/api/v1/commands/?cmd={cmd}"))
 
     def _status(self) -> str:
         """Return the playback status string from the current playback state.
@@ -587,6 +619,21 @@ class VolumioRESTAPIClient:
         """
         return self._send_command("next")
 
+    @property
+    def notifications(self) -> Notifications:
+        """The URLs registered to receive the push notifications of the Volumio instance.
+
+        Each access performs a fresh HTTP request.
+
+        Returns:
+            The registered notification URLs
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return Notifications.from_urls(self._get_json_list("/api/v1/pushNotificationUrls"))
+
     def pause(self) -> CommandResponse:
         """Pause playback.
 
@@ -719,6 +766,26 @@ class VolumioRESTAPIClient:
         if value is None:
             return self._send_command("random")
         return self._send_command(f"random&value={str(value).lower()}")
+
+    def register_notification(self, url: str | Notification) -> SuccessResponse:
+        """Register a URL to receive the push notifications of the Volumio instance.
+
+        The URL can be given as a string, or as one of the registered notifications
+        (e.g., ``client.register_notification(other_client.notifications[0])``).
+
+        Args:
+            url: The URL to register, or the notification holding it
+
+        Returns:
+            The response of the Volumio API
+
+        Raises:
+            ValueError: If the given notification has no URL
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        payload = {"url": self._notification_url(url)}
+        return SuccessResponse.from_raw(self._post_json("/api/v1/pushNotificationUrls", payload))
 
     def repeat(self, value: bool | None = None) -> CommandResponse:
         """Set or toggle the repeat mode.
@@ -873,6 +940,31 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an error response
         """
         return self._send_command("volume&volume=unmute")
+
+    def unregister_notification(self, url: str | Notification) -> SuccessResponse:
+        """Stop pushing the notifications of the Volumio instance to a URL.
+
+        The URL can be given as a string, or as one of the registered notifications
+        (e.g., ``client.unregister_notification(client.notifications[0])``).
+
+        Args:
+            url: The URL to unregister, or the notification holding it
+
+        Returns:
+            The response of the Volumio API
+
+        The URL travels in the request body: the Volumio API documents a ``?url=``
+        query string instead, but a Volumio 4 host answers that form with an error.
+
+        Raises:
+            ValueError: If the given notification has no URL
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        payload = {"url": self._notification_url(url)}
+        return SuccessResponse.from_raw(
+            self._delete_json("/api/v1/pushNotificationUrls", payload)
+        )
 
     @property
     def volume(self) -> int:

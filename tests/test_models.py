@@ -11,12 +11,15 @@ from volumito.clients.models import (
     CollectionStatistics,
     CommandResponse,
     DeviceState,
+    Notification,
+    Notifications,
     PlayerState,
     Playlist,
     Playlists,
     Queue,
     QueueTrack,
     Story,
+    SuccessResponse,
     SystemInfo,
     SystemVersion,
     Zone,
@@ -114,6 +117,70 @@ class TestCommandResponse:
 
         assert response.response == "volume Success"
         assert response.time == 1785775249407
+
+
+class TestNotifications:
+    """Test cases for the Notifications and Notification models."""
+
+    _URLS = [
+        "http://192.168.1.100/receiver",
+        "http://192.168.1.101/other",
+    ]
+
+    def test_parses_the_urls(self):
+        """Every listed URL becomes a notification, in the order reported."""
+        notifications = Notifications.from_urls(self._URLS)
+
+        assert notifications.urls == self._URLS
+        assert notifications.notifications[0].url == "http://192.168.1.100/receiver"
+
+    def test_keeps_the_listed_urls_as_raw(self):
+        """The collection keeps the array, and each notification its own URL."""
+        notifications = Notifications.from_urls(self._URLS)
+
+        assert notifications.raw == self._URLS
+        assert notifications[1].raw == "http://192.168.1.101/other"
+
+    def test_is_a_sequence_of_its_notifications(self):
+        """The collection can be measured, indexed, and iterated."""
+        notifications = Notifications.from_urls(self._URLS)
+
+        assert len(notifications) == 2
+        assert notifications[1].url == "http://192.168.1.101/other"
+        assert [notification.url for notification in notifications] == self._URLS
+
+    def test_membership_by_url_and_by_notification(self):
+        """Membership accepts either a URL or a notification."""
+        notifications = Notifications.from_urls(self._URLS)
+
+        assert "http://192.168.1.100/receiver" in notifications
+        assert "http://192.168.1.102/none" not in notifications
+        assert notifications[0] in notifications
+        assert Notification.from_url("http://192.168.1.102/none") not in notifications
+
+    def test_urls_skip_the_notifications_without_one(self):
+        """A notification without a URL is not listed among the URLs."""
+        notifications = Notifications.from_raw(
+            {"notifications": [{"url": "http://192.168.1.100/receiver"}, {}]}
+        )
+
+        assert len(notifications) == 2
+        assert notifications.urls == ["http://192.168.1.100/receiver"]
+
+    def test_no_notifications(self):
+        """An empty listing has no notifications."""
+        notifications = Notifications.from_urls([])
+
+        assert len(notifications) == 0
+        assert notifications.urls == []
+        assert notifications.raw == []
+
+    def test_notification_from_url(self):
+        """A notification built from a URL keeps it as its raw payload."""
+        notification = Notification.from_url("http://192.168.1.100/receiver")
+
+        assert notification.url == "http://192.168.1.100/receiver"
+        assert notification.raw == "http://192.168.1.100/receiver"
 
 
 class TestPlayerState:
@@ -390,6 +457,50 @@ class TestStory:
 
         assert story.value == "A story."
         assert story.raw == envelope
+
+
+class TestSuccessResponse:
+    """Test cases for the SuccessResponse model."""
+
+    def test_parses_a_successful_response(self):
+        """The success flag is parsed, and the payload is kept in raw."""
+        response = SuccessResponse.from_raw({"success": True})
+
+        assert response.success is True
+        assert response.error is None
+        assert response.is_success
+        assert response.raw == {"success": True}
+
+    def test_a_failed_response(self):
+        """A response denying the success is not a success."""
+        response = SuccessResponse.from_raw({"success": False})
+
+        assert response.success is False
+        assert not response.is_success
+
+    def test_a_reported_error_is_a_failure(self):
+        """A response carrying an error is not a success, flag or no flag."""
+        response = SuccessResponse.from_raw({"error": "No such URL is present"})
+
+        assert response.error == "No such URL is present"
+        assert response.success is None
+        assert not response.is_success
+
+    def test_a_response_reporting_nothing(self):
+        """A response reporting neither a flag nor an error is read as a success."""
+        response = SuccessResponse.from_raw({})
+
+        assert response.success is None
+        assert response.error is None
+        assert response.is_success
+
+    def test_an_unusable_flag_is_ignored(self):
+        """A success flag that is not a boolean is ignored, and stays in raw."""
+        response = SuccessResponse.from_raw({"success": "maybe"})
+
+        assert response.success is None
+        assert response.is_success
+        assert response.raw == {"success": "maybe"}
 
 
 class TestSystemInfo:

@@ -51,6 +51,11 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 )
 """Error message when the download destination options are combined."""
 
+MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR = (
+    "Option -a/--all and the URL argument are mutually exclusive."
+)
+"""Error message when "notifications unregister" combines --all with a URL."""
+
 OUTPUT_DIRECTORY_PLACEHOLDER = "{output_directory}"
 """Placeholder in manifest file paths replaced with the expanded output directory."""
 
@@ -153,3 +158,6 @@ STORY_ARTIST_ARGUMENT_ERROR = "Expected a NAME or MBID argument."
 
 STORY_CURRENT_TRACK_METADATA_ERROR = "The current track does not provide the required metadata."
 """Error message when the current track lacks the metadata a "story" subcommand needs."""
+
+UNREGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -a/--all option."
+"""Error message when "notifications unregister" is given neither a URL nor --all."""

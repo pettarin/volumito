@@ -33,6 +33,7 @@ from volumito.cli.click_helpers import (
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
     option_albumart_file_name_template,
+    option_all_notifications,
     option_audio_file_name_template,
     option_check_next_track,
     option_check_playlist_name,
@@ -77,10 +78,12 @@ from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
+    MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
+    UNREGISTER_ARGUMENT_ERROR,
 )
 from volumito.cli.pure_helpers import (
     display_position,
@@ -89,7 +92,7 @@ from volumito.cli.pure_helpers import (
     filter_queue_fields,
     filter_zones_fields,
     format_duration,
-    format_playlists_as_table,
+    format_names_as_table,
     format_queue_as_table,
     format_seek,
     format_zones_as_table,
@@ -104,6 +107,7 @@ from volumito.clients import (
     Label,
     Place,
     Scheme,
+    SuccessResponse,
     VolumioAPIError,
     VolumioConnectionError,
     VolumioHostConfiguration,
@@ -1519,7 +1523,7 @@ def playlist_list(ctx: click.Context, output_format: str) -> None:
     elif output_format == "json":
         output = json.dumps(names, indent=2)
     elif output_format == "table":
-        output = format_playlists_as_table(names)
+        output = format_names_as_table(names, "Volumio Playlists")
     else:  # pretty
         output = json.dumps(names, indent=4, ensure_ascii=False)
 
@@ -1801,6 +1805,95 @@ def story_place(
         output_format,
         heading="Place Story",
     )
+
+
+def _exit_on_notification_failure(
+    ctx: click.Context, response: SuccessResponse, action: str, url: str
+) -> None:
+    """Print what the Volumio host reported for a refused notification URL, and exit 1.
+
+    Args:
+        ctx: Click context object containing shared options
+        response: The response of the Volumio API
+        action: The action the host refused (e.g., "register")
+        url: The URL the action was requested for
+    """
+    if response.is_success:
+        return
+
+    if not ctx.obj["machine_readable"]:
+        detail = f" ({response.error})" if response.error else ""
+        click.echo(f"Error: the Volumio host did not {action} the URL: {url}{detail}", err=True)
+    sys.exit(1)
+
+
+@main.group()
+@click.pass_context
+def notifications(ctx: click.Context) -> None:
+    """Manage the URLs receiving the push notifications."""
+    pass
+
+
+@notifications.command("list")
+@click.pass_context
+@option_format
+def notifications_list(ctx: click.Context, output_format: str) -> None:
+    """List the URLs registered to receive the push notifications."""
+    urls = fetch_or_exit(ctx, lambda c: c.notifications.urls)
+
+    if output_format == "raw":
+        output = json.dumps(urls)
+    elif output_format == "json":
+        output = json.dumps(urls, indent=2)
+    elif output_format == "table":
+        output = format_names_as_table(urls, "Volumio Notification URLs")
+    else:  # pretty
+        output = json.dumps(urls, indent=4, ensure_ascii=False)
+
+    click.echo(output)
+
+
+@notifications.command("register")
+@click.pass_context
+@click.argument("url", type=str)
+def notifications_register(ctx: click.Context, url: str) -> None:
+    """Register URL to receive the push notifications."""
+    response = fetch_or_exit(ctx, lambda c: c.register_notification(url))
+    _exit_on_notification_failure(ctx, response, "register", url)
+
+    if not ctx.obj["machine_readable"]:
+        click.echo(f"Registered notification URL: {url}")
+
+
+@notifications.command("unregister")
+@click.pass_context
+@click.argument("url", required=False, default=None, type=str)
+@option_all_notifications
+def notifications_unregister(ctx: click.Context, url: str | None, all_notifications: bool) -> None:
+    """Stop pushing the notifications to URL.
+
+    With -a/--all, every registered URL is unregistered."""
+    if all_notifications and url is not None:
+        raise click.UsageError(MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR)
+    if not all_notifications and url is None:
+        raise click.UsageError(UNREGISTER_ARGUMENT_ERROR)
+
+    machine_readable = ctx.obj["machine_readable"]
+    targets = [url] if url is not None else fetch_or_exit(ctx, lambda c: c.notifications.urls)
+
+    if not targets:
+        if not machine_readable:
+            click.echo("No notification URL is registered, nothing to unregister")
+        return
+
+    outcomes = fetch_or_exit(
+        ctx, lambda c: [(target, c.unregister_notification(target)) for target in targets]
+    )
+
+    for target, response in outcomes:
+        _exit_on_notification_failure(ctx, response, "unregister", target)
+        if not machine_readable:
+            click.echo(f"Unregistered notification URL: {target}")
 
 
 # "info" is a top-level synonym for "system info"
