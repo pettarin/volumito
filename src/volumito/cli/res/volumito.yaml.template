@@ -109,20 +109,22 @@ miscellaneous:
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
 
-  # URL the Volumio host pushes the notifications to, instead of the detected one
-  listen-advertise-url: null
+
+notifications:
+  # URL the Volumio host pushes to, instead of the composed one
+  advertise-url: null
 
   # Path served by the local notification listener
-  listen-endpoint: /volumionotifications
+  endpoint: /volumionotifications
 
   # Port the local notification listener binds to
-  listen-port: 3003
+  port: 3003
 
-  # Register the listened URL on the Volumio host when it is not registered yet
-  listen-register-url: false
+  # When listening, register the URL if it is not registered yet
+  register-url: false
 
   # On exit, unregister the URL registered by the listener
-  listen-unregister-url-on-exit: true
+  unregister-url-on-exit: true
 
 
 output:

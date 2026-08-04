@@ -138,6 +138,8 @@ class NotificationListener:
         """
         self.bind_address = bind_address
         self.endpoint = endpoint
+        self.idle_timed_out = False
+        """Whether the last listen() ended with no notification within the idle timeout."""
         self.notifications: Queue[PushNotification] = Queue()
         self._port = port
         self._server: _NotificationServer | None = None
@@ -190,20 +192,25 @@ class NotificationListener:
         if self._server is None:
             raise RuntimeError("The notification listener is not serving")
 
+        self.idle_timed_out = False
         deadline = None if timeout is None else time.monotonic() + timeout
         yielded = 0
 
         while count is None or yielded < count:
             wait = idle_timeout
+            waiting_for_the_deadline = False
             if deadline is not None:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     return
-                wait = remaining if wait is None else min(wait, remaining)
+                if wait is None or remaining < wait:
+                    waiting_for_the_deadline = True
+                    wait = remaining
 
             try:
                 notification = self.notifications.get(timeout=wait)
             except Empty:
+                self.idle_timed_out = not waiting_for_the_deadline
                 return
 
             yield notification

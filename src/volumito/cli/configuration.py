@@ -236,11 +236,6 @@ Used for validation of the "output" and "downloads" sections.
 
 KEY_PARAM_OVERRIDES: dict[str, str] = {
     "format": "output_format",
-    "listen-advertise-url": "advertise_url",
-    "listen-endpoint": "endpoint",
-    "listen-port": "port",
-    "listen-register-url": "register_url",
-    "listen-unregister-url-on-exit": "unregister_url_on_exit",
 }
 """Config keys whose CLI parameter name differs from key.replace("-", "_")."""
 
@@ -261,23 +256,33 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "check-seek-position": [
         ["playback", "seek"],
     ],
-    "listen-advertise-url": [
+}
+"""The "miscellaneous" section holds the keys of options living on a specific command:
+key -> the default_map path(s) of the command(s) it targets.
+"""
+
+NOTIFICATIONS_KEY_PATHS: dict[str, list[list[str]]] = {
+    "advertise-url": [
         ["notifications", "listen"],
     ],
-    "listen-endpoint": [
+    "endpoint": [
+        ["notifications", "listen"],
+        ["notifications", "register"],
+        ["notifications", "unregister"],
+    ],
+    "port": [
+        ["notifications", "listen"],
+        ["notifications", "register"],
+        ["notifications", "unregister"],
+    ],
+    "register-url": [
         ["notifications", "listen"],
     ],
-    "listen-port": [
-        ["notifications", "listen"],
-    ],
-    "listen-register-url": [
-        ["notifications", "listen"],
-    ],
-    "listen-unregister-url-on-exit": [
+    "unregister-url-on-exit": [
         ["notifications", "listen"],
     ],
 }
-"""The "miscellaneous" section holds the keys of options living on a specific command:
+"""The "notifications" section holds the keys of the options of its subcommands:
 key -> the default_map path(s) of the command(s) it targets.
 """
 
@@ -294,6 +299,7 @@ SECTION_KEYS: dict[str, list[str]] = {
         "rest-api-sleep-before-next-call",
     ],
     "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
+    "notifications": list(NOTIFICATIONS_KEY_PATHS),
 }
 """Recognized flat section names and their allowed (hyphenated) keys, in display order.
 Keys mirror the CLI long options minus the leading "--".
@@ -410,6 +416,10 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
     # options of the top-level group
     for key, value in config.get("miscellaneous", {}).items():
         for command_path in MISCELLANEOUS_KEY_PATHS[key]:
+            _assign_nested(result, command_path, _param_name(key), value)
+
+    for key, value in config.get("notifications", {}).items():
+        for command_path in NOTIFICATIONS_KEY_PATHS[key]:
             _assign_nested(result, command_path, _param_name(key), value)
 
     output = config.get("output", {})

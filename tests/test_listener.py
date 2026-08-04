@@ -111,21 +111,37 @@ class TestNotificationListener:
     def test_idle_timeout_returns(self, listener: NotificationListener):
         """Listening returns when no notification arrives within the idle timeout."""
         assert list(listener.listen(idle_timeout=0.2)) == []
+        assert listener.idle_timed_out
 
     def test_timeout_returns(self, listener: NotificationListener):
-        """Listening returns when the total timeout expires."""
+        """Listening returns when the total timeout expires, which is not an idle timeout."""
         assert list(listener.listen(timeout=0.2)) == []
+        assert not listener.idle_timed_out
 
     def test_an_expired_timeout_returns_at_once(self, listener: NotificationListener):
         """A timeout that is already over returns without waiting for anything."""
         requests.post(_url(listener), json=STATE_NOTIFICATION, timeout=5)
 
         assert list(listener.listen(timeout=0)) == []
+        assert not listener.idle_timed_out
 
     def test_the_shorter_of_the_two_timeouts_applies(self, listener: NotificationListener):
         """With both timeouts given, the one expiring first ends the listening."""
         assert list(listener.listen(timeout=0.2, idle_timeout=5.0)) == []
+        assert not listener.idle_timed_out
+
         assert list(listener.listen(timeout=5.0, idle_timeout=0.2)) == []
+        assert listener.idle_timed_out
+
+    def test_a_reached_count_is_not_a_timeout(self, listener: NotificationListener):
+        """Reaching the count clears the idle timeout of an earlier listening."""
+        assert list(listener.listen(idle_timeout=0.2)) == []
+        assert listener.idle_timed_out
+
+        requests.post(_url(listener), json=STATE_NOTIFICATION, timeout=5)
+
+        assert len(list(listener.listen(count=1, idle_timeout=5.0))) == 1
+        assert not listener.idle_timed_out
 
     def test_listening_before_serving(self):
         """Listening on a listener that is not serving is a programming error."""

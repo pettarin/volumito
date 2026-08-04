@@ -36,6 +36,7 @@ from volumito.cli.click_helpers import (
     option_albumart_file_name_template,
     option_all_notifications,
     option_audio_file_name_template,
+    option_autocompose_url,
     option_check_next_track,
     option_check_playlist_name,
     option_count,
@@ -46,13 +47,13 @@ from volumito.cli.click_helpers import (
     option_file_name_template,
     option_format,
     option_idle_timeout,
-    option_listen_port,
     option_manifest_file,
     option_number_retries_next_track,
     option_only_tracks,
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
+    option_port,
     option_print_resulting_status,
     option_register_url,
     option_replace_characters_in_file_names,
@@ -83,14 +84,16 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.constants import (
     DEFAULT_VOLUMIO_VERSION,
-    LISTEN_ENDPOINT_ERROR,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
+    MUTUALLY_EXCLUSIVE_REGISTER_ERROR,
     MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR,
     NOTIFICATION_TIMESTAMP_FORMAT,
+    NOTIFICATIONS_ENDPOINT_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
+    REGISTER_ARGUMENT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
@@ -1913,12 +1916,37 @@ def _listen_and_print(
     if count is not None and received >= count:
         return
 
-    expired = timeout if timeout is not None else idle_timeout
-    if expired is not None:
-        if not machine_readable:
-            click.echo(f"Timed out after {expired:g} seconds")
-        if count is not None:
-            sys.exit(1)
+    if listener.idle_timed_out and idle_timeout is not None:
+        message = f"Timed out after {idle_timeout:g} seconds without notifications"
+    elif timeout is not None:
+        message = f"Timed out after {timeout:g} seconds"
+    else:
+        return
+
+    if not machine_readable:
+        click.echo(message)
+    if count is not None:
+        sys.exit(1)
+
+
+def _compose_notification_url(ctx: click.Context, port: int, endpoint: str) -> str:
+    """Return the URL of the local listener, as reachable by the Volumio host.
+
+    Args:
+        ctx: Click context object containing shared options
+        port: The port the local listener binds to
+        endpoint: The path the local listener serves
+
+    Returns:
+        The composed URL
+
+    Raises:
+        click.UsageError: If the endpoint does not start with a slash
+    """
+    if not endpoint.startswith("/"):
+        raise click.UsageError(NOTIFICATIONS_ENDPOINT_ERROR)
+
+    return fetch_or_exit(ctx, lambda c: receiver_url(c.host_configuration, port, endpoint))
 
 
 @main.group()
@@ -1949,7 +1977,7 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
 
 @notifications.command("listen")
 @click.pass_context
-@option_listen_port
+@option_port
 @option_endpoint
 @option_advertise_url
 @option_register_url
@@ -1975,13 +2003,8 @@ def notifications_listen(
     The URL the host pushes to must be registered: with --register-url it is
     registered if missing, and unregistered again on exit. A host pushes a burst
     of state notifications per change, often identical."""
-    if not endpoint.startswith("/"):
-        raise click.UsageError(LISTEN_ENDPOINT_ERROR)
-
     machine_readable = ctx.obj["machine_readable"]
-    url = advertise_url or fetch_or_exit(
-        ctx, lambda c: receiver_url(c.host_configuration, port, endpoint)
-    )
+    url = advertise_url or _compose_notification_url(ctx, port, endpoint)
 
     registered = fetch_or_exit(ctx, lambda c: url in c.notifications)
     if not registered and not register_url:
@@ -2013,31 +2036,68 @@ def notifications_listen(
 
 @notifications.command("register")
 @click.pass_context
-@click.argument("url", type=str)
-def notifications_register(ctx: click.Context, url: str) -> None:
-    """Register URL to receive the push notifications."""
-    response = fetch_or_exit(ctx, lambda c: c.register_notification(url))
-    _exit_on_notification_failure(ctx, response, "register", url)
+@click.argument("url", required=False, default=None, type=str)
+@option_autocompose_url
+@option_port
+@option_endpoint
+def notifications_register(
+    ctx: click.Context,
+    url: str | None,
+    autocompose_url: bool,
+    port: int,
+    endpoint: str,
+) -> None:
+    """Register URL to receive the push notifications.
+
+    With -A/--autocompose-url, the URL of the local listener is registered."""
+    if autocompose_url:
+        if url is not None:
+            raise click.UsageError(MUTUALLY_EXCLUSIVE_REGISTER_ERROR)
+        target = _compose_notification_url(ctx, port, endpoint)
+    elif url is None:
+        raise click.UsageError(REGISTER_ARGUMENT_ERROR)
+    else:
+        target = url
+
+    response = fetch_or_exit(ctx, lambda c: c.register_notification(target))
+    _exit_on_notification_failure(ctx, response, "register", target)
 
     if not ctx.obj["machine_readable"]:
-        click.echo(f"Registered notification URL: {url}")
+        click.echo(f"Registered notification URL: {target}")
 
 
 @notifications.command("unregister")
 @click.pass_context
 @click.argument("url", required=False, default=None, type=str)
 @option_all_notifications
-def notifications_unregister(ctx: click.Context, url: str | None, all_notifications: bool) -> None:
+@option_autocompose_url
+@option_port
+@option_endpoint
+def notifications_unregister(
+    ctx: click.Context,
+    url: str | None,
+    all_notifications: bool,
+    autocompose_url: bool,
+    port: int,
+    endpoint: str,
+) -> None:
     """Stop pushing the notifications to URL.
 
-    With -a/--all, every registered URL is unregistered."""
-    if all_notifications and url is not None:
+    With -A/--autocompose-url, the URL of the local listener is unregistered;
+    with -a/--all, every registered URL is."""
+    ways = [all_notifications, autocompose_url, url is not None]
+    if sum(ways) > 1:
         raise click.UsageError(MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR)
-    if not all_notifications and url is None:
+    if not any(ways):
         raise click.UsageError(UNREGISTER_ARGUMENT_ERROR)
 
     machine_readable = ctx.obj["machine_readable"]
-    targets = [url] if url is not None else fetch_or_exit(ctx, lambda c: c.notifications.urls)
+    if url is not None:
+        targets = [url]
+    elif autocompose_url:
+        targets = [_compose_notification_url(ctx, port, endpoint)]
+    else:
+        targets = fetch_or_exit(ctx, lambda c: c.notifications.urls)
 
     if not targets:
         if not machine_readable:

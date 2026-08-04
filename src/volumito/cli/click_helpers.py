@@ -987,6 +987,17 @@ def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-A``/``--autocompose-url`` option to a notifications subcommand."""
+    return click.option(
+        "--autocompose-url",
+        "-A",
+        is_flag=True,
+        default=False,
+        help="Act on the URL composed from the port and the endpoint.",
+    )(func)
+
+
 def option_check_next_track(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--check-next-track`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1049,7 +1060,7 @@ def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=DEFAULT_ENDPOINT,
         show_default=True,
-        help="Path served by the local listener.",
+        help="Path served by the local notification listener.",
     )(func)
 
 
@@ -1097,18 +1108,6 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
         type=float,
         default=None,
         help="Stop after this number of seconds without receiving a notification.",
-    )(func)
-
-
-def option_listen_port(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-p``/``--port`` option to the notifications listen subcommand."""
-    return click.option(
-        "--port",
-        "-p",
-        type=int,
-        default=DEFAULT_PORT,
-        show_default=True,
-        help="Port the local listener binds to.",
     )(func)
 
 
@@ -1183,6 +1182,18 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
         default=False,
         show_default=True,
         help="Overwrite the destination file if it already exists.",
+    )(func)
+
+
+def option_port(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--port`` option to a notifications subcommand."""
+    return click.option(
+        "--port",
+        "-p",
+        type=int,
+        default=DEFAULT_PORT,
+        show_default=True,
+        help="Port the local notification listener binds to.",
     )(func)
 
 

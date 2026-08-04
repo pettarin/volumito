@@ -25,9 +25,6 @@ DEFAULT_VOLUMIO_VERSION = "4"
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
 
-LISTEN_ENDPOINT_ERROR = "The endpoint must start with a slash."
-"""Error message when "notifications listen" is given an endpoint without a leading slash."""
-
 MPD_PORT_VOLUMIO_3 = 6599
 """MPD port used by Volumio 3 (major version below 4)."""
 
@@ -54,10 +51,18 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 )
 """Error message when the download destination options are combined."""
 
-MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR = (
-    "Option -a/--all and the URL argument are mutually exclusive."
+MUTUALLY_EXCLUSIVE_REGISTER_ERROR = (
+    "Option -A/--autocompose-url and the URL argument are mutually exclusive."
 )
-"""Error message when "notifications unregister" combines --all with a URL."""
+"""Error message when "notifications register" combines --autocompose-url with a URL."""
+
+MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR = (
+    "Options -a/--all, -A/--autocompose-url, and the URL argument are mutually exclusive."
+)
+"""Error message when "notifications unregister" combines its ways of naming a URL."""
+
+NOTIFICATIONS_ENDPOINT_ERROR = "The endpoint must start with a slash."
+"""Error message when a "notifications" subcommand is given an endpoint without a slash."""
 
 NOTIFICATION_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 """strftime format of the UTC time a notification was received, trimmed to milliseconds."""
@@ -87,6 +92,9 @@ OUTPUT_FORMATS = [
     "table",
 ]
 """Accepted values of the -F/--format option."""
+
+REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
+"""Error message when "notifications register" is given neither a URL nor --autocompose-url."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
@@ -165,5 +173,7 @@ STORY_ARTIST_ARGUMENT_ERROR = "Expected a NAME or MBID argument."
 STORY_CURRENT_TRACK_METADATA_ERROR = "The current track does not provide the required metadata."
 """Error message when the current track lacks the metadata a "story" subcommand needs."""
 
-UNREGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -a/--all option."
-"""Error message when "notifications unregister" is given neither a URL nor --all."""
+UNREGISTER_ARGUMENT_ERROR = (
+    "Expected a URL argument, or one of the -a/--all and -A/--autocompose-url options."
+)
+"""Error message when "notifications unregister" is given no way of naming a URL."""

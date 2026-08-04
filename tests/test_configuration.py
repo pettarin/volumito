@@ -403,11 +403,13 @@ class TestDefaultConfigurationTemplate:
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
-                "listen-advertise-url": None,
-                "listen-endpoint": "/volumionotifications",
-                "listen-port": 3003,
-                "listen-register-url": False,
-                "listen-unregister-url-on-exit": True,
+            },
+            "notifications": {
+                "advertise-url": None,
+                "endpoint": "/volumionotifications",
+                "port": 3003,
+                "register-url": False,
+                "unregister-url-on-exit": True,
             },
             "output": {
                 "fields": "SHORT",
