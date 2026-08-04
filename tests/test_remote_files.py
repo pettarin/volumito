@@ -14,7 +14,8 @@ from volumito.clients import (
     VOLUMIO_MNT_ROOT,
     VolumioHostConfiguration,
     VolumioSCPError,
-    copy_file_from_host,
+    copy_from_host,
+    copy_to_host,
     is_local_file_uri,
     remote_music_path,
 )
@@ -91,8 +92,8 @@ class TestLoadScp:
         assert "pip install volumito[scp]" in str(exc_info.value)
 
 
-class TestCopyFileFromHost:
-    """Test cases for the copy_file_from_host function."""
+class TestCopyFromHost:
+    """Test cases for the copy_from_host function."""
 
     def _mock_scp(self, mocker: MockerFixture):
         """Patch the optional dependencies with mocks, returning them."""
@@ -109,7 +110,9 @@ class TestCopyFileFromHost:
         paramiko, scp_client_class = self._mock_scp(mocker)
         host_configuration = VolumioHostConfiguration(host="volumio.local", ssh_port=2222)
 
-        copy_file_from_host(host_configuration, "/mnt/INTERNAL/a.flac", "/tmp/a.flac", 7.0)
+        copy_from_host(
+            host_configuration, "/mnt/INTERNAL/a.flac", "/tmp/a.flac", timeout=7.0
+        )
 
         ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
         ssh_client.load_system_host_keys.assert_called_once_with()
@@ -121,14 +124,14 @@ class TestCopyFileFromHost:
         )
         scp_client_class.assert_called_once_with(ssh_client.get_transport.return_value)
         scp_client_class.return_value.__enter__.return_value.get.assert_called_once_with(
-            "/mnt/INTERNAL/a.flac", "/tmp/a.flac"
+            "/mnt/INTERNAL/a.flac", "/tmp/a.flac", recursive=False
         )
 
     def test_the_configured_user_name(self, mocker: MockerFixture):
         """The SSH user name of the host configuration is the one used."""
         paramiko, _ = self._mock_scp(mocker)
 
-        copy_file_from_host(
+        copy_from_host(
             VolumioHostConfiguration(ssh_username="pi"), "/mnt/INTERNAL/a.flac", "/tmp/a.flac"
         )
 
@@ -139,7 +142,7 @@ class TestCopyFileFromHost:
         """The SSH password of the host configuration is the one used."""
         paramiko, _ = self._mock_scp(mocker)
 
-        copy_file_from_host(
+        copy_from_host(
             VolumioHostConfiguration(ssh_password="hunter2"),
             "/mnt/INTERNAL/a.flac",
             "/tmp/a.flac",
@@ -147,6 +150,30 @@ class TestCopyFileFromHost:
 
         ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
         assert ssh_client.connect.call_args.kwargs["password"] == "hunter2"
+
+    def test_a_recursive_copy(self, mocker: MockerFixture):
+        """A directory is copied with its content."""
+        _, scp_client_class = self._mock_scp(mocker)
+
+        copy_from_host(
+            VolumioHostConfiguration(), "/mnt/INTERNAL/music", "./music", recursive=True
+        )
+
+        scp_client_class.return_value.__enter__.return_value.get.assert_called_once_with(
+            "/mnt/INTERNAL/music", "./music", recursive=True
+        )
+
+    def test_a_missing_package(self, mocker: MockerFixture):
+        """The error of the lazy import is reported as it is."""
+        mocker.patch(
+            "volumito.clients.remote_files._load_scp",
+            side_effect=VolumioSCPError("needs the scp package"),
+        )
+
+        with pytest.raises(VolumioSCPError) as exc_info:
+            copy_from_host(VolumioHostConfiguration(), "/mnt/a.flac", "/tmp/a.flac")
+
+        assert str(exc_info.value) == "needs the scp package"
 
     def test_a_failed_copy(self, mocker: MockerFixture):
         """A failure of the SSH connection or of the copy is reported."""
@@ -156,7 +183,7 @@ class TestCopyFileFromHost:
         )
 
         with pytest.raises(VolumioSCPError) as exc_info:
-            copy_file_from_host(
+            copy_from_host(
                 VolumioHostConfiguration(host="volumio.local"),
                 "/mnt/INTERNAL/a.flac",
                 "/tmp/a.flac",
@@ -164,3 +191,71 @@ class TestCopyFileFromHost:
 
         assert "Failed to copy /mnt/INTERNAL/a.flac" in str(exc_info.value)
         assert "No route to host" in str(exc_info.value)
+
+
+class TestCopyToHost:
+    """Test cases for the copy_to_host function."""
+
+    def _mock_scp(self, mocker: MockerFixture):
+        """Patch the optional dependencies with mocks, returning them."""
+        paramiko = mocker.MagicMock()
+        scp_client_class = mocker.MagicMock()
+        mocker.patch(
+            "volumito.clients.remote_files._load_scp",
+            return_value=(paramiko, scp_client_class),
+        )
+        return paramiko, scp_client_class
+
+    def test_copies_the_file(self, mocker: MockerFixture):
+        """The file is sent over an SSH connection to the host."""
+        paramiko, scp_client_class = self._mock_scp(mocker)
+        host_configuration = VolumioHostConfiguration(host="volumio.local", ssh_port=2222)
+
+        copy_to_host(host_configuration, "/tmp/a.flac", "/mnt/INTERNAL/a.flac", timeout=7.0)
+
+        ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
+        ssh_client.load_system_host_keys.assert_called_once_with()
+        ssh_client.connect.assert_called_once_with(
+            "volumio.local", port=2222, username="volumio", password=None, timeout=7.0
+        )
+        scp_client_class.return_value.__enter__.return_value.put.assert_called_once_with(
+            "/tmp/a.flac", "/mnt/INTERNAL/a.flac", recursive=False
+        )
+
+    def test_a_recursive_copy(self, mocker: MockerFixture):
+        """A directory is copied with its content."""
+        _, scp_client_class = self._mock_scp(mocker)
+
+        copy_to_host(
+            VolumioHostConfiguration(), "./album", "/mnt/INTERNAL/music/album", recursive=True
+        )
+
+        scp_client_class.return_value.__enter__.return_value.put.assert_called_once_with(
+            "./album", "/mnt/INTERNAL/music/album", recursive=True
+        )
+
+    def test_a_failed_copy(self, mocker: MockerFixture):
+        """A failure of the SSH connection or of the copy is reported."""
+        paramiko, _ = self._mock_scp(mocker)
+        paramiko.SSHClient.return_value.__enter__.return_value.connect.side_effect = OSError(
+            "No route to host"
+        )
+
+        with pytest.raises(VolumioSCPError) as exc_info:
+            copy_to_host(
+                VolumioHostConfiguration(host="volumio.local"), "/tmp/a.flac", "/mnt/a.flac"
+            )
+
+        assert "Failed to copy /tmp/a.flac to the Volumio host" in str(exc_info.value)
+
+    def test_a_missing_package(self, mocker: MockerFixture):
+        """The error of the lazy import is reported as it is."""
+        mocker.patch(
+            "volumito.clients.remote_files._load_scp",
+            side_effect=VolumioSCPError("needs the scp package"),
+        )
+
+        with pytest.raises(VolumioSCPError) as exc_info:
+            copy_to_host(VolumioHostConfiguration(), "/tmp/a.flac", "/mnt/a.flac")
+
+        assert str(exc_info.value) == "needs the scp package"

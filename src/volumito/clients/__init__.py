@@ -38,7 +38,8 @@ from volumito.clients.mpd import VolumioMPDClient
 from volumito.clients.remote_files import (
     VOLUMIO_INTERNAL_ROOT,
     VOLUMIO_MNT_ROOT,
-    copy_file_from_host,
+    copy_from_host,
+    copy_to_host,
     is_local_file_uri,
     remote_music_path,
 )
@@ -72,7 +73,8 @@ __all__ = [
     "receiver_url",
     "VOLUMIO_INTERNAL_ROOT",
     "VOLUMIO_MNT_ROOT",
-    "copy_file_from_host",
+    "copy_from_host",
+    "copy_to_host",
     "is_local_file_uri",
     "remote_music_path",
     "VolumioHostConfiguration",

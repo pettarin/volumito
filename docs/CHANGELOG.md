@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.35] - 2026-08-04
+
+### Added
+
+- Command group `scp`, with `get` and `put` moving files and directories between this
+  machine and the Volumio host, with `-r`/`--recursive`
+
+### Changed
+
+- The library functions copying from and to the Volumio host are `copy_from_host` and
+  `copy_to_host`, both taking `recursive`
+
+
 ## [0.0.34] - 2026-08-04
 
 ### Added

@@ -21,7 +21,6 @@ from volumito import (
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
     VolumioStoryError,
-    receiver_url,
 )
 
 # replace with your Volumio host
@@ -108,16 +107,20 @@ else:
 # (which are a sequence of their notifications)
 for notification in client.notifications:
     print(notification.url)
-# http://192.168.1.100/receiver
+# http://192.168.1.100:3223/receiver1
 # ...
 
-# register a URL, and unregister one by notification or by URL
-client.register_notification("http://192.168.1.100/receiver")
+# unregister the first URL (receiver1)
 client.unregister_notification(client.notifications[0])
 
-# receive the notifications the host pushes: the listener serves the endpoint,
-# and receiver_url is the URL the host has to be told to push to
-url = receiver_url(host, port=3003, endpoint="/volumionotifications")
+# register three new URLs
+client.register_notification("http://192.168.1.100:3333/receiver2")
+client.register_notification("http://192.168.1.100:3333/receiver3")
+client.register_notification("http://192.168.1.100:3334/receiver4")
+
+# register a new URL, and start listening on it
+# (volumito_hostname is the machine running volumito)
+url = "http://volumito_hostname:3003/volumionotifications"
 client.register_notification(url)
 try:
     with NotificationListener(port=3003, endpoint="/volumionotifications") as listener:
