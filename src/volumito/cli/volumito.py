@@ -32,7 +32,6 @@ from volumito.cli.click_helpers import (
     fetch_state_or_exit,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
-    option_advertise_url,
     option_albumart_file_name_template,
     option_all_notifications,
     option_audio_file_name_template,
@@ -56,6 +55,7 @@ from volumito.cli.click_helpers import (
     option_port,
     option_print_resulting_status,
     option_register_url,
+    option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
     option_story_type,
@@ -1979,8 +1979,8 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
 @click.pass_context
 @option_port
 @option_endpoint
-@option_advertise_url
 @option_register_url
+@option_register_url_full
 @option_unregister_url_on_exit
 @option_count
 @option_timeout
@@ -1990,8 +1990,8 @@ def notifications_listen(
     ctx: click.Context,
     port: int,
     endpoint: str,
-    advertise_url: str | None,
     register_url: bool,
+    register_url_full: str | None,
     unregister_url_on_exit: bool,
     count: int | None,
     timeout: float | None,
@@ -2004,7 +2004,7 @@ def notifications_listen(
     registered if missing, and unregistered again on exit. A host pushes a burst
     of state notifications per change, often identical."""
     machine_readable = ctx.obj["machine_readable"]
-    url = advertise_url or _compose_notification_url(ctx, port, endpoint)
+    url = register_url_full or _compose_notification_url(ctx, port, endpoint)
 
     registered = fetch_or_exit(ctx, lambda c: url in c.notifications)
     if not registered and not register_url:

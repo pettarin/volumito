@@ -1236,14 +1236,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.32" in result.output
+        assert "volumito, version 0.0.33" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.32"'
+        assert result.output.strip() == '"0.0.33"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1252,7 +1252,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.32"'
+        assert result.output.strip() == '"0.0.33"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5439,8 +5439,8 @@ class TestNotificationsCommands:
         mock_client.register_notification.assert_not_called()
         mock_client.unregister_notification.assert_not_called()
 
-    def test_listen_advertise_url(self, runner: CliRunner, mocker: MockerFixture):
-        """--advertise-url replaces the detected URL."""
+    def test_listen_register_url_full(self, runner: CliRunner, mocker: MockerFixture):
+        """--register-url-full replaces the composed URL."""
         advertised = "http://receiver.lan:9000/hook"
         self._mock_client(mocker, urls=[advertised])
         listener_url = mocker.patch(
@@ -5451,7 +5451,7 @@ class TestNotificationsCommands:
         mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
 
         result = runner.invoke(
-            main, ["notifications", "listen", "--advertise-url", advertised]
+            main, ["notifications", "listen", "--register-url-full", advertised]
         )
 
         assert result.exit_code == 0
@@ -9643,10 +9643,10 @@ class TestConfigurationFile:
         config = self._write_config(
             tmp_path,
             "notifications:\n"
-            f"  advertise-url: {advertised}\n"
             "  endpoint: /hook\n"
             "  port: 9000\n"
             "  register-url: true\n"
+            f"  register-url-full: {advertised}\n"
             "  unregister-url-on-exit: false\n",
         )
 
@@ -10161,10 +10161,10 @@ class TestConfigurationCommands:
                     "check-seek-position": True,
                 },
                 "notifications": {
-                    "advertise-url": None,
                     "endpoint": "/volumionotifications",
                     "port": 3003,
                     "register-url": False,
+                    "register-url-full": None,
                     "unregister-url-on-exit": True,
                 },
                 "output": {

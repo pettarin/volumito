@@ -262,9 +262,6 @@ key -> the default_map path(s) of the command(s) it targets.
 """
 
 NOTIFICATIONS_KEY_PATHS: dict[str, list[list[str]]] = {
-    "advertise-url": [
-        ["notifications", "listen"],
-    ],
     "endpoint": [
         ["notifications", "listen"],
         ["notifications", "register"],
@@ -276,6 +273,9 @@ NOTIFICATIONS_KEY_PATHS: dict[str, list[list[str]]] = {
         ["notifications", "unregister"],
     ],
     "register-url": [
+        ["notifications", "listen"],
+    ],
+    "register-url-full": [
         ["notifications", "listen"],
     ],
     "unregister-url-on-exit": [

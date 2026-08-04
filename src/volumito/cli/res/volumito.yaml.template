@@ -111,9 +111,6 @@ miscellaneous:
 
 
 notifications:
-  # URL the Volumio host pushes to, instead of the composed one
-  advertise-url: null
-
   # Path served by the local notification listener
   endpoint: /volumionotifications
 
@@ -122,6 +119,9 @@ notifications:
 
   # When listening, register the URL if it is not registered yet
   register-url: false
+
+  # URL to register, overriding the one composed from the port and the endpoint
+  register-url-full: null
 
   # On exit, unregister the URL registered by the listener
   unregister-url-on-exit: true

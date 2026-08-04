@@ -405,10 +405,10 @@ class TestDefaultConfigurationTemplate:
                 "check-seek-position": True,
             },
             "notifications": {
-                "advertise-url": None,
                 "endpoint": "/volumionotifications",
                 "port": 3003,
                 "register-url": False,
+                "register-url-full": None,
                 "unregister-url-on-exit": True,
             },
             "output": {
