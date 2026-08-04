@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Download of a track stored on the Volumio host, copied over SCP
   (needs the `scp` extra: `pip install volumito[scp]`)
-- Options `--ssh-port` and `--ssh-username`
+- Options `--ssh-port`, `--ssh-username`, and `--ssh-password` (for a Volumio host that
+  authorizes no key of the current user)
 - Option `--allow-local-file-rename`, off by default, to name a track copied from the
   Volumio host after the file name template
 

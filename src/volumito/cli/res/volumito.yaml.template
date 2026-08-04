@@ -100,7 +100,8 @@ miscellaneous:
   # Embed track metadata and cover art into the downloaded audio file
   add-cover-and-metadata: true
 
-  # When copying local files (from /mnt/INTERNAL), allow renaming them after the audio file name template
+  # When copying local files (from /mnt),
+  # allow renaming them after the file name template
   allow-local-file-rename: false
 
   # Check that each queue-download track's metadata are current before downloading it
@@ -260,7 +261,15 @@ volumio:
   # URL scheme used to connect, one of http or https
   scheme: http
 
-  # SSH port of the Volumio host, used to copy local files (from /mnt/INTERNAL)
+  # SSH password of the Volumio host, used to copy local files (from /mnt)
+  #
+  # IMPORTANT: setting this value (or using the --ssh-password option on the command line)
+  #            leaves the password in clear text in this file or in the shell history;
+  #            prefer using a private key that is authorized to SSH into the Volumio host
+  #
+  ssh-password: null
+
+  # SSH port of the Volumio host, used to copy local files (from /mnt)
   ssh-port: 22
 
   # SSH user name on the Volumio host

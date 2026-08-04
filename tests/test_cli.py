@@ -3253,6 +3253,8 @@ class TestCLICommands:
         result = runner.invoke(
             main,
             [
+                "--ssh-password",
+                "hunter2",
                 "--ssh-port",
                 "2222",
                 "--ssh-username",
@@ -3266,6 +3268,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         host_configuration = copy.call_args.args[0]
+        assert host_configuration.ssh_password == "hunter2"
         assert host_configuration.ssh_port == 2222
         assert host_configuration.ssh_username == "pi"
 
@@ -10467,6 +10470,7 @@ class TestConfigurationCommands:
                     "scheme": "http",
                     "rest-api-port": 3000,
                     "mpd-port": 6600,
+                    "ssh-password": None,
                     "ssh-port": 22,
                     "ssh-username": "volumio",
                 },

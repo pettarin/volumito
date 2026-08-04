@@ -47,11 +47,12 @@ def copy_file_from_host(
     """Copy a file of the Volumio host to a local path, over SCP.
 
     The SSH connection is made with the user name and the port of the host
-    configuration, authenticating with the keys of the current user: the known hosts
-    of the system are loaded, and a host key not among them is accepted and added.
+    configuration, authenticating with the keys of the current user, or with the
+    password of the host configuration when it carries one: the known hosts of the
+    system are loaded, and a host key not among them is accepted and added.
 
     Args:
-        host_configuration: The host configuration (host, SSH port, and SSH user name)
+        host_configuration: The host configuration (host, SSH port, user name, password)
         remote_path: The path of the file on the Volumio host
         destination: The local path to copy the file to
         timeout: Connection timeout in seconds (default: 5.0)
@@ -69,6 +70,7 @@ def copy_file_from_host(
                 host_configuration.host,
                 port=host_configuration.ssh_port,
                 username=host_configuration.ssh_username,
+                password=host_configuration.ssh_password,
                 timeout=timeout,
             )
             with scp_client_class(ssh_client.get_transport()) as scp_client:

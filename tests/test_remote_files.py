@@ -117,7 +117,7 @@ class TestCopyFileFromHost:
             paramiko.AutoAddPolicy.return_value
         )
         ssh_client.connect.assert_called_once_with(
-            "volumio.local", port=2222, username="volumio", timeout=7.0
+            "volumio.local", port=2222, username="volumio", password=None, timeout=7.0
         )
         scp_client_class.assert_called_once_with(ssh_client.get_transport.return_value)
         scp_client_class.return_value.__enter__.return_value.get.assert_called_once_with(
@@ -134,6 +134,19 @@ class TestCopyFileFromHost:
 
         ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
         assert ssh_client.connect.call_args.kwargs["username"] == "pi"
+
+    def test_the_configured_password(self, mocker: MockerFixture):
+        """The SSH password of the host configuration is the one used."""
+        paramiko, _ = self._mock_scp(mocker)
+
+        copy_file_from_host(
+            VolumioHostConfiguration(ssh_password="hunter2"),
+            "/mnt/INTERNAL/a.flac",
+            "/tmp/a.flac",
+        )
+
+        ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
+        assert ssh_client.connect.call_args.kwargs["password"] == "hunter2"
 
     def test_a_failed_copy(self, mocker: MockerFixture):
         """A failure of the SSH connection or of the copy is reported."""

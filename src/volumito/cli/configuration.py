@@ -313,6 +313,7 @@ SECTION_KEYS: dict[str, list[str]] = {
         "scheme",
         "rest-api-port",
         "mpd-port",
+        "ssh-password",
         "ssh-port",
         "ssh-username",
     ],

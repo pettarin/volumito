@@ -191,20 +191,6 @@ from volumito.clients import (
     help="MPD port of the Volumio instance.",
 )
 @click.option(
-    "--ssh-port",
-    type=int,
-    default=22,
-    show_default=True,
-    help="SSH port of the Volumio instance, used to copy the files it stores.",
-)
-@click.option(
-    "--ssh-username",
-    type=str,
-    default="volumio",
-    show_default=True,
-    help="SSH user name on the Volumio instance.",
-)
-@click.option(
     "--mpd-timeout",
     type=float,
     default=5.0,
@@ -250,6 +236,29 @@ from volumito.clients import (
     help="URL scheme for connecting to the Volumio instance.",
 )
 @click.option(
+    "--ssh-password",
+    type=str,
+    default=None,
+    help=(
+        "SSH password of the Volumio instance; it stays in the shell history, "
+        "so a private key authorized on the host is preferable."
+    ),
+)
+@click.option(
+    "--ssh-port",
+    type=int,
+    default=22,
+    show_default=True,
+    help="SSH port of the Volumio instance, used to copy the files it stores.",
+)
+@click.option(
+    "--ssh-username",
+    type=str,
+    default="volumio",
+    show_default=True,
+    help="SSH user name on the Volumio instance.",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -268,6 +277,7 @@ def main(
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     scheme: Scheme,
+    ssh_password: str | None,
     ssh_port: int,
     ssh_username: str,
     verbose: bool,
@@ -280,6 +290,7 @@ def main(
         host=host,
         rest_api_port=rest_api_port,
         mpd_port=mpd_port,
+        ssh_password=ssh_password,
         ssh_port=ssh_port,
         ssh_username=ssh_username,
     )
