@@ -21,6 +21,7 @@ from volumito.cli.constants import (
 )
 from volumito.clients import VolumioHostConfiguration
 from volumito.clients.models import PlayerState, QueueTrack
+from volumito.clients.remote_files import is_local_file_uri
 
 
 def display_position(api_position: int, starting_at_one: bool) -> int:
@@ -653,6 +654,26 @@ def parse_time_to_seconds(text: str) -> int | None:
     for value in values:
         seconds = seconds * 60 + value
     return seconds
+
+
+def preserve_local_file_name(filename: str, uri: str) -> str:
+    """Return the file name to write a URI to, keeping the name a local file already has.
+
+    A file of the library of the Volumio host is copied as it is, so renaming it after a
+    template only makes its name worse: the directories of the rendered name are kept,
+    and its last component becomes the name the file has on the host. Anything fetched
+    over HTTP keeps the rendered name.
+
+    Args:
+        filename: The file name rendered from the template
+        uri: The URI the file is downloaded from
+
+    Returns:
+        The file name to use, relative to the output directory
+    """
+    if not is_local_file_uri(uri):
+        return filename
+    return os.path.join(os.path.dirname(filename), os.path.basename(uri))
 
 
 def queue_album_volumes(tracks: list[QueueTrack], replacement: str) -> list[str]:

@@ -59,6 +59,7 @@ from volumito.cli.pure_helpers import (
     format_duration,
     parse_time_to_seconds,
     parse_track_selection,
+    preserve_local_file_name,
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
@@ -72,7 +73,11 @@ from volumito.clients import (
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
+    VolumioSCPError,
     VolumioStoryError,
+    copy_file_from_host,
+    is_local_file_uri,
+    remote_music_path,
 )
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
@@ -296,6 +301,7 @@ def _materialize_albumart(
     timeout: float,
     machine_readable: bool,
     downloaded_covers: dict[str, str],
+    host_configuration: VolumioHostConfiguration,
 ) -> str | None:
     """Place the album art at ``cover_path``, downloading or copying it.
 
@@ -311,6 +317,7 @@ def _materialize_albumart(
         timeout: Request timeout in seconds
         machine_readable: Whether machine-readable mode is active (suppresses messages)
         downloaded_covers: Cache of album-art URIs already downloaded, updated in place
+        host_configuration: The Volumio host configuration (passed to the download)
 
     Returns:
         The cover file path, or None if the download or the copy failed
@@ -328,8 +335,8 @@ def _materialize_albumart(
         if cached is not None and os.path.exists(cached):
             shutil.copyfile(cached, cover_path)
         else:
-            fetch_uri_to_file(albumart_uri, cover_path, timeout)
-    except (requests.exceptions.RequestException, OSError) as e:
+            fetch_uri_to_file(albumart_uri, cover_path, timeout, host_configuration)
+    except (requests.exceptions.RequestException, VolumioSCPError, OSError) as e:
         if not machine_readable:
             click.echo(f"\nWarning: cannot download album art to {cover_path} ({e})", err=True)
         return None
@@ -488,7 +495,13 @@ def download_queue_albumart(
             click.echo("\nWarning: cannot determine a file name for the album art", err=True)
         return None
     result = _materialize_albumart(
-        albumart_uri, cover_path, overwrite, timeout, machine_readable, downloaded_covers
+        albumart_uri,
+        cover_path,
+        overwrite,
+        timeout,
+        machine_readable,
+        downloaded_covers,
+        host_configuration,
     )
 
     # For a multi-volume track, also place the cover in the album directory itself
@@ -502,6 +515,7 @@ def download_queue_albumart(
                 timeout,
                 machine_readable,
                 downloaded_covers,
+                host_configuration,
             )
     return result
 
@@ -545,13 +559,13 @@ def download_queue_track(
         parent = os.path.dirname(destination)
         if parent:
             os.makedirs(parent, exist_ok=True)
-        fetch_uri_to_file(uri, destination, timeout)
+        fetch_uri_to_file(uri, destination, timeout, host_configuration)
         if create_manifest:
             write_download_manifest(
                 destination, uri, state, host_configuration, "track", "audio",
                 add_cover_and_metadata, extra_state,
             )
-    except (requests.exceptions.RequestException, OSError) as e:
+    except (requests.exceptions.RequestException, VolumioSCPError, OSError) as e:
         return "error", str(e)
     return "downloaded", None
 
@@ -574,6 +588,7 @@ def download_uri_to(
     kind: str,
     position_starting_at_one: bool = True,
     add_cover_and_metadata: bool | None = None,
+    allow_local_file_rename: bool = False,
     replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
 ) -> str:
@@ -606,6 +621,8 @@ def download_uri_to(
         kind: The manifest ``kind`` value (e.g., "audio" or "albumart")
         position_starting_at_one: Whether the template ``position`` key starts at one
         add_cover_and_metadata: Recorded in the manifest when not None (audio downloads only)
+        allow_local_file_rename: Whether a file copied from the Volumio host is renamed
+            after the template, instead of keeping the name it has there
         replace_characters_in_file_names: Characters replaced in the rendered file name
         replace_characters_in_file_names_with: Replacement for the replaced characters
 
@@ -628,6 +645,8 @@ def download_uri_to(
             if not machine_readable:
                 click.echo("\nError: cannot determine a file name for the download", err=True)
             sys.exit(1)
+        if not allow_local_file_rename:
+            filename = preserve_local_file_name(filename, uri)
         destination = os.path.join(output_directory, filename)  # type: ignore[arg-type]
 
     if not overwrite and os.path.exists(destination):
@@ -645,7 +664,7 @@ def download_uri_to(
     try:
         if output_directory is not None:
             os.makedirs(output_directory, exist_ok=True)
-        fetch_uri_to_file(uri, destination, timeout)
+        fetch_uri_to_file(uri, destination, timeout, host_configuration)
 
         if not machine_readable:
             click.echo(f"\n{label.capitalize()} successfully downloaded to {destination}")
@@ -657,7 +676,7 @@ def download_uri_to(
             if verbose and not machine_readable:
                 click.echo(f"\nManifest written to {manifest_path}...", err=True)
 
-    except requests.exceptions.RequestException as e:
+    except (requests.exceptions.RequestException, VolumioSCPError) as e:
         if not machine_readable:
             click.echo(f"\nDownload error: {e}", err=True)
         sys.exit(1)
@@ -895,18 +914,32 @@ def fetch_state_or_exit(ctx: click.Context) -> PlayerState:
     return fetch_or_exit(ctx, lambda c: c.state)
 
 
-def fetch_uri_to_file(uri: str, destination: str, timeout: float) -> None:
+def fetch_uri_to_file(
+    uri: str,
+    destination: str,
+    timeout: float,
+    host_configuration: VolumioHostConfiguration,
+) -> None:
     """Stream ``uri`` into the ``destination`` file.
+
+    A URI naming a file of the Volumio host library (one without a scheme) is copied
+    from the host over SCP; everything else is fetched over HTTP.
 
     Args:
         uri: The URI to download
         destination: The destination file path
         timeout: Request timeout in seconds
+        host_configuration: The Volumio host configuration (used by the SCP copy)
 
     Raises:
         requests.exceptions.RequestException: If the HTTP request fails
+        VolumioSCPError: If the file cannot be copied from the Volumio host
         OSError: If the destination file cannot be written
     """
+    if is_local_file_uri(uri):
+        copy_file_from_host(host_configuration, remote_music_path(uri), destination, timeout)
+        return
+
     response = requests.get(uri, timeout=timeout, stream=True)
     response.raise_for_status()
 
@@ -962,6 +995,16 @@ def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Unregister every URL registered on the Volumio host.",
+    )(func)
+
+
+def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--allow-local-file-rename`` option to an audio download subcommand."""
+    return click.option(
+        "--allow-local-file-rename/--no-allow-local-file-rename",
+        default=False,
+        show_default=True,
+        help="Rename a file copied from the Volumio host after the file name template.",
     )(func)
 
 

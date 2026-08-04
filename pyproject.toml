@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "volumito"
-version = "0.0.33"
+version = "0.0.34"
 description = "Python client library and CLI tool for Volumio"
 authors = [
     {name = "Alberto Pettarin", email = "alberto@albertopettarin.it"}
@@ -35,7 +35,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+scp = [
+    "scp>=0.14.0",
+]
 dev = [
+    "volumito[scp]",
     "build>=1.3.0",
     "coverage>=7.0.0",
     "mypy>=1.13.0",

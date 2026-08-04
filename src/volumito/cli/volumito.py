@@ -34,6 +34,7 @@ from volumito.cli.click_helpers import (
     option_add_cover_and_metadata,
     option_albumart_file_name_template,
     option_all_notifications,
+    option_allow_local_file_rename,
     option_audio_file_name_template,
     option_autocompose_url,
     option_check_next_track,
@@ -112,6 +113,7 @@ from volumito.cli.pure_helpers import (
     format_termination_conditions,
     format_zones_as_table,
     manifest_matches_queue,
+    preserve_local_file_name,
     queue_album_volumes,
     queue_track_metadata_current,
     rebase_queue_positions,
@@ -130,6 +132,7 @@ from volumito.clients import (
     VolumioHostConfiguration,
     VolumioMPDClient,
     VolumioRESTAPIClient,
+    is_local_file_uri,
     receiver_url,
 )
 
@@ -233,6 +236,29 @@ from volumito.clients import (
     help="URL scheme for connecting to the Volumio instance.",
 )
 @click.option(
+    "--ssh-password",
+    type=str,
+    default=None,
+    help=(
+        "SSH password of the Volumio instance; it stays in the shell history, "
+        "so a private key authorized on the host is preferable."
+    ),
+)
+@click.option(
+    "--ssh-port",
+    type=int,
+    default=22,
+    show_default=True,
+    help="SSH port of the Volumio instance, used to copy the files it stores.",
+)
+@click.option(
+    "--ssh-username",
+    type=str,
+    default="volumio",
+    show_default=True,
+    help="SSH user name on the Volumio instance.",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -251,6 +277,9 @@ def main(
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     scheme: Scheme,
+    ssh_password: str | None,
+    ssh_port: int,
+    ssh_username: str,
     verbose: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""
@@ -261,6 +290,9 @@ def main(
         host=host,
         rest_api_port=rest_api_port,
         mpd_port=mpd_port,
+        ssh_password=ssh_password,
+        ssh_port=ssh_port,
+        ssh_username=ssh_username,
     )
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["mpd_timeout"] = mpd_timeout
@@ -305,11 +337,12 @@ def configuration(ctx: click.Context) -> None:
 )
 @click.option(
     "--output-file",
-    "-f",
+    "-o",
     type=str,
     default=None,
     help="Exact path of the configuration file to create.",
 )
+@option_overwrite_existing_files
 @click.option(
     "--volumio-version",
     "-V",
@@ -322,13 +355,12 @@ def configuration(ctx: click.Context) -> None:
         "(6600 for Volumio >= 4, 6599 otherwise)."
     ),
 )
-@option_overwrite_existing_files
 def configuration_create(
     ctx: click.Context,
     output_directory: str | None,
     output_file: str | None,
-    volumio_version: int,
     overwrite_existing_files: bool,
+    volumio_version: int,
 ) -> None:
     """Create a configuration file with all known keys set to their default values."""
     machine_readable = ctx.obj["machine_readable"]
@@ -736,6 +768,7 @@ def track_info(
 @track.command()
 @click.pass_context
 @option_add_cover_and_metadata
+@option_allow_local_file_rename
 @option_create_download_manifest
 @option_file_name_template
 @option_output_directory
@@ -746,6 +779,7 @@ def track_info(
 def audio(
     ctx: click.Context,
     add_cover_and_metadata: bool,
+    allow_local_file_rename: bool,
     create_download_manifest: bool,
     file_name_template: str,
     output_directory: str | None,
@@ -797,6 +831,16 @@ def audio(
 
             # Download the file if -o/--output-file or -d/--output-directory is specified
             if output_file is not None or output_directory is not None:
+                if is_local_file_uri(uri):
+                    embed_tags = False
+                    if verbose and not machine_readable:
+                        click.echo(
+                            "\nNot embedding the album art and the metadata, "
+                            "to preserve the file being copied...",
+                            err=True,
+                        )
+                else:
+                    embed_tags = add_cover_and_metadata
                 destination = download_uri_to(
                     uri,
                     output_file,
@@ -814,7 +858,8 @@ def audio(
                     "track",
                     "audio",
                     ctx.obj["position_starting_at_one"],
-                    add_cover_and_metadata,
+                    embed_tags,
+                    allow_local_file_rename,
                     replace_characters_in_file_names=replace_characters_in_file_names,
                     replace_characters_in_file_names_with=(
                         replace_characters_in_file_names_with
@@ -822,7 +867,7 @@ def audio(
                 )
 
                 # Embed track metadata and cover art into the downloaded file
-                if add_cover_and_metadata:
+                if embed_tags:
                     embed_track_tags(
                         destination,
                         state,
@@ -1048,6 +1093,7 @@ def _download_summary(entries: list[dict[str, Any]], selected: set[int], errors:
 @click.pass_context
 @option_add_cover_and_metadata
 @option_albumart_file_name_template
+@option_allow_local_file_rename
 @option_audio_file_name_template
 @option_check_next_track
 @option_create_download_manifest
@@ -1063,6 +1109,7 @@ def queue_download(
     ctx: click.Context,
     add_cover_and_metadata: bool,
     albumart_file_name_template: str,
+    allow_local_file_rename: bool,
     audio_file_name_template: str,
     check_next_track: bool,
     create_download_manifest: bool,
@@ -1306,6 +1353,18 @@ def queue_download(
                             status = "error"
                             detail = "cannot determine a file name for the download"
                         else:
+                            if not allow_local_file_rename:
+                                filename = preserve_local_file_name(filename, uri)
+                            if is_local_file_uri(uri):
+                                embed_tags = False
+                                if verbose and not machine_readable:
+                                    click.echo(
+                                        "Not embedding the album art and the metadata, "
+                                        "to preserve the file being copied",
+                                        err=True,
+                                    )
+                            else:
+                                embed_tags = add_cover_and_metadata
                             destination = os.path.join(run_directory, filename)
                             base = os.path.realpath(run_directory)
                             if os.path.commonpath([base, os.path.realpath(destination)]) != base:
@@ -1322,10 +1381,10 @@ def queue_download(
                                 create_download_manifest,
                                 state,
                                 host_configuration,
-                                add_cover_and_metadata,
+                                embed_tags,
                                 extra_state,
                             )
-                            if status == "downloaded" and add_cover_and_metadata:
+                            if status == "downloaded" and embed_tags:
                                 embed_track_tags(
                                     destination,
                                     state,
@@ -1579,6 +1638,7 @@ def playlist_play(
 @click.argument("name", type=str)
 @option_add_cover_and_metadata
 @option_albumart_file_name_template
+@option_allow_local_file_rename
 @option_audio_file_name_template
 @option_check_next_track
 @option_check_playlist_name
@@ -1597,6 +1657,7 @@ def playlist_download(
     name: str,
     add_cover_and_metadata: bool,
     albumart_file_name_template: str,
+    allow_local_file_rename: bool,
     audio_file_name_template: str,
     check_next_track: bool,
     check_playlist_name: bool,
@@ -1651,6 +1712,7 @@ def playlist_download(
         queue_download,
         add_cover_and_metadata=add_cover_and_metadata,
         albumart_file_name_template=albumart_file_name_template,
+        allow_local_file_rename=allow_local_file_rename,
         audio_file_name_template=audio_file_name_template,
         check_next_track=check_next_track,
         create_download_manifest=create_download_manifest,

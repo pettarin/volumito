@@ -95,22 +95,18 @@ class VolumioMPDClient:
         return dict(current_song)
 
     def get_track_uri(self) -> str:
-        """Get the URI of the current track with localhost replaced by actual host.
+        """Get the URI of the current track, as the Volumio host reports it.
+
+        A track of the library of the host is reported by path, without a scheme
+        (e.g., ``INTERNAL/music/album/01-track.flac``); everything else carries one.
 
         Returns:
-            The track URI with localhost/127.0.0.1 replaced by the actual host
+            The URI of the current track
 
         Raises:
             VolumioConnectionError: If not connected or no track is playing
         """
-        current_song = self.get_current_song()
-        uri = str(current_song["file"])
-
-        # Replace localhost or 127.0.0.1 with the actual host
-        uri = uri.replace("127.0.0.1", self.host_configuration.host)
-        uri = uri.replace("localhost", self.host_configuration.host)
-
-        return uri
+        return str(self.get_current_song()["file"])
 
     def __enter__(self) -> "VolumioMPDClient":
         """Context manager entry - connects to MPD.

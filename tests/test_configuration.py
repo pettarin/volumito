@@ -473,6 +473,9 @@ class TestDefaultConfigurationTemplate:
                 "scheme": "http",
                 "rest-api-port": 3000,
                 "mpd-port": 6600,
+                "ssh-password": None,
+                "ssh-port": 22,
+                "ssh-username": "volumio",
             },
             "timeouts": {
                 "rest-api-timeout": 5.0,
@@ -481,6 +484,7 @@ class TestDefaultConfigurationTemplate:
             },
             "miscellaneous": {
                 "add-cover-and-metadata": True,
+                "allow-local-file-rename": False,
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,

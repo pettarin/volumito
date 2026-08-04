@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.34] - 2026-08-04
+
+### Added
+
+- Download of a track stored on the Volumio host, copied over SCP
+  (needs the `scp` extra: `pip install volumito[scp]`)
+- Options `--ssh-port`, `--ssh-username`, and `--ssh-password` (for a Volumio host that
+  authorizes no key of the current user)
+- Option `--allow-local-file-rename`, off by default, to name a track copied from the
+  Volumio host after the file name template
+
+### Changed
+
+- The MPD client returns the track URI as the Volumio host reports it
+- A track copied from the Volumio host is left untouched, keeping the tags and the name
+  it has there
+- Option `-f`/`--output-file` of `configuration create` is now `-o`/`--output-file`, as in
+  the other commands
+
+
 ## [0.0.33] - 2026-08-04
 
 ### Added

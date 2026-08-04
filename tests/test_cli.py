@@ -53,6 +53,7 @@ from volumito.cli.pure_helpers import (
     manifest_matches_queue,
     parse_time_to_seconds,
     parse_track_selection,
+    preserve_local_file_name,
     queue_album_volumes,
     queue_track_metadata_current,
     rebase_queue_positions,
@@ -61,6 +62,7 @@ from volumito.cli.pure_helpers import (
 )
 from volumito.cli.volumito import main
 from volumito.clients import Album, Artist, Label, Place
+from volumito.clients.errors import VolumioSCPError
 from volumito.clients.models import (
     CollectionStatistics,
     Notifications,
@@ -1002,6 +1004,34 @@ class TestRenderOutputFilename:
             )
 
 
+class TestPreserveLocalFileName:
+    """Test cases for the preserve_local_file_name function."""
+
+    def test_a_local_file_keeps_its_name(self):
+        """The rendered name of a file of the host library becomes the name it has there."""
+        assert (
+            preserve_local_file_name("000___8_-_Luiza.mp3", "INTERNAL/music/elegy/08-Luiza.mp3")
+            == "08-Luiza.mp3"
+        )
+
+    def test_the_rendered_directories_are_kept(self):
+        """Only the last component of the rendered name is replaced."""
+        assert preserve_local_file_name(
+            "Aeon_Trio/Elegy/000___8_-_Luiza.mp3", "INTERNAL/music/elegy/08-Luiza.mp3"
+        ) == os.path.join("Aeon_Trio/Elegy", "08-Luiza.mp3")
+
+    def test_a_file_without_an_extension(self):
+        """A name without an extension is kept as it is."""
+        assert preserve_local_file_name("001___Song.flac", "INTERNAL/music/track") == "track"
+
+    def test_a_uri_fetched_over_http(self):
+        """A URI carrying a scheme keeps the rendered name."""
+        assert (
+            preserve_local_file_name("001___Song.flac", "http://volumio.local/x/track.flac")
+            == "001___Song.flac"
+        )
+
+
 class TestSanitizeFilenameComponent:
     """Test cases for the sanitize_filename_component function."""
 
@@ -1288,14 +1318,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.33" in result.output
+        assert "volumito, version 0.0.34" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.33"'
+        assert result.output.strip() == '"0.0.34"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1304,7 +1334,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.33"'
+        assert result.output.strip() == '"0.0.34"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3082,6 +3112,165 @@ class TestCLICommands:
         assert "successfully downloaded" in result.output
         mock_get.assert_called_once()
         mock_open.assert_called_once_with("/tmp/my_track.flac", "wb")
+
+    def test_audio_of_a_file_of_the_host_library(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A URI without a scheme is copied from the Volumio host over SCP."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+
+        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+
+        assert result.exit_code == 0
+        assert "successfully downloaded to /tmp/track.flac" in result.output
+        mock_get.assert_not_called()
+        assert copy.call_args.args[1:3] == (
+            "/mnt/INTERNAL/music/album/01-track.flac",
+            "/tmp/track.flac",
+        )
+        assert copy.call_args.args[0].ssh_username == "volumio"
+
+    def test_audio_of_a_file_of_the_host_library_keeps_its_name(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A copied file keeps the name it has on the host, and is not retagged."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "8 - Luiza"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/elegy/08-Luiza.mp3")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
+
+        result = runner.invoke(main, ["--verbose", "track", "audio", "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert copy.call_args.args[2] == str(tmp_path / "08-Luiza.mp3")
+        embed.assert_not_called()
+        assert (
+            "Not embedding the album art and the metadata, to preserve the file being copied"
+            in result.output
+        )
+
+    def test_audio_of_a_file_of_the_host_library_renamed(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--allow-local-file-rename names the copy after the template."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "8 - Luiza"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/elegy/08-Luiza.mp3")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
+
+        result = runner.invoke(
+            main,
+            [
+                "track",
+                "audio",
+                "-d",
+                str(tmp_path),
+                "--allow-local-file-rename",
+                "-f",
+                "{title}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert copy.call_args.args[2] == str(tmp_path / "8_-_Luiza.mp3")
+        # The file is still left untouched: only its name follows the template
+        embed.assert_not_called()
+
+    def test_audio_fetched_over_http_is_still_tagged(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A track fetched over HTTP keeps the templated name and the embedded tags."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [b"audio"]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
+
+        result = runner.invoke(
+            main, ["track", "audio", "-d", str(tmp_path), "-f", "{title}.{extension}"]
+        )
+
+        assert result.exit_code == 0
+        assert (tmp_path / "Test_Song.flac").exists()
+        embed.assert_called_once()
+
+    def test_audio_of_a_file_of_the_host_library_failing(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A failed copy exits 1, reporting what went wrong."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
+        mocker.patch(
+            "volumito.cli.click_helpers.copy_file_from_host",
+            side_effect=VolumioSCPError("Authentication failed"),
+        )
+
+        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+
+        assert result.exit_code == 1
+        assert "Download error: Authentication failed" in result.output
+
+    def test_audio_with_the_ssh_options(self, runner: CliRunner, mocker: MockerFixture):
+        """The SSH options reach the copy through the host configuration."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+
+        result = runner.invoke(
+            main,
+            [
+                "--ssh-password",
+                "hunter2",
+                "--ssh-port",
+                "2222",
+                "--ssh-username",
+                "pi",
+                "track",
+                "audio",
+                "-o",
+                "/tmp/track.flac",
+            ],
+        )
+
+        assert result.exit_code == 0
+        host_configuration = copy.call_args.args[0]
+        assert host_configuration.ssh_password == "hunter2"
+        assert host_configuration.ssh_port == 2222
+        assert host_configuration.ssh_username == "pi"
 
     def test_audio_with_output_file_verbose(
         self, runner: CliRunner, mocker: MockerFixture
@@ -6777,6 +6966,70 @@ class TestQueueDownload:
         assert (out / "from_config.json").exists()
         assert not (out / "manifest.json").exists()
 
+    def test_download_of_a_file_of_the_host_library(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A track copied from the host keeps its name, under the template directories."""
+        tracks = [{"title": "8 - Luiza", "artist": "Aeon Trio", "album": "Elegy"}]
+        self._mock_services(mocker, tracks, ["INTERNAL/music/elegy/08-Luiza.mp3"])
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+        embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
+
+        result = runner.invoke(
+            main,
+            [
+                "--verbose",
+                *self._BASE,
+                # Both are asked for, and both are skipped for a file copied from the host
+                "--create-download-manifest",
+                "--add-cover-and-metadata",
+                "-d",
+                str(tmp_path),
+                "--no-with-albumart",
+                "--audio-file-name-template",
+                "{artist}/{album}/{tracknumber:03d}___{title}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert copy.call_args.args[2] == str(tmp_path / "Aeon_Trio/Elegy/08-Luiza.mp3")
+        embed.assert_not_called()
+        assert (
+            "Not embedding the album art and the metadata, to preserve the file being copied"
+            in result.output
+        )
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["status"] == "downloaded"
+        # The manifest of the file records that nothing was embedded into it
+        with open(tmp_path / "Aeon_Trio/Elegy/08-Luiza.mp3.json", encoding="utf-8") as sidecar:
+            assert json.load(sidecar)["add_cover_and_metadata"] is False
+
+    def test_download_of_a_file_of_the_host_library_renamed(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--allow-local-file-rename names the copy after the template."""
+        tracks = [{"title": "8 - Luiza", "artist": "Aeon Trio", "album": "Elegy"}]
+        self._mock_services(mocker, tracks, ["INTERNAL/music/elegy/08-Luiza.mp3"])
+        copy = mocker.patch("volumito.cli.click_helpers.copy_file_from_host")
+
+        result = runner.invoke(
+            main,
+            [
+                *self._BASE,
+                "-d",
+                str(tmp_path),
+                "--no-with-albumart",
+                "--allow-local-file-rename",
+                "--audio-file-name-template",
+                "{artist}/{album}/{tracknumber:03d}___{title}.{extension}",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert copy.call_args.args[2] == str(
+            tmp_path / "Aeon_Trio/Elegy/000___8_-_Luiza.mp3"
+        )
+
     def test_download_only_tracks_help(self, runner: CliRunner):
         """The selection option is listed in the help, with its metavar."""
         result = runner.invoke(main, ["queue", "download", "--help"])
@@ -10217,6 +10470,9 @@ class TestConfigurationCommands:
                     "scheme": "http",
                     "rest-api-port": 3000,
                     "mpd-port": 6600,
+                    "ssh-password": None,
+                    "ssh-port": 22,
+                    "ssh-username": "volumio",
                 },
                 "timeouts": {
                     "rest-api-timeout": 5.0,
@@ -10225,6 +10481,7 @@ class TestConfigurationCommands:
                 },
                 "miscellaneous": {
                     "add-cover-and-metadata": True,
+                    "allow-local-file-rename": False,
                     "check-next-track": True,
                     "check-playlist-name": True,
                     "check-seek-position": True,
@@ -10310,7 +10567,7 @@ class TestConfigurationCommands:
         """`-f FILE` writes exactly FILE."""
         target = tmp_path / "my-config.yaml"
 
-        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 0
         assert target.exists()
@@ -10320,7 +10577,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "--volumio-version", "3"]
+            main, ["configuration", "create", "-o", str(target), "--volumio-version", "3"]
         )
 
         assert result.exit_code == 0
@@ -10333,7 +10590,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "-V", "3"]
+            main, ["configuration", "create", "-o", str(target), "-V", "3"]
         )
 
         assert result.exit_code == 0
@@ -10347,10 +10604,10 @@ class TestConfigurationCommands:
         v4 = tmp_path / "v4.yaml"
 
         result3 = runner.invoke(
-            main, ["configuration", "create", "-f", str(v3), "--volumio-version", "3.123"]
+            main, ["configuration", "create", "-o", str(v3), "--volumio-version", "3.123"]
         )
         result4 = runner.invoke(
-            main, ["configuration", "create", "-f", str(v4), "--volumio-version", "4.119"]
+            main, ["configuration", "create", "-o", str(v4), "--volumio-version", "4.119"]
         )
 
         assert result3.exit_code == 0
@@ -10365,7 +10622,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "--volumio-version", "nope"]
+            main, ["configuration", "create", "-o", str(target), "--volumio-version", "nope"]
         )
 
         assert result.exit_code == 2
@@ -10377,7 +10634,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "--volumio-version", "3.1.2"]
+            main, ["configuration", "create", "-o", str(target), "--volumio-version", "3.1.2"]
         )
 
         assert result.exit_code == 0
@@ -10389,24 +10646,31 @@ class TestConfigurationCommands:
         """In machine-readable mode create prints the quoted destination path."""
         target = tmp_path / "volumito.yaml"
 
-        result = runner.invoke(main, ["-m", "configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["-m", "configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 0
         assert result.output.strip() == json.dumps(str(target))
 
     def test_create_mutually_exclusive(self, runner: CliRunner):
         """`-d` and `-f` together is a usage error."""
-        result = runner.invoke(main, ["configuration", "create", "-d", "x", "-f", "y"])
+        result = runner.invoke(main, ["configuration", "create", "-d", "x", "-o", "y"])
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
+
+    def test_create_rejects_the_old_short_option(self, runner: CliRunner):
+        """The destination is -o, as in the other commands, not -f."""
+        result = runner.invoke(main, ["configuration", "create", "-f", "y"])
+
+        assert result.exit_code == 2
+        assert "No such option: -f" in result.output
 
     def test_create_refuses_overwrite(self, runner: CliRunner, tmp_path):
         """Without --overwrite-existing-files, create refuses to clobber."""
         target = tmp_path / "volumito.yaml"
         target.write_text("old\n")
 
-        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 1
         assert "already exists" in result.output
@@ -10419,7 +10683,7 @@ class TestConfigurationCommands:
 
         result = runner.invoke(
             main,
-            ["configuration", "create", "-f", str(target), "--overwrite-existing-files"],
+            ["configuration", "create", "-o", str(target), "--overwrite-existing-files"],
         )
 
         assert result.exit_code == 0
@@ -10430,7 +10694,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
         mocker.patch("volumito.cli.volumito.open", side_effect=OSError("disk full"))
 
-        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 1
         assert "cannot write configuration file" in result.output

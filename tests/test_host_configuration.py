@@ -22,6 +22,21 @@ class TestVolumioHostConfiguration:
         assert host_configuration.host == "volumio.local"
         assert host_configuration.rest_api_port == 3000
         assert host_configuration.mpd_port == 6600
+        assert host_configuration.ssh_password is None
+        assert host_configuration.ssh_port == 22
+        assert host_configuration.ssh_username == "volumio"
+
+    def test_the_ssh_values(self):
+        """The SSH parameters of the host can be given."""
+        host_configuration = VolumioHostConfiguration(
+            ssh_password="hunter2",
+            ssh_port=2222,
+            ssh_username="pi",
+        )
+
+        assert host_configuration.ssh_password == "hunter2"
+        assert host_configuration.ssh_port == 2222
+        assert host_configuration.ssh_username == "pi"
 
     def test_custom_values(self):
         """Test VolumioHostConfiguration with custom values."""
