@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.37] - 2026-08-04
+
+### Changed
+
+- `scp put` copies only when `-y`/`--yes` is given
+
+
 ## [0.0.36] - 2026-08-04
 
 ### Added

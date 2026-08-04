@@ -48,7 +48,7 @@ from volumito.clients import (
     remote_music_path,
 )
 
-__version__ = "0.0.36"
+__version__ = "0.0.37"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 

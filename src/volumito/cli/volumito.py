@@ -2276,13 +2276,25 @@ def scp_get(ctx: click.Context, remote_path: str, local_path: str, recursive: bo
 @click.argument("local_path", type=str)
 @click.argument("remote_path", type=str)
 @option_recursive
-def scp_put(ctx: click.Context, local_path: str, remote_path: str, recursive: bool) -> None:
+@option_yes
+def scp_put(
+    ctx: click.Context, local_path: str, remote_path: str, recursive: bool, yes: bool
+) -> None:
     """Copy LOCAL_PATH to REMOTE_PATH of the Volumio host.
 
     IMPORTANT: this command writes to the Volumio host and may damage its
-    integrity; please proceed with caution."""
+    integrity; the copy is made only when -y/--yes is given."""
     host_configuration = ctx.obj["host_configuration"]
     machine_readable = ctx.obj["machine_readable"]
+
+    if not yes:
+        if not machine_readable:
+            click.echo(
+                "Error: refusing to copy to the Volumio host without -y/--yes: "
+                f"{remote_path}",
+                err=True,
+            )
+        sys.exit(1)
 
     try:
         copy_to_host(host_configuration, local_path, remote_path, recursive=recursive)
