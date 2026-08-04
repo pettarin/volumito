@@ -61,8 +61,8 @@ from volumito.cli.pure_helpers import (
     story_query_reference,
 )
 from volumito.cli.volumito import main
-from volumito.clients import Album, Artist, Label, Place
-from volumito.clients.errors import VolumioSCPError
+from volumito.clients import Album, Artist, Label, Place, RemoteCommandResult
+from volumito.clients.errors import VolumioSCPError, VolumioSSHError
 from volumito.clients.models import (
     CollectionStatistics,
     Notifications,
@@ -1318,14 +1318,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.35" in result.output
+        assert "volumito, version 0.0.36" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.35"'
+        assert result.output.strip() == '"0.0.36"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1334,7 +1334,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.35"'
+        assert result.output.strip() == '"0.0.36"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4719,6 +4719,151 @@ class TestSystemCommands:
         assert info_result.exit_code == 0
         assert info_result.output == system_info_result.output
         assert json.loads(info_result.output)["name"] == "Living Room"
+
+
+class TestSystemExecute:
+    """Test cases for the system execute command."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_execution(self, mocker: MockerFixture, exit_code=0, stdout="up 3 days\n"):
+        """Patch the remote execution with a prepared result."""
+        return mocker.patch(
+            "volumito.cli.volumito.execute_on_host",
+            return_value=RemoteCommandResult(
+                command="uptime", exit_code=exit_code, stdout=stdout, stderr=""
+            ),
+        )
+
+    def test_help_warns_about_the_host(self, runner: CliRunner):
+        """The help says the command may damage the host, and needs -y/--yes."""
+        result = runner.invoke(main, ["system", "execute", "--help"])
+        joined = " ".join(result.output.split())
+
+        assert result.exit_code == 0
+        assert "may damage it" in joined
+        assert "executed only when -y/--yes is given" in joined
+
+    def test_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is executed."""
+        execute = self._mock_execution(mocker)
+
+        result = runner.invoke(main, ["system", "execute", "uptime"])
+
+        assert result.exit_code == 1
+        assert "refusing to execute the command without -y/--yes: uptime" in result.output
+        execute.assert_not_called()
+
+    def test_without_yes_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """The refusal prints nothing in machine-readable mode."""
+        self._mock_execution(mocker)
+
+        result = runner.invoke(main, ["-m", "system", "execute", "uptime"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+
+    def test_executes_and_prints_the_result(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y the command runs and its outcome is printed."""
+        execute = self._mock_execution(mocker)
+
+        result = runner.invoke(main, ["system", "execute", "-y", "uptime"])
+
+        assert result.exit_code == 0
+        # The pretty view strips the outer whitespace of the strings, as it does
+        # for every payload; the other formats keep the streams verbatim
+        assert json.loads(result.output) == {
+            "command": "uptime",
+            "exit_code": 0,
+            "stdout": "up 3 days",
+            "stderr": "",
+        }
+        assert execute.call_args.args[1] == "uptime"
+
+    def test_the_json_format_keeps_the_output_verbatim(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F json prints what the command wrote, newlines included."""
+        self._mock_execution(mocker, stdout="  indented\n")
+
+        result = runner.invoke(main, ["system", "execute", "-y", "uptime", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["stdout"] == "  indented\n"
+
+    def test_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table prints the outcome as a table."""
+        self._mock_execution(mocker)
+
+        result = runner.invoke(main, ["system", "execute", "-y", "uptime", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Remote Command" in result.output
+        assert "up 3 days" in result.output
+
+    def test_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Machine-readable mode prints the outcome as compact JSON."""
+        self._mock_execution(mocker)
+
+        result = runner.invoke(main, ["-m", "system", "execute", "-y", "uptime"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == json.dumps(
+            {"command": "uptime", "exit_code": 0, "stdout": "up 3 days\n", "stderr": ""}
+        )
+
+    def test_the_remote_exit_code_is_propagated(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """By default volumito exits with the status of the remote command."""
+        self._mock_execution(mocker, exit_code=3, stdout="inactive\n")
+
+        result = runner.invoke(main, ["system", "execute", "-y", "uptime"])
+
+        assert result.exit_code == 3
+        assert "inactive" in result.output
+
+    def test_the_remote_exit_code_can_be_ignored(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """--no-propagate-remote-exit-code exits 0 whatever the command returned."""
+        self._mock_execution(mocker, exit_code=3)
+
+        result = runner.invoke(
+            main,
+            ["system", "execute", "-y", "--no-propagate-remote-exit-code", "uptime"],
+        )
+
+        assert result.exit_code == 0
+
+    def test_a_failed_execution(self, runner: CliRunner, mocker: MockerFixture):
+        """A failure of the connection exits 1, reporting what went wrong."""
+        mocker.patch(
+            "volumito.cli.volumito.execute_on_host",
+            side_effect=VolumioSSHError("Authentication failed."),
+        )
+
+        result = runner.invoke(main, ["system", "execute", "-y", "uptime"])
+
+        assert result.exit_code == 1
+        assert "Error: Authentication failed." in result.output
+
+    def test_a_failed_execution_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The failure prints nothing in machine-readable mode."""
+        mocker.patch(
+            "volumito.cli.volumito.execute_on_host",
+            side_effect=VolumioSSHError("Authentication failed."),
+        )
+
+        result = runner.invoke(main, ["-m", "system", "execute", "-y", "uptime"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
 
 
 class TestCollectionCommands:
@@ -10636,6 +10781,7 @@ class TestConfigurationCommands:
                     "check-next-track": True,
                     "check-playlist-name": True,
                     "check-seek-position": True,
+                    "propagate-remote-exit-code": True,
                 },
                 "notifications": {
                     "endpoint": "/volumionotifications",
@@ -10668,6 +10814,7 @@ class TestConfigurationCommands:
                     "story-credits": None,
                     "story-label": None,
                     "story-place": None,
+                    "system-execute": None,
                     "system-info": None,
                     "system-version": None,
                     "track-info": None,

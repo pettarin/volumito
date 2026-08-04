@@ -488,6 +488,7 @@ class TestDefaultConfigurationTemplate:
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
+                "propagate-remote-exit-code": True,
             },
             "notifications": {
                 "endpoint": "/volumionotifications",
@@ -729,7 +730,11 @@ class TestBuildClickDefaultMap:
             "notifications": {"list": format_only, "listen": format_only},
             "playlist": {"list": format_only},
             "zones": {"list": formatting},
-            "system": {"version": format_only, "info": format_only},
+            "system": {
+                "execute": format_only,
+                "version": format_only,
+                "info": format_only,
+            },
             "collection": {"statistics": format_only},
             "story": {
                 "album": formatting,

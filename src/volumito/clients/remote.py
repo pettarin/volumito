@@ -1,4 +1,4 @@
-"""Access to the files a Volumio host stores locally.
+"""Access to the files and to the shell of a Volumio host.
 
 :copyright: Copyright (C) 2025-2026 Alberto Pettarin
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
@@ -7,9 +7,11 @@
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Any
+from dataclasses import dataclass
+from types import ModuleType
+from typing import Any, cast
 
-from volumito.clients.errors import VolumioSCPError
+from volumito.clients.errors import VolumioSCPError, VolumioSSHError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 
 VOLUMIO_MNT_ROOT = "/mnt"
@@ -17,6 +19,27 @@ VOLUMIO_MNT_ROOT = "/mnt"
 
 VOLUMIO_INTERNAL_ROOT = os.path.join(VOLUMIO_MNT_ROOT, "INTERNAL")
 """Directory of the internal storage of a Volumio host."""
+
+
+def _load_paramiko() -> ModuleType:
+    """Import the optional SSH dependency, when a connection is about to be made.
+
+    Returns:
+        The paramiko module
+
+    Raises:
+        VolumioSSHError: If the package is not installed
+    """
+    try:
+        import paramiko
+    except ImportError as e:
+        raise VolumioSSHError(
+            "Reaching the Volumio host over SSH needs the scp package: "
+            "install it with 'pip install volumito[scp]'"
+        ) from e
+
+    # The module carries no type information, so it arrives as Any
+    return cast(ModuleType, paramiko)
 
 
 def _load_scp() -> tuple[Any, Any]:
@@ -28,8 +51,9 @@ def _load_scp() -> tuple[Any, Any]:
     Raises:
         VolumioSCPError: If the packages are not installed
     """
+    paramiko: Any = _load_paramiko()
+
     try:
-        import paramiko
         from scp import SCPClient
     except ImportError as e:
         raise VolumioSCPError(
@@ -46,11 +70,6 @@ def _scp_session(
 ) -> Iterator[Any]:
     """Yield an SCP client connected to the Volumio host.
 
-    The SSH connection is made with the user name and the port of the host
-    configuration, authenticating with the keys of the current user, or with the
-    password of the host configuration when it carries one: the known hosts of the
-    system are loaded, and a host key not among them is accepted and added.
-
     Args:
         host_configuration: The host configuration (host, SSH port, user name, password)
         timeout: Connection timeout in seconds
@@ -61,7 +80,35 @@ def _scp_session(
     Raises:
         VolumioSCPError: If the packages are not installed
     """
-    paramiko, scp_client_class = _load_scp()
+    _, scp_client_class = _load_scp()
+
+    with _ssh_session(host_configuration, timeout) as ssh_client:
+        with scp_client_class(ssh_client.get_transport()) as scp_client:
+            yield scp_client
+
+
+@contextmanager
+def _ssh_session(
+    host_configuration: VolumioHostConfiguration, timeout: float
+) -> Iterator[Any]:
+    """Yield an SSH client connected to the Volumio host.
+
+    The connection is made with the user name and the port of the host configuration,
+    authenticating with the keys of the current user, or with the password of the host
+    configuration when it carries one: the known hosts of the system are loaded, and a
+    host key not among them is accepted and added.
+
+    Args:
+        host_configuration: The host configuration (host, SSH port, user name, password)
+        timeout: Connection timeout in seconds
+
+    Yields:
+        The SSH client of the connection
+
+    Raises:
+        VolumioSSHError: If the package is not installed
+    """
+    paramiko: Any = _load_paramiko()
 
     with paramiko.SSHClient() as ssh_client:
         ssh_client.load_system_host_keys()
@@ -73,8 +120,7 @@ def _scp_session(
             password=host_configuration.ssh_password,
             timeout=timeout,
         )
-        with scp_client_class(ssh_client.get_transport()) as scp_client:
-            yield scp_client
+        yield ssh_client
 
 
 def copy_from_host(
@@ -137,6 +183,63 @@ def copy_to_host(
             f"Failed to copy {source} to the Volumio host at "
             f"{host_configuration.host}: {e}"
         ) from e
+
+
+@dataclass(frozen=True)
+class RemoteCommandResult:
+    """The outcome of a command executed on a Volumio host.
+
+    Attributes:
+        command: The command that was executed
+        exit_code: The exit code the command returned on the host
+        stdout: What the command wrote to its standard output
+        stderr: What the command wrote to its standard error
+    """
+
+    command: str
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
+def execute_on_host(
+    host_configuration: VolumioHostConfiguration,
+    command: str,
+    timeout: float = 5.0,
+) -> RemoteCommandResult:
+    """Execute a command on the Volumio host, over SSH.
+
+    The command runs as the SSH user of the host configuration, in a session of its
+    own: it can change or damage the host, which is the caller's responsibility.
+
+    Args:
+        host_configuration: The host configuration (host, SSH port, user name, password)
+        command: The command to execute on the Volumio host
+        timeout: Connection timeout in seconds (default: 5.0)
+
+    Returns:
+        The exit code of the command and what it wrote to its output streams
+
+    Raises:
+        VolumioSSHError: If the package is not installed, or the execution fails
+    """
+    try:
+        with _ssh_session(host_configuration, timeout) as ssh_client:
+            _stdin, stdout, stderr = ssh_client.exec_command(command)
+            output = stdout.read().decode("utf-8", errors="replace")
+            error = stderr.read().decode("utf-8", errors="replace")
+            exit_code = int(stdout.channel.recv_exit_status())
+    except VolumioSSHError:
+        raise
+    except Exception as e:
+        raise VolumioSSHError(
+            f"Failed to execute {command!r} on the Volumio host at "
+            f"{host_configuration.host}: {e}"
+        ) from e
+
+    return RemoteCommandResult(
+        command=command, exit_code=exit_code, stdout=output, stderr=error
+    )
 
 
 def is_local_file_uri(uri: str) -> bool:

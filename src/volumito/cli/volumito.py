@@ -55,6 +55,7 @@ from volumito.cli.click_helpers import (
     option_overwrite_existing_files,
     option_port,
     option_print_resulting_status,
+    option_propagate_remote_exit_code,
     option_recursive,
     option_register_url,
     option_register_url_full,
@@ -64,6 +65,7 @@ from volumito.cli.click_helpers import (
     option_timeout,
     option_unregister_url_on_exit,
     option_with_albumart,
+    option_yes,
     read_queue_log,
     render_output_filename,
     render_payload,
@@ -134,8 +136,10 @@ from volumito.clients import (
     VolumioMPDClient,
     VolumioRESTAPIClient,
     VolumioSCPError,
+    VolumioSSHError,
     copy_from_host,
     copy_to_host,
+    execute_on_host,
     is_local_file_uri,
     receiver_url,
 )
@@ -1508,6 +1512,57 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
 def system(ctx: click.Context) -> None:
     """Query Volumio system utilities."""
     pass
+
+
+@system.command("execute")
+@click.pass_context
+@click.argument("command", type=str)
+@option_format
+@option_propagate_remote_exit_code
+@option_yes
+def system_execute(
+    ctx: click.Context,
+    command: str,
+    output_format: str,
+    propagate_remote_exit_code: bool,
+    yes: bool,
+) -> None:
+    """Execute COMMAND on the Volumio host, printing what it returned.
+
+    IMPORTANT: the command runs on the Volumio host as its SSH user and may damage
+    it; it is executed only when -y/--yes is given."""
+    host_configuration = ctx.obj["host_configuration"]
+    machine_readable = ctx.obj["machine_readable"]
+
+    if not yes:
+        if not machine_readable:
+            click.echo(
+                f"Error: refusing to execute the command without -y/--yes: {command}",
+                err=True,
+            )
+        sys.exit(1)
+
+    try:
+        result = execute_on_host(host_configuration, command)
+    except VolumioSSHError as e:
+        if not machine_readable:
+            click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+    render_payload(
+        ctx,
+        {
+            "command": result.command,
+            "exit_code": result.exit_code,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+        },
+        output_format,
+        heading="Remote Command",
+    )
+
+    if propagate_remote_exit_code:
+        sys.exit(result.exit_code)
 
 
 @system.command("ping")
