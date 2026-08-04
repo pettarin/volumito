@@ -109,6 +109,7 @@ from volumito.cli.pure_helpers import (
     format_notification_as_line,
     format_queue_as_table,
     format_seek,
+    format_termination_conditions,
     format_zones_as_table,
     manifest_matches_queue,
     queue_album_volumes,
@@ -1902,6 +1903,7 @@ def _listen_and_print(
 
     if not machine_readable:
         click.echo(f"Listening on port {port} for the notifications sent to {url}")
+        click.echo(format_termination_conditions(count, timeout, idle_timeout))
 
     received = 0
     try:

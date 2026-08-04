@@ -461,6 +461,37 @@ def format_seek(milliseconds: int) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}.{millis:03d}"
 
 
+def format_termination_conditions(
+    count: int | None, timeout: float | None, idle_timeout: float | None
+) -> str:
+    """Return the message listing what ends a listening.
+
+    Args:
+        count: Number of notifications ending the listening, or None
+        timeout: Seconds of listening ending it, or None
+        idle_timeout: Seconds without a notification ending it, or None
+
+    Returns:
+        A line such as ``Terminate as soon as: CTRL+C is issued, or 3 notifications received``
+    """
+    conditions = ["CTRL+C is issued"]
+
+    if timeout is not None:
+        seconds = "second" if timeout == 1 else "seconds"
+        conditions.append(f"a total of {timeout:g} {seconds} elapsed")
+    if idle_timeout is not None:
+        seconds = "second" if idle_timeout == 1 else "seconds"
+        conditions.append(f"no notifications received for {idle_timeout:g} {seconds}")
+    if count is not None:
+        notifications = "notification" if count == 1 else "notifications"
+        conditions.append(f"{count} {notifications} received")
+
+    if len(conditions) > 1:
+        conditions[-1] = f"or {conditions[-1]}"
+
+    return f"Terminate as soon as: {', '.join(conditions)}"
+
+
 def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
     """Format the zones as a readable table.
 
