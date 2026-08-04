@@ -122,7 +122,7 @@ $ volumito --help
 $ volumito playback --help
 
 $ # create a configuration file (you might want to inspect/edit it later)
-$ volumito configuration create -f ~/volumito.yaml
+$ volumito configuration create -o ~/volumito.yaml
 Created configuration file ~/volumito.yaml
 
 $ # print information about the Volumio host

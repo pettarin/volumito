@@ -37,7 +37,7 @@ MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR = (
 """Error message when the configuration-file selection options are combined."""
 
 MUTUALLY_EXCLUSIVE_CREATE_ERROR = (
-    "Options -d/--output-directory and -f/--output-file are mutually exclusive."
+    "Options -d/--output-directory and -o/--output-file are mutually exclusive."
 )
 """Error message when the "configuration create" destination options are combined."""
 

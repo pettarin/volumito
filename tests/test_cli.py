@@ -10567,7 +10567,7 @@ class TestConfigurationCommands:
         """`-f FILE` writes exactly FILE."""
         target = tmp_path / "my-config.yaml"
 
-        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 0
         assert target.exists()
@@ -10577,7 +10577,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "--volumio-version", "3"]
+            main, ["configuration", "create", "-o", str(target), "--volumio-version", "3"]
         )
 
         assert result.exit_code == 0
@@ -10590,7 +10590,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "-V", "3"]
+            main, ["configuration", "create", "-o", str(target), "-V", "3"]
         )
 
         assert result.exit_code == 0
@@ -10604,10 +10604,10 @@ class TestConfigurationCommands:
         v4 = tmp_path / "v4.yaml"
 
         result3 = runner.invoke(
-            main, ["configuration", "create", "-f", str(v3), "--volumio-version", "3.123"]
+            main, ["configuration", "create", "-o", str(v3), "--volumio-version", "3.123"]
         )
         result4 = runner.invoke(
-            main, ["configuration", "create", "-f", str(v4), "--volumio-version", "4.119"]
+            main, ["configuration", "create", "-o", str(v4), "--volumio-version", "4.119"]
         )
 
         assert result3.exit_code == 0
@@ -10622,7 +10622,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "--volumio-version", "nope"]
+            main, ["configuration", "create", "-o", str(target), "--volumio-version", "nope"]
         )
 
         assert result.exit_code == 2
@@ -10634,7 +10634,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
 
         result = runner.invoke(
-            main, ["configuration", "create", "-f", str(target), "--volumio-version", "3.1.2"]
+            main, ["configuration", "create", "-o", str(target), "--volumio-version", "3.1.2"]
         )
 
         assert result.exit_code == 0
@@ -10646,24 +10646,31 @@ class TestConfigurationCommands:
         """In machine-readable mode create prints the quoted destination path."""
         target = tmp_path / "volumito.yaml"
 
-        result = runner.invoke(main, ["-m", "configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["-m", "configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 0
         assert result.output.strip() == json.dumps(str(target))
 
     def test_create_mutually_exclusive(self, runner: CliRunner):
         """`-d` and `-f` together is a usage error."""
-        result = runner.invoke(main, ["configuration", "create", "-d", "x", "-f", "y"])
+        result = runner.invoke(main, ["configuration", "create", "-d", "x", "-o", "y"])
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
+
+    def test_create_rejects_the_old_short_option(self, runner: CliRunner):
+        """The destination is -o, as in the other commands, not -f."""
+        result = runner.invoke(main, ["configuration", "create", "-f", "y"])
+
+        assert result.exit_code == 2
+        assert "No such option: -f" in result.output
 
     def test_create_refuses_overwrite(self, runner: CliRunner, tmp_path):
         """Without --overwrite-existing-files, create refuses to clobber."""
         target = tmp_path / "volumito.yaml"
         target.write_text("old\n")
 
-        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 1
         assert "already exists" in result.output
@@ -10676,7 +10683,7 @@ class TestConfigurationCommands:
 
         result = runner.invoke(
             main,
-            ["configuration", "create", "-f", str(target), "--overwrite-existing-files"],
+            ["configuration", "create", "-o", str(target), "--overwrite-existing-files"],
         )
 
         assert result.exit_code == 0
@@ -10687,7 +10694,7 @@ class TestConfigurationCommands:
         target = tmp_path / "volumito.yaml"
         mocker.patch("volumito.cli.volumito.open", side_effect=OSError("disk full"))
 
-        result = runner.invoke(main, ["configuration", "create", "-f", str(target)])
+        result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 1
         assert "cannot write configuration file" in result.output

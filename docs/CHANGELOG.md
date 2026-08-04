@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The MPD client returns the track URI as the Volumio host reports it
 - A track copied from the Volumio host is left untouched, keeping the tags and the name
   it has there
+- Option `-f`/`--output-file` of `configuration create` is now `-o`/`--output-file`, as in
+  the other commands
 
 
 ## [0.0.33] - 2026-08-04

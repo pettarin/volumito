@@ -337,11 +337,12 @@ def configuration(ctx: click.Context) -> None:
 )
 @click.option(
     "--output-file",
-    "-f",
+    "-o",
     type=str,
     default=None,
     help="Exact path of the configuration file to create.",
 )
+@option_overwrite_existing_files
 @click.option(
     "--volumio-version",
     "-V",
@@ -354,13 +355,12 @@ def configuration(ctx: click.Context) -> None:
         "(6600 for Volumio >= 4, 6599 otherwise)."
     ),
 )
-@option_overwrite_existing_files
 def configuration_create(
     ctx: click.Context,
     output_directory: str | None,
     output_file: str | None,
-    volumio_version: int,
     overwrite_existing_files: bool,
+    volumio_version: int,
 ) -> None:
     """Create a configuration file with all known keys set to their default values."""
     machine_readable = ctx.obj["machine_readable"]
