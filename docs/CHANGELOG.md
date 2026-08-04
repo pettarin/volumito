@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.33] - 2026-08-04
+
+### Added
+
+- The stop conditions of `notifications listen` can be set in the configuration file
+
+### Changed
+
+- Option `--advertise-url` of `notifications listen` renamed to `--register-url-full`
+- The messages of `notifications listen` tell what ends the command
+- The configuration keys that only `notifications listen` uses moved under their own
+  subsection
+
+### Fixed
+
+- The probed configuration paths are listed once, even when the working directory is one
+  of the directories probed
+
+
 ## [0.0.32] - 2026-08-04
 
 ### Added

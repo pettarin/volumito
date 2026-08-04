@@ -58,6 +58,66 @@ class TestConfigurationPaths:
             os.path.join("/etc", "volumito", ".volumito.yaml"),
         ]
 
+    def test_the_working_directory_is_probed_once(self, mocker: MockerFixture):
+        """A working directory that is the home directory is probed once, at the top."""
+        mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.name", "posix")
+
+        paths = configuration_paths()
+
+        assert paths == [
+            os.path.join("/home/user", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito.yaml"),
+            os.path.join("/home/user", ".volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito", ".volumito.yaml"),
+            os.path.join("/home/user", ".config", "volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".config", "volumito", ".volumito.yaml"),
+            os.path.join("/etc", "volumito.yaml"),
+            os.path.join("/etc", ".volumito.yaml"),
+            os.path.join("/etc", "volumito", "volumito.yaml"),
+            os.path.join("/etc", "volumito", ".volumito.yaml"),
+        ]
+
+    def test_a_probed_subdirectory_as_the_working_directory(self, mocker: MockerFixture):
+        """A working directory that is one of the probed subdirectories is probed once."""
+        mocker.patch(
+            "volumito.cli.configuration.os.getcwd",
+            return_value=os.path.join("/home/user", ".volumito"),
+        )
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.name", "posix")
+
+        paths = configuration_paths()
+
+        assert paths[:2] == [
+            os.path.join("/home/user", ".volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito", ".volumito.yaml"),
+        ]
+        assert paths.count(os.path.join("/home/user", ".volumito", "volumito.yaml")) == 1
+        assert len(paths) == 10
+
+    def test_a_symlinked_working_directory_is_probed_once(
+        self, mocker: MockerFixture, tmp_path
+    ):
+        """A working directory reaching a probed directory by symlink is probed once."""
+        home = tmp_path / "home"
+        home.mkdir()
+        link = tmp_path / "link"
+        os.symlink(home, link)
+        mocker.patch("volumito.cli.configuration.os.getcwd", return_value=str(link))
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value=str(home))
+        mocker.patch("volumito.cli.configuration.os.name", "nt")
+
+        paths = configuration_paths()
+
+        assert paths[:2] == [
+            os.path.join(str(link), "volumito.yaml"),
+            os.path.join(str(link), ".volumito.yaml"),
+        ]
+        assert not any(path.startswith(f"{home}{os.sep}volumito") for path in paths)
+        assert len(paths) == 6
+
     def test_etc_omitted_on_non_posix(self, mocker: MockerFixture):
         """On non-POSIX systems (e.g., Windows) the /etc directories are not probed."""
         mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/work")
@@ -288,6 +348,27 @@ class TestLoadDefaultMap:
         with pytest.raises(click.BadParameter, match="'downloads.track-audio'.*must be a mapping"):
             load_configuration(str(config))
 
+    def test_notifications_listen_unknown_key_raises(self, tmp_path):
+        """An unrecognized key in the listen subsection raises BadParameter."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("notifications:\n  listen:\n    bogus: 1\n")
+
+        with pytest.raises(
+            click.BadParameter, match="unknown key 'bogus' in section 'notifications.listen'"
+        ):
+            load_configuration(str(config))
+
+    def test_notifications_listen_key_at_the_section_level_raises(self, tmp_path):
+        """A key of the listen subsection is not accepted at the section level."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("notifications:\n  register-url: true\n")
+
+        with pytest.raises(
+            click.BadParameter,
+            match="unknown key 'register-url' in section 'notifications'",
+        ):
+            load_configuration(str(config))
+
     def test_empty_file(self, tmp_path):
         """An empty file yields an empty mapping."""
         config = tmp_path / "volumito.yaml"
@@ -405,11 +486,16 @@ class TestDefaultConfigurationTemplate:
                 "check-seek-position": True,
             },
             "notifications": {
-                "advertise-url": None,
                 "endpoint": "/volumionotifications",
                 "port": 3003,
-                "register-url": False,
-                "unregister-url-on-exit": True,
+                "listen": {
+                    "count": None,
+                    "idle-timeout": None,
+                    "register-url": False,
+                    "register-url-full": None,
+                    "timeout": None,
+                    "unregister-url-on-exit": True,
+                },
             },
             "output": {
                 "fields": "SHORT",
@@ -650,6 +736,30 @@ class TestBuildClickDefaultMap:
             },
             # "info" is the top-level synonym of "system info"
             "info": format_only,
+        }
+
+    def test_notifications_keys_reach_their_commands(self):
+        """The scalars reach the three subcommands, the listen keys only that one."""
+        result = build_click_default_map(
+            {
+                "notifications": {
+                    "endpoint": "/hook",
+                    "port": 9000,
+                    "listen": {"count": 4, "idle-timeout": 5.0, "register-url": True},
+                }
+            }
+        )
+
+        assert result["notifications"] == {
+            "listen": {
+                "endpoint": "/hook",
+                "port": 9000,
+                "count": 4,
+                "idle_timeout": 5.0,
+                "register_url": True,
+            },
+            "register": {"endpoint": "/hook", "port": 9000},
+            "unregister": {"endpoint": "/hook", "port": 9000},
         }
 
     def test_format_only_subsection_overrides_shared(self):

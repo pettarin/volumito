@@ -117,7 +117,6 @@ client.unregister_notification(client.notifications[0])
 
 # receive the notifications the host pushes: the listener serves the endpoint,
 # and receiver_url is the URL the host has to be told to push to
-# (a host pushes a burst of state notifications per change, often identical)
 url = receiver_url(host, port=3003, endpoint="/volumionotifications")
 client.register_notification(url)
 try:

@@ -32,7 +32,6 @@ from volumito.cli.click_helpers import (
     fetch_state_or_exit,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
-    option_advertise_url,
     option_albumart_file_name_template,
     option_all_notifications,
     option_audio_file_name_template,
@@ -56,6 +55,7 @@ from volumito.cli.click_helpers import (
     option_port,
     option_print_resulting_status,
     option_register_url,
+    option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
     option_story_type,
@@ -109,6 +109,7 @@ from volumito.cli.pure_helpers import (
     format_notification_as_line,
     format_queue_as_table,
     format_seek,
+    format_termination_conditions,
     format_zones_as_table,
     manifest_matches_queue,
     queue_album_volumes,
@@ -1902,6 +1903,7 @@ def _listen_and_print(
 
     if not machine_readable:
         click.echo(f"Listening on port {port} for the notifications sent to {url}")
+        click.echo(format_termination_conditions(count, timeout, idle_timeout))
 
     received = 0
     try:
@@ -1977,34 +1979,37 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
 
 @notifications.command("listen")
 @click.pass_context
-@option_port
-@option_endpoint
-@option_advertise_url
-@option_register_url
-@option_unregister_url_on_exit
 @option_count
-@option_timeout
-@option_idle_timeout
+@option_endpoint
 @option_format
+@option_idle_timeout
+@option_port
+@option_register_url
+@option_register_url_full
+@option_timeout
+@option_unregister_url_on_exit
 def notifications_listen(
     ctx: click.Context,
-    port: int,
-    endpoint: str,
-    advertise_url: str | None,
-    register_url: bool,
-    unregister_url_on_exit: bool,
     count: int | None,
-    timeout: float | None,
-    idle_timeout: float | None,
+    endpoint: str,
     output_format: str,
+    idle_timeout: float | None,
+    port: int,
+    register_url: bool,
+    register_url_full: str | None,
+    timeout: float | None,
+    unregister_url_on_exit: bool,
 ) -> None:
     """Print the notifications the Volumio host pushes to this machine.
 
     The URL the host pushes to must be registered: with --register-url it is
-    registered if missing, and unregistered again on exit. A host pushes a burst
-    of state notifications per change, often identical."""
+    registered if missing, and unregistered again on exit unless
+    --no-unregister-url-on-exit is given.
+
+    The command keeps listening until it is interrupted with Ctrl-C, or until one
+    of -n/--count, --idle-timeout, and --timeout is reached."""
     machine_readable = ctx.obj["machine_readable"]
-    url = advertise_url or _compose_notification_url(ctx, port, endpoint)
+    url = register_url_full or _compose_notification_url(ctx, port, endpoint)
 
     registered = fetch_or_exit(ctx, lambda c: url in c.notifications)
     if not registered and not register_url:
@@ -2038,14 +2043,14 @@ def notifications_listen(
 @click.pass_context
 @click.argument("url", required=False, default=None, type=str)
 @option_autocompose_url
-@option_port
 @option_endpoint
+@option_port
 def notifications_register(
     ctx: click.Context,
     url: str | None,
     autocompose_url: bool,
-    port: int,
     endpoint: str,
+    port: int,
 ) -> None:
     """Register URL to receive the push notifications.
 
@@ -2071,15 +2076,15 @@ def notifications_register(
 @click.argument("url", required=False, default=None, type=str)
 @option_all_notifications
 @option_autocompose_url
-@option_port
 @option_endpoint
+@option_port
 def notifications_unregister(
     ctx: click.Context,
     url: str | None,
     all_notifications: bool,
     autocompose_url: bool,
-    port: int,
     endpoint: str,
+    port: int,
 ) -> None:
     """Stop pushing the notifications to URL.
 

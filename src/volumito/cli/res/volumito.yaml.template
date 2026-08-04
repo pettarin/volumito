@@ -111,8 +111,8 @@ miscellaneous:
 
 
 notifications:
-  # URL the Volumio host pushes to, instead of the composed one
-  advertise-url: null
+  # A key here applies to the listen, register, and unregister commands;
+  # the keys of the options only "listen" has are under its own section
 
   # Path served by the local notification listener
   endpoint: /volumionotifications
@@ -120,11 +120,24 @@ notifications:
   # Port the local notification listener binds to
   port: 3003
 
-  # When listening, register the URL if it is not registered yet
-  register-url: false
+  listen:
+    # Stop after receiving this number of notifications
+    count: null
 
-  # On exit, unregister the URL registered by the listener
-  unregister-url-on-exit: true
+    # Stop after this number of seconds without receiving a notification
+    idle-timeout: null
+
+    # Register the URL if it is not registered yet
+    register-url: false
+
+    # URL to register, overriding the one composed from the port and the endpoint
+    register-url-full: null
+
+    # Stop after listening for this number of seconds
+    timeout: null
+
+    # On exit, unregister the URL registered by this run
+    unregister-url-on-exit: true
 
 
 output:

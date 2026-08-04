@@ -942,16 +942,6 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
-def option_advertise_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--advertise-url`` option to the notifications listen subcommand."""
-    return click.option(
-        "--advertise-url",
-        type=str,
-        default=None,
-        help="URL the Volumio host pushes to, instead of the detected one.",
-    )(func)
-
-
 def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--albumart-file-name-template`` option to the queue download subcommand."""
     return click.option(
@@ -1215,6 +1205,16 @@ def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
         default=False,
         show_default=True,
         help="Register the URL on the Volumio host when it is not registered yet.",
+    )(func)
+
+
+def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
+    return click.option(
+        "--register-url-full",
+        type=str,
+        default=None,
+        help="URL to register, overriding the one composed from --port and --endpoint.",
     )(func)
 
 

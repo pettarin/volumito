@@ -48,6 +48,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_notification_as_line,
     format_queue_as_table,
+    format_termination_conditions,
     is_mbid,
     manifest_matches_queue,
     parse_time_to_seconds,
@@ -581,6 +582,57 @@ class TestFormatNotificationAsLine:
         line = format_notification_as_line(None, None, "2026-08-04T10:15:32.123Z")
 
         assert line == "[2026-08-04T10:15:32.123Z] ?        null"
+
+
+class TestFormatTerminationConditions:
+    """Test cases for the format_termination_conditions function."""
+
+    def test_only_the_interruption(self):
+        """Without limits, only the interruption ends the listening."""
+        assert (
+            format_termination_conditions(None, None, None)
+            == "Terminate as soon as: CTRL+C is issued"
+        )
+
+    def test_a_count(self):
+        """A count is listed as the last condition."""
+        assert format_termination_conditions(3, None, None) == (
+            "Terminate as soon as: CTRL+C is issued, or 3 notifications received"
+        )
+
+    def test_a_timeout(self):
+        """A total timeout is listed with the seconds it was given."""
+        assert format_termination_conditions(None, 60.0, None) == (
+            "Terminate as soon as: CTRL+C is issued, or a total of 60 seconds elapsed"
+        )
+
+    def test_an_idle_timeout(self):
+        """An idle timeout is listed as a silence."""
+        assert format_termination_conditions(None, None, 30.0) == (
+            "Terminate as soon as: CTRL+C is issued, "
+            "or no notifications received for 30 seconds"
+        )
+
+    def test_every_condition(self):
+        """Every condition is listed, in order, with "or" before the last one."""
+        assert format_termination_conditions(10, 60.0, 5.0) == (
+            "Terminate as soon as: CTRL+C is issued, a total of 60 seconds elapsed, "
+            "no notifications received for 5 seconds, or 10 notifications received"
+        )
+
+    def test_the_singular_forms(self):
+        """A value of one is spelled in the singular."""
+        assert format_termination_conditions(1, 1.0, 1.0) == (
+            "Terminate as soon as: CTRL+C is issued, a total of 1 second elapsed, "
+            "no notifications received for 1 second, or 1 notification received"
+        )
+
+    def test_a_fractional_number_of_seconds(self):
+        """A fractional timeout keeps its decimals, and stays plural."""
+        assert format_termination_conditions(None, None, 1.5) == (
+            "Terminate as soon as: CTRL+C is issued, "
+            "or no notifications received for 1.5 seconds"
+        )
 
 
 class TestExpandManifestFile:
@@ -1236,14 +1288,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.32" in result.output
+        assert "volumito, version 0.0.33" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.32"'
+        assert result.output.strip() == '"0.0.33"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1252,7 +1304,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.32"'
+        assert result.output.strip() == '"0.0.33"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5316,9 +5368,12 @@ class TestNotificationsCommands:
         result = runner.invoke(main, ["notifications", "listen"])
 
         assert result.exit_code == 0
-        assert f"Listening on port 3003 for the notifications sent to {self.LISTEN_URL}" in (
-            result.output
+        lines = result.output.splitlines()
+        assert lines[0] == (
+            f"Listening on port 3003 for the notifications sent to {self.LISTEN_URL}"
         )
+        # The ways out are the last thing said before the wait begins
+        assert lines[1] == "Terminate as soon as: CTRL+C is issued"
         assert '\n    "item": "state"' in result.output
         assert '"item": "queue"' in result.output
 
@@ -5439,8 +5494,8 @@ class TestNotificationsCommands:
         mock_client.register_notification.assert_not_called()
         mock_client.unregister_notification.assert_not_called()
 
-    def test_listen_advertise_url(self, runner: CliRunner, mocker: MockerFixture):
-        """--advertise-url replaces the detected URL."""
+    def test_listen_register_url_full(self, runner: CliRunner, mocker: MockerFixture):
+        """--register-url-full replaces the composed URL."""
         advertised = "http://receiver.lan:9000/hook"
         self._mock_client(mocker, urls=[advertised])
         listener_url = mocker.patch(
@@ -5451,7 +5506,7 @@ class TestNotificationsCommands:
         mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
 
         result = runner.invoke(
-            main, ["notifications", "listen", "--advertise-url", advertised]
+            main, ["notifications", "listen", "--register-url-full", advertised]
         )
 
         assert result.exit_code == 0
@@ -5509,6 +5564,10 @@ class TestNotificationsCommands:
 
         assert result.exit_code == 0
         assert "Timed out" not in result.output
+        assert (
+            "Terminate as soon as: CTRL+C is issued, a total of 30 seconds elapsed, "
+            "or 2 notifications received" in result.output
+        )
         fake.listen.assert_called_once_with(2, 30.0, None)
 
     def test_listen_timeout(self, runner: CliRunner, mocker: MockerFixture):
@@ -5545,7 +5604,8 @@ class TestNotificationsCommands:
 
         assert result.exit_code == 0
         assert "Timed out after 3 seconds without notifications" in result.output
-        assert "60 seconds" not in result.output
+        # The total timeout is named among the conditions, but is not the one reported
+        assert "Timed out after 60 seconds" not in result.output
 
     def test_listen_timeout_before_the_count(self, runner: CliRunner, mocker: MockerFixture):
         """A timeout expiring before the requested count exits 1."""
@@ -9636,18 +9696,26 @@ class TestConfigurationFile:
         mock_client.register_notification.return_value = outcome
         mock_client.unregister_notification.return_value = outcome
         fake = mocker.Mock()
-        fake.listen.return_value = iter([])
+        fake.idle_timed_out = False
+        # As many notifications as the count the configuration asks for
+        fake.listen.return_value = iter(
+            [PushNotification.from_raw({"item": "state", "data": {}}) for _ in range(4)]
+        )
         listener_class = mocker.patch(
             "volumito.cli.volumito.NotificationListener", return_value=fake
         )
         config = self._write_config(
             tmp_path,
             "notifications:\n"
-            f"  advertise-url: {advertised}\n"
             "  endpoint: /hook\n"
             "  port: 9000\n"
-            "  register-url: true\n"
-            "  unregister-url-on-exit: false\n",
+            "  listen:\n"
+            "    count: 4\n"
+            "    idle-timeout: 5.0\n"
+            "    register-url: true\n"
+            f"    register-url-full: {advertised}\n"
+            "    timeout: 30.0\n"
+            "    unregister-url-on-exit: false\n",
         )
 
         result = runner.invoke(main, ["-c", config, "notifications", "listen"])
@@ -9655,6 +9723,7 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         assert advertised in result.output
         listener_class.assert_called_once_with(port=9000, endpoint="/hook")
+        fake.listen.assert_called_once_with(4, 30.0, 5.0)
         mock_client.register_notification.assert_called_once_with(advertised)
         mock_client.unregister_notification.assert_not_called()
 
@@ -10161,11 +10230,16 @@ class TestConfigurationCommands:
                     "check-seek-position": True,
                 },
                 "notifications": {
-                    "advertise-url": None,
                     "endpoint": "/volumionotifications",
                     "port": 3003,
-                    "register-url": False,
-                    "unregister-url-on-exit": True,
+                    "listen": {
+                        "count": None,
+                        "idle-timeout": None,
+                        "register-url": False,
+                        "register-url-full": None,
+                        "timeout": None,
+                        "unregister-url-on-exit": True,
+                    },
                 },
                 "output": {
                     "fields": "SHORT",
