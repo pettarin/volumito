@@ -13,10 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Download of a track stored on the Volumio host, copied over SCP
   (needs the `scp` extra: `pip install volumito[scp]`)
 - Options `--ssh-port` and `--ssh-username`
+- Option `--allow-local-file-rename`, off by default, to name a track copied from the
+  Volumio host after the file name template
 
 ### Changed
 
 - The MPD client returns the track URI as the Volumio host reports it
+- A track copied from the Volumio host is left untouched, keeping the tags and the name
+  it has there
 
 
 ## [0.0.33] - 2026-08-04

@@ -59,6 +59,7 @@ from volumito.cli.pure_helpers import (
     format_duration,
     parse_time_to_seconds,
     parse_track_selection,
+    preserve_local_file_name,
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
@@ -587,6 +588,7 @@ def download_uri_to(
     kind: str,
     position_starting_at_one: bool = True,
     add_cover_and_metadata: bool | None = None,
+    allow_local_file_rename: bool = False,
     replace_characters_in_file_names: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
     replace_characters_in_file_names_with: str = DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
 ) -> str:
@@ -619,6 +621,8 @@ def download_uri_to(
         kind: The manifest ``kind`` value (e.g., "audio" or "albumart")
         position_starting_at_one: Whether the template ``position`` key starts at one
         add_cover_and_metadata: Recorded in the manifest when not None (audio downloads only)
+        allow_local_file_rename: Whether a file copied from the Volumio host is renamed
+            after the template, instead of keeping the name it has there
         replace_characters_in_file_names: Characters replaced in the rendered file name
         replace_characters_in_file_names_with: Replacement for the replaced characters
 
@@ -641,6 +645,8 @@ def download_uri_to(
             if not machine_readable:
                 click.echo("\nError: cannot determine a file name for the download", err=True)
             sys.exit(1)
+        if not allow_local_file_rename:
+            filename = preserve_local_file_name(filename, uri)
         destination = os.path.join(output_directory, filename)  # type: ignore[arg-type]
 
     if not overwrite and os.path.exists(destination):
@@ -989,6 +995,16 @@ def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Unregister every URL registered on the Volumio host.",
+    )(func)
+
+
+def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--allow-local-file-rename`` option to an audio download subcommand."""
+    return click.option(
+        "--allow-local-file-rename/--no-allow-local-file-rename",
+        default=False,
+        show_default=True,
+        help="Rename a file copied from the Volumio host after the file name template.",
     )(func)
 
 

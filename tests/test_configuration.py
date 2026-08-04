@@ -483,6 +483,7 @@ class TestDefaultConfigurationTemplate:
             },
             "miscellaneous": {
                 "add-cover-and-metadata": True,
+                "allow-local-file-rename": False,
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,

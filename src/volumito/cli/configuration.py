@@ -286,6 +286,11 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
         ["queue", "download"],
         ["track", "audio"],
     ],
+    "allow-local-file-rename": [
+        ["playlist", "download"],
+        ["queue", "download"],
+        ["track", "audio"],
+    ],
     "check-next-track": [
         ["playlist", "download"],
         ["queue", "download"],
