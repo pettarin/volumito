@@ -38,7 +38,7 @@ from volumito.clients import (
     receiver_url,
 )
 
-__version__ = "0.0.33"
+__version__ = "0.0.34"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
