@@ -2001,8 +2001,11 @@ def notifications_listen(
     """Print the notifications the Volumio host pushes to this machine.
 
     The URL the host pushes to must be registered: with --register-url it is
-    registered if missing, and unregistered again on exit. A host pushes a burst
-    of state notifications per change, often identical."""
+    registered if missing, and unregistered again on exit unless
+    --no-unregister-url-on-exit is given.
+
+    The command keeps listening until it is interrupted with Ctrl-C, or until one
+    of -n/--count, --idle-timeout, and --timeout is reached."""
     machine_readable = ctx.obj["machine_readable"]
     url = register_url_full or _compose_notification_url(ctx, port, endpoint)
 
