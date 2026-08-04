@@ -58,6 +58,66 @@ class TestConfigurationPaths:
             os.path.join("/etc", "volumito", ".volumito.yaml"),
         ]
 
+    def test_the_working_directory_is_probed_once(self, mocker: MockerFixture):
+        """A working directory that is the home directory is probed once, at the top."""
+        mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.name", "posix")
+
+        paths = configuration_paths()
+
+        assert paths == [
+            os.path.join("/home/user", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito.yaml"),
+            os.path.join("/home/user", ".volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito", ".volumito.yaml"),
+            os.path.join("/home/user", ".config", "volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".config", "volumito", ".volumito.yaml"),
+            os.path.join("/etc", "volumito.yaml"),
+            os.path.join("/etc", ".volumito.yaml"),
+            os.path.join("/etc", "volumito", "volumito.yaml"),
+            os.path.join("/etc", "volumito", ".volumito.yaml"),
+        ]
+
+    def test_a_probed_subdirectory_as_the_working_directory(self, mocker: MockerFixture):
+        """A working directory that is one of the probed subdirectories is probed once."""
+        mocker.patch(
+            "volumito.cli.configuration.os.getcwd",
+            return_value=os.path.join("/home/user", ".volumito"),
+        )
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value="/home/user")
+        mocker.patch("volumito.cli.configuration.os.name", "posix")
+
+        paths = configuration_paths()
+
+        assert paths[:2] == [
+            os.path.join("/home/user", ".volumito", "volumito.yaml"),
+            os.path.join("/home/user", ".volumito", ".volumito.yaml"),
+        ]
+        assert paths.count(os.path.join("/home/user", ".volumito", "volumito.yaml")) == 1
+        assert len(paths) == 10
+
+    def test_a_symlinked_working_directory_is_probed_once(
+        self, mocker: MockerFixture, tmp_path
+    ):
+        """A working directory reaching a probed directory by symlink is probed once."""
+        home = tmp_path / "home"
+        home.mkdir()
+        link = tmp_path / "link"
+        os.symlink(home, link)
+        mocker.patch("volumito.cli.configuration.os.getcwd", return_value=str(link))
+        mocker.patch("volumito.cli.configuration.os.path.expanduser", return_value=str(home))
+        mocker.patch("volumito.cli.configuration.os.name", "nt")
+
+        paths = configuration_paths()
+
+        assert paths[:2] == [
+            os.path.join(str(link), "volumito.yaml"),
+            os.path.join(str(link), ".volumito.yaml"),
+        ]
+        assert not any(path.startswith(f"{home}{os.sep}volumito") for path in paths)
+        assert len(paths) == 6
+
     def test_etc_omitted_on_non_posix(self, mocker: MockerFixture):
         """On non-POSIX systems (e.g., Windows) the /etc directories are not probed."""
         mocker.patch("volumito.cli.configuration.os.getcwd", return_value="/work")

@@ -450,6 +450,9 @@ def configuration_directories() -> list[str]:
     ``~/.volumito``, and ``~/.config/volumito``. On POSIX systems (Linux, macOS) the
     system directories ``/etc`` and ``/etc/volumito`` are appended as the lowest-priority
     locations; they are omitted on non-POSIX systems (e.g., Windows) where they make no sense.
+
+    A directory reached more than once (e.g., when the working directory is the home
+    directory, possibly through a symbolic link) is listed once, at its highest priority.
     """
     home = os.path.expanduser("~")
     directories = [
@@ -461,7 +464,16 @@ def configuration_directories() -> list[str]:
     if os.name == "posix":
         directories.append("/etc")
         directories.append(os.path.join("/etc", "volumito"))
-    return directories
+
+    probed: list[str] = []
+    seen: set[str] = set()
+    for directory in directories:
+        resolved = os.path.realpath(directory)
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        probed.append(directory)
+    return probed
 
 
 def configuration_paths() -> list[str]:

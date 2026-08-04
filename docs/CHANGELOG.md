@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Option `--advertise-url` of `notifications listen` renamed to `--register-url-full`
 
+### Fixed
+
+- The probed configuration paths are listed once, even when the working directory is one
+  of the directories probed
+
 
 ## [0.0.32] - 2026-08-04
 
