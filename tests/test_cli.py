@@ -1318,14 +1318,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.36" in result.output
+        assert "volumito, version 0.0.37" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.36"'
+        assert result.output.strip() == '"0.0.37"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1334,7 +1334,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.36"'
+        assert result.output.strip() == '"0.0.37"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5430,9 +5430,9 @@ class TestScpCommands:
         result = runner.invoke(main, ["scp", "put", "--help"])
 
         assert result.exit_code == 0
-        assert "writes to the Volumio host and may damage its integrity" in " ".join(
-            result.output.split()
-        )
+        joined = " ".join(result.output.split())
+        assert "writes to the Volumio host and may damage its integrity" in joined
+        assert "the copy is made only when -y/--yes is given" in joined
 
     def test_get_help(self, runner: CliRunner):
         """The reading command carries no such warning."""
@@ -5502,7 +5502,7 @@ class TestScpCommands:
         copy = mocker.patch("volumito.cli.volumito.copy_to_host")
 
         result = runner.invoke(
-            main, ["scp", "put", "/tmp/local_file", "/mnt/INTERNAL/remote_file"]
+            main, ["scp", "put", "-y", "/tmp/local_file", "/mnt/INTERNAL/remote_file"]
         )
 
         assert result.exit_code == 0
@@ -5524,6 +5524,7 @@ class TestScpCommands:
                 "pi",
                 "scp",
                 "put",
+                "--yes",
                 "--recursive",
                 "/tmp/local_directory",
                 "/mnt/INTERNAL/remote_directory",
@@ -5534,6 +5535,29 @@ class TestScpCommands:
         assert copy.call_args.kwargs == {"recursive": True}
         assert copy.call_args.args[0].ssh_username == "pi"
 
+    def test_put_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is copied to the host."""
+        copy = mocker.patch("volumito.cli.volumito.copy_to_host")
+
+        result = runner.invoke(main, ["scp", "put", "/tmp/a", "/mnt/INTERNAL/a"])
+
+        assert result.exit_code == 1
+        assert (
+            "refusing to copy to the Volumio host without -y/--yes: /mnt/INTERNAL/a"
+            in result.output
+        )
+        copy.assert_not_called()
+
+    def test_put_without_yes_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """The refusal prints nothing in machine-readable mode."""
+        copy = mocker.patch("volumito.cli.volumito.copy_to_host")
+
+        result = runner.invoke(main, ["-m", "scp", "put", "/tmp/a", "/mnt/a"])
+
+        assert result.exit_code == 1
+        assert result.output == ""
+        copy.assert_not_called()
+
     def test_put_failing(self, runner: CliRunner, mocker: MockerFixture):
         """A failed copy exits 1, reporting what went wrong."""
         mocker.patch(
@@ -5541,7 +5565,7 @@ class TestScpCommands:
             side_effect=VolumioSCPError("Permission denied"),
         )
 
-        result = runner.invoke(main, ["scp", "put", "/tmp/a", "/mnt/a"])
+        result = runner.invoke(main, ["scp", "put", "-y", "/tmp/a", "/mnt/a"])
 
         assert result.exit_code == 1
         assert "Error: Permission denied" in result.output
@@ -5550,7 +5574,7 @@ class TestScpCommands:
         """scp put prints nothing in machine-readable mode."""
         mocker.patch("volumito.cli.volumito.copy_to_host")
 
-        result = runner.invoke(main, ["-m", "scp", "put", "/tmp/a", "/mnt/a"])
+        result = runner.invoke(main, ["-m", "scp", "put", "-y", "/tmp/a", "/mnt/a"])
 
         assert result.exit_code == 0
         assert result.output == ""

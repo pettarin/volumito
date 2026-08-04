@@ -1358,13 +1358,13 @@ def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_yes(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-y``/``--yes`` option to the system execute subcommand."""
+    """Add the ``-y``/``--yes`` option to a subcommand acting on the Volumio host."""
     return click.option(
         "--yes/--no-yes",
         "-y",
         default=False,
         show_default=True,
-        help="Really execute the command on the Volumio host.",
+        help="Really perform the operation on the Volumio host.",
     )(func)
 
 
