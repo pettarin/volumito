@@ -38,6 +38,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
+    SEARCH_SERVICES,
     SHORT_FORMAT_FIELDS_STORY,
     STORY_ARGUMENT_TYPES,
     STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
@@ -57,6 +58,7 @@ from volumito.cli.pure_helpers import (
     format_as_pretty,
     format_as_table,
     format_duration,
+    parse_result_kinds,
     parse_time_to_seconds,
     parse_track_selection,
     preserve_local_file_name,
@@ -81,7 +83,7 @@ from volumito.clients import (
 )
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
-from volumito.clients.models import PlayerState, Story
+from volumito.clients.models import PlayerState, SearchResultItemKind, Story
 
 
 class OnOffParamType(click.ParamType):
@@ -115,6 +117,30 @@ class OnOffParamType(click.ParamType):
             sorted(s for spellings in self.ALIASES.values() for s in spellings)
         )
         self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+
+class ResultKindsParamType(click.ParamType):
+    """Click parameter type for a selection of search result kinds.
+
+    Accepts a comma-separated list of the kinds a search result can be (e.g.,
+    ``"album,track"``); anything else is a usage error.
+    """
+
+    name = "kinds"
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> set[SearchResultItemKind]:
+        try:
+            return parse_result_kinds(str(value))
+        except ValueError as e:
+            self.fail(str(e), param, ctx)
+
+    def get_metavar(self, param: click.Parameter, ctx: click.Context) -> str:
+        return f"[{'|'.join(kind.value for kind in SearchResultItemKind)}]"
 
 
 class SchemeParamType(click.ParamType):
@@ -977,6 +1003,17 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_album(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-b``/``--album`` option to the collection search subcommand."""
+    return click.option(
+        "--album",
+        "-b",
+        type=str,
+        default=None,
+        help="Keep the results of this album, and search for it when no query is given.",
+    )(func)
+
+
 def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--albumart-file-name-template`` option to the queue download subcommand."""
     return click.option(
@@ -985,6 +1022,17 @@ def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..
         default="{file_name_from_uri}",
         show_default=True,
         help="Template, in Python str.format syntax, for the album art file names.",
+    )(func)
+
+
+def option_albums_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-B``/``--albums-only`` option to the collection search subcommand."""
+    return click.option(
+        "--albums-only",
+        "-B",
+        is_flag=True,
+        default=False,
+        help="Keep the albums found, whatever the other options match.",
     )(func)
 
 
@@ -1010,6 +1058,28 @@ def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., N
     )(func)
 
 
+def option_artist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-a``/``--artist`` option to the collection search subcommand."""
+    return click.option(
+        "--artist",
+        "-a",
+        type=str,
+        default=None,
+        help="Keep the results of this artist, and search for it when no query is given.",
+    )(func)
+
+
+def option_artists_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-A``/``--artists-only`` option to the collection search subcommand."""
+    return click.option(
+        "--artists-only",
+        "-A",
+        is_flag=True,
+        default=False,
+        help="Keep the artists found, whatever the other options match.",
+    )(func)
+
+
 def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-f``/``--audio-file-name-template`` option to the queue download subcommand."""
     return click.option(
@@ -1030,6 +1100,17 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Act on the URL composed from the port and the endpoint.",
+    )(func)
+
+
+def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-1``/``--best-result-only`` option to the collection search subcommand."""
+    return click.option(
+        "--best-result-only",
+        "-1",
+        is_flag=True,
+        default=False,
+        help="Keep the best result of each list only, as -l/--limit 1 does.",
     )(func)
 
 
@@ -1146,6 +1227,17 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_limit(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-l``/``--limit`` option to the collection search subcommand."""
+    return click.option(
+        "--limit",
+        "-l",
+        type=click.IntRange(min=1),
+        default=None,
+        help="Keep at most this number of results in each list.",
+    )(func)
+
+
 def option_manifest_file(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--manifest-file`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1220,6 +1312,28 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-y``/``--playlist`` option to the collection search subcommand."""
+    return click.option(
+        "--playlist",
+        "-y",
+        type=str,
+        default=None,
+        help="Search for this text and keep the playlists found for it.",
+    )(func)
+
+
+def option_playlists_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-Y``/``--playlists-only`` option to the collection search subcommand."""
+    return click.option(
+        "--playlists-only",
+        "-Y",
+        is_flag=True,
+        default=False,
+        help="Keep the playlists found, whatever the other options match.",
+    )(func)
+
+
 def option_port(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-p``/``--port`` option to a notifications subcommand."""
     return click.option(
@@ -1243,23 +1357,14 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
-def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url`` option to the notifications listen subcommand."""
+def option_print_uri(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-u``/``--print-uri`` option to the collection search subcommand."""
     return click.option(
-        "--register-url/--no-register-url",
+        "--print-uri",
+        "-u",
+        is_flag=True,
         default=False,
-        show_default=True,
-        help="Register the URL on the Volumio host when it is not registered yet.",
-    )(func)
-
-
-def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
-    return click.option(
-        "--register-url-full",
-        type=str,
-        default=None,
-        help="URL to register, overriding the one composed from --port and --endpoint.",
+        help="Print the URI of each result, under its line of the -F table output.",
     )(func)
 
 
@@ -1281,6 +1386,26 @@ def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Copy a directory and its content.",
+    )(func)
+
+
+def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--register-url`` option to the notifications listen subcommand."""
+    return click.option(
+        "--register-url/--no-register-url",
+        default=False,
+        show_default=True,
+        help="Register the URL on the Volumio host when it is not registered yet.",
+    )(func)
+
+
+def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
+    return click.option(
+        "--register-url-full",
+        type=str,
+        default=None,
+        help="URL to register, overriding the one composed from --port and --endpoint.",
     )(func)
 
 
@@ -1311,6 +1436,31 @@ def option_replace_characters_in_file_names_with(
     )(func)
 
 
+def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-k``/``--result-kinds`` option to the collection search subcommand."""
+    return click.option(
+        "--result-kinds",
+        "-k",
+        type=ResultKindsParamType(),
+        default=None,
+        help=(
+            "Keep the results of these kinds only, comma-separated (e.g., 'album,track'); "
+            "the other options then only say what to search for."
+        ),
+    )(func)
+
+
+def option_service(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-s``/``--service`` option to the collection search subcommand."""
+    return click.option(
+        "--service",
+        "-s",
+        type=click.Choice(SEARCH_SERVICES, case_sensitive=True),
+        default=None,
+        help="Keep the results of this source only.",
+    )(func)
+
+
 def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-T/--type`` option to a story subcommand."""
     return click.option(
@@ -1334,6 +1484,28 @@ def option_timeout(func: Callable[..., None]) -> Callable[..., None]:
         type=float,
         default=None,
         help="Stop after listening for this number of seconds.",
+    )(func)
+
+
+def option_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-t``/``--track`` option to the collection search subcommand."""
+    return click.option(
+        "--track",
+        "-t",
+        type=str,
+        default=None,
+        help="Keep the tracks with this title, and search for it when no query is given.",
+    )(func)
+
+
+def option_tracks_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-T``/``--tracks-only`` option to the collection search subcommand."""
+    return click.option(
+        "--tracks-only",
+        "-T",
+        is_flag=True,
+        default=False,
+        help="Keep the tracks found, whatever the other options match.",
     )(func)
 
 

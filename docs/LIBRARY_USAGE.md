@@ -132,6 +132,17 @@ finally:
     client.unregister_notification(url)
 
 
+# search the sources of the host, and keep what is wanted
+results = client.search("Paolo Conte")
+for result_list in results.filtered(service="mpd"):
+    print(result_list.title)
+    for item in result_list:
+        print(" ", item.kind, item.title, item.uri)
+# Found 1 Artist 'paolo conte'
+#   artist Paolo Conte artists://Paolo%20Conte
+# ...
+
+
 # get stories and album credits
 # (requires a Premium subscription on the Volumio host;
 # entities are given by free text, or by MusicBrainz ID with is_mbid=True)
@@ -165,6 +176,7 @@ Every query returns a model instead of a raw dictionary:
 | `playlists`                                         | `Playlists` (of `Playlist`)         |
 | `queue`                                             | `Queue` (of `QueueTrack`)           |
 | `register_notification`, `unregister_notification`  | `SuccessResponse`                   |
+| `search`                                            | `SearchResults`                     |
 | `state`                                             | `PlayerState`                       |
 | `system_info`                                       | `SystemInfo`                        |
 | `system_version`                                    | `SystemVersion`                     |

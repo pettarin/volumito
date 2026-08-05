@@ -96,6 +96,37 @@ OUTPUT_FORMATS = [
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notifications register" is given neither a URL nor --autocompose-url."""
 
+SEARCH_ARGUMENT_ERROR = (
+    "Expected a QUERY argument, or one of the --album, --artist, --playlist, and --track options."
+)
+"""Error message when "collection search" is given nothing to search for."""
+
+SEARCH_KINDS_ERROR = (
+    "Expected the --result-kinds, --albums-only, --artists-only, --playlist, --playlists-only, "
+    "and --tracks-only options to agree on the kinds to keep."
+)
+"""Error message when "collection search" is asked for two different kinds of result."""
+
+SEARCH_LIMIT_ERROR ="Expected the -1/--best-result-only or the -l/--limit option, not both."
+"""Error message when "collection search" is given two limits on the results."""
+
+SEARCH_SERVICES = [
+    "highresaudio",  # not verified
+    "mpd",
+    "qobuz",
+    "soundcloud",    # not verified
+    "spop",          # the Spotify plugin, not verified
+    "tidal",         # not verified
+    "webradio",
+    "youtube2",      # the YouTube2 plugin, not verified
+]
+"""Accepted values of the --service option of the "collection search" command.
+
+Only "mpd", "qobuz", and "webradio" are verified against a host: each value marked as not
+verified is the name its plugin registers itself with, or a guess where the plugin is not
+public.
+"""
+
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
     "position",

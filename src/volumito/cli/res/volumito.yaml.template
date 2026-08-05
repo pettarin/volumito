@@ -151,6 +151,7 @@ notifications:
 output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
+  # - collection-search
   # - collection-statistics
   # - notifications-list
   # - notifications-listen
@@ -194,6 +195,9 @@ output:
 
   # Enable verbose output
   verbose: false
+
+  collection-search:
+    # Add your own overrides here
 
   collection-statistics:
     # Add your own overrides here

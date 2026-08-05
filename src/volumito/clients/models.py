@@ -4,7 +4,8 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
+from enum import StrEnum
 from typing import Any, Self
 
 from pydantic import (
@@ -549,6 +550,267 @@ class Story(VolumioModel):
             raise VolumioStoryError(str(data.get("error", "unknown error")))
         # The story text comes from the data, while raw keeps the whole envelope
         return cls.from_raw({**data, "raw": envelope})
+
+
+class SearchResultItem(VolumioModel):
+    """One result of a search on a Volumio instance."""
+
+    album: str | None = None
+    """The album of the result, when it has one."""
+
+    albumart: str | None = None
+    """The album art URI, absolute or relative to the host."""
+
+    artist: str | None = None
+    """The artist of the result, when it has one."""
+
+    audio_quality: str | None = Field(default=None, alias="audioQuality")
+    """The audio quality reported by the source (e.g., ``"hires"``)."""
+
+    duration: int | None = None
+    """The duration of the result, in seconds, when it is a track."""
+
+    explicit: bool | None = None
+    """Whether the source marks the result as explicit."""
+
+    favourite: bool | None = None
+    """Whether the result is among the favourites of the source."""
+
+    icon: str | None = None
+    """The icon of the result, when the source gives one."""
+
+    service: str | None = None
+    """The source the result comes from (e.g., ``"mpd"``, ``"webradio"``, ``"qobuz"``)."""
+
+    title: str | None = None
+    """The title of the result: the name of the artist, album, playlist, or track."""
+
+    track_number: int | None = None
+    """The number of the track within its album, when the source gives one."""
+
+    track_type: str | None = Field(default=None, alias="trackType")
+    """The type of the track (e.g., ``"flac"``, ``"qobuz"``)."""
+
+    type: str | None = None
+    """The type reported by the host (e.g., ``"folder"``, ``"song"``, ``"webradio"``)."""
+
+    uri: str | None = None
+    """The URI the result can be played or browsed from."""
+
+    @property
+    def kind(self) -> "SearchResultItemKind":
+        """The kind of entity the result is, read from its URI and its type.
+
+        A Volumio host names its entities by URI (``artists://…`` and ``qobuz://artist/…``
+        for the artists, and likewise for the albums and the playlists), and reports the
+        tracks with the ``song`` type, whatever the source.
+
+        Returns:
+            The kind of the result, :attr:`SearchResultItemKind.OTHER` when it is none of
+            the kinds the model knows
+        """
+        if self.type == "song":
+            return SearchResultItemKind.TRACK
+        uri = self.uri or ""
+        for kind in (
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.PLAYLIST,
+        ):
+            if uri.startswith(f"{kind.value}s://") or f"://{kind.value}/" in uri:
+                return kind
+        return SearchResultItemKind.OTHER
+
+
+class SearchResultItemKind(StrEnum):
+    """The kind of entity a search result is.
+
+    A member is its own lowercase name, so it can be compared to a string and written to
+    JSON as it is.
+    """
+
+    ALBUM = "album"
+    """An album of a source."""
+
+    ARTIST = "artist"
+    """An artist of a source."""
+
+    OTHER = "other"
+    """Anything else, a web radio for instance."""
+
+    PLAYLIST = "playlist"
+    """A playlist of a source."""
+
+    TRACK = "track"
+    """A playable track, which a Volumio host types as a song."""
+
+
+class SearchResultList(VolumioModel):
+    """A titled list of search results, as a Volumio instance groups them.
+
+    The list is a sequence of its items: it can be iterated, indexed, and measured
+    with ``len()``.
+    """
+
+    available_list_views: list[str] | None = Field(default=None, alias="availableListViews")
+    """The views the host suggests for the list (e.g., ``["list", "grid"]``)."""
+
+    icon: str | None = None
+    """The icon of the list, when the host gives one."""
+
+    items: list[SearchResultItem] = Field(default_factory=list)
+    """The results of the list, in the order reported by the Volumio instance."""
+
+    title: str | None = None
+    """The title of the list (e.g., ``"QOBUZ Albums"``)."""
+
+    type: str | None = None
+    """The type of the list, when the host gives one."""
+
+    def __getitem__(self, index: int) -> SearchResultItem:
+        """Return the result at the given position."""
+        return self.items[index]
+
+    def __iter__(self) -> Iterator[SearchResultItem]:  # type: ignore[override]
+        """Iterate over the results of the list."""
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        """Return the number of results in the list."""
+        return len(self.items)
+
+
+class SearchResults(VolumioModel):
+    """The results of a search on a Volumio instance.
+
+    The results are a sequence of the lists the host grouped them in: the collection can
+    be iterated, indexed, and measured with ``len()``. The :attr:`raw` attribute holds
+    the whole response envelope, as the host returned it.
+    """
+
+    is_search_result: bool | None = Field(default=None, alias="isSearchResult")
+    """Whether the host reports the payload as the result of a search."""
+
+    lists: list[SearchResultList] = Field(default_factory=list)
+    """The lists of results, in the order reported by the Volumio instance."""
+
+    @classmethod
+    def from_envelope(cls, envelope: dict[str, Any]) -> Self:
+        """Parse the response envelope of a search query.
+
+        Args:
+            envelope: The response envelope (``{"navigation": {...}}``)
+
+        Returns:
+            The results, holding the whole envelope in their ``raw`` attribute
+
+        Raises:
+            VolumioAPIError: If the envelope cannot be parsed into the model
+        """
+        navigation = envelope.get("navigation")
+        if not isinstance(navigation, dict):
+            navigation = {}
+        # The results come from the navigation, while raw keeps the whole envelope
+        return cls.from_raw({**navigation, "raw": envelope})
+
+    @property
+    def items(self) -> list[SearchResultItem]:
+        """Every result of every list, in the order reported."""
+        return [item for result_list in self.lists for item in result_list.items]
+
+    def __getitem__(self, index: int) -> SearchResultList:
+        """Return the list of results at the given position."""
+        return self.lists[index]
+
+    def __iter__(self) -> Iterator[SearchResultList]:  # type: ignore[override]
+        """Iterate over the lists of results."""
+        return iter(self.lists)
+
+    def __len__(self) -> int:
+        """Return the number of lists of results."""
+        return len(self.lists)
+
+    def filtered(
+        self,
+        service: str | None = None,
+        artist: str | None = None,
+        album: str | None = None,
+        track: str | None = None,
+        playlist: str | None = None,
+        kinds: Collection[SearchResultItemKind] | None = None,
+    ) -> "SearchResults":
+        """Return the results whose items match every filter given.
+
+        A filter is ignored when it is None. The service is matched by equality, and the
+        kind by membership, while the other filters are matched as case-insensitive
+        substrings, against the field of the item (``artist``, ``album``) and against the
+        title of the entity itself (an artist, an album, a playlist, or a track), which is
+        where a Volumio host carries the name of an entity. An empty string matches every
+        entity of its kind. The lists left without items are dropped, and the raw payload
+        is preserved.
+
+        Args:
+            service: The source the results must come from
+            artist: The text an artist of a result, or an artist result, must contain
+            album: The text an album of a result, or an album result, must contain
+            track: The text a track result must contain
+            playlist: The text a playlist result must contain
+            kinds: The kinds of entity the results must be
+
+        Returns:
+            The filtered results, holding the original payload in their ``raw`` attribute
+        """
+
+        def matches(item: SearchResultItem) -> bool:
+            if service is not None and (item.service or "").lower() != service.lower():
+                return False
+            if kinds is not None and item.kind not in kinds:
+                return False
+            for text, field, kind in (
+                (artist, item.artist, SearchResultItemKind.ARTIST),
+                (album, item.album, SearchResultItemKind.ALBUM),
+                (track, None, SearchResultItemKind.TRACK),
+                (playlist, None, SearchResultItemKind.PLAYLIST),
+            ):
+                if text is None:
+                    continue
+                wanted = text.lower()
+                in_field = wanted in (field or "").lower() if field else False
+                in_title = item.kind == kind and wanted in (item.title or "").lower()
+                if not (in_field or in_title):
+                    return False
+            return True
+
+        filtered_lists = []
+        for result_list in self.lists:
+            items = [item for item in result_list.items if matches(item)]
+            if items:
+                filtered_lists.append(result_list.model_copy(update={"items": items}))
+
+        return self.model_copy(update={"lists": filtered_lists})
+
+    def limited(self, count: int) -> "SearchResults":
+        """Return the results with at most the given number of items in each list.
+
+        The items kept are the first ones of each list, in the order the host reported
+        them, which is the order of relevance a source answers a query with. The lists
+        left without items are dropped, and the raw payload is preserved.
+
+        Args:
+            count: The number of items to keep in each list, at most
+
+        Returns:
+            The limited results, holding the original payload in their ``raw`` attribute
+        """
+        # A negative count would keep the items but the last ones, which is not a limit
+        kept = max(count, 0)
+        limited_lists = [
+            result_list.model_copy(update={"items": result_list.items[:kept]})
+            for result_list in self.lists
+            if result_list.items[:kept]
+        ]
+
+        return self.model_copy(update={"lists": limited_lists})
 
 
 class SuccessResponse(VolumioModel):

@@ -20,7 +20,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE,
 )
 from volumito.clients import VolumioHostConfiguration
-from volumito.clients.models import PlayerState, QueueTrack
+from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKind
 from volumito.clients.remote import is_local_file_uri
 
 
@@ -446,6 +446,51 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def format_search_results_as_table(lists: list[dict[str, Any]], print_uri: bool = False) -> str:
+    """Format the results of a search as a readable table.
+
+    The lists a Volumio host titles after the query it answered (e.g., ``Found 12
+    Tracks 'Sirtaki'``) are titled after their source instead (``MPD Tracks``), so that
+    every list reads alike; the titles the sources give (``QOBUZ Albums``, ``Web
+    Radio``) are kept as they are.
+
+    Args:
+        lists: The lists of results, as the Volumio host groups them
+        print_uri: Whether to print the URI of a result under its line
+
+    Returns:
+        A formatted string representation of the results
+    """
+    lines = ["Volumio Search Results", "=" * 50]
+
+    if not any(result_list.get("items") for result_list in lists):
+        lines.append("(no result)")
+        return "\n".join(lines)
+
+    for result_list in lists:
+        items = result_list.get("items") or []
+        if not items:
+            continue
+        title = str(result_list.get("title") or "Results")
+        found = re.match(r"^Found \d+ (\w+?)s? '.*'$", title)
+        service = str(items[0].get("service") or "")
+        if found is not None and service:
+            title = f"{service.upper()} {found.group(1)}s"
+        lines.append("")
+        lines.append(title)
+        width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
+        indent = " " * (width + 2)
+        for index, item in enumerate(items, start=1):
+            details = " - ".join(
+                str(item[key]) for key in ("title", "artist", "album") if item.get(key)
+            )
+            lines.append(f"{index:>{width}}. {details}")
+            if print_uri and item.get("uri"):
+                lines.append(f"{indent}{item['uri']}")
+
+    return "\n".join(lines)
+
+
 def format_seek(milliseconds: int) -> str:
     """Convert a seek position in milliseconds to HH:MM:SS.mmm format.
 
@@ -626,6 +671,34 @@ def parse_track_selection(value: str) -> set[int]:
             raise ValueError(f"reversed range {item!r} in the track selection {value!r}")
         positions.update(range(int(first), int(last) + 1))
     return positions
+
+
+def parse_result_kinds(value: str) -> set[SearchResultItemKind]:
+    """Parse a list of search result kinds such as ``"album,track"``.
+
+    The list is comma-separated; blanks around the items are ignored, and a kind listed
+    more than once is kept once.
+
+    Args:
+        value: The list of kinds to parse
+
+    Returns:
+        The kinds listed
+
+    Raises:
+        ValueError: If the list is empty or names a kind that does not exist
+    """
+    accepted = ", ".join(kind.value for kind in SearchResultItemKind)
+    kinds = set()
+    items = [item.strip() for item in value.split(",")]
+    if not any(items):
+        raise ValueError("the list of kinds is empty")
+    for item in items:
+        try:
+            kinds.add(SearchResultItemKind(item))
+        except ValueError:
+            raise ValueError(f"unknown kind {item!r}: expected one of {accepted}") from None
+    return kinds
 
 
 def parse_time_to_seconds(text: str) -> int | None:

@@ -4,6 +4,8 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import json
+
 import pytest
 
 from volumito.clients.errors import VolumioAPIError, VolumioStoryError
@@ -19,6 +21,10 @@ from volumito.clients.models import (
     PushNotification,
     Queue,
     QueueTrack,
+    SearchResultItem,
+    SearchResultItemKind,
+    SearchResultList,
+    SearchResults,
     Story,
     SuccessResponse,
     SystemInfo,
@@ -456,6 +462,339 @@ class TestQueue:
 
         assert track.title == "A Song"
         assert track.volume_number == 2
+
+
+class TestSearchResults:
+    """Test cases for the SearchResults, SearchResultList, and SearchResultItem models."""
+
+    _ENVELOPE = {
+        "navigation": {
+            "isSearchResult": True,
+            "lists": [
+                {
+                    "title": "Found 1 Artist 'paolo conte'",
+                    "availableListViews": ["list", "grid"],
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "Paolo Conte",
+                            "uri": "artists://Paolo%20Conte",
+                        }
+                    ],
+                },
+                {
+                    "title": "Found 1 Album 'paolo conte'",
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "Paris Milonga",
+                            "artist": "Paolo Conte",
+                            "uri": "albums://Paolo%20Conte/Paris%20Milonga",
+                        }
+                    ],
+                },
+                {
+                    "title": "Found 2 Tracks 'paolo conte'",
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "song",
+                            "title": "1 - Aguaplano",
+                            "artist": "Paolo Conte",
+                            "album": "Aguaplano",
+                            "uri": "music-library/INTERNAL/music/001___Aguaplano.flac",
+                        },
+                        {
+                            "service": "mpd",
+                            "type": "song",
+                            "title": "2 - Come Di",
+                            "artist": "Paolo Conte",
+                            "album": "Aguaplano",
+                            "uri": "music-library/INTERNAL/music/002___Come_Di.flac",
+                        },
+                    ],
+                },
+                {
+                    "title": "Web Radio",
+                    "icon": "fa icon",
+                    "items": [
+                        {
+                            "service": "webradio",
+                            "type": "webradio",
+                            "title": "RADIO ATHENABEAT",
+                            "artist": "",
+                            "album": "",
+                            "uri": "http://opml.radiotime.com/Tune.ashx?id=s339255",
+                        }
+                    ],
+                },
+                {
+                    "title": "QOBUZ Artists",
+                    "type": "",
+                    "items": [
+                        {
+                            "service": "qobuz",
+                            "type": "folder-with-favourites",
+                            "title": "Paolo Conte",
+                            "explicit": False,
+                            "favourite": False,
+                            "audioQuality": "",
+                            "uri": "qobuz://artist/31776",
+                        }
+                    ],
+                },
+                {
+                    "title": "QOBUZ Playlists",
+                    "items": [
+                        {
+                            "service": "qobuz",
+                            "type": "folder-with-favourites",
+                            "title": "Paolo Conte Essentials",
+                            "trackType": "qobuz",
+                            "uri": "qobuz://playlist/13980206",
+                        }
+                    ],
+                },
+                {
+                    "title": "QOBUZ Tracks",
+                    "items": [
+                        {
+                            "service": "qobuz",
+                            "type": "song",
+                            "title": "Aguaplano",
+                            "artist": "Paolo Conte",
+                            "album": "Aguaplano",
+                            "duration": 251,
+                            "track_number": 1,
+                            "trackType": "qobuz",
+                            "uri": "qobuz://song/11665865",
+                        }
+                    ],
+                },
+            ],
+        }
+    }
+    """A payload of the shape a Volumio host answers a search with."""
+
+    def _results(self) -> SearchResults:
+        return SearchResults.from_envelope(self._ENVELOPE)
+
+    def test_parses_the_envelope(self):
+        """The lists and their items are parsed, and the envelope is kept in raw."""
+        results = self._results()
+
+        assert results.is_search_result is True
+        assert len(results) == 7
+        assert results.raw == self._ENVELOPE
+        assert [result_list.title for result_list in results][:2] == [
+            "Found 1 Artist 'paolo conte'",
+            "Found 1 Album 'paolo conte'",
+        ]
+
+    def test_an_envelope_without_a_navigation(self):
+        """A payload that carries no navigation parses to empty results."""
+        results = SearchResults.from_envelope({"unexpected": True})
+
+        assert len(results) == 0
+        assert results.raw == {"unexpected": True}
+
+    def test_the_lists_are_sequences_of_their_items(self):
+        """A list can be measured, indexed, and iterated."""
+        tracks = self._results()[2]
+
+        assert isinstance(tracks, SearchResultList)
+        assert isinstance(tracks[0], SearchResultItem)
+        assert len(tracks) == 2
+        assert tracks[0].title == "1 - Aguaplano"
+        assert [item.title for item in tracks] == ["1 - Aguaplano", "2 - Come Di"]
+
+    def test_the_fields_of_an_item(self):
+        """The camelCase keys of an item are read into their snake_case fields."""
+        track = self._results()[6][0]
+
+        assert track.service == "qobuz"
+        assert track.artist == "Paolo Conte"
+        assert track.duration == 251
+        assert track.track_number == 1
+        assert track.track_type == "qobuz"
+        assert track.uri == "qobuz://song/11665865"
+
+    def test_the_items_of_every_list(self):
+        """The items property flattens the lists, in the order reported."""
+        items = self._results().items
+
+        assert len(items) == 8
+        assert items[0].title == "Paolo Conte"
+        assert items[-1].service == "qobuz"
+
+    @pytest.mark.parametrize(
+        ("index", "kind"),
+        [
+            (0, SearchResultItemKind.ARTIST),
+            (1, SearchResultItemKind.ALBUM),
+            (2, SearchResultItemKind.TRACK),
+            (3, SearchResultItemKind.TRACK),
+            (4, SearchResultItemKind.OTHER),
+            (5, SearchResultItemKind.ARTIST),
+            (6, SearchResultItemKind.PLAYLIST),
+            (7, SearchResultItemKind.TRACK),
+        ],
+    )
+    def test_the_kind_of_an_item(self, index, kind):
+        """The kind of an item is read from its URI and its type."""
+        assert self._results().items[index].kind is kind
+
+    def test_a_kind_is_its_own_string(self):
+        """A kind is a member of the enumeration, and the string the member holds."""
+        kind = self._results().items[0].kind
+
+        assert isinstance(kind, SearchResultItemKind)
+        assert kind == "artist"
+        assert json.dumps({"kind": kind}) == '{"kind": "artist"}'
+
+    def test_filtered_by_service(self):
+        """The service filter keeps the results of that source only."""
+        filtered = self._results().filtered(service="qobuz")
+
+        assert [result_list.title for result_list in filtered] == [
+            "QOBUZ Artists",
+            "QOBUZ Playlists",
+            "QOBUZ Tracks",
+        ]
+
+    def test_filtered_by_artist(self):
+        """The artist filter keeps the artist entries too, whose field is empty."""
+        filtered = self._results().filtered(artist="paolo conte")
+
+        assert [item.kind for item in filtered.items] == [
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.TRACK,
+            SearchResultItemKind.TRACK,
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.TRACK,
+        ]
+
+    def test_filtered_by_album(self):
+        """The album filter matches the album field and the album entries."""
+        filtered = self._results().filtered(album="aguaplano")
+
+        assert [item.title for item in filtered.items] == [
+            "1 - Aguaplano",
+            "2 - Come Di",
+            "Aguaplano",
+        ]
+
+    def test_filtered_by_track(self):
+        """The track filter keeps the tracks with that title."""
+        filtered = self._results().filtered(track="come di")
+
+        assert [item.title for item in filtered.items] == ["2 - Come Di"]
+
+    def test_filtered_by_playlist(self):
+        """The playlist filter keeps the playlists with that title."""
+        assert [item.title for item in self._results().filtered(playlist="essentials").items] == [
+            "Paolo Conte Essentials"
+        ]
+
+    def test_filtered_by_any_playlist(self):
+        """An empty playlist filter keeps every playlist."""
+        filtered = self._results().filtered(playlist="")
+
+        assert [item.kind for item in filtered.items] == [SearchResultItemKind.PLAYLIST]
+
+    def test_filtered_by_kind(self):
+        """The kinds filter keeps the results that are of one of them."""
+        filtered = self._results().filtered(kinds={SearchResultItemKind.ARTIST})
+
+        assert [item.title for item in filtered.items] == ["Paolo Conte", "Paolo Conte"]
+
+    def test_filtered_by_several_kinds(self):
+        """Every kind listed is kept."""
+        filtered = self._results().filtered(
+            kinds={SearchResultItemKind.ALBUM, SearchResultItemKind.PLAYLIST}
+        )
+
+        assert [item.kind for item in filtered.items] == [
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.PLAYLIST,
+        ]
+
+    def test_filtered_by_kind_and_service(self):
+        """The kinds filter combines with the other filters."""
+        filtered = self._results().filtered(
+            service="qobuz", kinds={SearchResultItemKind.ARTIST}
+        )
+
+        assert [result_list.title for result_list in filtered] == ["QOBUZ Artists"]
+        assert filtered.raw == self._ENVELOPE
+
+    def test_filtered_by_a_kind_without_a_match(self):
+        """A kind no result is leaves no list."""
+        assert len(self._results().filtered(kinds=set())) == 0
+
+    def test_the_filters_combine(self):
+        """Every filter given must match."""
+        filtered = self._results().filtered(service="mpd", artist="conte", track="aguaplano")
+
+        assert [item.title for item in filtered.items] == ["1 - Aguaplano"]
+
+    def test_filtering_keeps_the_raw_payload(self):
+        """The filtered results still carry the payload the host answered."""
+        filtered = self._results().filtered(service="mpd")
+
+        assert len(filtered) == 3
+        assert filtered.raw == self._ENVELOPE
+
+    def test_filtering_without_a_match(self):
+        """Filters matching nothing leave no list."""
+        assert len(self._results().filtered(artist="no such artist")) == 0
+
+    def test_filtering_nothing(self):
+        """Without a filter every list is kept."""
+        assert len(self._results().filtered()) == 7
+
+    def test_limited_to_the_first_items(self):
+        """Each list keeps its first items, in the order the host reported them."""
+        results = self._results()
+
+        limited = results.limited(1)
+
+        assert len(limited) == 7
+        # The list of two tracks is the only one the limit shortens
+        assert [len(result_list) for result_list in limited] == [1] * 7
+        assert [item.title for item in limited.items][2] == "1 - Aguaplano"
+        # The results the method was called on are left alone
+        assert [len(result_list) for result_list in results] == [1, 1, 2, 1, 1, 1, 1]
+
+    def test_limited_to_more_than_there_is(self):
+        """A limit above the length of every list changes nothing."""
+        limited = self._results().limited(10)
+
+        assert [len(result_list) for result_list in limited] == [1, 1, 2, 1, 1, 1, 1]
+
+    def test_limited_to_nothing(self):
+        """A limit of zero, or less, leaves no list."""
+        assert len(self._results().limited(0)) == 0
+        assert len(self._results().limited(-1)) == 0
+
+    def test_limiting_keeps_the_raw_payload(self):
+        """The limited results still carry the payload the host answered."""
+        limited = self._results().limited(1)
+
+        assert limited.raw == self._ENVELOPE
+
+    def test_limiting_what_is_filtered(self):
+        """The two methods compose, the limit applying to what the filters left."""
+        limited = self._results().filtered(service="mpd").limited(1)
+
+        assert [item.title for item in limited.items] == [
+            "Paolo Conte",
+            "Paris Milonga",
+            "1 - Aguaplano",
+        ]
 
 
 class TestStory:

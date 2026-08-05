@@ -29,6 +29,7 @@ from volumito.clients.models import (
     Playlists,
     Queue,
     QueueTrack,
+    SearchResults,
     Story,
     SuccessResponse,
     SystemInfo,
@@ -804,6 +805,26 @@ class VolumioRESTAPIClient:
         if value is None:
             return self._send_command("repeat")
         return self._send_command(f"repeat&value={str(value).lower()}")
+
+    def search(self, query: str) -> SearchResults:
+        """Search the sources of the Volumio instance.
+
+        The Volumio API takes the query only: the results it groups by source and by
+        kind can be narrowed with :meth:`SearchResults.filtered`.
+
+        Args:
+            query: The text to search for
+
+        Returns:
+            The results of the search
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return SearchResults.from_envelope(
+            self._get_json(f"/api/v1/search?query={quote(query, safe='')}")
+        )
 
     @property
     def seek(self) -> int:

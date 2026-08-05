@@ -1778,6 +1778,71 @@ class TestVolumioRESTAPIClient:
         assert "Expected JSON object from Volumio API, got list" in str(exc_info.value)
 
 
+    def test_search_success(self, mocker: MockerFixture):
+        """Test successful search() call."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "navigation": {
+                "isSearchResult": True,
+                "lists": [
+                    {
+                        "title": "Found 1 Artist 'paolo conte'",
+                        "items": [
+                            {
+                                "service": "mpd",
+                                "type": "folder",
+                                "title": "Paolo Conte",
+                                "uri": "artists://Paolo%20Conte",
+                            }
+                        ],
+                    }
+                ],
+            }
+        }
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        results = client.search("Paolo Conte")
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/search?query=Paolo%20Conte", timeout=5.0
+        )
+        assert len(results) == 1
+        assert results[0].title == "Found 1 Artist 'paolo conte'"
+        assert results.items[0].kind == "artist"
+        # The whole envelope stays available on the model
+        assert results.raw == mock_response.json.return_value
+
+    def test_search_connection_error(self, mocker: MockerFixture):
+        """Test search() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.search("Paolo Conte")
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_search_non_dict_response(self, mocker: MockerFixture):
+        """Test search() rejects a payload that is not a JSON object."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = []
+        mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.search("Paolo Conte")
+
+        assert "Expected JSON object from Volumio API, got list" in str(exc_info.value)
+
+
 class TestVolumioExceptions:
     """Test cases for Volumio exception classes."""
 
