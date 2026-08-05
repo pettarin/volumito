@@ -65,6 +65,27 @@ def _lists_with_first_items(
     ]
 
 
+def _lists_without_first_items(
+    lists: list["SearchResultList"], count: int
+) -> list["SearchResultList"]:
+    """Return copies of the lists without their first items, dropping the emptied ones.
+
+    Args:
+        lists: The lists of results to offset
+        count: The number of items to skip in each list
+
+    Returns:
+        The offset copies of the lists still holding an item
+    """
+    # A negative count would drop the items but the last ones, which is not an offset
+    skipped = max(count, 0)
+    return [
+        result_list.model_copy(update={"items": result_list.items[skipped:]})
+        for result_list in lists
+        if result_list.items[skipped:]
+    ]
+
+
 def _lists_with_items_kept(
     lists: list["SearchResultList"],
     keep: Callable[["SearchResultItem"], bool],
@@ -718,6 +739,12 @@ class SearchResultList(VolumioModel):
     available_list_views: list[str] | None = Field(default=None, alias="availableListViews")
     """The views the host suggests for the list (e.g., ``["list", "grid"]``)."""
 
+    count: int | None = None
+    """The number of items the list held before the host offset or limited it."""
+
+    filters: dict[str, Any] | None = None
+    """The offset and limit the host applied to the list, when it applied any."""
+
     icon: str | None = None
     """The icon of the list, when the host gives one."""
 
@@ -860,6 +887,21 @@ class SearchResults(VolumioModel):
             The limited results, holding the original payload in their ``raw`` attribute
         """
         return self.model_copy(update={"lists": _lists_with_first_items(self.lists, count)})
+
+    def offset(self, count: int) -> "SearchResults":
+        """Return the results without the first items of each list.
+
+        The items skipped are the first ones of each list, in the order the host
+        reported them. The lists left without items are dropped, and the raw payload
+        is preserved.
+
+        Args:
+            count: The number of items to skip in each list
+
+        Returns:
+            The offset results, holding the original payload in their ``raw`` attribute
+        """
+        return self.model_copy(update={"lists": _lists_without_first_items(self.lists, count)})
 
 
 class BrowseResults(VolumioModel):

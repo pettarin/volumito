@@ -5204,7 +5204,7 @@ class TestCollectionBrowse:
         result = runner.invoke(main, ["collection", "browse", "-F", "json"])
 
         assert result.exit_code == 0
-        mock_client.browse.assert_called_once_with(None)
+        mock_client.browse.assert_called_once_with(None, None)
         navigation = json.loads(result.output)
         assert [item["name"] for item in navigation["lists"][0]["items"]] == [
             "Music Library",
@@ -5220,7 +5220,7 @@ class TestCollectionBrowse:
         result = runner.invoke(main, ["collection", "browse", "music-library"])
 
         assert result.exit_code == 0
-        mock_client.browse.assert_called_once_with("music-library")
+        mock_client.browse.assert_called_once_with("music-library", None)
 
     def test_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
         """The table numbers the named items, with their URIs unless declined."""
@@ -5244,6 +5244,24 @@ class TestCollectionBrowse:
 
         assert result.exit_code == 0
         assert "1. Music Library\n2. Web Radio" in result.output
+
+    def test_the_offset_reaches_the_client(self, runner: CliRunner, mocker: MockerFixture):
+        """-o passes the offset to the client, which lets the host skip."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "music-library", "-o", "2"])
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with("music-library", 2)
+
+    def test_a_negative_offset(self, runner: CliRunner, mocker: MockerFixture):
+        """A negative offset is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-o", "-1"])
+
+        assert result.exit_code == 2
+        mock_client.browse.assert_not_called()
 
     def test_the_slow_endpoints_timeout_reaches_the_client(
         self, runner: CliRunner, mocker: MockerFixture
@@ -5834,6 +5852,41 @@ class TestCollectionSearch:
         assert result.exit_code == 2
         assert "not both" in result.output
         mock_client.search.assert_not_called()
+
+    def test_the_offset(self, runner: CliRunner, mocker: MockerFixture):
+        """-o skips the first results of each list, client-side."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-o", "1", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == [
+            "Come Di",
+            "Sotto le stelle del jazz",
+        ]
+
+    def test_the_offset_applies_after_the_filters_and_before_the_limit(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-o skips among the filtered results, and -l then caps the window."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(
+            main,
+            ["collection", "search", "Paolo", "-T", "-o", "1", "-l", "1", "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == ["Come Di"]
+
+    def test_an_offset_of_zero(self, runner: CliRunner, mocker: MockerFixture):
+        """-o 0 changes nothing."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-o", "0", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert len(json.loads(result.output)[0]["items"]) == 3
 
     def test_the_uris_in_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
         """--print-uri prints the URI of each result under its line."""

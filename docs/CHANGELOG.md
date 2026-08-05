@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Methods `add_to_queue` and `replace_queue_and_play` on the REST API client
 - Global option `--rest-api-timeout-slow-endpoints` for the endpoints that can take long
   (e.g., replacing the queue)
+- Option `-o`/`--offset` on `collection browse` and `collection search`, skipping the
+  first results of each list
 
 
 ## [0.0.39] - 2026-08-05

@@ -502,7 +502,7 @@ class VolumioRESTAPIClient:
             self._post_json("/api/v1/addToQueue", payload, self.timeout_slow_endpoints)
         )
 
-    def browse(self, uri: str | None = None) -> BrowseResults:
+    def browse(self, uri: str | None = None, offset: int | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
 
         The URIs to descend into come from the answers themselves, and from the search
@@ -511,18 +511,29 @@ class VolumioRESTAPIClient:
         its percent signs, so the escapes the instance itself puts in its URIs (e.g.,
         ``artists://Paolo%20Conte``) are not encoded twice.
 
+        The offset is applied by the instance to each list of the answer, whose
+        ``count`` then tells how many items it held; the root ignores it, and so does
+        the instance when it is 0, which is therefore not sent.
+
         Args:
             uri: The URI to browse, the root when not given
+            offset: The number of items to skip in each list, when given
 
         Returns:
             The content listed at the URI
 
         Raises:
+            ValueError: If the offset is negative
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
+        if offset is not None and offset < 0:
+            raise ValueError(f"The offset must be 0 or greater, got {offset}")
         browsed = quote(uri if uri is not None else "/", safe=":/%")
-        return BrowseResults.from_envelope(self._get_json(f"/api/v1/browse?uri={browsed}"))
+        skipped = f"&offset={offset}" if offset else ""
+        return BrowseResults.from_envelope(
+            self._get_json(f"/api/v1/browse?uri={browsed}{skipped}")
+        )
 
     def clear(self) -> CommandResponse:
         """Clear the playback queue.

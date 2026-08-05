@@ -1889,6 +1889,40 @@ class TestVolumioRESTAPIClient:
             "http://volumio.local:3000/api/v1/browse?uri=/", timeout=5.0
         )
 
+    def test_browse_with_an_offset(self, mocker: MockerFixture):
+        """Test browse() sends a positive offset, and only a positive one."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"navigation": {"lists": []}}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.browse("music-library", 3)
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=music-library&offset=3", timeout=5.0
+        )
+
+        # The host ignores an offset of 0, so it is not sent
+        mock_get.reset_mock()
+        client.browse("music-library", 0)
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=music-library", timeout=5.0
+        )
+
+    def test_browse_with_a_negative_offset(self, mocker: MockerFixture):
+        """Test browse() rejects a negative offset without any request."""
+        mock_get = mocker.patch("requests.get")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError) as exc_info:
+            client.browse("music-library", -1)
+
+        assert "must be 0 or greater" in str(exc_info.value)
+        mock_get.assert_not_called()
+
     def test_browse_encodes_the_uri(self, mocker: MockerFixture):
         """Test browse() encoding a URI without touching its escapes and structure."""
         mock_response = mocker.Mock()

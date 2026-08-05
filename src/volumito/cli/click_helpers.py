@@ -1282,6 +1282,17 @@ def option_number_retries_next_track(func: Callable[..., None]) -> Callable[...,
     )(func)
 
 
+def option_offset(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-o``/``--offset`` option to a collection subcommand."""
+    return click.option(
+        "-o",
+        "--offset",
+        type=click.IntRange(min=0),
+        default=None,
+        help="Skip this number of results at the start of each list.",
+    )(func)
+
+
 def option_only_tracks(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-T``/``--only-tracks`` option to a queue/playlist download subcommand."""
     return click.option(

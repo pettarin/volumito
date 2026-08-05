@@ -56,6 +56,7 @@ from volumito.cli.click_helpers import (
     option_limit,
     option_manifest_file,
     option_number_retries_next_track,
+    option_offset,
     option_only_tracks,
     option_output_directory,
     option_output_file,
@@ -1680,6 +1681,7 @@ def collection(ctx: click.Context) -> None:
 @option_best_result_only
 @option_format_table
 @option_limit
+@option_offset
 @option_playlists_only
 @option_print_uri_toggle
 @option_result_kinds
@@ -1692,6 +1694,7 @@ def collection_browse(
     best_result_only: bool,
     output_format: str,
     limit: int | None,
+    offset: int | None,
     playlists_only: bool,
     print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
@@ -1702,7 +1705,8 @@ def collection_browse(
     Without URI, the root of the collection is listed: the starting points of the
     sources currently enabled. The URIs to descend into come from the listings
     themselves, printed unless --no-print-uri is given, and from the -u/--print-uri
-    option of "collection search"."""
+    option of "collection search". The -o/--offset skip is applied by the host to
+    each list, before the kind options act, and not at the root."""
     machine_readable = ctx.obj["machine_readable"]
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
@@ -1720,7 +1724,7 @@ def collection_browse(
     if len(asked) > 1:
         raise click.UsageError(BROWSE_KINDS_ERROR)
 
-    results = fetch_or_exit(ctx, lambda c: c.browse(uri))
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
 
     if asked:
         results = results.filtered(kinds=asked[0])
@@ -1757,6 +1761,7 @@ def collection_browse(
 @option_best_result_only
 @option_format_table
 @option_limit
+@option_offset
 @option_playlist
 @option_playlists_only
 @option_print_uri
@@ -1774,6 +1779,7 @@ def collection_search(
     best_result_only: bool,
     output_format: str,
     limit: int | None,
+    offset: int | None,
     playlist: str | None,
     playlists_only: bool,
     print_uri: bool,
@@ -1819,6 +1825,9 @@ def collection_search(
         results = results.filtered(service=service, kinds=asked[0])
     else:
         results = results.filtered(service=service, artist=artist, album=album, track=track)
+
+    if offset:
+        results = results.offset(offset)
 
     kept = 1 if best_result_only else limit
     if kept is not None:
