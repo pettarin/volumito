@@ -1362,16 +1362,6 @@ def option_service(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_song(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--song`` option to the collection search subcommand."""
-    return click.option(
-        "--song",
-        type=str,
-        default=None,
-        help="Keep the songs with this title, and search for it when no query is given.",
-    )(func)
-
-
 def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-T/--type`` option to a story subcommand."""
     return click.option(
@@ -1395,6 +1385,16 @@ def option_timeout(func: Callable[..., None]) -> Callable[..., None]:
         type=float,
         default=None,
         help="Stop after listening for this number of seconds.",
+    )(func)
+
+
+def option_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--track`` option to the collection search subcommand."""
+    return click.option(
+        "--track",
+        type=str,
+        default=None,
+        help="Keep the tracks with this title, and search for it when no query is given.",
     )(func)
 
 

@@ -66,9 +66,9 @@ from volumito.cli.click_helpers import (
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
     option_service,
-    option_song,
     option_story_type,
     option_timeout,
+    option_track,
     option_unregister_url_on_exit,
     option_with_albumart,
     option_yes,
@@ -1618,7 +1618,7 @@ def collection(ctx: click.Context) -> None:
 @option_playlist
 @option_playlists_only
 @option_service
-@option_song
+@option_track
 def collection_search(
     ctx: click.Context,
     query: str | None,
@@ -1628,16 +1628,16 @@ def collection_search(
     playlist: str | None,
     playlists_only: bool,
     service: str | None,
-    song: str | None,
+    track: str | None,
 ) -> None:
     """Search QUERY in the Volumio sources currently enabled.
 
-    Without QUERY, the text of the --album, --artist, --playlist, and --song options
-    is searched for; --album, --artist, and --song also keep the matching results
+    Without QUERY, the text of the --album, --artist, --playlist, and --track options
+    is searched for; --album, --artist, and --track also keep the matching results
     only. With --playlist or --playlists-only, the playlists found are all kept, and
     the other options only say what to search for."""
     machine_readable = ctx.obj["machine_readable"]
-    terms = [term for term in (artist, album, song, playlist) if term]
+    terms = [term for term in (artist, album, track, playlist) if term]
     searched = query or " ".join(terms)
     if not searched:
         raise click.UsageError(SEARCH_ARGUMENT_ERROR)
@@ -1650,7 +1650,7 @@ def collection_search(
         # playlists it finds related to it, whose titles rarely carry the query
         results = results.filtered(service=service, playlist="")
     else:
-        results = results.filtered(service=service, artist=artist, album=album, song=song)
+        results = results.filtered(service=service, artist=artist, album=album, song=track)
 
     if machine_readable or output_format == "raw":
         # The raw format is the payload of the host, as it answered it

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Subcommand `collection search`, searching the sources of the Volumio host and keeping
-  the results matching `--service`, `--artist`, `--album`, `--song`, `--playlist`, or
+  the results matching `--service`, `--artist`, `--album`, `--track`, `--playlist`, or
   `--playlists-only`
 - Method `search` on the REST API client, returning the new `SearchResults` (of
   `SearchResultList`, of `SearchResultItem`) model, which filters its own results

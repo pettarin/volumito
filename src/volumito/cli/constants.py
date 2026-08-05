@@ -97,7 +97,7 @@ REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url 
 """Error message when "notifications register" is given neither a URL nor --autocompose-url."""
 
 SEARCH_ARGUMENT_ERROR = (
-    "Expected a QUERY argument, or one of the --album, --artist, --playlist, and --song options."
+    "Expected a QUERY argument, or one of the --album, --artist, --playlist, and --track options."
 )
 """Error message when "collection search" is given nothing to search for."""
 

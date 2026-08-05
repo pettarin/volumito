@@ -5089,7 +5089,7 @@ class TestCollectionSearch:
         mock_client = self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["collection", "search", "--artist", "Paolo Conte", "--song", "Aguaplano"]
+            main, ["collection", "search", "--artist", "Paolo Conte", "--track", "Aguaplano"]
         )
 
         assert result.exit_code == 0
@@ -5180,7 +5180,7 @@ class TestCollectionSearch:
         self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["collection", "search", "Paolo", "--song", "nothing", "-F", "table"]
+            main, ["collection", "search", "Paolo", "--track", "nothing", "-F", "table"]
         )
 
         assert result.exit_code == 0
