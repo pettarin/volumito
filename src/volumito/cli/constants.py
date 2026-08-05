@@ -102,6 +102,9 @@ OUTPUT_FORMATS = [
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notifications register" is given neither a URL nor --autocompose-url."""
 
+REPLACE_POSITION_ERROR = "Expected the -p/--position option only together with --play."
+"""Error message when "queue replace" is asked for a position without playing."""
+
 SEARCH_ARGUMENT_ERROR = (
     "Expected a QUERY argument, or one of the --album, --artist, --playlist, and --track options."
 )

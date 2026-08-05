@@ -383,6 +383,21 @@ class VolumioRESTAPIClient:
             return {"mbid": entity.value}
         return {key: entity.value}
 
+    def add_to_queue(self, uri: str) -> CommandResponse:
+        """Add the content of a URI to the end of the queue, without touching playback.
+
+        Args:
+            uri: The URI whose content to add, from a browse or a search
+
+        Returns:
+            The response of the Volumio API
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        return CommandResponse.from_raw(self._post_json("/api/v1/addToQueue", {"uri": uri}))
+
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
 
@@ -828,6 +843,46 @@ class VolumioRESTAPIClient:
         if value is None:
             return self._send_command("repeat")
         return self._send_command(f"repeat&value={str(value).lower()}")
+
+    def replace_queue_and_play(self, uri: str, index: int | None = None) -> CommandResponse:
+        """Replace the queue with the content of a URI and start playing it.
+
+        Without an index the host plays the first item. With one, the URI is browsed
+        first and its items are sent along with the index, since that is the only
+        payload the Volumio API starts at a chosen item with; a URI listing nothing
+        (a single track, for instance) falls back to the payload without an index
+        when the index is 0, whose first item is the wanted one.
+
+        Args:
+            uri: The URI whose content to play, from a browse or a search
+            index: The position of the item to play first (0-based), or None for
+                the first without browsing the URI
+
+        Returns:
+            The response of the Volumio API
+
+        Raises:
+            ValueError: If the index is negative
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response, or if the URI
+                does not list enough items to play the asked one
+        """
+        if index is not None and index < 0:
+            raise ValueError(f"The index must be 0 or greater, got {index}")
+        if index is not None:
+            items = [item.raw for item in self.browse(uri).items]
+            if len(items) > index:
+                return CommandResponse.from_raw(
+                    self._post_json("/api/v1/replaceAndPlay", {"list": items, "index": index})
+                )
+            if items or index > 0:
+                raise VolumioAPIError(
+                    f"The URI lists {len(items)} items, not enough to play the one "
+                    f"at index {index}"
+                )
+        return CommandResponse.from_raw(
+            self._post_json("/api/v1/replaceAndPlay", {"item": {"uri": uri}})
+        )
 
     def search(self, query: str) -> SearchResults:
         """Search the sources of the Volumio instance.

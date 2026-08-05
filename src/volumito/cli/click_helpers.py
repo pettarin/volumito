@@ -1325,6 +1325,16 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_play(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--play/--no-play`` option to the queue replace subcommand."""
+    return click.option(
+        "--play/--no-play",
+        default=True,
+        show_default=True,
+        help="Start playing the replaced queue (from the -p/--position item), or only replace it.",
+    )(func)
+
+
 def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-y``/``--playlist`` option to the collection search subcommand."""
     return click.option(
@@ -1356,6 +1366,20 @@ def option_port(func: Callable[..., None]) -> Callable[..., None]:
         default=DEFAULT_PORT,
         show_default=True,
         help="Port the local notification listener binds to.",
+    )(func)
+
+
+def option_position(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--position`` option to the queue replace subcommand."""
+    return click.option(
+        "-p",
+        "--position",
+        type=int,
+        default=None,
+        help=(
+            "Play the item at this position among those URI lists (indexed according to "
+            "--position-starting-at-one/--position-starting-at-zero); the first when not given."
+        ),
     )(func)
 
 

@@ -1569,14 +1569,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.39" in result.output
+        assert "volumito, version 0.0.40" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.39"'
+        assert result.output.strip() == '"0.0.40"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1585,7 +1585,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.39"'
+        assert result.output.strip() == '"0.0.40"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -10164,6 +10164,137 @@ class TestQueueActions:
         assert result.exit_code == 0
         assert "executed successfully" not in result.output
         mock_client.clear.assert_called_once()
+
+
+class TestQueueReplace:
+    """Test cases for the queue replace command."""
+
+    URI = "albums://Paolo%20Conte/Aguaplano"
+    """A URI of the kind a browse or a search prints."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with usable replace methods; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.add_to_queue.return_value = {"response": "success"}
+        mock_client.clear.return_value = {"response": "clearQueue"}
+        mock_client.replace_queue_and_play.return_value = {"response": "success"}
+        _attach_property(mock_client, "state", return_value={
+            "title": "Test Song",
+            "artist": "StatusMarkerArtist",
+        })
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_replaces_and_plays_the_first_item(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a position the first item plays, and the status is printed."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI])
+
+        assert result.exit_code == 0
+        assert "Command 'replace' executed successfully" in result.output
+        assert "StatusMarkerArtist" in result.output
+        mock_client.replace_queue_and_play.assert_called_once_with(self.URI, 0)
+        mock_sleep.assert_called_once_with(2.0)
+
+    @pytest.mark.parametrize(("position", "index"), [("1", 0), ("3", 2)])
+    def test_the_position_starting_at_one(
+        self, runner: CliRunner, mocker: MockerFixture, position, index
+    ):
+        """The one-based position of the user reaches the client as a 0-based index."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main,
+            ["queue", "replace", self.URI, "-p", position, "--no-print-resulting-status"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.replace_queue_and_play.assert_called_once_with(self.URI, index)
+
+    def test_the_position_starting_at_zero(self, runner: CliRunner, mocker: MockerFixture):
+        """Under the zero-based convention the position is the index."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                "queue",
+                "replace",
+                self.URI,
+                "-p",
+                "0",
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.replace_queue_and_play.assert_called_once_with(self.URI, 0)
+
+    def test_a_position_below_the_minimum(self, runner: CliRunner, mocker: MockerFixture):
+        """A position below the convention minimum is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "-p", "0"])
+
+        assert result.exit_code == 2
+        assert "position must be 1 or greater" in result.output
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    def test_no_play_replaces_without_playing(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-play clears the queue and adds the URI, never replaceAndPlay."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["queue", "replace", self.URI, "--no-play", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'clear' executed successfully" in result.output
+        assert "Command 'add' executed successfully" in result.output
+        mock_client.clear.assert_called_once()
+        mock_client.add_to_queue.assert_called_once_with(self.URI)
+        mock_client.replace_queue_and_play.assert_not_called()
+        # The configured sleep separates the two calls
+        mock_sleep.assert_called_once_with(2.0)
+
+    def test_no_play_with_a_position(self, runner: CliRunner, mocker: MockerFixture):
+        """Asking for a position to play while asking not to play is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "--no-play", "-p", "2"])
+
+        assert result.exit_code == 2
+        assert "only together with --play" in result.output
+        mock_client.clear.assert_not_called()
+        mock_client.add_to_queue.assert_not_called()
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A host that cannot be reached exits 1."""
+        mock_client = mocker.Mock()
+        mock_client.replace_queue_and_play.side_effect = VolumioConnectionError(
+            "Connection failed"
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["queue", "replace", self.URI])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
 
 
 class TestSeekCommand:

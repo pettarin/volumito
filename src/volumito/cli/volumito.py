@@ -60,9 +60,11 @@ from volumito.cli.click_helpers import (
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
+    option_play,
     option_playlist,
     option_playlists_only,
     option_port,
+    option_position,
     option_print_resulting_status,
     option_print_uri,
     option_print_uri_toggle,
@@ -114,6 +116,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     REGISTER_ARGUMENT_ERROR,
+    REPLACE_POSITION_ERROR,
     SEARCH_ARGUMENT_ERROR,
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
@@ -1526,6 +1529,40 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
     """
     label = "randomize" if value is None else f"randomize {'on' if value else 'off'}"
     execute_command(ctx, label, lambda c: c.randomize(value))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("uri", type=str)
+@option_play
+@option_position
+@option_print_resulting_status
+def replace(
+    ctx: click.Context,
+    uri: str,
+    play: bool,
+    position: int | None,
+    print_resulting_status: bool,
+) -> None:
+    """Replace the queue with the content of URI, playing it unless --no-play.
+
+    A URI comes from "collection browse" or "collection search". With -p/--position,
+    the item at that position among those URI lists plays first (indexed according
+    to --position-starting-at-one/--position-starting-at-zero); without, the first.
+    """
+    if position is not None and not play:
+        raise click.UsageError(REPLACE_POSITION_ERROR)
+    if play:
+        minimum = 1 if ctx.obj["position_starting_at_one"] else 0
+        if position is not None and position < minimum:
+            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
+        index = position - minimum if position is not None else 0
+        execute_command(ctx, "replace", lambda c: c.replace_queue_and_play(uri, index))
+    else:
+        execute_command(ctx, "clear", lambda c: c.clear())
+        rest_api_sleep(ctx)
+        execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
