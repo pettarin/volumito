@@ -5123,7 +5123,10 @@ class TestCollectionSearch:
         result = runner.invoke(main, ["collection", "search", "Paolo", "--service", "spotify"])
 
         assert result.exit_code == 2
-        assert "'spotify' is not one of 'mpd', 'qobuz', 'webradio'" in result.output
+        assert (
+            "'spotify' is not one of 'highresaudio', 'mpd', 'qobuz', 'soundcloud', 'spop', "
+            "'tidal', 'webradio', 'youtube2'" in result.output
+        )
         mock_client.search.assert_not_called()
 
     def test_the_playlists_only(self, runner: CliRunner, mocker: MockerFixture):

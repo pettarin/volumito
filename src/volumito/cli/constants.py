@@ -102,11 +102,21 @@ SEARCH_ARGUMENT_ERROR = (
 """Error message when "collection search" is given nothing to search for."""
 
 SEARCH_SERVICES = [
+    "highresaudio",  # not verified
     "mpd",
     "qobuz",
+    "soundcloud",    # not verified
+    "spop",          # the Spotify plugin, not verified
+    "tidal",         # not verified
     "webradio",
+    "youtube2",      # the YouTube2 plugin, not verified
 ]
-"""Accepted values of the --service option of the "collection search" command."""
+"""Accepted values of the --service option of the "collection search" command.
+
+Only "mpd", "qobuz", and "webradio" are verified against a host: each value marked as not
+verified is the name its plugin registers itself with, or a guess where the plugin is not
+public.
+"""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
