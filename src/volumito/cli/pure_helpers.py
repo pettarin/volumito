@@ -446,6 +446,47 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def format_search_results_as_table(lists: list[dict[str, Any]]) -> str:
+    """Format the results of a search as a readable table.
+
+    The lists a Volumio host titles after the query it answered (e.g., ``Found 12
+    Tracks 'Sirtaki'``) are titled after their source instead (``MPD Tracks``), so that
+    every list reads alike; the titles the sources give (``QOBUZ Albums``, ``Web
+    Radio``) are kept as they are.
+
+    Args:
+        lists: The lists of results, as the Volumio host groups them
+
+    Returns:
+        A formatted string representation of the results
+    """
+    lines = ["Volumio Search Results", "=" * 50]
+
+    if not any(result_list.get("items") for result_list in lists):
+        lines.append("(no result)")
+        return "\n".join(lines)
+
+    for result_list in lists:
+        items = result_list.get("items") or []
+        if not items:
+            continue
+        title = str(result_list.get("title") or "Results")
+        found = re.match(r"^Found \d+ (\w+?)s? '.*'$", title)
+        service = str(items[0].get("service") or "")
+        if found is not None and service:
+            title = f"{service.upper()} {found.group(1)}s"
+        lines.append("")
+        lines.append(title)
+        width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
+        for index, item in enumerate(items, start=1):
+            details = " - ".join(
+                str(item[key]) for key in ("title", "artist", "album") if item.get(key)
+            )
+            lines.append(f"{index:>{width}}. {details}")
+
+    return "\n".join(lines)
+
+
 def format_seek(milliseconds: int) -> str:
     """Convert a seek position in milliseconds to HH:MM:SS.mmm format.
 

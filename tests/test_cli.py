@@ -48,6 +48,7 @@ from volumito.cli.pure_helpers import (
     format_as_table,
     format_notification_as_line,
     format_queue_as_table,
+    format_search_results_as_table,
     format_termination_conditions,
     is_mbid,
     manifest_matches_queue,
@@ -61,7 +62,7 @@ from volumito.cli.pure_helpers import (
     story_query_reference,
 )
 from volumito.cli.volumito import main
-from volumito.clients import Album, Artist, Label, Place, RemoteCommandResult
+from volumito.clients import Album, Artist, Label, Place, RemoteCommandResult, SearchResults
 from volumito.clients.errors import VolumioSCPError, VolumioSSHError
 from volumito.clients.models import (
     CollectionStatistics,
@@ -584,6 +585,82 @@ class TestFormatNotificationAsLine:
         line = format_notification_as_line(None, None, "2026-08-04T10:15:32.123Z")
 
         assert line == "[2026-08-04T10:15:32.123Z] ?        null"
+
+
+class TestFormatSearchResultsAsTable:
+    """Test cases for the format_search_results_as_table function."""
+
+    def test_the_lists_and_their_items(self):
+        """Every list is titled, and its items are numbered."""
+        lines = format_search_results_as_table(
+            [
+                {
+                    "title": "QOBUZ Tracks",
+                    "items": [
+                        {
+                            "title": "Aguaplano",
+                            "artist": "Paolo Conte",
+                            "album": "Aguaplano",
+                            "service": "qobuz",
+                            "type": "song",
+                        },
+                        {"title": "Come Di", "service": "qobuz", "type": "song"},
+                    ],
+                }
+            ]
+        ).splitlines()
+
+        assert lines[0] == "Volumio Search Results"
+        assert lines[2] == ""
+        assert lines[3] == "QOBUZ Tracks"
+        assert lines[4] == "1. Aguaplano - Paolo Conte - Aguaplano"
+        assert lines[5] == "2. Come Di"
+
+    def test_a_list_titled_after_the_query(self):
+        """A list the host titles after the query is titled after its source instead."""
+        table = format_search_results_as_table(
+            [
+                {
+                    "title": "Found 1 Album 'Sirtaki'",
+                    "items": [{"title": "Sirtaki", "artist": "Mango", "service": "mpd"}],
+                },
+                {
+                    "title": "Found 12 Tracks 'Sirtaki'",
+                    "items": [{"title": "6 - Sirtaki", "service": "mpd"}],
+                },
+            ]
+        )
+
+        assert "MPD Albums" in table
+        assert "MPD Tracks" in table
+        assert "Found" not in table
+
+    def test_a_list_titled_after_the_query_without_a_service(self):
+        """Without a service to name, the title of the host is kept."""
+        table = format_search_results_as_table(
+            [{"title": "Found 1 Album 'Sirtaki'", "items": [{"title": "Sirtaki"}]}]
+        )
+
+        assert "Found 1 Album 'Sirtaki'" in table
+
+    def test_a_list_without_items_is_skipped(self):
+        """A list the host sent empty contributes no title."""
+        table = format_search_results_as_table(
+            [
+                {"title": "Empty", "items": []},
+                {"title": "Web Radio", "items": [{"title": "RADIO", "service": "webradio"}]},
+            ]
+        )
+
+        assert "Empty" not in table
+        # The title a source gives is kept as it is
+        assert "Web Radio" in table
+        assert "1. RADIO" in table
+
+    def test_no_result_at_all(self):
+        """Without any item the table says so."""
+        assert format_search_results_as_table([]).endswith("(no result)")
+        assert format_search_results_as_table([{"title": "Empty"}]).endswith("(no result)")
 
 
 class TestFormatTerminationConditions:
@@ -1318,14 +1395,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.37" in result.output
+        assert "volumito, version 0.0.38" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.37"'
+        assert result.output.strip() == '"0.0.38"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1334,7 +1411,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.37"'
+        assert result.output.strip() == '"0.0.38"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4939,6 +5016,214 @@ class TestCollectionCommands:
         )
 
         result = runner.invoke(main, ["collection", "statistics"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+
+class TestCollectionSearch:
+    """Test cases for the collection search command."""
+
+    ENVELOPE = {
+        "navigation": {
+            "isSearchResult": True,
+            "lists": [
+                {
+                    "title": "Found 1 Artist 'paolo conte'",
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "Paolo Conte",
+                            "uri": "artists://Paolo%20Conte",
+                        }
+                    ],
+                },
+                {
+                    "title": "QOBUZ Playlists",
+                    "items": [
+                        {
+                            "service": "qobuz",
+                            "type": "folder-with-favourites",
+                            "title": "Paolo Conte Essentials",
+                            "uri": "qobuz://playlist/13980206",
+                        }
+                    ],
+                },
+            ],
+        }
+    }
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with a prepared search result."""
+        mock_client = mocker.Mock()
+        mock_client.search.return_value = SearchResults.from_envelope(self.ENVELOPE)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_searches_for_the_query(self, runner: CliRunner, mocker: MockerFixture):
+        """The query argument is what the host is asked for."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo Conte"])
+
+        assert result.exit_code == 0
+        mock_client.search.assert_called_once_with("Paolo Conte")
+        assert [block["title"] for block in json.loads(result.output)] == [
+            "Found 1 Artist 'paolo conte'",
+            "QOBUZ Playlists",
+        ]
+
+    def test_the_query_is_composed_from_the_options(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Without a query, the text of the options is what is searched for."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "--artist", "Paolo Conte", "--song", "Aguaplano"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.search.assert_called_once_with("Paolo Conte Aguaplano")
+
+    def test_nothing_to_search_for(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a query and without any text option, the command says what it expects."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search"])
+
+        assert result.exit_code == 2
+        assert "Expected a QUERY argument" in result.output
+        mock_client.search.assert_not_called()
+
+    def test_filtered_by_service(self, runner: CliRunner, mocker: MockerFixture):
+        """The service option keeps the results of that source only."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "--service", "mpd"])
+
+        assert result.exit_code == 0
+        assert [block["title"] for block in json.loads(result.output)] == [
+            "Found 1 Artist 'paolo conte'"
+        ]
+
+    def test_an_unknown_service(self, runner: CliRunner, mocker: MockerFixture):
+        """Only the services the tool knows are accepted."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "--service", "spotify"])
+
+        assert result.exit_code == 2
+        assert "'spotify' is not one of 'mpd', 'qobuz', 'webradio'" in result.output
+        mock_client.search.assert_not_called()
+
+    def test_the_playlists_only(self, runner: CliRunner, mocker: MockerFixture):
+        """--playlists-only keeps the playlists, whatever the other options match."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                "collection",
+                "search",
+                "--artist",
+                "Paolo Conte",
+                "--service",
+                "qobuz",
+                "--playlists-only",
+            ],
+        )
+
+        assert result.exit_code == 0
+        # The artist still says what to search for, but only the playlists are kept
+        mock_client.search.assert_called_once_with("Paolo Conte")
+        assert [block["title"] for block in json.loads(result.output)] == ["QOBUZ Playlists"]
+
+    def test_a_playlist_query(self, runner: CliRunner, mocker: MockerFixture):
+        """--playlist searches for its text and keeps every playlist found for it."""
+        mock_client = self._mock_client(mocker)
+
+        # A source answers with the playlists it finds related to the query, whose
+        # titles rarely carry it, so they are kept whatever they are called
+        result = runner.invoke(main, ["collection", "search", "--playlist", "Mango"])
+
+        assert result.exit_code == 0
+        mock_client.search.assert_called_once_with("Mango")
+        assert [block["title"] for block in json.loads(result.output)] == ["QOBUZ Playlists"]
+        assert json.loads(result.output)[0]["items"][0]["title"] == "Paolo Conte Essentials"
+
+    def test_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table prints the lists with their numbered items."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Search Results" in result.output
+        assert "MPD Artists" in result.output
+        assert "1. Paolo Conte" in result.output
+
+    def test_the_table_format_without_a_result(self, runner: CliRunner, mocker: MockerFixture):
+        """A filter matching nothing prints an empty table."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--song", "nothing", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        assert "(no result)" in result.output
+
+    def test_the_json_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F json prints the lists with 2-space indentation."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert '\n    "title"' in result.output
+
+    def test_the_raw_format_is_the_payload_of_the_host(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F raw prints what the host answered, even when the results are filtered."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--service", "mpd", "-F", "raw"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.ENVELOPE
+
+    def test_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Machine-readable mode prints the payload of the host, compact."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "collection", "search", "Paolo"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == json.dumps(self.ENVELOPE)
+
+    def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A host that cannot be reached exits 1."""
+        mock_client = mocker.Mock()
+        mock_client.search.side_effect = VolumioConnectionError("Connection failed")
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["collection", "search", "Paolo"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -10827,6 +11112,7 @@ class TestConfigurationCommands:
                     "print-resulting-status": True,
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders.
+                    "collection-search": None,
                     "collection-statistics": None,
                     "notifications-list": None,
                     "notifications-listen": None,

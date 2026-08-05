@@ -551,6 +551,211 @@ class Story(VolumioModel):
         return cls.from_raw({**data, "raw": envelope})
 
 
+class SearchResultItem(VolumioModel):
+    """One result of a search on a Volumio instance."""
+
+    album: str | None = None
+    """The album of the result, when it has one."""
+
+    albumart: str | None = None
+    """The album art URI, absolute or relative to the host."""
+
+    artist: str | None = None
+    """The artist of the result, when it has one."""
+
+    audio_quality: str | None = Field(default=None, alias="audioQuality")
+    """The audio quality reported by the source (e.g., ``"hires"``)."""
+
+    duration: int | None = None
+    """The duration of the result, in seconds, when it is a track."""
+
+    explicit: bool | None = None
+    """Whether the source marks the result as explicit."""
+
+    favourite: bool | None = None
+    """Whether the result is among the favourites of the source."""
+
+    icon: str | None = None
+    """The icon of the result, when the source gives one."""
+
+    service: str | None = None
+    """The source the result comes from (e.g., ``"mpd"``, ``"webradio"``, ``"qobuz"``)."""
+
+    title: str | None = None
+    """The title of the result: the name of the artist, album, playlist, or track."""
+
+    track_number: int | None = None
+    """The number of the track within its album, when the source gives one."""
+
+    track_type: str | None = Field(default=None, alias="trackType")
+    """The type of the track (e.g., ``"flac"``, ``"qobuz"``)."""
+
+    type: str | None = None
+    """The type reported by the host (e.g., ``"folder"``, ``"song"``, ``"webradio"``)."""
+
+    uri: str | None = None
+    """The URI the result can be played or browsed from."""
+
+    @property
+    def kind(self) -> str:
+        """The kind of entity the result is, read from its URI and its type.
+
+        A Volumio host names its entities by URI (``artists://…`` and ``qobuz://artist/…``
+        for the artists, and likewise for the albums and the playlists), and reports the
+        tracks with the ``song`` type, whatever the source.
+
+        Returns:
+            One of ``"artist"``, ``"album"``, ``"playlist"``, ``"song"``, and ``"other"``
+        """
+        if self.type == "song":
+            return "song"
+        uri = self.uri or ""
+        for kind in ("artist", "album", "playlist"):
+            if uri.startswith(f"{kind}s://") or f"://{kind}/" in uri:
+                return kind
+        return "other"
+
+
+class SearchResultList(VolumioModel):
+    """A titled list of search results, as a Volumio instance groups them.
+
+    The list is a sequence of its items: it can be iterated, indexed, and measured
+    with ``len()``.
+    """
+
+    available_list_views: list[str] | None = Field(default=None, alias="availableListViews")
+    """The views the host suggests for the list (e.g., ``["list", "grid"]``)."""
+
+    icon: str | None = None
+    """The icon of the list, when the host gives one."""
+
+    items: list[SearchResultItem] = Field(default_factory=list)
+    """The results of the list, in the order reported by the Volumio instance."""
+
+    title: str | None = None
+    """The title of the list (e.g., ``"QOBUZ Albums"``)."""
+
+    type: str | None = None
+    """The type of the list, when the host gives one."""
+
+    def __getitem__(self, index: int) -> SearchResultItem:
+        """Return the result at the given position."""
+        return self.items[index]
+
+    def __iter__(self) -> Iterator[SearchResultItem]:  # type: ignore[override]
+        """Iterate over the results of the list."""
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        """Return the number of results in the list."""
+        return len(self.items)
+
+
+class SearchResults(VolumioModel):
+    """The results of a search on a Volumio instance.
+
+    The results are a sequence of the lists the host grouped them in: the collection can
+    be iterated, indexed, and measured with ``len()``. The :attr:`raw` attribute holds
+    the whole response envelope, as the host returned it.
+    """
+
+    is_search_result: bool | None = Field(default=None, alias="isSearchResult")
+    """Whether the host reports the payload as the result of a search."""
+
+    lists: list[SearchResultList] = Field(default_factory=list)
+    """The lists of results, in the order reported by the Volumio instance."""
+
+    @classmethod
+    def from_envelope(cls, envelope: dict[str, Any]) -> Self:
+        """Parse the response envelope of a search query.
+
+        Args:
+            envelope: The response envelope (``{"navigation": {...}}``)
+
+        Returns:
+            The results, holding the whole envelope in their ``raw`` attribute
+
+        Raises:
+            VolumioAPIError: If the envelope cannot be parsed into the model
+        """
+        navigation = envelope.get("navigation")
+        if not isinstance(navigation, dict):
+            navigation = {}
+        # The results come from the navigation, while raw keeps the whole envelope
+        return cls.from_raw({**navigation, "raw": envelope})
+
+    @property
+    def items(self) -> list[SearchResultItem]:
+        """Every result of every list, in the order reported."""
+        return [item for result_list in self.lists for item in result_list.items]
+
+    def __getitem__(self, index: int) -> SearchResultList:
+        """Return the list of results at the given position."""
+        return self.lists[index]
+
+    def __iter__(self) -> Iterator[SearchResultList]:  # type: ignore[override]
+        """Iterate over the lists of results."""
+        return iter(self.lists)
+
+    def __len__(self) -> int:
+        """Return the number of lists of results."""
+        return len(self.lists)
+
+    def filtered(
+        self,
+        service: str | None = None,
+        artist: str | None = None,
+        album: str | None = None,
+        song: str | None = None,
+        playlist: str | None = None,
+    ) -> "SearchResults":
+        """Return the results whose items match every filter given.
+
+        A filter is ignored when it is None. The service is matched by equality, while
+        the other filters are matched as case-insensitive substrings, against the field
+        of the item (``artist``, ``album``) and against the title of the entity itself
+        (an artist, an album, a playlist, or a song), which is where a Volumio host
+        carries the name of an entity. An empty string matches every entity of its kind.
+        The lists left without items are dropped, and the raw payload is preserved.
+
+        Args:
+            service: The source the results must come from
+            artist: The text an artist of a result, or an artist result, must contain
+            album: The text an album of a result, or an album result, must contain
+            song: The text a song result must contain
+            playlist: The text a playlist result must contain
+
+        Returns:
+            The filtered results, holding the original payload in their ``raw`` attribute
+        """
+
+        def matches(item: SearchResultItem) -> bool:
+            if service is not None and (item.service or "").lower() != service.lower():
+                return False
+            for text, field, kind in (
+                (artist, item.artist, "artist"),
+                (album, item.album, "album"),
+                (song, None, "song"),
+                (playlist, None, "playlist"),
+            ):
+                if text is None:
+                    continue
+                wanted = text.lower()
+                in_field = wanted in (field or "").lower() if field else False
+                in_title = item.kind == kind and wanted in (item.title or "").lower()
+                if not (in_field or in_title):
+                    return False
+            return True
+
+        filtered_lists = []
+        for result_list in self.lists:
+            items = [item for item in result_list.items if matches(item)]
+            if items:
+                filtered_lists.append(result_list.model_copy(update={"items": items}))
+
+        return self.model_copy(update={"lists": filtered_lists})
+
+
 class SuccessResponse(VolumioModel):
     """The outcome a Volumio instance reports as a success flag."""
 

@@ -96,6 +96,18 @@ OUTPUT_FORMATS = [
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notifications register" is given neither a URL nor --autocompose-url."""
 
+SEARCH_ARGUMENT_ERROR = (
+    "Expected a QUERY argument, or one of the --album, --artist, --playlist, and --song options."
+)
+"""Error message when "collection search" is given nothing to search for."""
+
+SEARCH_SERVICES = [
+    "mpd",
+    "qobuz",
+    "webradio",
+]
+"""Accepted values of the --service option of the "collection search" command."""
+
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
     "position",

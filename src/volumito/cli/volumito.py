@@ -32,9 +32,11 @@ from volumito.cli.click_helpers import (
     fetch_state_or_exit,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
+    option_album,
     option_albumart_file_name_template,
     option_all_notifications,
     option_allow_local_file_rename,
+    option_artist,
     option_audio_file_name_template,
     option_autocompose_url,
     option_check_next_track,
@@ -53,6 +55,8 @@ from volumito.cli.click_helpers import (
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
+    option_playlist,
+    option_playlists_only,
     option_port,
     option_print_resulting_status,
     option_propagate_remote_exit_code,
@@ -61,6 +65,8 @@ from volumito.cli.click_helpers import (
     option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_service,
+    option_song,
     option_story_type,
     option_timeout,
     option_unregister_url_on_exit,
@@ -98,6 +104,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     REGISTER_ARGUMENT_ERROR,
+    SEARCH_ARGUMENT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
@@ -112,6 +119,7 @@ from volumito.cli.pure_helpers import (
     format_names_as_table,
     format_notification_as_line,
     format_queue_as_table,
+    format_search_results_as_table,
     format_seek,
     format_termination_conditions,
     format_zones_as_table,
@@ -1597,8 +1605,66 @@ def system_info(ctx: click.Context, output_format: str) -> None:
 @main.group()
 @click.pass_context
 def collection(ctx: click.Context) -> None:
-    """Query the local music collection managed by Volumio."""
+    """Query the music collection managed by Volumio."""
     pass
+
+
+@collection.command("search")
+@click.pass_context
+@click.argument("query", required=False, default=None, type=str)
+@option_album
+@option_artist
+@option_format
+@option_playlist
+@option_playlists_only
+@option_service
+@option_song
+def collection_search(
+    ctx: click.Context,
+    query: str | None,
+    album: str | None,
+    artist: str | None,
+    output_format: str,
+    playlist: str | None,
+    playlists_only: bool,
+    service: str | None,
+    song: str | None,
+) -> None:
+    """Search QUERY in the Volumio sources currently enabled.
+
+    Without QUERY, the text of the --album, --artist, --playlist, and --song options
+    is searched for; --album, --artist, and --song also keep the matching results
+    only. With --playlist or --playlists-only, the playlists found are all kept, and
+    the other options only say what to search for."""
+    machine_readable = ctx.obj["machine_readable"]
+    terms = [term for term in (artist, album, song, playlist) if term]
+    searched = query or " ".join(terms)
+    if not searched:
+        raise click.UsageError(SEARCH_ARGUMENT_ERROR)
+
+    results = fetch_or_exit(ctx, lambda c: c.search(searched))
+
+    if playlists_only or playlist is not None:
+        # The playlists are asked for, so the other options only feed the query, and
+        # the playlists themselves are all kept: a source answers a query with the
+        # playlists it finds related to it, whose titles rarely carry the query
+        results = results.filtered(service=service, playlist="")
+    else:
+        results = results.filtered(service=service, artist=artist, album=album, song=song)
+
+    if machine_readable or output_format == "raw":
+        # The raw format is the payload of the host, as it answered it
+        output = json.dumps(results.raw)
+    else:
+        lists = [result_list.model_dump(by_alias=True) for result_list in results.lists]
+        if output_format == "json":
+            output = json.dumps(lists, indent=2)
+        elif output_format == "table":
+            output = format_search_results_as_table(lists)
+        else:  # pretty
+            output = json.dumps(lists, indent=4, sort_keys=True, ensure_ascii=False)
+
+    click.echo(output)
 
 
 @collection.command("statistics")

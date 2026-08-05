@@ -38,6 +38,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
+    SEARCH_SERVICES,
     SHORT_FORMAT_FIELDS_STORY,
     STORY_ARGUMENT_TYPES,
     STORY_ARTIST_ALBUM_ARGUMENTS_ERROR,
@@ -977,6 +978,16 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_album(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--album`` option to the collection search subcommand."""
+    return click.option(
+        "--album",
+        type=str,
+        default=None,
+        help="Keep the results of this album, and search for it when no query is given.",
+    )(func)
+
+
 def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--albumart-file-name-template`` option to the queue download subcommand."""
     return click.option(
@@ -1007,6 +1018,16 @@ def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., N
         default=False,
         show_default=True,
         help="Rename a file copied from the Volumio host after the file name template.",
+    )(func)
+
+
+def option_artist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--artist`` option to the collection search subcommand."""
+    return click.option(
+        "--artist",
+        type=str,
+        default=None,
+        help="Keep the results of this artist, and search for it when no query is given.",
     )(func)
 
 
@@ -1220,6 +1241,26 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--playlist`` option to the collection search subcommand."""
+    return click.option(
+        "--playlist",
+        type=str,
+        default=None,
+        help="Search for this text and keep the playlists found for it.",
+    )(func)
+
+
+def option_playlists_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--playlists-only`` option to the collection search subcommand."""
+    return click.option(
+        "--playlists-only",
+        is_flag=True,
+        default=False,
+        help="Keep the playlists found, whatever the other options match.",
+    )(func)
+
+
 def option_port(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-p``/``--port`` option to a notifications subcommand."""
     return click.option(
@@ -1243,26 +1284,6 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
-def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url`` option to the notifications listen subcommand."""
-    return click.option(
-        "--register-url/--no-register-url",
-        default=False,
-        show_default=True,
-        help="Register the URL on the Volumio host when it is not registered yet.",
-    )(func)
-
-
-def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
-    return click.option(
-        "--register-url-full",
-        type=str,
-        default=None,
-        help="URL to register, overriding the one composed from --port and --endpoint.",
-    )(func)
-
-
 def option_propagate_remote_exit_code(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--propagate-remote-exit-code`` option to the system execute subcommand."""
     return click.option(
@@ -1281,6 +1302,26 @@ def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Copy a directory and its content.",
+    )(func)
+
+
+def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--register-url`` option to the notifications listen subcommand."""
+    return click.option(
+        "--register-url/--no-register-url",
+        default=False,
+        show_default=True,
+        help="Register the URL on the Volumio host when it is not registered yet.",
+    )(func)
+
+
+def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
+    return click.option(
+        "--register-url-full",
+        type=str,
+        default=None,
+        help="URL to register, overriding the one composed from --port and --endpoint.",
     )(func)
 
 
@@ -1308,6 +1349,26 @@ def option_replace_characters_in_file_names_with(
             "Replacement string for the characters selected by "
             "--replace-characters-in-file-names."
         ),
+    )(func)
+
+
+def option_service(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--service`` option to the collection search subcommand."""
+    return click.option(
+        "--service",
+        type=click.Choice(SEARCH_SERVICES, case_sensitive=True),
+        default=None,
+        help="Keep the results of this source only.",
+    )(func)
+
+
+def option_song(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--song`` option to the collection search subcommand."""
+    return click.option(
+        "--song",
+        type=str,
+        default=None,
+        help="Keep the songs with this title, and search for it when no query is given.",
     )(func)
 
 

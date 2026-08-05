@@ -735,7 +735,7 @@ class TestBuildClickDefaultMap:
                 "version": format_only,
                 "info": format_only,
             },
-            "collection": {"statistics": format_only},
+            "collection": {"search": format_only, "statistics": format_only},
             "story": {
                 "album": formatting,
                 "artist": formatting,
