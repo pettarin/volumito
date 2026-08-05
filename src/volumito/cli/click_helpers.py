@@ -1217,6 +1217,19 @@ def option_format(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_format_table(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-F``/``--format`` option, defaulting to the table, to a collection subcommand."""
+    return click.option(
+        "--format",
+        "-F",
+        "output_format",
+        type=click.Choice(OUTPUT_FORMATS, case_sensitive=True),
+        default="table",
+        show_default=True,
+        help="Output format.",
+    )(func)
+
+
 def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--idle-timeout`` option to the notifications listen subcommand."""
     return click.option(
@@ -1364,6 +1377,16 @@ def option_print_uri(func: Callable[..., None]) -> Callable[..., None]:
         "-u",
         is_flag=True,
         default=False,
+        help="Print the URI of each result, under its line of the -F table output.",
+    )(func)
+
+
+def option_print_uri_toggle(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--print-uri/--no-print-uri`` option to the collection browse subcommand."""
+    return click.option(
+        "--print-uri/--no-print-uri",
+        default=True,
+        show_default=True,
         help="Print the URI of each result, under its line of the -F table output.",
     )(func)
 

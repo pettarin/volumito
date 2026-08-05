@@ -51,6 +51,7 @@ from volumito.cli.click_helpers import (
     option_fields,
     option_file_name_template,
     option_format,
+    option_format_table,
     option_idle_timeout,
     option_limit,
     option_manifest_file,
@@ -64,6 +65,7 @@ from volumito.cli.click_helpers import (
     option_port,
     option_print_resulting_status,
     option_print_uri,
+    option_print_uri_toggle,
     option_propagate_remote_exit_code,
     option_recursive,
     option_register_url,
@@ -100,6 +102,7 @@ from volumito.cli.configuration import (
     resolve_configuration_path,
 )
 from volumito.cli.constants import (
+    BROWSE_KINDS_ERROR,
     DEFAULT_VOLUMIO_VERSION,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -124,6 +127,7 @@ from volumito.cli.pure_helpers import (
     expand_timestamp_placeholder,
     filter_queue_fields,
     filter_zones_fields,
+    format_browse_results_as_table,
     format_duration,
     format_names_as_table,
     format_notification_as_line,
@@ -1619,6 +1623,81 @@ def collection(ctx: click.Context) -> None:
     pass
 
 
+@collection.command("browse")
+@click.pass_context
+@click.argument("uri", required=False, default=None, type=str)
+@option_albums_only
+@option_artists_only
+@option_best_result_only
+@option_format_table
+@option_limit
+@option_playlists_only
+@option_print_uri_toggle
+@option_result_kinds
+@option_tracks_only
+def collection_browse(
+    ctx: click.Context,
+    uri: str | None,
+    albums_only: bool,
+    artists_only: bool,
+    best_result_only: bool,
+    output_format: str,
+    limit: int | None,
+    playlists_only: bool,
+    print_uri: bool,
+    result_kinds: set[SearchResultItemKind] | None,
+    tracks_only: bool,
+) -> None:
+    """Browse the content that URI lists in the collection of the Volumio host.
+
+    Without URI, the root of the collection is listed: the starting points of the
+    sources currently enabled. The URIs to descend into come from the listings
+    themselves, printed unless --no-print-uri is given, and from the -u/--print-uri
+    option of "collection search"."""
+    machine_readable = ctx.obj["machine_readable"]
+    if best_result_only and limit is not None:
+        raise click.UsageError(SEARCH_LIMIT_ERROR)
+    asked = [
+        kinds
+        for kinds, wanted in (
+            (result_kinds or set(), result_kinds is not None),
+            ({SearchResultItemKind.ALBUM}, albums_only),
+            ({SearchResultItemKind.ARTIST}, artists_only),
+            ({SearchResultItemKind.PLAYLIST}, playlists_only),
+            ({SearchResultItemKind.TRACK}, tracks_only),
+        )
+        if wanted
+    ]
+    if len(asked) > 1:
+        raise click.UsageError(BROWSE_KINDS_ERROR)
+
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri))
+
+    if asked:
+        results = results.filtered(kinds=asked[0])
+
+    kept = 1 if best_result_only else limit
+    if kept is not None:
+        results = results.limited(kept)
+
+    if machine_readable or output_format == "raw":
+        # The raw format is the payload of the host, as it answered it
+        output = json.dumps(results.raw)
+    else:
+        info = results.info.model_dump(by_alias=True) if results.info else None
+        lists = [result_list.model_dump(by_alias=True) for result_list in results.lists]
+        if output_format == "table":
+            output = format_browse_results_as_table(lists, info, print_uri)
+        else:
+            navigation = {"info": info, "lists": lists, "prev": results.prev}
+            if output_format == "json":
+                output = json.dumps(navigation, indent=2)
+            else:  # pretty
+                output = json.dumps(navigation, indent=4, sort_keys=True, ensure_ascii=False)
+
+    click.echo(output)
+
+
 @collection.command("search")
 @click.pass_context
 @click.argument("query", required=False, default=None, type=str)
@@ -1627,7 +1706,7 @@ def collection(ctx: click.Context) -> None:
 @option_artist
 @option_artists_only
 @option_best_result_only
-@option_format
+@option_format_table
 @option_limit
 @option_playlist
 @option_playlists_only

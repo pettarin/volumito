@@ -20,6 +20,7 @@ from volumito.clients.entities import (
 from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
+    BrowseResults,
     CollectionStatistics,
     CommandResponse,
     Notification,
@@ -381,6 +382,28 @@ class VolumioRESTAPIClient:
         if entity.is_mbid:
             return {"mbid": entity.value}
         return {key: entity.value}
+
+    def browse(self, uri: str | None = None) -> BrowseResults:
+        """Browse the content the Volumio instance lists at a URI.
+
+        The URIs to descend into come from the answers themselves, and from the search
+        results; the Volumio API wants ``/`` for the root, which stands in when no URI
+        is given. A URI is encoded for the query string except for its structure and
+        its percent signs, so the escapes the instance itself puts in its URIs (e.g.,
+        ``artists://Paolo%20Conte``) are not encoded twice.
+
+        Args:
+            uri: The URI to browse, the root when not given
+
+        Returns:
+            The content listed at the URI
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        browsed = quote(uri if uri is not None else "/", safe=":/%")
+        return BrowseResults.from_envelope(self._get_json(f"/api/v1/browse?uri={browsed}"))
 
     def clear(self) -> CommandResponse:
         """Clear the playback queue.

@@ -75,6 +75,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
+    "collection-browse": FORMAT_KEYS,
     "collection-search": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
     "story-album": DISPLAY_KEYS,
@@ -89,6 +90,9 @@ DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
 """The display subsection names, in the order the keys map defines them."""
 
 DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "collection-browse": [
+        ["collection", "browse"],
+    ],
     "collection-search": [
         ["collection", "search"],
     ],

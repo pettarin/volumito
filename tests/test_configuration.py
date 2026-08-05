@@ -509,6 +509,9 @@ class TestDefaultConfigurationTemplate:
                 "position-starting-at-one": True,
                 "print-resulting-status": True,
                 "verbose": False,
+                # The two collection subsections pin their table format
+                "collection-browse": {"format": "table"},
+                "collection-search": {"format": "table"},
             },
             "downloads": {
                 "create-download-manifest": True,
@@ -735,7 +738,11 @@ class TestBuildClickDefaultMap:
                 "version": format_only,
                 "info": format_only,
             },
-            "collection": {"search": format_only, "statistics": format_only},
+            "collection": {
+                "browse": format_only,
+                "search": format_only,
+                "statistics": format_only,
+            },
             "story": {
                 "album": formatting,
                 "artist": formatting,
