@@ -47,6 +47,7 @@ from volumito.cli.pure_helpers import (
     format_as_json,
     format_as_pretty,
     format_as_table,
+    format_browse_results_as_table,
     format_notification_as_line,
     format_queue_as_table,
     format_search_results_as_table,
@@ -64,7 +65,15 @@ from volumito.cli.pure_helpers import (
     story_query_reference,
 )
 from volumito.cli.volumito import main
-from volumito.clients import Album, Artist, Label, Place, RemoteCommandResult, SearchResults
+from volumito.clients import (
+    Album,
+    Artist,
+    BrowseResults,
+    Label,
+    Place,
+    RemoteCommandResult,
+    SearchResults,
+)
 from volumito.clients.errors import VolumioSCPError, VolumioSSHError
 from volumito.clients.models import (
     CollectionStatistics,
@@ -536,6 +545,62 @@ class TestFormatFunctions:
 
         assert "Album Story" in result
         assert f"{'Data Value':20}: A story." in result.splitlines()
+
+
+class TestFormatBrowseResultsAsTable:
+    """Test cases for the format_browse_results_as_table function."""
+
+    def test_the_untitled_list_and_its_named_items(self):
+        """An untitled list gets no title line, and an item is told by its name."""
+        lines = format_browse_results_as_table(
+            [
+                {
+                    "items": [
+                        {"name": "Music Library", "uri": "music-library"},
+                        {"name": "Web Radio", "uri": "radio"},
+                    ],
+                }
+            ],
+            print_uri=True,
+        ).splitlines()
+
+        assert lines[0] == "Volumio Browse Results"
+        assert lines[2] == ""
+        assert lines[3] == "1. Music Library"
+        assert lines[4] == "   music-library"
+        assert lines[5] == "2. Web Radio"
+        assert lines[6] == "   radio"
+
+    def test_the_info_follows_the_heading(self):
+        """The entity being browsed is told under the heading, without repeating its URI."""
+        lists = [{"items": [{"title": "Aguaplano", "artist": "Paolo Conte"}]}]
+        info = {
+            "title": "Aguaplano",
+            "artist": "Paolo Conte",
+            "uri": "albums://Paolo%20Conte/Aguaplano",
+        }
+
+        lines = format_browse_results_as_table(lists, info, print_uri=True).splitlines()
+
+        assert lines[2] == "Aguaplano - Paolo Conte"
+        # The URI of the entity is the very URI that was browsed
+        assert "albums://" not in "\n".join(lines)
+
+    def test_an_info_with_nothing_to_tell(self):
+        """An entity without a title or a name adds no line."""
+        table = format_browse_results_as_table(
+            [{"items": [{"title": "A Track"}]}], {"uri": "somewhere://"}
+        )
+
+        assert table.splitlines()[2] == ""
+        assert "somewhere://" not in table
+
+    def test_no_content_at_all(self):
+        """Without any item the table says so, after the info when there is one."""
+        assert format_browse_results_as_table([]).endswith("(no result)")
+        assert format_browse_results_as_table(
+            [], {"title": "An Album"}
+        ).splitlines() == ["Volumio Browse Results", "=" * 50, "An Album", "(no result)"]
 
 
 class TestFormatNotificationAsLine:
@@ -1504,14 +1569,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.38" in result.output
+        assert "volumito, version 0.0.39" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.38"'
+        assert result.output.strip() == '"0.0.39"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1520,7 +1585,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.38"'
+        assert result.output.strip() == '"0.0.39"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5050,6 +5115,294 @@ class TestSystemExecute:
 
         assert result.exit_code == 1
         assert result.output == ""
+
+
+class TestCollectionBrowse:
+    """Test cases for the collection browse command."""
+
+    ENVELOPE = {
+        "navigation": {
+            # The root answers with its items directly in the lists array
+            "lists": [
+                {
+                    "name": "Music Library",
+                    "uri": "music-library",
+                    "plugin_type": "music_service",
+                    "plugin_name": "mpd",
+                },
+                {
+                    "name": "Web Radio",
+                    "uri": "radio",
+                    "plugin_type": "music_service",
+                    "plugin_name": "webradio",
+                },
+            ],
+            "prev": {"uri": "/"},
+        }
+    }
+    """A payload of the shape a root browse is answered with."""
+
+    ALBUM_ENVELOPE = {
+        "navigation": {
+            "lists": [
+                {
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "song",
+                            "title": "Aguaplano",
+                            "artist": "Paolo Conte",
+                            "uri": "music-library/INTERNAL/music/001___Aguaplano.flac",
+                        },
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "A Folder",
+                            "uri": "music-library/INTERNAL/music/folder",
+                        },
+                        {
+                            "service": "mpd",
+                            "type": "song",
+                            "title": "Come Di",
+                            "artist": "Paolo Conte",
+                            "uri": "music-library/INTERNAL/music/002___Come_Di.flac",
+                        },
+                    ],
+                }
+            ],
+            "info": {
+                "title": "Aguaplano",
+                "artist": "Paolo Conte",
+                "service": "mpd",
+                "type": "album",
+                "uri": "albums://Paolo%20Conte/Aguaplano",
+            },
+            "prev": {"uri": "albums://Paolo%20Conte"},
+        }
+    }
+    """A payload of the shape an album browse is answered with."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, envelope: dict | None = None):
+        """Mock VolumioRESTAPIClient with a prepared browse result."""
+        mock_client = mocker.Mock()
+        mock_client.browse.return_value = BrowseResults.from_envelope(envelope or self.ENVELOPE)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_browses_the_root_by_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a URI the root is asked for, and the navigation is printed."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse"])
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with(None)
+        navigation = json.loads(result.output)
+        assert [item["name"] for item in navigation["lists"][0]["items"]] == [
+            "Music Library",
+            "Web Radio",
+        ]
+        assert navigation["info"] is None
+        assert navigation["prev"] == {"uri": "/"}
+
+    def test_browses_the_uri(self, runner: CliRunner, mocker: MockerFixture):
+        """The URI argument is what the host is asked for."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "music-library"])
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with("music-library")
+
+    def test_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """The table numbers the named items, with their URIs unless declined."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Browse Results" in result.output
+        # The URIs are printed by default: browsing deeper needs them
+        assert "1. Music Library\n   music-library" in result.output
+        assert "2. Web Radio\n   radio" in result.output
+
+    def test_the_table_format_without_the_uris(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-uri leaves the URIs out of the table."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "browse", "-F", "table", "--no-print-uri"]
+        )
+
+        assert result.exit_code == 0
+        assert "1. Music Library\n2. Web Radio" in result.output
+
+    def test_the_short_uri_flag_of_the_search_is_not_taken(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The -u short form belongs to the search: the URIs are already on here."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-u"])
+
+        assert result.exit_code == 2
+        mock_client.browse.assert_not_called()
+
+    def test_the_table_format_with_the_info(self, runner: CliRunner, mocker: MockerFixture):
+        """The entity being browsed follows the heading."""
+        self._mock_client(mocker, self.ALBUM_ENVELOPE)
+
+        result = runner.invoke(main, ["collection", "browse", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "==\nAguaplano - Paolo Conte\n" in result.output
+        # The URI of the entity itself is not repeated: it is the URI browsed
+        assert "\n  albums://Paolo%20Conte/Aguaplano" not in result.output
+
+    def test_the_raw_format_is_the_payload_of_the_host(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F raw prints what the host answered, even when the results are limited."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-l", "1", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.ENVELOPE
+
+    def test_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """Machine-readable mode prints the payload of the host, compact."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "collection", "browse"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == json.dumps(self.ENVELOPE)
+
+    def test_the_json_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F json prints the navigation with 2-space indentation."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert '\n  "lists"' in result.output
+
+    def test_the_limit(self, runner: CliRunner, mocker: MockerFixture):
+        """-l keeps at most that number of results in each list."""
+        self._mock_client(mocker, self.ALBUM_ENVELOPE)
+
+        result = runner.invoke(main, ["collection", "browse", "-l", "2"])
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)["lists"][0]["items"]] == [
+            "Aguaplano",
+            "A Folder",
+        ]
+
+    def test_the_best_result_only(self, runner: CliRunner, mocker: MockerFixture):
+        """-1 keeps the first result of each list, as --limit 1 does."""
+        self._mock_client(mocker, self.ALBUM_ENVELOPE)
+
+        result = runner.invoke(main, ["collection", "browse", "-1"])
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)["lists"][0]["items"]] == [
+            "Aguaplano"
+        ]
+
+    def test_the_best_result_only_with_a_limit(self, runner: CliRunner, mocker: MockerFixture):
+        """The flag and the limit exclude each other."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-1", "-l", "3"])
+
+        assert result.exit_code == 2
+        assert "not both" in result.output
+        mock_client.browse.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("option", "titles"),
+        [
+            ("--tracks-only", ["Aguaplano", "Come Di"]),
+            ("-T", ["Aguaplano", "Come Di"]),
+            ("--result-kinds", None),
+        ],
+    )
+    def test_the_kinds_are_kept(
+        self, runner: CliRunner, mocker: MockerFixture, option, titles
+    ):
+        """A kind option keeps the results of that kind only."""
+        self._mock_client(mocker, self.ALBUM_ENVELOPE)
+        arguments = ["collection", "browse", option]
+        if option == "--result-kinds":
+            arguments.append("track")
+            titles = ["Aguaplano", "Come Di"]
+
+        result = runner.invoke(main, arguments)
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)["lists"][0]["items"]] == titles
+
+    def test_the_kind_options_must_agree(self, runner: CliRunner, mocker: MockerFixture):
+        """Two options asking for different kinds refuse each other."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-B", "-T"])
+
+        assert result.exit_code == 2
+        assert "agree on the kinds to keep" in result.output
+        assert "--playlist," not in result.output
+        mock_client.browse.assert_not_called()
+
+    def test_an_unknown_result_kind(self, runner: CliRunner, mocker: MockerFixture):
+        """A kind that does not exist is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-k", "song"])
+
+        assert result.exit_code == 2
+        assert "album, artist, other, playlist, track" in result.output
+        mock_client.browse.assert_not_called()
+
+    def test_the_format_comes_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The collection-browse subsection sets the format of the command."""
+        self._mock_client(mocker)
+        configuration = tmp_path / "volumito.yaml"
+        configuration.write_text(
+            yaml.safe_dump({"output": {"collection-browse": {"format": "table"}}})
+        )
+
+        result = runner.invoke(
+            main, ["--configuration-file", str(configuration), "collection", "browse"]
+        )
+
+        assert result.exit_code == 0
+        assert "Volumio Browse Results" in result.output
+
+    def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A host that cannot be reached exits 1."""
+        mock_client = mocker.Mock()
+        mock_client.browse.side_effect = VolumioConnectionError("Connection failed")
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["collection", "browse"])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
 
 
 class TestCollectionCommands:
@@ -11476,6 +11829,7 @@ class TestConfigurationCommands:
                     "print-resulting-status": True,
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders.
+                    "collection-browse": None,
                     "collection-search": None,
                     "collection-statistics": None,
                     "notifications-list": None,

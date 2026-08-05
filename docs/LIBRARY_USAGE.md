@@ -143,6 +143,14 @@ for result_list in results.filtered(service="mpd"):
 # ...
 
 
+# browse the collection from a URI, the root without one
+content = client.browse("music-library")
+for item in content.items:
+    print(item.title or item.name, item.uri)
+# INTERNAL music-library/INTERNAL
+# ...
+
+
 # get stories and album credits
 # (requires a Premium subscription on the Volumio host;
 # entities are given by free text, or by MusicBrainz ID with is_mbid=True)
@@ -167,6 +175,7 @@ Every query returns a model instead of a raw dictionary:
 
 | Client member                                       | Model                               |
 | --------------------------------------------------- | ----------------------------------- |
+| `browse`                                            | `BrowseResults`                     |
 | `collection_statistics`                             | `CollectionStatistics`              |
 | `get_album_credits`, `get_story`                    | `Story`                             |
 | `notifications`                                     | `Notifications` (of `Notification`) |

@@ -1842,6 +1842,84 @@ class TestVolumioRESTAPIClient:
 
         assert "Expected JSON object from Volumio API, got list" in str(exc_info.value)
 
+    def test_browse_root(self, mocker: MockerFixture):
+        """Test browse() asking for the root when no URI is given."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "navigation": {
+                # The root answers with its items directly in the lists array
+                "lists": [
+                    {
+                        "name": "Music Library",
+                        "uri": "music-library",
+                        "plugin_type": "music_service",
+                        "plugin_name": "mpd",
+                    }
+                ],
+                "prev": {"uri": "/"},
+            }
+        }
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        results = client.browse()
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=/", timeout=5.0
+        )
+        assert len(results) == 1
+        assert results.items[0].name == "Music Library"
+        assert results.items[0].plugin_name == "mpd"
+        assert results.prev_uri == "/"
+        # The whole envelope stays available on the model
+        assert results.raw == mock_response.json.return_value
+
+    def test_browse_the_root_uri(self, mocker: MockerFixture):
+        """Test browse("/") asking for the root explicitly."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"navigation": {"lists": []}}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.browse("/")
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=/", timeout=5.0
+        )
+
+    def test_browse_encodes_the_uri(self, mocker: MockerFixture):
+        """Test browse() encoding a URI without touching its escapes and structure."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"navigation": {"lists": []}}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        # The %20 the host itself wrote stays; the bare space and the accent are encoded
+        client.browse("albums://Paolo%20Conte/Città vuota")
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse"
+            "?uri=albums://Paolo%20Conte/Citt%C3%A0%20vuota",
+            timeout=5.0,
+        )
+
+    def test_browse_connection_error(self, mocker: MockerFixture):
+        """Test browse() translates a connection error."""
+        mocker.patch(
+            "requests.get",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.browse("music-library")
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
 
 class TestVolumioExceptions:
     """Test cases for Volumio exception classes."""

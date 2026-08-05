@@ -10,6 +10,7 @@ import pytest
 
 from volumito.clients.errors import VolumioAPIError, VolumioStoryError
 from volumito.clients.models import (
+    BrowseResults,
     CollectionStatistics,
     CommandResponse,
     DeviceState,
@@ -646,6 +647,26 @@ class TestSearchResults:
         """The kind of an item is read from its URI and its type."""
         assert self._results().items[index].kind is kind
 
+    @pytest.mark.parametrize(
+        ("payload", "kind"),
+        [
+            ({"type": "artist", "uri": "artists://Paolo Conte"}, SearchResultItemKind.ARTIST),
+            ({"type": "album", "uri": ""}, SearchResultItemKind.ALBUM),
+            ({"type": "playlist", "uri": ""}, SearchResultItemKind.PLAYLIST),
+            (
+                {"type": "folder", "uri": "artists://Paolo%20Conte"},
+                SearchResultItemKind.ARTIST,
+            ),
+            (
+                {"type": "folder", "uri": "artists://Paolo%20Conte/Aguaplano"},
+                SearchResultItemKind.ALBUM,
+            ),
+        ],
+    )
+    def test_the_kind_of_a_browsed_item(self, payload, kind):
+        """The explicit type wins, and an album inside an artist tree is told apart."""
+        assert SearchResultItem.from_raw(payload).kind is kind
+
     def test_a_kind_is_its_own_string(self):
         """A kind is a member of the enumeration, and the string the member holds."""
         kind = self._results().items[0].kind
@@ -795,6 +816,146 @@ class TestSearchResults:
             "Paris Milonga",
             "1 - Aguaplano",
         ]
+
+
+class TestBrowseResults:
+    """Test cases for the BrowseResults model."""
+
+    _ROOT_ENVELOPE = {
+        "navigation": {
+            "lists": [
+                {
+                    "name": "Music Library",
+                    "uri": "music-library",
+                    "plugin_type": "music_service",
+                    "plugin_name": "mpd",
+                    "albumart": "/albumart?sourceicon=music_library.svg",
+                },
+                {
+                    "name": "QOBUZ",
+                    "uri": "qobuz://",
+                    "plugin_type": "music_service",
+                    "plugin_name": "qobuz",
+                },
+            ],
+        }
+    }
+    """A payload of the shape a Volumio host answers a root browse with: the items sit
+    directly in the lists array, without list objects around them."""
+
+    _ALBUM_ENVELOPE = {
+        "navigation": {
+            "lists": [
+                {
+                    "availableListViews": ["list"],
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "song",
+                            "title": "Aguaplano",
+                            "artist": "Paolo Conte",
+                            "album": "Aguaplano",
+                            "uri": "music-library/INTERNAL/music/001___Aguaplano.flac",
+                        },
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "A Folder",
+                            "uri": "music-library/INTERNAL/music/folder",
+                        },
+                    ],
+                }
+            ],
+            "prev": {"uri": "albums://Paolo%20Conte"},
+            "info": {
+                "uri": "albums://Paolo%20Conte/Aguaplano",
+                "title": "Aguaplano",
+                "artist": "Paolo Conte",
+                "service": "mpd",
+                "type": "album",
+            },
+        }
+    }
+    """A payload of the shape a Volumio host answers an album browse with."""
+
+    def test_parses_a_root_envelope(self):
+        """The loose items are gathered into one untitled list, and the envelope kept in raw."""
+        results = BrowseResults.from_envelope(self._ROOT_ENVELOPE)
+
+        assert len(results) == 1
+        assert results[0].title is None
+        assert [item.name for item in results.items] == ["Music Library", "QOBUZ"]
+        assert results.items[0].plugin_name == "mpd"
+        assert results.items[0].plugin_type == "music_service"
+        assert results.info is None
+        assert results.prev_uri is None
+        assert results.raw == self._ROOT_ENVELOPE
+
+    def test_a_mix_of_loose_items_and_lists(self):
+        """The loose items come first as one list, and the real lists follow."""
+        results = BrowseResults.from_envelope(
+            {
+                "navigation": {
+                    "lists": [
+                        {"title": "A List", "items": [{"title": "Listed"}]},
+                        {"name": "Loose", "uri": "loose://"},
+                    ],
+                }
+            }
+        )
+
+        assert [result_list.title for result_list in results] == [None, "A List"]
+        assert [item.title or item.name for item in results.items] == ["Loose", "Listed"]
+
+    def test_parses_an_album_envelope(self):
+        """The entity being browsed and the step back up are parsed with the lists."""
+        results = BrowseResults.from_envelope(self._ALBUM_ENVELOPE)
+
+        assert results.info is not None
+        assert results.info.title == "Aguaplano"
+        assert results.info.artist == "Paolo Conte"
+        assert results.info.kind == SearchResultItemKind.ALBUM
+        assert results.prev_uri == "albums://Paolo%20Conte"
+        assert [item.kind for item in results.items] == [
+            SearchResultItemKind.TRACK,
+            SearchResultItemKind.OTHER,
+        ]
+
+    def test_an_envelope_without_a_navigation(self):
+        """A payload that carries no navigation parses to empty content."""
+        results = BrowseResults.from_envelope({"unexpected": True})
+
+        assert len(results) == 0
+        assert results.raw == {"unexpected": True}
+
+    def test_the_content_is_a_sequence_of_its_lists(self):
+        """The content can be indexed, iterated, and measured."""
+        results = BrowseResults.from_envelope(self._ALBUM_ENVELOPE)
+
+        assert len(results) == 1
+        assert results[0] is results.lists[0]
+        assert [len(result_list) for result_list in results] == [2]
+
+    def test_filtered_by_kind(self):
+        """The kinds filter keeps the items of those kinds, dropping the emptied lists."""
+        results = BrowseResults.from_envelope(self._ALBUM_ENVELOPE)
+
+        filtered = results.filtered(kinds={SearchResultItemKind.TRACK})
+
+        assert [item.title for item in filtered.items] == ["Aguaplano"]
+        assert filtered.raw == self._ALBUM_ENVELOPE
+        assert len(results.filtered(kinds={SearchResultItemKind.PLAYLIST})) == 0
+
+    def test_limited(self):
+        """The limit keeps the first items of each list and preserves the raw payload."""
+        results = BrowseResults.from_envelope(self._ROOT_ENVELOPE)
+
+        limited = results.limited(1)
+
+        assert [item.name for item in limited.items] == ["Music Library"]
+        assert limited.raw == self._ROOT_ENVELOPE
+        assert len(results.limited(0)) == 0
+        assert len(results.items) == 2
 
 
 class TestStory:

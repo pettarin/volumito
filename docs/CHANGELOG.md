@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.39] - 2026-08-05
+
+### Added
+
+- Subcommand `collection browse`, listing the content of a URI of the Volumio host (the
+  root without one), with the kind and limit options of `collection search`, and the
+  URIs to browse deeper printed unless `--no-print-uri`
+- Method `browse` on the REST API client, returning the new `BrowseResults` model,
+  which filters and limits its own content
+
+
 ## [0.0.38] - 2026-08-04
 
 ### Added

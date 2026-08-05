@@ -24,6 +24,54 @@ from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKin
 from volumito.clients.remote import is_local_file_uri
 
 
+def _append_result_lists(lines: list[str], lists: list[dict[str, Any]], print_uri: bool) -> None:
+    """Append the lists of a navigation payload to the lines of a table.
+
+    The lists a Volumio host titles after the query it answered (e.g., ``Found 12
+    Tracks 'Sirtaki'``) are titled after their source instead (``MPD Tracks``), so that
+    every list reads alike; the titles the sources give (``QOBUZ Albums``, ``Web
+    Radio``) are kept as they are, and a list without a title gets no title line, which
+    is how a host lists the content of a browsed URI.
+
+    Args:
+        lines: The lines of the table, appended to in place
+        lists: The lists of results, as the Volumio host groups them
+        print_uri: Whether to print the URI of a result under its line
+    """
+    for result_list in lists:
+        items = result_list.get("items") or []
+        if not items:
+            continue
+        title = str(result_list.get("title") or "")
+        found = re.match(r"^Found \d+ (\w+?)s? '.*'$", title)
+        service = str(items[0].get("service") or "")
+        if found is not None and service:
+            title = f"{service.upper()} {found.group(1)}s"
+        lines.append("")
+        if title:
+            lines.append(title)
+        width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
+        indent = " " * (width + 2)
+        for index, item in enumerate(items, start=1):
+            lines.append(f"{index:>{width}}. {_result_details(item)}")
+            if print_uri and item.get("uri"):
+                lines.append(f"{indent}{item['uri']}")
+
+
+def _result_details(item: dict[str, Any]) -> str:
+    """Return the one-line description of a navigation result.
+
+    Args:
+        item: The result, as the Volumio host reports it
+
+    Returns:
+        The title (or the name, which is what a root listing has), the artist, and the
+        album of the result, joined by dashes
+    """
+    parts = [item.get("title") or item.get("name"), item.get("artist"), item.get("album")]
+    return " - ".join(str(part) for part in parts if part)
+
+
 def display_position(api_position: int, starting_at_one: bool) -> int:
     """Convert a position as returned by the Volumio API to the displayed one.
 
@@ -318,6 +366,40 @@ def format_as_table(
     return "\n".join(lines)
 
 
+def format_browse_results_as_table(
+    lists: list[dict[str, Any]],
+    info: dict[str, Any] | None = None,
+    print_uri: bool = False,
+) -> str:
+    """Format the content listed at a browsing URI as a readable table.
+
+    The entity being browsed (e.g., the album of the tracks listed), when the host
+    describes it, follows the heading; its URI is not repeated, being the very URI
+    that was browsed.
+
+    Args:
+        lists: The lists of content, as the Volumio host groups them
+        info: The entity being browsed, when the host describes it
+        print_uri: Whether to print the URI of a result under its line
+
+    Returns:
+        A formatted string representation of the content
+    """
+    lines = ["Volumio Browse Results", "=" * 50]
+
+    details = _result_details(info) if info else ""
+    if details:
+        lines.append(details)
+
+    if not any(result_list.get("items") for result_list in lists):
+        lines.append("(no result)")
+        return "\n".join(lines)
+
+    _append_result_lists(lines, lists, print_uri)
+
+    return "\n".join(lines)
+
+
 def format_duration(seconds: int) -> str:
     """Convert duration in seconds to HH:MM:SS format.
 
@@ -467,26 +549,7 @@ def format_search_results_as_table(lists: list[dict[str, Any]], print_uri: bool 
         lines.append("(no result)")
         return "\n".join(lines)
 
-    for result_list in lists:
-        items = result_list.get("items") or []
-        if not items:
-            continue
-        title = str(result_list.get("title") or "Results")
-        found = re.match(r"^Found \d+ (\w+?)s? '.*'$", title)
-        service = str(items[0].get("service") or "")
-        if found is not None and service:
-            title = f"{service.upper()} {found.group(1)}s"
-        lines.append("")
-        lines.append(title)
-        width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
-        indent = " " * (width + 2)
-        for index, item in enumerate(items, start=1):
-            details = " - ".join(
-                str(item[key]) for key in ("title", "artist", "album") if item.get(key)
-            )
-            lines.append(f"{index:>{width}}. {details}")
-            if print_uri and item.get("uri"):
-                lines.append(f"{indent}{item['uri']}")
+    _append_result_lists(lines, lists, print_uri)
 
     return "\n".join(lines)
 

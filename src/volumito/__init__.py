@@ -9,6 +9,7 @@ from volumito.clients import (
     VOLUMIO_MNT_ROOT,
     Album,
     Artist,
+    BrowseResults,
     CollectionStatistics,
     CommandResponse,
     DeviceState,
@@ -52,7 +53,7 @@ from volumito.clients import (
     remote_music_path,
 )
 
-__version__ = "0.0.38"
+__version__ = "0.0.39"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
@@ -61,6 +62,7 @@ __all__ = [
     "Artist",
     "Label",
     "Place",
+    "BrowseResults",
     "CollectionStatistics",
     "CommandResponse",
     "DeviceState",

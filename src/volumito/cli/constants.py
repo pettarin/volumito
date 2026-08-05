@@ -4,6 +4,12 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+BROWSE_KINDS_ERROR = (
+    "Expected the --result-kinds, --albums-only, --artists-only, --playlists-only, "
+    "and --tracks-only options to agree on the kinds to keep."
+)
+"""Error message when "collection browse" is asked for two different kinds of result."""
+
 DEFAULT_MANIFEST_FILE = "{output_directory}/manifest.json"
 """Default path template of the queue/playlist download manifest file."""
 

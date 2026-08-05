@@ -4,7 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
-from collections.abc import Collection, Iterator
+from collections.abc import Callable, Collection, Iterator
 from enum import StrEnum
 from typing import Any, Self
 
@@ -42,6 +42,48 @@ def _value_adapters(model: type["VolumioModel"]) -> dict[str, TypeAdapter[Any]]:
                 adapters[field.alias] = adapter
         _VALUE_ADAPTERS[model] = adapters
     return adapters
+
+
+def _lists_with_first_items(
+    lists: list["SearchResultList"], count: int
+) -> list["SearchResultList"]:
+    """Return copies of the lists holding their first items, dropping the emptied ones.
+
+    Args:
+        lists: The lists of results to limit
+        count: The number of items to keep in each list, at most
+
+    Returns:
+        The limited copies of the lists still holding an item
+    """
+    # A negative count would keep the items but the last ones, which is not a limit
+    kept = max(count, 0)
+    return [
+        result_list.model_copy(update={"items": result_list.items[:kept]})
+        for result_list in lists
+        if result_list.items[:kept]
+    ]
+
+
+def _lists_with_items_kept(
+    lists: list["SearchResultList"],
+    keep: Callable[["SearchResultItem"], bool],
+) -> list["SearchResultList"]:
+    """Return copies of the lists holding their items passing the check, dropping the emptied ones.
+
+    Args:
+        lists: The lists of results to filter
+        keep: The check an item must pass to be kept
+
+    Returns:
+        The filtered copies of the lists still holding an item
+    """
+    kept_lists = []
+    for result_list in lists:
+        items = [item for item in result_list.items if keep(item)]
+        if items:
+            kept_lists.append(result_list.model_copy(update={"items": items}))
+    return kept_lists
 
 
 class VolumioModel(BaseModel):
@@ -579,6 +621,15 @@ class SearchResultItem(VolumioModel):
     icon: str | None = None
     """The icon of the result, when the source gives one."""
 
+    name: str | None = None
+    """The name of the result, which is what a browsed root listing has for a title."""
+
+    plugin_name: str | None = None
+    """The plugin serving the result (e.g., ``"mpd"``), in a browsed root listing."""
+
+    plugin_type: str | None = None
+    """The type of that plugin (e.g., ``"music_service"``), in a browsed root listing."""
+
     service: str | None = None
     """The source the result comes from (e.g., ``"mpd"``, ``"webradio"``, ``"qobuz"``)."""
 
@@ -599,11 +650,14 @@ class SearchResultItem(VolumioModel):
 
     @property
     def kind(self) -> "SearchResultItemKind":
-        """The kind of entity the result is, read from its URI and its type.
+        """The kind of entity the result is, read from its type and its URI.
 
-        A Volumio host names its entities by URI (``artists://…`` and ``qobuz://artist/…``
-        for the artists, and likewise for the albums and the playlists), and reports the
-        tracks with the ``song`` type, whatever the source.
+        A Volumio host reports the tracks with the ``song`` type, and sometimes names
+        the kind in the type outright (the entity a browse describes, for instance);
+        otherwise the URI tells (``artists://…`` and ``qobuz://artist/…`` for the
+        artists, and likewise for the albums and the playlists), knowing that
+        ``artists://X/Y`` is not an artist but an album of one, which is how a browsed
+        artist lists its albums.
 
         Returns:
             The kind of the result, :attr:`SearchResultItemKind.OTHER` when it is none of
@@ -611,12 +665,21 @@ class SearchResultItem(VolumioModel):
         """
         if self.type == "song":
             return SearchResultItemKind.TRACK
-        uri = self.uri or ""
-        for kind in (
+        entity_kinds = (
             SearchResultItemKind.ARTIST,
             SearchResultItemKind.ALBUM,
             SearchResultItemKind.PLAYLIST,
-        ):
+        )
+        for kind in entity_kinds:
+            if self.type == kind.value:
+                return kind
+        uri = self.uri or ""
+        if uri.startswith("artists://"):
+            in_artist = uri.removeprefix("artists://")
+            if "/" in in_artist:
+                return SearchResultItemKind.ALBUM
+            return SearchResultItemKind.ARTIST
+        for kind in entity_kinds:
             if uri.startswith(f"{kind.value}s://") or f"://{kind.value}/" in uri:
                 return kind
         return SearchResultItemKind.OTHER
@@ -781,13 +844,7 @@ class SearchResults(VolumioModel):
                     return False
             return True
 
-        filtered_lists = []
-        for result_list in self.lists:
-            items = [item for item in result_list.items if matches(item)]
-            if items:
-                filtered_lists.append(result_list.model_copy(update={"items": items}))
-
-        return self.model_copy(update={"lists": filtered_lists})
+        return self.model_copy(update={"lists": _lists_with_items_kept(self.lists, matches)})
 
     def limited(self, count: int) -> "SearchResults":
         """Return the results with at most the given number of items in each list.
@@ -802,15 +859,113 @@ class SearchResults(VolumioModel):
         Returns:
             The limited results, holding the original payload in their ``raw`` attribute
         """
-        # A negative count would keep the items but the last ones, which is not a limit
-        kept = max(count, 0)
-        limited_lists = [
-            result_list.model_copy(update={"items": result_list.items[:kept]})
-            for result_list in self.lists
-            if result_list.items[:kept]
-        ]
+        return self.model_copy(update={"lists": _lists_with_first_items(self.lists, count)})
 
-        return self.model_copy(update={"lists": limited_lists})
+
+class BrowseResults(VolumioModel):
+    """The content a Volumio instance lists at a browsing URI.
+
+    The content is a sequence of the lists the host grouped it in: the collection can
+    be iterated, indexed, and measured with ``len()``. The :attr:`raw` attribute holds
+    the whole response envelope, as the host returned it. The class follows
+    :class:`SearchResults`, whose list model it shares, instead of its lexicographic
+    place.
+    """
+
+    info: SearchResultItem | None = None
+    """The entity being browsed (e.g., the album of the tracks listed), when given."""
+
+    lists: list[SearchResultList] = Field(default_factory=list)
+    """The lists of content, in the order reported by the Volumio instance."""
+
+    prev: dict[str, Any] | None = None
+    """The step back up, as the host gives it (see :attr:`prev_uri`)."""
+
+    @classmethod
+    def from_envelope(cls, envelope: dict[str, Any]) -> Self:
+        """Parse the response envelope of a browse query.
+
+        A root listing puts its items directly into ``lists``, without list objects
+        around them: such loose items are gathered into one untitled list, before any
+        list the payload also carries.
+
+        Args:
+            envelope: The response envelope (``{"navigation": {...}}``)
+
+        Returns:
+            The content, holding the whole envelope in its ``raw`` attribute
+
+        Raises:
+            VolumioAPIError: If the envelope cannot be parsed into the model
+        """
+        navigation = envelope.get("navigation")
+        if not isinstance(navigation, dict):
+            navigation = {}
+        lists = navigation.get("lists")
+        if isinstance(lists, list):
+            loose = [entry for entry in lists if isinstance(entry, dict) and "items" not in entry]
+            if loose:
+                grouped: list[dict[str, Any]] = [{"items": loose}]
+                grouped += [
+                    entry for entry in lists if isinstance(entry, dict) and "items" in entry
+                ]
+                navigation = {**navigation, "lists": grouped}
+        # The content comes from the navigation, while raw keeps the whole envelope
+        return cls.from_raw({**navigation, "raw": envelope})
+
+    @property
+    def items(self) -> list[SearchResultItem]:
+        """Every item of every list, in the order reported."""
+        return [item for result_list in self.lists for item in result_list.items]
+
+    @property
+    def prev_uri(self) -> str | None:
+        """The URI of the parent of the browsed URI, when the host gives one."""
+        if isinstance(self.prev, dict) and isinstance(self.prev.get("uri"), str):
+            return str(self.prev["uri"])
+        return None
+
+    def __getitem__(self, index: int) -> SearchResultList:
+        """Return the list of content at the given position."""
+        return self.lists[index]
+
+    def __iter__(self) -> Iterator[SearchResultList]:  # type: ignore[override]
+        """Iterate over the lists of content."""
+        return iter(self.lists)
+
+    def __len__(self) -> int:
+        """Return the number of lists of content."""
+        return len(self.lists)
+
+    def filtered(self, kinds: Collection[SearchResultItemKind]) -> "BrowseResults":
+        """Return the content whose items are of one of the given kinds.
+
+        The lists left without items are dropped, and the raw payload is preserved.
+
+        Args:
+            kinds: The kinds of entity the items must be
+
+        Returns:
+            The filtered content, holding the original payload in its ``raw`` attribute
+        """
+        return self.model_copy(
+            update={"lists": _lists_with_items_kept(self.lists, lambda item: item.kind in kinds)}
+        )
+
+    def limited(self, count: int) -> "BrowseResults":
+        """Return the content with at most the given number of items in each list.
+
+        The items kept are the first ones of each list, in the order the host reported
+        them. The lists left without items are dropped, and the raw payload is
+        preserved.
+
+        Args:
+            count: The number of items to keep in each list, at most
+
+        Returns:
+            The limited content, holding the original payload in its ``raw`` attribute
+        """
+        return self.model_copy(update={"lists": _lists_with_first_items(self.lists, count)})
 
 
 class SuccessResponse(VolumioModel):

@@ -16,6 +16,7 @@ from volumito.clients.errors import (
 from volumito.clients.host_configuration import Scheme, VolumioHostConfiguration
 from volumito.clients.listener import NotificationListener, receiver_url
 from volumito.clients.models import (
+    BrowseResults,
     CollectionStatistics,
     CommandResponse,
     DeviceState,
@@ -58,6 +59,7 @@ __all__ = [
     "Label",
     "Place",
     "Scheme",
+    "BrowseResults",
     "CollectionStatistics",
     "CommandResponse",
     "DeviceState",
