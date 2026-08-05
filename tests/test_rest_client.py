@@ -1889,6 +1889,40 @@ class TestVolumioRESTAPIClient:
             "http://volumio.local:3000/api/v1/browse?uri=/", timeout=5.0
         )
 
+    def test_browse_with_an_offset(self, mocker: MockerFixture):
+        """Test browse() sends a positive offset, and only a positive one."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"navigation": {"lists": []}}
+        mock_get = mocker.patch("requests.get", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.browse("music-library", 3)
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=music-library&offset=3", timeout=5.0
+        )
+
+        # The host ignores an offset of 0, so it is not sent
+        mock_get.reset_mock()
+        client.browse("music-library", 0)
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=music-library", timeout=5.0
+        )
+
+    def test_browse_with_a_negative_offset(self, mocker: MockerFixture):
+        """Test browse() rejects a negative offset without any request."""
+        mock_get = mocker.patch("requests.get")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError) as exc_info:
+            client.browse("music-library", -1)
+
+        assert "must be 0 or greater" in str(exc_info.value)
+        mock_get.assert_not_called()
+
     def test_browse_encodes_the_uri(self, mocker: MockerFixture):
         """Test browse() encoding a URI without touching its escapes and structure."""
         mock_response = mocker.Mock()
@@ -1917,6 +1951,363 @@ class TestVolumioRESTAPIClient:
 
         with pytest.raises(VolumioConnectionError) as exc_info:
             client.browse("music-library")
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_add_to_queue_success(self, mocker: MockerFixture):
+        """Test add_to_queue() posts the URI as an item and reads the outcome."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.add_to_queue("albums://Paolo%20Conte/Aguaplano")
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/addToQueue",
+            json={"service": "mpd", "uri": "albums://Paolo%20Conte/Aguaplano"},
+            timeout=60.0,
+        )
+        assert result.response == "success"
+
+    @pytest.mark.parametrize(
+        ("uri", "service"),
+        [
+            ("music-library/INTERNAL/music/track.flac", "mpd"),
+            ("albums://Paolo%20Conte/Aguaplano", "mpd"),
+            ("artists://Paolo%20Conte", "mpd"),
+            ("genres://Jazz", "mpd"),
+            ("playlists", "mpd"),
+            ("qobuz://album/0884977674569", "qobuz"),
+            ("tidal://song/123", "tidal"),
+            ("http://opml.radiotime.com/Tune.ashx?id=s339255", "webradio"),
+            ("https://stream.example/radio", "webradio"),
+            ("spotify:track:abc", "spop"),
+        ],
+    )
+    def test_the_service_of_a_uri(self, mocker: MockerFixture, uri, service):
+        """The service is read from the URI, since the host defaults to mpd silently."""
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {}
+        mocker.patch("requests.get", return_value=browse_response)
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        VolumioRESTAPIClient(VolumioHostConfiguration()).add_to_queue(uri)
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/addToQueue",
+            json={"service": service, "uri": uri},
+            timeout=60.0,
+        )
+
+    def test_add_to_queue_a_container_of_another_source(self, mocker: MockerFixture):
+        """A non-local container is browsed and queued as its items: only mpd explodes."""
+        first = {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
+        second = {"service": "qobuz", "type": "song", "title": "Two", "uri": "qobuz://song/2"}
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": [first, second]}]}}
+        mock_get = mocker.patch("requests.get", return_value=browse_response)
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        VolumioRESTAPIClient(VolumioHostConfiguration()).add_to_queue("qobuz://album/123")
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=qobuz://album/123", timeout=5.0
+        )
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/addToQueue",
+            json=[first, second],
+            timeout=60.0,
+        )
+
+    def test_add_to_queue_of_the_local_library_is_not_browsed(self, mocker: MockerFixture):
+        """A local URI is queued as itself: the host explodes its own containers."""
+        mock_get = mocker.patch("requests.get")
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "success"}
+        mocker.patch("requests.post", return_value=mock_response)
+
+        VolumioRESTAPIClient(VolumioHostConfiguration()).add_to_queue("artists://Paolo%20Conte")
+
+        mock_get.assert_not_called()
+
+    def test_the_slow_endpoints_timeout(self, mocker: MockerFixture):
+        """The slow-endpoints timeout defaults to 60 seconds and is configurable."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+        assert VolumioRESTAPIClient(VolumioHostConfiguration()).timeout_slow_endpoints == 60.0
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), timeout_slow_endpoints=120.0)
+        client.add_to_queue("music-library/INTERNAL/music/track.flac")
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/addToQueue",
+            json={"service": "mpd", "uri": "music-library/INTERNAL/music/track.flac"},
+            timeout=120.0,
+        )
+
+    def test_add_to_queue_connection_error(self, mocker: MockerFixture):
+        """Test add_to_queue() translates a connection error."""
+        mocker.patch(
+            "requests.post",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.add_to_queue("albums://Paolo%20Conte/Aguaplano")
+
+        assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+    def test_replace_queue_and_play_without_an_index(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() posts the item form, without browsing."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_get = mocker.patch("requests.get")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.replace_queue_and_play("albums://Paolo%20Conte/Aguaplano")
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={"item": {"service": "mpd", "uri": "albums://Paolo%20Conte/Aguaplano"}},
+            timeout=60.0,
+        )
+        mock_get.assert_not_called()
+        assert result.response == "success"
+
+    def test_replace_queue_and_play_a_container_of_another_source(self, mocker: MockerFixture):
+        """Without an index, a non-local container is still browsed and sent as its items."""
+        item = {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
+        mocker.patch("requests.get", return_value=browse_response)
+        play_response = mocker.Mock()
+        play_response.status_code = 200
+        play_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=play_response)
+
+        VolumioRESTAPIClient(VolumioHostConfiguration()).replace_queue_and_play(
+            "qobuz://album/123"
+        )
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={"list": [item], "index": 0},
+            timeout=60.0,
+        )
+
+    def test_replace_queue_and_play_a_single_of_another_source(self, mocker: MockerFixture):
+        """Without an index, a non-local URI listing nothing is sent as an item."""
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {}
+        mocker.patch("requests.get", return_value=browse_response)
+        play_response = mocker.Mock()
+        play_response.status_code = 200
+        play_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=play_response)
+
+        VolumioRESTAPIClient(VolumioHostConfiguration()).replace_queue_and_play(
+            "qobuz://song/2210819"
+        )
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={"item": {"service": "qobuz", "uri": "qobuz://song/2210819"}},
+            timeout=60.0,
+        )
+
+    def test_replace_queue_and_play_slims_the_items(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() drops the item keys queueing does not read."""
+        item = {
+            "service": "qobuz",
+            "type": "song",
+            "title": "One",
+            "uri": "qobuz://song/1",
+            "albumart": "https://static.qobuz.com/images/covers/very/long/url.jpg",
+            "duration": 251,
+            "audioQuality": "hires",
+        }
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
+        mocker.patch("requests.get", return_value=browse_response)
+        play_response = mocker.Mock()
+        play_response.status_code = 200
+        play_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=play_response)
+
+        VolumioRESTAPIClient(VolumioHostConfiguration()).replace_queue_and_play(
+            "qobuz://album/123", 0
+        )
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={
+                "list": [
+                    {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
+                ],
+                "index": 0,
+            },
+            timeout=60.0,
+        )
+
+    def test_a_payload_too_large_for_the_host(self, mocker: MockerFixture):
+        """Test the client refuses a body beyond the host limit, instead of posting it."""
+        items = [
+            {"service": "qobuz", "type": "song", "title": f"Track {index:04d}", "uri": f"qobuz://song/{index}"}
+            for index in range(2000)
+        ]
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": items}]}}
+        mocker.patch("requests.get", return_value=browse_response)
+        mock_post = mocker.patch("requests.post")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.add_to_queue("qobuz://artist/2101")
+
+        assert "larger than the 100 kB a Volumio instance accepts" in str(exc_info.value)
+        mock_post.assert_not_called()
+
+    def test_replace_queue_and_play_with_an_index(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() browses the URI and posts the items it lists."""
+        first = {"service": "mpd", "type": "song", "title": "One", "uri": "music-library/1.flac"}
+        second = {"service": "mpd", "type": "song", "title": "Two", "uri": "music-library/2.flac"}
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": [first, second]}]}}
+        mock_get = mocker.patch("requests.get", return_value=browse_response)
+        play_response = mocker.Mock()
+        play_response.status_code = 200
+        play_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=play_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        result = client.replace_queue_and_play("albums://X/Y", 1)
+
+        mock_get.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/browse?uri=albums://X/Y", timeout=5.0
+        )
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={"list": [first, second], "index": 1},
+            timeout=60.0,
+        )
+        assert result.response == "success"
+
+    def test_replace_queue_and_play_index_zero_of_a_listing(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() uses the list form for index 0 too."""
+        item = {"service": "mpd", "type": "song", "title": "One", "uri": "music-library/1.flac"}
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
+        mocker.patch("requests.get", return_value=browse_response)
+        play_response = mocker.Mock()
+        play_response.status_code = 200
+        play_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=play_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.replace_queue_and_play("albums://X/Y", 0)
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={"list": [item], "index": 0},
+            timeout=60.0,
+        )
+
+    def test_replace_queue_and_play_index_zero_of_a_single_track(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() falls back to the item form for an unbrowsable URI."""
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {}
+        mocker.patch("requests.get", return_value=browse_response)
+        play_response = mocker.Mock()
+        play_response.status_code = 200
+        play_response.json.return_value = {"response": "success"}
+        mock_post = mocker.patch("requests.post", return_value=play_response)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        client.replace_queue_and_play("music-library/INTERNAL/music/track.flac", 0)
+
+        mock_post.assert_called_once_with(
+            "http://volumio.local:3000/api/v1/replaceAndPlay",
+            json={"item": {"service": "mpd", "uri": "music-library/INTERNAL/music/track.flac"}},
+            timeout=60.0,
+        )
+
+    @pytest.mark.parametrize(
+        ("lists", "index"),
+        [
+            ([], 1),
+            ([{"items": [{"title": "One", "uri": "music-library/1.flac"}]}], 1),
+        ],
+        ids=["nothing-listed", "beyond-the-items"],
+    )
+    def test_replace_queue_and_play_not_enough_items(
+        self, mocker: MockerFixture, lists, index
+    ):
+        """Test replace_queue_and_play() refuses an index the URI has no item for."""
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": lists}}
+        mocker.patch("requests.get", return_value=browse_response)
+        mock_post = mocker.patch("requests.post")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioAPIError) as exc_info:
+            client.replace_queue_and_play("albums://X/Y", index)
+
+        assert "not enough to play" in str(exc_info.value)
+        mock_post.assert_not_called()
+
+    def test_replace_queue_and_play_negative_index(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() rejects a negative index without any request."""
+        mock_get = mocker.patch("requests.get")
+        mock_post = mocker.patch("requests.post")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(ValueError) as exc_info:
+            client.replace_queue_and_play("albums://X/Y", -1)
+
+        assert "must be 0 or greater" in str(exc_info.value)
+        mock_get.assert_not_called()
+        mock_post.assert_not_called()
+
+    def test_replace_queue_and_play_connection_error(self, mocker: MockerFixture):
+        """Test replace_queue_and_play() translates a connection error."""
+        mocker.patch(
+            "requests.post",
+            side_effect=requests.exceptions.ConnectionError("Connection failed"),
+        )
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        with pytest.raises(VolumioConnectionError) as exc_info:
+            client.replace_queue_and_play("albums://X/Y")
 
         assert "Failed to connect to Volumio instance" in str(exc_info.value)
 

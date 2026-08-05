@@ -1569,14 +1569,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.39" in result.output
+        assert "volumito, version 0.0.40" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.39"'
+        assert result.output.strip() == '"0.0.40"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1585,7 +1585,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.39"'
+        assert result.output.strip() == '"0.0.40"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5204,7 +5204,7 @@ class TestCollectionBrowse:
         result = runner.invoke(main, ["collection", "browse", "-F", "json"])
 
         assert result.exit_code == 0
-        mock_client.browse.assert_called_once_with(None)
+        mock_client.browse.assert_called_once_with(None, None)
         navigation = json.loads(result.output)
         assert [item["name"] for item in navigation["lists"][0]["items"]] == [
             "Music Library",
@@ -5220,7 +5220,7 @@ class TestCollectionBrowse:
         result = runner.invoke(main, ["collection", "browse", "music-library"])
 
         assert result.exit_code == 0
-        mock_client.browse.assert_called_once_with("music-library")
+        mock_client.browse.assert_called_once_with("music-library", None)
 
     def test_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
         """The table numbers the named items, with their URIs unless declined."""
@@ -5244,6 +5244,41 @@ class TestCollectionBrowse:
 
         assert result.exit_code == 0
         assert "1. Music Library\n2. Web Radio" in result.output
+
+    def test_the_offset_reaches_the_client(self, runner: CliRunner, mocker: MockerFixture):
+        """-o passes the offset to the client, which lets the host skip."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "music-library", "-o", "2"])
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with("music-library", 2)
+
+    def test_a_negative_offset(self, runner: CliRunner, mocker: MockerFixture):
+        """A negative offset is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-o", "-1"])
+
+        assert result.exit_code == 2
+        mock_client.browse.assert_not_called()
+
+    def test_the_slow_endpoints_timeout_reaches_the_client(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The global slow-endpoints timeout also reaches the fetching commands."""
+        mock_client = mocker.Mock()
+        mock_client.browse.return_value = BrowseResults.from_envelope(self.ENVELOPE)
+        mock_class = mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(
+            main, ["--rest-api-timeout-slow-endpoints", "120", "collection", "browse"]
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.call_args.args[1:] == (5.0, 120.0)
 
     def test_the_short_uri_flag_of_the_search_is_not_taken(
         self, runner: CliRunner, mocker: MockerFixture
@@ -5817,6 +5852,41 @@ class TestCollectionSearch:
         assert result.exit_code == 2
         assert "not both" in result.output
         mock_client.search.assert_not_called()
+
+    def test_the_offset(self, runner: CliRunner, mocker: MockerFixture):
+        """-o skips the first results of each list, client-side."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-o", "1", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == [
+            "Come Di",
+            "Sotto le stelle del jazz",
+        ]
+
+    def test_the_offset_applies_after_the_filters_and_before_the_limit(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-o skips among the filtered results, and -l then caps the window."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(
+            main,
+            ["collection", "search", "Paolo", "-T", "-o", "1", "-l", "1", "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == ["Come Di"]
+
+    def test_an_offset_of_zero(self, runner: CliRunner, mocker: MockerFixture):
+        """-o 0 changes nothing."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-o", "0", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert len(json.loads(result.output)[0]["items"]) == 3
 
     def test_the_uris_in_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
         """--print-uri prints the URI of each result under its line."""
@@ -10166,6 +10236,162 @@ class TestQueueActions:
         mock_client.clear.assert_called_once()
 
 
+class TestQueueReplace:
+    """Test cases for the queue replace command."""
+
+    URI = "albums://Paolo%20Conte/Aguaplano"
+    """A URI of the kind a browse or a search prints."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with usable replace methods; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.add_to_queue.return_value = {"response": "success"}
+        mock_client.clear.return_value = {"response": "clearQueue"}
+        mock_client.replace_queue_and_play.return_value = {"response": "success"}
+        _attach_property(mock_client, "state", return_value={
+            "title": "Test Song",
+            "artist": "StatusMarkerArtist",
+        })
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_replaces_and_plays_the_first_item(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a position the first item plays, and the status is printed."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI])
+
+        assert result.exit_code == 0
+        assert "Command 'replace' executed successfully" in result.output
+        assert "StatusMarkerArtist" in result.output
+        mock_client.replace_queue_and_play.assert_called_once_with(self.URI, 0)
+        mock_sleep.assert_called_once_with(2.0)
+
+    @pytest.mark.parametrize(("position", "index"), [("1", 0), ("3", 2)])
+    def test_the_position_starting_at_one(
+        self, runner: CliRunner, mocker: MockerFixture, position, index
+    ):
+        """The one-based position of the user reaches the client as a 0-based index."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main,
+            ["queue", "replace", self.URI, "-p", position, "--no-print-resulting-status"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.replace_queue_and_play.assert_called_once_with(self.URI, index)
+
+    def test_the_position_starting_at_zero(self, runner: CliRunner, mocker: MockerFixture):
+        """Under the zero-based convention the position is the index."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                "queue",
+                "replace",
+                self.URI,
+                "-p",
+                "0",
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.replace_queue_and_play.assert_called_once_with(self.URI, 0)
+
+    def test_a_position_below_the_minimum(self, runner: CliRunner, mocker: MockerFixture):
+        """A position below the convention minimum is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "-p", "0"])
+
+        assert result.exit_code == 2
+        assert "position must be 1 or greater" in result.output
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    def test_no_play_replaces_without_playing(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-play clears the queue and adds the URI, never replaceAndPlay."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["queue", "replace", self.URI, "--no-play", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'clear' executed successfully" in result.output
+        assert "Command 'add' executed successfully" in result.output
+        mock_client.clear.assert_called_once()
+        mock_client.add_to_queue.assert_called_once_with(self.URI)
+        mock_client.replace_queue_and_play.assert_not_called()
+        # The configured sleep separates the two calls
+        mock_sleep.assert_called_once_with(2.0)
+
+    def test_no_play_with_a_position(self, runner: CliRunner, mocker: MockerFixture):
+        """Asking for a position to play while asking not to play is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "--no-play", "-p", "2"])
+
+        assert result.exit_code == 2
+        assert "only together with --play" in result.output
+        mock_client.clear.assert_not_called()
+        mock_client.add_to_queue.assert_not_called()
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    def test_the_slow_endpoints_timeout_reaches_the_client(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The global slow-endpoints timeout option is what the client is built with."""
+        mock_client = mocker.Mock()
+        mock_client.replace_queue_and_play.return_value = {"response": "success"}
+        mock_class = mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                "--rest-api-timeout-slow-endpoints",
+                "120",
+                "queue",
+                "replace",
+                self.URI,
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.call_args.args[1:] == (5.0, 120.0)
+
+    def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
+        """A host that cannot be reached exits 1."""
+        mock_client = mocker.Mock()
+        mock_client.replace_queue_and_play.side_effect = VolumioConnectionError(
+            "Connection failed"
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["queue", "replace", self.URI])
+
+        assert result.exit_code == 1
+        assert "Connection error" in result.output
+
+
 class TestSeekCommand:
     """Test cases for the playback seek command."""
 
@@ -11823,6 +12049,7 @@ class TestConfigurationCommands:
                 },
                 "timeouts": {
                     "rest-api-timeout": 5.0,
+                    "rest-api-timeout-slow-endpoints": 60.0,
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 2.0,
                 },

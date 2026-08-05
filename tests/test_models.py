@@ -817,6 +817,44 @@ class TestSearchResults:
             "1 - Aguaplano",
         ]
 
+    def test_offset_skips_the_first_items(self):
+        """Each list loses its first items, and the emptied lists are dropped."""
+        results = self._results()
+
+        skipped = results.offset(1)
+
+        # Only the list of two tracks holds a second item
+        assert [item.title for item in skipped.items] == ["2 - Come Di"]
+        assert skipped.raw == self._ENVELOPE
+        # The results the method was called on are left alone
+        assert len(results.items) == 8
+
+    def test_offset_by_nothing(self):
+        """An offset of zero, or less, changes nothing."""
+        assert len(self._results().offset(0)) == 7
+        assert len(self._results().offset(-1)) == 7
+
+    def test_offset_and_limit_open_a_window(self):
+        """The two methods compose: skip, then keep."""
+        window = self._results().offset(1).limited(1)
+
+        assert [item.title for item in window.items] == ["2 - Come Di"]
+
+    def test_the_count_and_filters_of_a_host_filtered_list(self):
+        """The count and filters fields a host adds when offsetting are parsed."""
+        result_list = SearchResultList.from_raw(
+            {
+                "title": "Tracks",
+                "count": 19,
+                "filters": {"offset": 2},
+                "items": [{"title": "Third", "service": "mpd", "type": "song"}],
+            }
+        )
+
+        assert result_list.count == 19
+        assert result_list.filters == {"offset": 2}
+        assert len(result_list) == 1
+
 
 class TestBrowseResults:
     """Test cases for the BrowseResults model."""

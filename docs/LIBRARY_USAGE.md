@@ -150,6 +150,11 @@ for item in content.items:
 # INTERNAL music-library/INTERNAL
 # ...
 
+# replace the queue with the content of a URI and play its second item,
+# or add the content to the queue without touching playback
+client.replace_queue_and_play(content.items[0].uri, index=1)
+client.add_to_queue(content.items[0].uri)
+
 
 # get stories and album credits
 # (requires a Premium subscription on the Volumio host;
@@ -175,6 +180,7 @@ Every query returns a model instead of a raw dictionary:
 
 | Client member                                       | Model                               |
 | --------------------------------------------------- | ----------------------------------- |
+| `add_to_queue`, `replace_queue_and_play`            | `CommandResponse`                   |
 | `browse`                                            | `BrowseResults`                     |
 | `collection_statistics`                             | `CollectionStatistics`              |
 | `get_album_credits`, `get_story`                    | `Story`                             |

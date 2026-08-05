@@ -420,18 +420,22 @@ def configuration_file_callback(
 
 
 def create_client(
-    host_configuration: VolumioHostConfiguration, timeout: float
+    host_configuration: VolumioHostConfiguration,
+    timeout: float,
+    timeout_slow_endpoints: float = 60.0,
 ) -> VolumioRESTAPIClient:
     """Create a VolumioRESTAPIClient with the given host configuration.
 
     Args:
         host_configuration: The host configuration (scheme, host, and ports)
         timeout: Request timeout in seconds
+        timeout_slow_endpoints: Request timeout, in seconds, for the endpoints that
+            can take long, like replacing the queue
 
     Returns:
         A configured VolumioRESTAPIClient instance
     """
-    return VolumioRESTAPIClient(host_configuration, timeout)
+    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints)
 
 
 def download_queue_albumart(
@@ -803,7 +807,9 @@ def execute_command(
         click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = create_client(
+            host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
+        )
         response = command_func(client)
 
         if verbose and not machine_readable:
@@ -908,7 +914,9 @@ def fetch_or_exit[T](
         click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = create_client(
+            host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
+        )
         return fetch(client)
     except VolumioConnectionError as e:
         if not machine_readable:
@@ -1274,6 +1282,17 @@ def option_number_retries_next_track(func: Callable[..., None]) -> Callable[...,
     )(func)
 
 
+def option_offset(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-o``/``--offset`` option to a collection subcommand."""
+    return click.option(
+        "-o",
+        "--offset",
+        type=click.IntRange(min=0),
+        default=None,
+        help="Skip this number of results at the start of each list.",
+    )(func)
+
+
 def option_only_tracks(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-T``/``--only-tracks`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1325,6 +1344,16 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_play(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--play/--no-play`` option to the queue replace subcommand."""
+    return click.option(
+        "--play/--no-play",
+        default=True,
+        show_default=True,
+        help="Start playing the replaced queue (from the -p/--position item), or only replace it.",
+    )(func)
+
+
 def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-y``/``--playlist`` option to the collection search subcommand."""
     return click.option(
@@ -1356,6 +1385,20 @@ def option_port(func: Callable[..., None]) -> Callable[..., None]:
         default=DEFAULT_PORT,
         show_default=True,
         help="Port the local notification listener binds to.",
+    )(func)
+
+
+def option_position(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--position`` option to the queue replace subcommand."""
+    return click.option(
+        "-p",
+        "--position",
+        type=int,
+        default=None,
+        help=(
+            "Play the item at this position among those URI lists (indexed according to "
+            "--position-starting-at-one/--position-starting-at-zero); the first when not given."
+        ),
     )(func)
 
 

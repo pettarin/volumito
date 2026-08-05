@@ -56,13 +56,16 @@ from volumito.cli.click_helpers import (
     option_limit,
     option_manifest_file,
     option_number_retries_next_track,
+    option_offset,
     option_only_tracks,
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
+    option_play,
     option_playlist,
     option_playlists_only,
     option_port,
+    option_position,
     option_print_resulting_status,
     option_print_uri,
     option_print_uri_toggle,
@@ -114,6 +117,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     REGISTER_ARGUMENT_ERROR,
+    REPLACE_POSITION_ERROR,
     SEARCH_ARGUMENT_ERROR,
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
@@ -259,6 +263,16 @@ from volumito.clients import (
     help="REST API request timeout, in seconds.",
 )
 @click.option(
+    "--rest-api-timeout-slow-endpoints",
+    type=float,
+    default=60.0,
+    show_default=True,
+    help=(
+        "REST API request timeout for the endpoints that can take long "
+        "(e.g., replacing the queue), in seconds."
+    ),
+)
+@click.option(
     "--scheme",
     type=SchemeParamType(),
     default="http",
@@ -306,6 +320,7 @@ def main(
     rest_api_port: int,
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
+    rest_api_timeout_slow_endpoints: float,
     scheme: Scheme,
     ssh_password: str | None,
     ssh_port: int,
@@ -325,6 +340,7 @@ def main(
         ssh_username=ssh_username,
     )
     ctx.obj["rest_api_timeout"] = rest_api_timeout
+    ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["mpd_timeout"] = mpd_timeout
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
@@ -1529,6 +1545,40 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
+@queue.command()
+@click.pass_context
+@click.argument("uri", type=str)
+@option_play
+@option_position
+@option_print_resulting_status
+def replace(
+    ctx: click.Context,
+    uri: str,
+    play: bool,
+    position: int | None,
+    print_resulting_status: bool,
+) -> None:
+    """Replace the queue with the content of URI, playing it unless --no-play.
+
+    A URI comes from "collection browse" or "collection search". With -p/--position,
+    the item at that position among those URI lists plays first (indexed according
+    to --position-starting-at-one/--position-starting-at-zero); without, the first.
+    """
+    if position is not None and not play:
+        raise click.UsageError(REPLACE_POSITION_ERROR)
+    if play:
+        minimum = 1 if ctx.obj["position_starting_at_one"] else 0
+        if position is not None and position < minimum:
+            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
+        index = position - minimum if position is not None else 0
+        execute_command(ctx, "replace", lambda c: c.replace_queue_and_play(uri, index))
+    else:
+        execute_command(ctx, "clear", lambda c: c.clear())
+        rest_api_sleep(ctx)
+        execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
 @main.group()
 @click.pass_context
 def system(ctx: click.Context) -> None:
@@ -1631,6 +1681,7 @@ def collection(ctx: click.Context) -> None:
 @option_best_result_only
 @option_format_table
 @option_limit
+@option_offset
 @option_playlists_only
 @option_print_uri_toggle
 @option_result_kinds
@@ -1643,6 +1694,7 @@ def collection_browse(
     best_result_only: bool,
     output_format: str,
     limit: int | None,
+    offset: int | None,
     playlists_only: bool,
     print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
@@ -1653,7 +1705,8 @@ def collection_browse(
     Without URI, the root of the collection is listed: the starting points of the
     sources currently enabled. The URIs to descend into come from the listings
     themselves, printed unless --no-print-uri is given, and from the -u/--print-uri
-    option of "collection search"."""
+    option of "collection search". The -o/--offset skip is applied by the host to
+    each list, before the kind options act, and not at the root."""
     machine_readable = ctx.obj["machine_readable"]
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
@@ -1671,7 +1724,7 @@ def collection_browse(
     if len(asked) > 1:
         raise click.UsageError(BROWSE_KINDS_ERROR)
 
-    results = fetch_or_exit(ctx, lambda c: c.browse(uri))
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
 
     if asked:
         results = results.filtered(kinds=asked[0])
@@ -1708,6 +1761,7 @@ def collection_browse(
 @option_best_result_only
 @option_format_table
 @option_limit
+@option_offset
 @option_playlist
 @option_playlists_only
 @option_print_uri
@@ -1725,6 +1779,7 @@ def collection_search(
     best_result_only: bool,
     output_format: str,
     limit: int | None,
+    offset: int | None,
     playlist: str | None,
     playlists_only: bool,
     print_uri: bool,
@@ -1770,6 +1825,9 @@ def collection_search(
         results = results.filtered(service=service, kinds=asked[0])
     else:
         results = results.filtered(service=service, artist=artist, album=album, track=track)
+
+    if offset:
+        results = results.offset(offset)
 
     kept = 1 if best_result_only else limit
     if kept is not None:

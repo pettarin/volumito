@@ -268,6 +268,10 @@ timeouts:
   # REST API request timeout, in seconds
   rest-api-timeout: 5.0
 
+  # REST API request timeout, in seconds, for slow endpoints
+  # (e.g., replaceAndPlay, addToQueue)
+  rest-api-timeout-slow-endpoints: 60.0
+
 
 volumio:
   # Hostname or IP address of the Volumio host
