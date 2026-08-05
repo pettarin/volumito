@@ -4,6 +4,8 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import json
+
 import pytest
 
 from volumito.clients.errors import VolumioAPIError, VolumioStoryError
@@ -20,6 +22,7 @@ from volumito.clients.models import (
     Queue,
     QueueTrack,
     SearchResultItem,
+    SearchResultItemKind,
     SearchResultList,
     SearchResults,
     Story,
@@ -629,19 +632,27 @@ class TestSearchResults:
     @pytest.mark.parametrize(
         ("index", "kind"),
         [
-            (0, "artist"),
-            (1, "album"),
-            (2, "song"),
-            (3, "song"),
-            (4, "other"),
-            (5, "artist"),
-            (6, "playlist"),
-            (7, "song"),
+            (0, SearchResultItemKind.ARTIST),
+            (1, SearchResultItemKind.ALBUM),
+            (2, SearchResultItemKind.TRACK),
+            (3, SearchResultItemKind.TRACK),
+            (4, SearchResultItemKind.OTHER),
+            (5, SearchResultItemKind.ARTIST),
+            (6, SearchResultItemKind.PLAYLIST),
+            (7, SearchResultItemKind.TRACK),
         ],
     )
     def test_the_kind_of_an_item(self, index, kind):
         """The kind of an item is read from its URI and its type."""
-        assert self._results().items[index].kind == kind
+        assert self._results().items[index].kind is kind
+
+    def test_a_kind_is_its_own_string(self):
+        """A kind is a member of the enumeration, and the string the member holds."""
+        kind = self._results().items[0].kind
+
+        assert isinstance(kind, SearchResultItemKind)
+        assert kind == "artist"
+        assert json.dumps({"kind": kind}) == '{"kind": "artist"}'
 
     def test_filtered_by_service(self):
         """The service filter keeps the results of that source only."""
@@ -658,12 +669,12 @@ class TestSearchResults:
         filtered = self._results().filtered(artist="paolo conte")
 
         assert [item.kind for item in filtered.items] == [
-            "artist",
-            "album",
-            "song",
-            "song",
-            "artist",
-            "song",
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.TRACK,
+            SearchResultItemKind.TRACK,
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.TRACK,
         ]
 
     def test_filtered_by_album(self):
@@ -676,9 +687,9 @@ class TestSearchResults:
             "Aguaplano",
         ]
 
-    def test_filtered_by_song(self):
-        """The song filter keeps the songs with that title."""
-        filtered = self._results().filtered(song="come di")
+    def test_filtered_by_track(self):
+        """The track filter keeps the tracks with that title."""
+        filtered = self._results().filtered(track="come di")
 
         assert [item.title for item in filtered.items] == ["2 - Come Di"]
 
@@ -692,11 +703,11 @@ class TestSearchResults:
         """An empty playlist filter keeps every playlist."""
         filtered = self._results().filtered(playlist="")
 
-        assert [item.kind for item in filtered.items] == ["playlist"]
+        assert [item.kind for item in filtered.items] == [SearchResultItemKind.PLAYLIST]
 
     def test_the_filters_combine(self):
         """Every filter given must match."""
-        filtered = self._results().filtered(service="mpd", artist="conte", song="aguaplano")
+        filtered = self._results().filtered(service="mpd", artist="conte", track="aguaplano")
 
         assert [item.title for item in filtered.items] == ["1 - Aguaplano"]
 

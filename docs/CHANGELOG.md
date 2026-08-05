@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--playlists-only`, at most `-l`/`--limit` of them in each list, or only the best one
   with `-b`/`--best-result-only`
 - Method `search` on the REST API client, returning the new `SearchResults` (of
-  `SearchResultList`, of `SearchResultItem`) model, which filters its own results
+  `SearchResultList`, of `SearchResultItem`, of kind `SearchResultItemKind`) model, which
+  filters its own results
 
 
 ## [0.0.37] - 2026-08-04

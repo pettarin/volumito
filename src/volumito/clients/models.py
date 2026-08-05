@@ -5,6 +5,7 @@
 """
 
 from collections.abc import Iterator
+from enum import StrEnum
 from typing import Any, Self
 
 from pydantic import (
@@ -597,7 +598,7 @@ class SearchResultItem(VolumioModel):
     """The URI the result can be played or browsed from."""
 
     @property
-    def kind(self) -> str:
+    def kind(self) -> "SearchResultItemKind":
         """The kind of entity the result is, read from its URI and its type.
 
         A Volumio host names its entities by URI (``artists://…`` and ``qobuz://artist/…``
@@ -605,15 +606,43 @@ class SearchResultItem(VolumioModel):
         tracks with the ``song`` type, whatever the source.
 
         Returns:
-            One of ``"artist"``, ``"album"``, ``"playlist"``, ``"song"``, and ``"other"``
+            The kind of the result, :attr:`SearchResultItemKind.OTHER` when it is none of
+            the kinds the model knows
         """
         if self.type == "song":
-            return "song"
+            return SearchResultItemKind.TRACK
         uri = self.uri or ""
-        for kind in ("artist", "album", "playlist"):
-            if uri.startswith(f"{kind}s://") or f"://{kind}/" in uri:
+        for kind in (
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.PLAYLIST,
+        ):
+            if uri.startswith(f"{kind.value}s://") or f"://{kind.value}/" in uri:
                 return kind
-        return "other"
+        return SearchResultItemKind.OTHER
+
+
+class SearchResultItemKind(StrEnum):
+    """The kind of entity a search result is.
+
+    A member is its own lowercase name, so it can be compared to a string and written to
+    JSON as it is.
+    """
+
+    ALBUM = "album"
+    """An album of a source."""
+
+    ARTIST = "artist"
+    """An artist of a source."""
+
+    OTHER = "other"
+    """Anything else, a web radio for instance."""
+
+    PLAYLIST = "playlist"
+    """A playlist of a source."""
+
+    TRACK = "track"
+    """A playable track, which a Volumio host types as a song."""
 
 
 class SearchResultList(VolumioModel):
@@ -706,7 +735,7 @@ class SearchResults(VolumioModel):
         service: str | None = None,
         artist: str | None = None,
         album: str | None = None,
-        song: str | None = None,
+        track: str | None = None,
         playlist: str | None = None,
     ) -> "SearchResults":
         """Return the results whose items match every filter given.
@@ -714,7 +743,7 @@ class SearchResults(VolumioModel):
         A filter is ignored when it is None. The service is matched by equality, while
         the other filters are matched as case-insensitive substrings, against the field
         of the item (``artist``, ``album``) and against the title of the entity itself
-        (an artist, an album, a playlist, or a song), which is where a Volumio host
+        (an artist, an album, a playlist, or a track), which is where a Volumio host
         carries the name of an entity. An empty string matches every entity of its kind.
         The lists left without items are dropped, and the raw payload is preserved.
 
@@ -722,7 +751,7 @@ class SearchResults(VolumioModel):
             service: The source the results must come from
             artist: The text an artist of a result, or an artist result, must contain
             album: The text an album of a result, or an album result, must contain
-            song: The text a song result must contain
+            track: The text a track result must contain
             playlist: The text a playlist result must contain
 
         Returns:
@@ -733,10 +762,10 @@ class SearchResults(VolumioModel):
             if service is not None and (item.service or "").lower() != service.lower():
                 return False
             for text, field, kind in (
-                (artist, item.artist, "artist"),
-                (album, item.album, "album"),
-                (song, None, "song"),
-                (playlist, None, "playlist"),
+                (artist, item.artist, SearchResultItemKind.ARTIST),
+                (album, item.album, SearchResultItemKind.ALBUM),
+                (track, None, SearchResultItemKind.TRACK),
+                (playlist, None, SearchResultItemKind.PLAYLIST),
             ):
                 if text is None:
                     continue

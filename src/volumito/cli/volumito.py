@@ -1659,7 +1659,7 @@ def collection_search(
         # playlists it finds related to it, whose titles rarely carry the query
         results = results.filtered(service=service, playlist="")
     else:
-        results = results.filtered(service=service, artist=artist, album=album, song=track)
+        results = results.filtered(service=service, artist=artist, album=album, track=track)
 
     kept = 1 if best_result_only else limit
     if kept is not None:
