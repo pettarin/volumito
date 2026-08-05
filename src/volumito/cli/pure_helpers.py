@@ -20,7 +20,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE,
 )
 from volumito.clients import VolumioHostConfiguration
-from volumito.clients.models import PlayerState, QueueTrack
+from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKind
 from volumito.clients.remote import is_local_file_uri
 
 
@@ -667,6 +667,34 @@ def parse_track_selection(value: str) -> set[int]:
             raise ValueError(f"reversed range {item!r} in the track selection {value!r}")
         positions.update(range(int(first), int(last) + 1))
     return positions
+
+
+def parse_result_kinds(value: str) -> set[SearchResultItemKind]:
+    """Parse a list of search result kinds such as ``"album,track"``.
+
+    The list is comma-separated; blanks around the items are ignored, and a kind listed
+    more than once is kept once.
+
+    Args:
+        value: The list of kinds to parse
+
+    Returns:
+        The kinds listed
+
+    Raises:
+        ValueError: If the list is empty or names a kind that does not exist
+    """
+    accepted = ", ".join(kind.value for kind in SearchResultItemKind)
+    kinds = set()
+    items = [item.strip() for item in value.split(",")]
+    if not any(items):
+        raise ValueError("the list of kinds is empty")
+    for item in items:
+        try:
+            kinds.add(SearchResultItemKind(item))
+        except ValueError:
+            raise ValueError(f"unknown kind {item!r}: expected one of {accepted}") from None
+    return kinds
 
 
 def parse_time_to_seconds(text: str) -> int | None:

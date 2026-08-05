@@ -4,7 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from enum import StrEnum
 from typing import Any, Self
 
@@ -737,15 +737,17 @@ class SearchResults(VolumioModel):
         album: str | None = None,
         track: str | None = None,
         playlist: str | None = None,
+        kinds: Collection[SearchResultItemKind] | None = None,
     ) -> "SearchResults":
         """Return the results whose items match every filter given.
 
-        A filter is ignored when it is None. The service is matched by equality, while
-        the other filters are matched as case-insensitive substrings, against the field
-        of the item (``artist``, ``album``) and against the title of the entity itself
-        (an artist, an album, a playlist, or a track), which is where a Volumio host
-        carries the name of an entity. An empty string matches every entity of its kind.
-        The lists left without items are dropped, and the raw payload is preserved.
+        A filter is ignored when it is None. The service is matched by equality, and the
+        kind by membership, while the other filters are matched as case-insensitive
+        substrings, against the field of the item (``artist``, ``album``) and against the
+        title of the entity itself (an artist, an album, a playlist, or a track), which is
+        where a Volumio host carries the name of an entity. An empty string matches every
+        entity of its kind. The lists left without items are dropped, and the raw payload
+        is preserved.
 
         Args:
             service: The source the results must come from
@@ -753,6 +755,7 @@ class SearchResults(VolumioModel):
             album: The text an album of a result, or an album result, must contain
             track: The text a track result must contain
             playlist: The text a playlist result must contain
+            kinds: The kinds of entity the results must be
 
         Returns:
             The filtered results, holding the original payload in their ``raw`` attribute
@@ -760,6 +763,8 @@ class SearchResults(VolumioModel):
 
         def matches(item: SearchResultItem) -> bool:
             if service is not None and (item.service or "").lower() != service.lower():
+                return False
+            if kinds is not None and item.kind not in kinds:
                 return False
             for text, field, kind in (
                 (artist, item.artist, SearchResultItemKind.ARTIST),

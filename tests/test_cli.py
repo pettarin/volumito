@@ -20,6 +20,7 @@ from pytest_mock import MockerFixture
 from volumito import __version__
 from volumito.cli.click_helpers import (
     OnOffParamType,
+    ResultKindsParamType,
     SchemeParamType,
     SeekParamType,
     VolumeParamType,
@@ -52,6 +53,7 @@ from volumito.cli.pure_helpers import (
     format_termination_conditions,
     is_mbid,
     manifest_matches_queue,
+    parse_result_kinds,
     parse_time_to_seconds,
     parse_track_selection,
     preserve_local_file_name,
@@ -72,6 +74,7 @@ from volumito.clients.models import (
     PushNotification,
     Queue,
     QueueTrack,
+    SearchResultItemKind,
     Story,
     SuccessResponse,
     SystemInfo,
@@ -1153,6 +1156,64 @@ class TestParseTimeToSeconds:
     def test_not_a_colon_time(self, text: str):
         """Anything that is not a well-formed colon time yields None."""
         assert parse_time_to_seconds(text) is None
+
+
+class TestParseResultKinds:
+    """Test cases for the parse_result_kinds function."""
+
+    def test_a_single_kind(self):
+        """A single kind is parsed into its member."""
+        assert parse_result_kinds("album") == {SearchResultItemKind.ALBUM}
+
+    def test_several_kinds(self):
+        """A comma-separated list is parsed into its members."""
+        assert parse_result_kinds("album,track") == {
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.TRACK,
+        }
+
+    def test_blanks_are_ignored(self):
+        """Blanks around the items are ignored."""
+        assert parse_result_kinds(" artist , other ") == {
+            SearchResultItemKind.ARTIST,
+            SearchResultItemKind.OTHER,
+        }
+
+    def test_repeated_kinds_are_kept_once(self):
+        """A kind listed twice appears once."""
+        assert parse_result_kinds("track,track") == {SearchResultItemKind.TRACK}
+
+    @pytest.mark.parametrize(
+        "value",
+        ["", "   ", "album,,track", "song", "Album", "nonesuch"],
+        ids=["empty", "blank", "empty-item", "host-word", "capitalized", "unknown"],
+    )
+    def test_an_invalid_list(self, value):
+        """A list naming a kind that does not exist is rejected."""
+        with pytest.raises(ValueError):
+            parse_result_kinds(value)
+
+
+class TestResultKindsParamType:
+    """Test cases for the ResultKindsParamType Click parameter type."""
+
+    def test_convert_a_list(self):
+        """A well-formed list is converted to the kinds it names."""
+        assert ResultKindsParamType().convert("album,track", None, None) == {
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.TRACK,
+        }
+
+    def test_convert_an_unknown_kind(self):
+        """An unknown kind is a usage error naming the accepted values."""
+        with pytest.raises(click.exceptions.BadParameter) as exc_info:
+            ResultKindsParamType().convert("nonesuch", None, None)
+
+        assert "album, artist, other, playlist, track" in str(exc_info.value)
+
+    def test_the_metavar(self):
+        """The option shows the kinds it takes."""
+        assert ResultKindsParamType().get_metavar(None, None) == "[KINDS]"
 
 
 class TestParseTrackSelection:
@@ -5071,6 +5132,51 @@ class TestCollectionSearch:
     }
     """A payload whose list carries more results than a limit keeps."""
 
+    ENVELOPE_OF_EVERY_KIND = {
+        "navigation": {
+            "isSearchResult": True,
+            "lists": [
+                {
+                    "title": "Everything",
+                    "items": [
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "An Artist",
+                            "uri": "artists://An%20Artist",
+                        },
+                        {
+                            "service": "mpd",
+                            "type": "folder",
+                            "title": "An Album",
+                            "artist": "Enzo Jannacci",
+                            "uri": "albums://Enzo%20Jannacci/An%20Album",
+                        },
+                        {
+                            "service": "qobuz",
+                            "type": "folder-with-favourites",
+                            "title": "A Playlist",
+                            "uri": "qobuz://playlist/1",
+                        },
+                        {
+                            "service": "qobuz",
+                            "type": "song",
+                            "title": "A Track",
+                            "uri": "qobuz://song/1",
+                        },
+                        {
+                            "service": "webradio",
+                            "type": "webradio",
+                            "title": "A Radio",
+                            "uri": "http://opml.radiotime.com/Tune.ashx?id=1",
+                        },
+                    ],
+                },
+            ],
+        }
+    }
+    """A payload carrying one result of each kind."""
+
     @pytest.fixture
     def runner(self):
         """Create a CliRunner instance."""
@@ -5294,6 +5400,101 @@ class TestCollectionSearch:
 
         assert result.exit_code == 0
         assert json.loads(result.output) == self.ENVELOPE_OF_A_LONG_LIST
+
+    def _titles_of_every_kind(self, runner: CliRunner, mocker: MockerFixture, *options: str):
+        """Invoke a search over the payload of every kind and return the titles kept."""
+        self._mock_client(mocker, self.ENVELOPE_OF_EVERY_KIND)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", *options])
+
+        assert result.exit_code == 0
+        return [item["title"] for block in json.loads(result.output) for item in block["items"]]
+
+    def test_the_result_kinds(self, runner: CliRunner, mocker: MockerFixture):
+        """--result-kinds keeps the results of the kinds it names."""
+        assert self._titles_of_every_kind(runner, mocker, "--result-kinds", "album") == [
+            "An Album"
+        ]
+
+    def test_several_result_kinds(self, runner: CliRunner, mocker: MockerFixture):
+        """A comma-separated list keeps every kind it names."""
+        assert self._titles_of_every_kind(runner, mocker, "--result-kinds", "album,track") == [
+            "An Album",
+            "A Track",
+        ]
+
+    def test_the_kind_of_the_results_nothing_else_is(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The other kind keeps what none of the named kinds is, a web radio here."""
+        assert self._titles_of_every_kind(runner, mocker, "--result-kinds", "other") == ["A Radio"]
+
+    @pytest.mark.parametrize(
+        ("option", "title"),
+        [
+            ("--albums-only", "An Album"),
+            ("--artists-only", "An Artist"),
+            ("--playlists-only", "A Playlist"),
+            ("--tracks-only", "A Track"),
+        ],
+    )
+    def test_the_only_flags(self, runner: CliRunner, mocker: MockerFixture, option, title):
+        """Each flag keeps the kind it names, as --result-kinds does."""
+        assert self._titles_of_every_kind(runner, mocker, option) == [title]
+
+    def test_the_text_options_only_feed_the_query_with_a_kind(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With a kind asked for, the text options say what to search for, nothing more."""
+        mock_client = self._mock_client(mocker, self.ENVELOPE_OF_EVERY_KIND)
+
+        result = runner.invoke(
+            main, ["collection", "search", "--artist", "Paolo Conte", "--albums-only"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.search.assert_called_once_with("Paolo Conte")
+        # The album is kept although another artist is the one it carries
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == ["An Album"]
+
+    def test_an_unknown_result_kind(self, runner: CliRunner, mocker: MockerFixture):
+        """A kind that does not exist is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "--result-kinds", "song"])
+
+        assert result.exit_code == 2
+        assert "album, artist, other, playlist, track" in result.output
+        mock_client.search.assert_not_called()
+
+    def test_the_kind_options_must_agree(self, runner: CliRunner, mocker: MockerFixture):
+        """Two options asking for different kinds refuse each other."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--albums-only", "--tracks-only"]
+        )
+
+        assert result.exit_code == 2
+        assert "agree on the kinds to keep" in result.output
+        mock_client.search.assert_not_called()
+
+    def test_the_result_kinds_and_a_flag_must_agree(self, runner: CliRunner, mocker: MockerFixture):
+        """A flag is refused next to --result-kinds, which already says what to keep."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--result-kinds", "album", "--albums-only"]
+        )
+
+        assert result.exit_code == 2
+        mock_client.search.assert_not_called()
+
+    def test_the_playlist_options_agree(self, runner: CliRunner, mocker: MockerFixture):
+        """--playlist and --playlists-only ask for the same kind, so both may be given."""
+        assert self._titles_of_every_kind(
+            runner, mocker, "--playlist", "Paolo", "--playlists-only"
+        ) == ["A Playlist"]
 
     def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A host that cannot be reached exits 1."""

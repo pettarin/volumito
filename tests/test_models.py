@@ -705,6 +705,36 @@ class TestSearchResults:
 
         assert [item.kind for item in filtered.items] == [SearchResultItemKind.PLAYLIST]
 
+    def test_filtered_by_kind(self):
+        """The kinds filter keeps the results that are of one of them."""
+        filtered = self._results().filtered(kinds={SearchResultItemKind.ARTIST})
+
+        assert [item.title for item in filtered.items] == ["Paolo Conte", "Paolo Conte"]
+
+    def test_filtered_by_several_kinds(self):
+        """Every kind listed is kept."""
+        filtered = self._results().filtered(
+            kinds={SearchResultItemKind.ALBUM, SearchResultItemKind.PLAYLIST}
+        )
+
+        assert [item.kind for item in filtered.items] == [
+            SearchResultItemKind.ALBUM,
+            SearchResultItemKind.PLAYLIST,
+        ]
+
+    def test_filtered_by_kind_and_service(self):
+        """The kinds filter combines with the other filters."""
+        filtered = self._results().filtered(
+            service="qobuz", kinds={SearchResultItemKind.ARTIST}
+        )
+
+        assert [result_list.title for result_list in filtered] == ["QOBUZ Artists"]
+        assert filtered.raw == self._ENVELOPE
+
+    def test_filtered_by_a_kind_without_a_match(self):
+        """A kind no result is leaves no list."""
+        assert len(self._results().filtered(kinds=set())) == 0
+
     def test_the_filters_combine(self):
         """Every filter given must match."""
         filtered = self._results().filtered(service="mpd", artist="conte", track="aguaplano")

@@ -34,9 +34,11 @@ from volumito.cli.click_helpers import (
     option_add_cover_and_metadata,
     option_album,
     option_albumart_file_name_template,
+    option_albums_only,
     option_all_notifications,
     option_allow_local_file_rename,
     option_artist,
+    option_artists_only,
     option_audio_file_name_template,
     option_autocompose_url,
     option_best_result_only,
@@ -67,10 +69,12 @@ from volumito.cli.click_helpers import (
     option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_result_kinds,
     option_service,
     option_story_type,
     option_timeout,
     option_track,
+    option_tracks_only,
     option_unregister_url_on_exit,
     option_with_albumart,
     option_yes,
@@ -107,6 +111,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     REGISTER_ARGUMENT_ERROR,
     SEARCH_ARGUMENT_ERROR,
+    SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
@@ -140,6 +145,7 @@ from volumito.clients import (
     Place,
     PushNotification,
     Scheme,
+    SearchResultItemKind,
     SuccessResponse,
     VolumioAPIError,
     VolumioConnectionError,
@@ -1616,33 +1622,42 @@ def collection(ctx: click.Context) -> None:
 @click.pass_context
 @click.argument("query", required=False, default=None, type=str)
 @option_album
+@option_albums_only
 @option_artist
+@option_artists_only
 @option_best_result_only
 @option_format
 @option_limit
 @option_playlist
 @option_playlists_only
+@option_result_kinds
 @option_service
 @option_track
+@option_tracks_only
 def collection_search(
     ctx: click.Context,
     query: str | None,
     album: str | None,
+    albums_only: bool,
     artist: str | None,
+    artists_only: bool,
     best_result_only: bool,
     output_format: str,
     limit: int | None,
     playlist: str | None,
     playlists_only: bool,
+    result_kinds: set[SearchResultItemKind] | None,
     service: str | None,
     track: str | None,
+    tracks_only: bool,
 ) -> None:
     """Search QUERY in the Volumio sources currently enabled.
 
     Without QUERY, the text of the --album, --artist, --playlist, and --track options
     is searched for; --album, --artist, and --track also keep the matching results
-    only. With --playlist or --playlists-only, the playlists found are all kept, and
-    the other options only say what to search for."""
+    only. With --result-kinds, or one of --albums-only, --artists-only, --playlist,
+    --playlists-only, and --tracks-only, the results of the kinds asked for are all
+    kept, and the other options only say what to search for."""
     machine_readable = ctx.obj["machine_readable"]
     terms = [term for term in (artist, album, track, playlist) if term]
     searched = query or " ".join(terms)
@@ -1650,14 +1665,27 @@ def collection_search(
         raise click.UsageError(SEARCH_ARGUMENT_ERROR)
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
+    asked = [
+        kinds
+        for kinds, wanted in (
+            (result_kinds, result_kinds is not None),
+            ({SearchResultItemKind.ALBUM}, albums_only),
+            ({SearchResultItemKind.ARTIST}, artists_only),
+            ({SearchResultItemKind.PLAYLIST}, playlists_only or playlist is not None),
+            ({SearchResultItemKind.TRACK}, tracks_only),
+        )
+        if wanted
+    ]
+    if len(asked) > 1:
+        raise click.UsageError(SEARCH_KINDS_ERROR)
 
     results = fetch_or_exit(ctx, lambda c: c.search(searched))
 
-    if playlists_only or playlist is not None:
-        # The playlists are asked for, so the other options only feed the query, and
-        # the playlists themselves are all kept: a source answers a query with the
-        # playlists it finds related to it, whose titles rarely carry the query
-        results = results.filtered(service=service, playlist="")
+    if asked:
+        # The kinds are asked for, so the other options only feed the query, and the
+        # results of those kinds are all kept: a source answers a query with what it
+        # finds related to it, whose titles rarely carry the query
+        results = results.filtered(service=service, kinds=asked[0])
     else:
         results = results.filtered(service=service, artist=artist, album=album, track=track)
 

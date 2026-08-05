@@ -58,6 +58,7 @@ from volumito.cli.pure_helpers import (
     format_as_pretty,
     format_as_table,
     format_duration,
+    parse_result_kinds,
     parse_time_to_seconds,
     parse_track_selection,
     preserve_local_file_name,
@@ -82,7 +83,7 @@ from volumito.clients import (
 )
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
-from volumito.clients.models import PlayerState, Story
+from volumito.clients.models import PlayerState, SearchResultItemKind, Story
 
 
 class OnOffParamType(click.ParamType):
@@ -116,6 +117,30 @@ class OnOffParamType(click.ParamType):
             sorted(s for spellings in self.ALIASES.values() for s in spellings)
         )
         self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+
+class ResultKindsParamType(click.ParamType):
+    """Click parameter type for a selection of search result kinds.
+
+    Accepts a comma-separated list of the kinds a search result can be (e.g.,
+    ``"album,track"``); anything else is a usage error.
+    """
+
+    name = "kinds"
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> set[SearchResultItemKind]:
+        try:
+            return parse_result_kinds(str(value))
+        except ValueError as e:
+            self.fail(str(e), param, ctx)
+
+    def get_metavar(self, param: click.Parameter, ctx: click.Context) -> str:
+        return "[KINDS]"
 
 
 class SchemeParamType(click.ParamType):
@@ -999,6 +1024,16 @@ def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..
     )(func)
 
 
+def option_albums_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--albums-only`` option to the collection search subcommand."""
+    return click.option(
+        "--albums-only",
+        is_flag=True,
+        default=False,
+        help="Keep the albums found, whatever the other options match.",
+    )(func)
+
+
 def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-a``/``--all`` option to the notifications unregister subcommand."""
     return click.option(
@@ -1028,6 +1063,16 @@ def option_artist(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="Keep the results of this artist, and search for it when no query is given.",
+    )(func)
+
+
+def option_artists_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--artists-only`` option to the collection search subcommand."""
+    return click.option(
+        "--artists-only",
+        is_flag=True,
+        default=False,
+        help="Keep the artists found, whatever the other options match.",
     )(func)
 
 
@@ -1374,6 +1419,19 @@ def option_replace_characters_in_file_names_with(
     )(func)
 
 
+def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--result-kinds`` option to the collection search subcommand."""
+    return click.option(
+        "--result-kinds",
+        type=ResultKindsParamType(),
+        default=None,
+        help=(
+            "Keep the results of these kinds only, comma-separated (e.g., 'album,track'); "
+            "the other options then only say what to search for."
+        ),
+    )(func)
+
+
 def option_service(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--service`` option to the collection search subcommand."""
     return click.option(
@@ -1417,6 +1475,16 @@ def option_track(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="Keep the tracks with this title, and search for it when no query is given.",
+    )(func)
+
+
+def option_tracks_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--tracks-only`` option to the collection search subcommand."""
+    return click.option(
+        "--tracks-only",
+        is_flag=True,
+        default=False,
+        help="Keep the tracks found, whatever the other options match.",
     )(func)
 
 
