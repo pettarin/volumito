@@ -5054,15 +5054,32 @@ class TestCollectionSearch:
         }
     }
 
+    ENVELOPE_OF_A_LONG_LIST = {
+        "navigation": {
+            "isSearchResult": True,
+            "lists": [
+                {
+                    "title": "QOBUZ Tracks",
+                    "items": [
+                        {"service": "qobuz", "type": "song", "title": "Aguaplano"},
+                        {"service": "qobuz", "type": "song", "title": "Come Di"},
+                        {"service": "qobuz", "type": "song", "title": "Sotto le stelle del jazz"},
+                    ],
+                },
+            ],
+        }
+    }
+    """A payload whose list carries more results than a limit keeps."""
+
     @pytest.fixture
     def runner(self):
         """Create a CliRunner instance."""
         return CliRunner()
 
-    def _mock_client(self, mocker: MockerFixture):
+    def _mock_client(self, mocker: MockerFixture, envelope: dict | None = None):
         """Mock VolumioRESTAPIClient with a prepared search result."""
         mock_client = mocker.Mock()
-        mock_client.search.return_value = SearchResults.from_envelope(self.ENVELOPE)
+        mock_client.search.return_value = SearchResults.from_envelope(envelope or self.ENVELOPE)
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -5216,6 +5233,67 @@ class TestCollectionSearch:
 
         assert result.exit_code == 0
         assert result.output.strip() == json.dumps(self.ENVELOPE)
+
+    def test_the_limit(self, runner: CliRunner, mocker: MockerFixture):
+        """-l keeps at most that number of results in each list."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-l", "2"])
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == [
+            "Aguaplano",
+            "Come Di",
+        ]
+
+    def test_the_limit_in_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """The table prints the lists the limit shortened."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--limit", "1", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        assert "1. Aguaplano" in result.output
+        assert "Come Di" not in result.output
+
+    def test_a_limit_below_one(self, runner: CliRunner, mocker: MockerFixture):
+        """A limit that would keep nothing is a usage error."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "--limit", "0"])
+
+        assert result.exit_code == 2
+        mock_client.search.assert_not_called()
+
+    def test_the_best_result_only(self, runner: CliRunner, mocker: MockerFixture):
+        """-b keeps the first result of each list, as --limit 1 does."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-b"])
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)[0]["items"]] == ["Aguaplano"]
+
+    def test_the_best_result_only_with_a_limit(self, runner: CliRunner, mocker: MockerFixture):
+        """The flag and the limit exclude each other."""
+        mock_client = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-b", "--limit", "3"])
+
+        assert result.exit_code == 2
+        assert "not both" in result.output
+        mock_client.search.assert_not_called()
+
+    def test_a_limit_leaves_the_raw_payload(self, runner: CliRunner, mocker: MockerFixture):
+        """-F raw prints what the host answered, whatever the limit keeps."""
+        self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-b", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.ENVELOPE_OF_A_LONG_LIST
 
     def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A host that cannot be reached exits 1."""

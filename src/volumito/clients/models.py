@@ -755,6 +755,29 @@ class SearchResults(VolumioModel):
 
         return self.model_copy(update={"lists": filtered_lists})
 
+    def limited(self, count: int) -> "SearchResults":
+        """Return the results with at most the given number of items in each list.
+
+        The items kept are the first ones of each list, in the order the host reported
+        them, which is the order of relevance a source answers a query with. The lists
+        left without items are dropped, and the raw payload is preserved.
+
+        Args:
+            count: The number of items to keep in each list, at most
+
+        Returns:
+            The limited results, holding the original payload in their ``raw`` attribute
+        """
+        # A negative count would keep the items but the last ones, which is not a limit
+        kept = max(count, 0)
+        limited_lists = [
+            result_list.model_copy(update={"items": result_list.items[:kept]})
+            for result_list in self.lists
+            if result_list.items[:kept]
+        ]
+
+        return self.model_copy(update={"lists": limited_lists})
+
 
 class SuccessResponse(VolumioModel):
     """The outcome a Volumio instance reports as a success flag."""

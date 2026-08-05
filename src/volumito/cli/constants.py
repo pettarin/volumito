@@ -101,6 +101,9 @@ SEARCH_ARGUMENT_ERROR = (
 )
 """Error message when "collection search" is given nothing to search for."""
 
+SEARCH_LIMIT_ERROR = "Expected the -b/--best-result-only or the -l/--limit option, not both."
+"""Error message when "collection search" is given two limits on the results."""
+
 SEARCH_SERVICES = [
     "highresaudio",  # not verified
     "mpd",

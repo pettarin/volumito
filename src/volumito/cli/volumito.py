@@ -39,6 +39,7 @@ from volumito.cli.click_helpers import (
     option_artist,
     option_audio_file_name_template,
     option_autocompose_url,
+    option_best_result_only,
     option_check_next_track,
     option_check_playlist_name,
     option_count,
@@ -49,6 +50,7 @@ from volumito.cli.click_helpers import (
     option_file_name_template,
     option_format,
     option_idle_timeout,
+    option_limit,
     option_manifest_file,
     option_number_retries_next_track,
     option_only_tracks,
@@ -105,6 +107,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     REGISTER_ARGUMENT_ERROR,
     SEARCH_ARGUMENT_ERROR,
+    SEARCH_LIMIT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
@@ -1614,7 +1617,9 @@ def collection(ctx: click.Context) -> None:
 @click.argument("query", required=False, default=None, type=str)
 @option_album
 @option_artist
+@option_best_result_only
 @option_format
+@option_limit
 @option_playlist
 @option_playlists_only
 @option_service
@@ -1624,7 +1629,9 @@ def collection_search(
     query: str | None,
     album: str | None,
     artist: str | None,
+    best_result_only: bool,
     output_format: str,
+    limit: int | None,
     playlist: str | None,
     playlists_only: bool,
     service: str | None,
@@ -1641,6 +1648,8 @@ def collection_search(
     searched = query or " ".join(terms)
     if not searched:
         raise click.UsageError(SEARCH_ARGUMENT_ERROR)
+    if best_result_only and limit is not None:
+        raise click.UsageError(SEARCH_LIMIT_ERROR)
 
     results = fetch_or_exit(ctx, lambda c: c.search(searched))
 
@@ -1651,6 +1660,10 @@ def collection_search(
         results = results.filtered(service=service, playlist="")
     else:
         results = results.filtered(service=service, artist=artist, album=album, song=track)
+
+    kept = 1 if best_result_only else limit
+    if kept is not None:
+        results = results.limited(kept)
 
     if machine_readable or output_format == "raw":
         # The raw format is the payload of the host, as it answered it

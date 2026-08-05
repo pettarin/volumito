@@ -715,6 +715,46 @@ class TestSearchResults:
         """Without a filter every list is kept."""
         assert len(self._results().filtered()) == 7
 
+    def test_limited_to_the_first_items(self):
+        """Each list keeps its first items, in the order the host reported them."""
+        results = self._results()
+
+        limited = results.limited(1)
+
+        assert len(limited) == 7
+        # The list of two tracks is the only one the limit shortens
+        assert [len(result_list) for result_list in limited] == [1] * 7
+        assert [item.title for item in limited.items][2] == "1 - Aguaplano"
+        # The results the method was called on are left alone
+        assert [len(result_list) for result_list in results] == [1, 1, 2, 1, 1, 1, 1]
+
+    def test_limited_to_more_than_there_is(self):
+        """A limit above the length of every list changes nothing."""
+        limited = self._results().limited(10)
+
+        assert [len(result_list) for result_list in limited] == [1, 1, 2, 1, 1, 1, 1]
+
+    def test_limited_to_nothing(self):
+        """A limit of zero, or less, leaves no list."""
+        assert len(self._results().limited(0)) == 0
+        assert len(self._results().limited(-1)) == 0
+
+    def test_limiting_keeps_the_raw_payload(self):
+        """The limited results still carry the payload the host answered."""
+        limited = self._results().limited(1)
+
+        assert limited.raw == self._ENVELOPE
+
+    def test_limiting_what_is_filtered(self):
+        """The two methods compose, the limit applying to what the filters left."""
+        limited = self._results().filtered(service="mpd").limited(1)
+
+        assert [item.title for item in limited.items] == [
+            "Paolo Conte",
+            "Paris Milonga",
+            "1 - Aguaplano",
+        ]
+
 
 class TestStory:
     """Test cases for the Story model."""

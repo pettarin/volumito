@@ -1054,6 +1054,17 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-b``/``--best-result-only`` option to the collection search subcommand."""
+    return click.option(
+        "--best-result-only",
+        "-b",
+        is_flag=True,
+        default=False,
+        help="Keep the best result of each list only, as -l/--limit 1 does.",
+    )(func)
+
+
 def option_check_next_track(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--check-next-track`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1164,6 +1175,17 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
         type=float,
         default=None,
         help="Stop after this number of seconds without receiving a notification.",
+    )(func)
+
+
+def option_limit(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-l``/``--limit`` option to the collection search subcommand."""
+    return click.option(
+        "--limit",
+        "-l",
+        type=click.IntRange(min=1),
+        default=None,
+        help="Keep at most this number of results in each list.",
     )(func)
 
 
