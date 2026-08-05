@@ -5245,6 +5245,23 @@ class TestCollectionBrowse:
         assert result.exit_code == 0
         assert "1. Music Library\n2. Web Radio" in result.output
 
+    def test_the_slow_endpoints_timeout_reaches_the_client(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The global slow-endpoints timeout also reaches the fetching commands."""
+        mock_client = mocker.Mock()
+        mock_client.browse.return_value = BrowseResults.from_envelope(self.ENVELOPE)
+        mock_class = mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(
+            main, ["--rest-api-timeout-slow-endpoints", "120", "collection", "browse"]
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.call_args.args[1:] == (5.0, 120.0)
+
     def test_the_short_uri_flag_of_the_search_is_not_taken(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -10280,6 +10297,31 @@ class TestQueueReplace:
         mock_client.add_to_queue.assert_not_called()
         mock_client.replace_queue_and_play.assert_not_called()
 
+    def test_the_slow_endpoints_timeout_reaches_the_client(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The global slow-endpoints timeout option is what the client is built with."""
+        mock_client = mocker.Mock()
+        mock_client.replace_queue_and_play.return_value = {"response": "success"}
+        mock_class = mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                "--rest-api-timeout-slow-endpoints",
+                "120",
+                "queue",
+                "replace",
+                self.URI,
+                "--no-print-resulting-status",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.call_args.args[1:] == (5.0, 120.0)
+
     def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A host that cannot be reached exits 1."""
         mock_client = mocker.Mock()
@@ -11954,6 +11996,7 @@ class TestConfigurationCommands:
                 },
                 "timeouts": {
                     "rest-api-timeout": 5.0,
+                    "rest-api-timeout-slow-endpoints": 60.0,
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 2.0,
                 },

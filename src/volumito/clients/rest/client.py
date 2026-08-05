@@ -4,6 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import json
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
@@ -38,8 +39,16 @@ from volumito.clients.models import (
     Zones,
 )
 
+_MAX_POST_BODY_BYTES = 100 * 1024
+"""The JSON body size a Volumio instance accepts, the default limit of its Express
+body parser: a larger body is not answered by the API but by the album art server."""
+
 _MPD_LIBRARY_SCHEMES = frozenset({"albums", "artists", "genres", "playlists"})
 """The URI schemes the local library of a Volumio instance is browsed by."""
+
+_QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
+"""The keys of a browsed item a Volumio instance reads when queueing it: the others
+(the album art URL above all) only grow the payload toward the body size limit."""
 
 
 class VolumioRESTAPIClient:
@@ -49,15 +58,19 @@ class VolumioRESTAPIClient:
         self,
         host_configuration: VolumioHostConfiguration,
         timeout: float = 5.0,
+        timeout_slow_endpoints: float = 60.0,
     ) -> None:
         """Initialize the Volumio client.
 
         Args:
             host_configuration: The host configuration (scheme, host, and ports)
             timeout: Request timeout in seconds (default: 5.0)
+            timeout_slow_endpoints: Request timeout, in seconds, for the endpoints
+                that can take long, like replacing the queue (default: 60.0)
         """
         self.host_configuration = host_configuration
         self.timeout = timeout
+        self.timeout_slow_endpoints = timeout_slow_endpoints
 
     def _delete_json(
         self, path: str, payload: dict[str, Any] | None = None
@@ -247,22 +260,33 @@ class VolumioRESTAPIClient:
         return self._post_json("/api/v1/pluginEndpoint", {"endpoint": endpoint, "data": data})
 
     def _post_json(
-        self, path: str, payload: dict[str, Any] | list[dict[str, Any]]
+        self,
+        path: str,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        timeout: float | None = None,
     ) -> dict[str, Any]:
         """POST ``payload`` as JSON to ``path`` and parse the response as a JSON object.
 
         Args:
             path: The URL path to request
             payload: The JSON body to send
+            timeout: The request timeout in seconds, :attr:`timeout` when not given
 
         Returns:
             The parsed JSON object
 
         Raises:
             VolumioConnectionError: If connection to the Volumio instance fails
-            VolumioAPIError: If the API returns an error or a non-object response
+            VolumioAPIError: If the API returns an error or a non-object response, or
+                if the payload is larger than the Volumio instance accepts
         """
-        return self._json_object(self._request(requests.post, path, payload))
+        body_bytes = len(json.dumps(payload).encode())
+        if body_bytes > _MAX_POST_BODY_BYTES:
+            raise VolumioAPIError(
+                f"The payload is {body_bytes // 1024} kB, larger than the "
+                f"{_MAX_POST_BODY_BYTES // 1024} kB a Volumio instance accepts"
+            )
+        return self._json_object(self._request(requests.post, path, payload, timeout))
 
     def _queue_payload_items(self, uri: str) -> list[dict[str, Any]] | None:
         """Return the browsed items a URI must be queued as, or None for the URI itself.
@@ -281,7 +305,7 @@ class VolumioRESTAPIClient:
         """
         if self._uri_service(uri) == "mpd":
             return None
-        items = [item.raw for item in self.browse(uri).items]
+        items = [self._slim_queue_item(item.raw) for item in self.browse(uri).items]
         return items or None
 
     def _request(
@@ -289,6 +313,7 @@ class VolumioRESTAPIClient:
         send: Callable[..., requests.Response],
         path: str,
         payload: dict[str, Any] | list[dict[str, Any]] | None = None,
+        timeout: float | None = None,
     ) -> requests.Response:
         """Request ``{rest_base_url}{path}``, translating failures to Volumio errors.
 
@@ -296,6 +321,7 @@ class VolumioRESTAPIClient:
             send: The requests function performing the request (e.g., ``requests.get``)
             path: The URL path (including any query string) to request
             payload: The JSON body to send, for the requests carrying one
+            timeout: The request timeout in seconds, :attr:`timeout` when not given
 
         Returns:
             The successful :class:`requests.Response`
@@ -305,7 +331,8 @@ class VolumioRESTAPIClient:
             VolumioAPIError: If the API returns an HTTP error response
         """
         url = f"{self.host_configuration.rest_base_url}{path}"
-        arguments: dict[str, Any] = {"timeout": self.timeout}
+        waited = timeout if timeout is not None else self.timeout
+        arguments: dict[str, Any] = {"timeout": waited}
         if payload is not None:
             arguments["json"] = payload
 
@@ -321,7 +348,7 @@ class VolumioRESTAPIClient:
             raise VolumioConnectionError(
                 f"Connection to Volumio instance at "
                 f"{self.host_configuration.rest_base_url} "
-                f"timed out after {self.timeout} seconds: {e}"
+                f"timed out after {waited} seconds: {e}"
             ) from e
         except requests.exceptions.HTTPError as e:
             raise VolumioAPIError(
@@ -409,6 +436,22 @@ class VolumioRESTAPIClient:
         return {key: entity.value}
 
     @staticmethod
+    def _slim_queue_item(item: dict[str, Any]) -> dict[str, Any]:
+        """Return the keys of a browsed item that queueing it needs.
+
+        A Volumio instance queues a listed item by exploding its URI through its
+        service, so the other keys of the item are dead weight; dropping them keeps
+        the payload of a long listing within the body size the instance accepts.
+
+        Args:
+            item: The item, as the Volumio instance listed it
+
+        Returns:
+            The item reduced to the keys queueing reads
+        """
+        return {key: item[key] for key in _QUEUE_ITEM_KEYS if key in item}
+
+    @staticmethod
     def _uri_service(uri: str) -> str:
         """Return the name of the Volumio service a URI belongs to.
 
@@ -455,7 +498,9 @@ class VolumioRESTAPIClient:
         payload: dict[str, Any] | list[dict[str, Any]] = (
             items if items is not None else {"service": self._uri_service(uri), "uri": uri}
         )
-        return CommandResponse.from_raw(self._post_json("/api/v1/addToQueue", payload))
+        return CommandResponse.from_raw(
+            self._post_json("/api/v1/addToQueue", payload, self.timeout_slow_endpoints)
+        )
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -932,10 +977,14 @@ class VolumioRESTAPIClient:
         if index is not None and index < 0:
             raise ValueError(f"The index must be 0 or greater, got {index}")
         if index is not None:
-            items = [item.raw for item in self.browse(uri).items]
+            items = [self._slim_queue_item(item.raw) for item in self.browse(uri).items]
             if len(items) > index:
                 return CommandResponse.from_raw(
-                    self._post_json("/api/v1/replaceAndPlay", {"list": items, "index": index})
+                    self._post_json(
+                        "/api/v1/replaceAndPlay",
+                        {"list": items, "index": index},
+                        self.timeout_slow_endpoints,
+                    )
                 )
             if items or index > 0:
                 raise VolumioAPIError(
@@ -946,11 +995,17 @@ class VolumioRESTAPIClient:
             listed = self._queue_payload_items(uri)
             if listed is not None:
                 return CommandResponse.from_raw(
-                    self._post_json("/api/v1/replaceAndPlay", {"list": listed, "index": 0})
+                    self._post_json(
+                        "/api/v1/replaceAndPlay",
+                        {"list": listed, "index": 0},
+                        self.timeout_slow_endpoints,
+                    )
                 )
         item = {"service": self._uri_service(uri), "uri": uri}
         return CommandResponse.from_raw(
-            self._post_json("/api/v1/replaceAndPlay", {"item": item})
+            self._post_json(
+                "/api/v1/replaceAndPlay", {"item": item}, self.timeout_slow_endpoints
+            )
         )
 
     def search(self, query: str) -> SearchResults:

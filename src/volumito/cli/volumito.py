@@ -262,6 +262,16 @@ from volumito.clients import (
     help="REST API request timeout, in seconds.",
 )
 @click.option(
+    "--rest-api-timeout-slow-endpoints",
+    type=float,
+    default=60.0,
+    show_default=True,
+    help=(
+        "REST API request timeout for the endpoints that can take long "
+        "(e.g., replacing the queue), in seconds."
+    ),
+)
+@click.option(
     "--scheme",
     type=SchemeParamType(),
     default="http",
@@ -309,6 +319,7 @@ def main(
     rest_api_port: int,
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
+    rest_api_timeout_slow_endpoints: float,
     scheme: Scheme,
     ssh_password: str | None,
     ssh_port: int,
@@ -328,6 +339,7 @@ def main(
         ssh_username=ssh_username,
     )
     ctx.obj["rest_api_timeout"] = rest_api_timeout
+    ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["mpd_timeout"] = mpd_timeout
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose

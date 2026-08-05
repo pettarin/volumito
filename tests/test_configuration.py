@@ -479,6 +479,7 @@ class TestDefaultConfigurationTemplate:
             },
             "timeouts": {
                 "rest-api-timeout": 5.0,
+                "rest-api-timeout-slow-endpoints": 60.0,
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 2.0,
             },

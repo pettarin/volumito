@@ -420,18 +420,22 @@ def configuration_file_callback(
 
 
 def create_client(
-    host_configuration: VolumioHostConfiguration, timeout: float
+    host_configuration: VolumioHostConfiguration,
+    timeout: float,
+    timeout_slow_endpoints: float = 60.0,
 ) -> VolumioRESTAPIClient:
     """Create a VolumioRESTAPIClient with the given host configuration.
 
     Args:
         host_configuration: The host configuration (scheme, host, and ports)
         timeout: Request timeout in seconds
+        timeout_slow_endpoints: Request timeout, in seconds, for the endpoints that
+            can take long, like replacing the queue
 
     Returns:
         A configured VolumioRESTAPIClient instance
     """
-    return VolumioRESTAPIClient(host_configuration, timeout)
+    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints)
 
 
 def download_queue_albumart(
@@ -803,7 +807,9 @@ def execute_command(
         click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = create_client(
+            host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
+        )
         response = command_func(client)
 
         if verbose and not machine_readable:
@@ -908,7 +914,9 @@ def fetch_or_exit[T](
         click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
 
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = create_client(
+            host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
+        )
         return fetch(client)
     except VolumioConnectionError as e:
         if not machine_readable:

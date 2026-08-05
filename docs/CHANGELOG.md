@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `collection browse` or `collection search`) and playing it from the item given by
   `-p`/`--position`, or only replacing it with `--no-play`
 - Methods `add_to_queue` and `replace_queue_and_play` on the REST API client
+- Global option `--rest-api-timeout-slow-endpoints` for the endpoints that can take long
+  (e.g., replacing the queue)
 
 
 ## [0.0.39] - 2026-08-05
