@@ -446,7 +446,7 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def format_search_results_as_table(lists: list[dict[str, Any]]) -> str:
+def format_search_results_as_table(lists: list[dict[str, Any]], print_uri: bool = False) -> str:
     """Format the results of a search as a readable table.
 
     The lists a Volumio host titles after the query it answered (e.g., ``Found 12
@@ -456,6 +456,7 @@ def format_search_results_as_table(lists: list[dict[str, Any]]) -> str:
 
     Args:
         lists: The lists of results, as the Volumio host groups them
+        print_uri: Whether to print the URI of a result under its line
 
     Returns:
         A formatted string representation of the results
@@ -478,11 +479,14 @@ def format_search_results_as_table(lists: list[dict[str, Any]]) -> str:
         lines.append("")
         lines.append(title)
         width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
+        indent = " " * (width + 2)
         for index, item in enumerate(items, start=1):
             details = " - ".join(
                 str(item[key]) for key in ("title", "artist", "album") if item.get(key)
             )
             lines.append(f"{index:>{width}}. {details}")
+            if print_uri and item.get("uri"):
+                lines.append(f"{indent}{item['uri']}")
 
     return "\n".join(lines)
 

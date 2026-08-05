@@ -1351,6 +1351,16 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_print_uri(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--print-uri`` option to the collection search subcommand."""
+    return click.option(
+        "--print-uri",
+        is_flag=True,
+        default=False,
+        help="Print the URI of each result, under its line of the -F table output.",
+    )(func)
+
+
 def option_propagate_remote_exit_code(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--propagate-remote-exit-code`` option to the system execute subcommand."""
     return click.option(

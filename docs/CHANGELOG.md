@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the results matching `--service`, `--artist`, `--album`, `--track`, or `--playlist`, of
   the kinds of `--result-kinds` (or of `--albums-only`, `--artists-only`,
   `--playlists-only`, `--tracks-only`), at most `-l`/`--limit` of them in each list, or
-  only the best one with `-b`/`--best-result-only`
+  only the best one with `-b`/`--best-result-only`, printing their URI with `--print-uri`
 - Method `search` on the REST API client, returning the new `SearchResults` (of
   `SearchResultList`, of `SearchResultItem`, of kind `SearchResultItemKind`) model, which
   filters its own results

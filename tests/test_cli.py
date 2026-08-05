@@ -665,6 +665,51 @@ class TestFormatSearchResultsAsTable:
         assert format_search_results_as_table([]).endswith("(no result)")
         assert format_search_results_as_table([{"title": "Empty"}]).endswith("(no result)")
 
+    def test_the_uris_are_printed_under_their_items(self):
+        """Each URI starts at the column the title of its result starts at."""
+        lists = [
+            {
+                "title": "MPD Tracks",
+                "items": [
+                    {"title": "Aguaplano", "service": "mpd", "uri": "music-library/1.flac"},
+                    {"title": "Come Di", "service": "mpd"},
+                ],
+            }
+        ]
+
+        lines = format_search_results_as_table(lists, print_uri=True).splitlines()
+
+        assert lines[4] == "1. Aguaplano"
+        assert lines[5] == "   music-library/1.flac"
+        # An item the host gave no URI for gets no line of its own
+        assert lines[6] == "2. Come Di"
+        assert len(lines) == 7
+        # Without the flag the table is the one it has always been
+        assert format_search_results_as_table(lists).splitlines() == [
+            *lines[:5],
+            lines[6],
+        ]
+
+    def test_the_uris_of_a_list_numbered_past_nine(self):
+        """The indent widens with the numbers, keeping the URIs under the titles."""
+        lines = format_search_results_as_table(
+            [
+                {
+                    "title": "QOBUZ Tracks",
+                    "items": [
+                        {"title": f"Track {index}", "service": "qobuz", "uri": f"qobuz://{index}"}
+                        for index in range(1, 11)
+                    ],
+                }
+            ],
+            print_uri=True,
+        ).splitlines()
+
+        assert lines[4] == " 1. Track 1"
+        assert lines[5] == "    qobuz://1"
+        assert lines[22] == "10. Track 10"
+        assert lines[23] == "    qobuz://10"
+
 
 class TestFormatTerminationConditions:
     """Test cases for the format_termination_conditions function."""
@@ -5391,6 +5436,38 @@ class TestCollectionSearch:
         assert result.exit_code == 2
         assert "not both" in result.output
         mock_client.search.assert_not_called()
+
+    def test_the_uris_in_the_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """--print-uri prints the URI of each result under its line."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--print-uri", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        assert "1. Paolo Conte\n   artists://Paolo%20Conte" in result.output
+        assert "qobuz://playlist/13980206" in result.output
+
+    def test_the_uris_are_not_printed_by_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Without the flag the table carries no URI."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "artists://" not in result.output
+
+    def test_the_uris_in_another_format(self, runner: CliRunner, mocker: MockerFixture):
+        """--print-uri says nothing to the other formats, which carry the URI already."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", "search", "Paolo", "--print-uri", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)[0]["items"][0]["uri"] == "artists://Paolo%20Conte"
 
     def test_a_limit_leaves_the_raw_payload(self, runner: CliRunner, mocker: MockerFixture):
         """-F raw prints what the host answered, whatever the limit keeps."""

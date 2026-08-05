@@ -63,6 +63,7 @@ from volumito.cli.click_helpers import (
     option_playlists_only,
     option_port,
     option_print_resulting_status,
+    option_print_uri,
     option_propagate_remote_exit_code,
     option_recursive,
     option_register_url,
@@ -1630,6 +1631,7 @@ def collection(ctx: click.Context) -> None:
 @option_limit
 @option_playlist
 @option_playlists_only
+@option_print_uri
 @option_result_kinds
 @option_service
 @option_track
@@ -1646,6 +1648,7 @@ def collection_search(
     limit: int | None,
     playlist: str | None,
     playlists_only: bool,
+    print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
     service: str | None,
     track: str | None,
@@ -1701,7 +1704,7 @@ def collection_search(
         if output_format == "json":
             output = json.dumps(lists, indent=2)
         elif output_format == "table":
-            output = format_search_results_as_table(lists)
+            output = format_search_results_as_table(lists, print_uri)
         else:  # pretty
             output = json.dumps(lists, indent=4, sort_keys=True, ensure_ascii=False)
 
