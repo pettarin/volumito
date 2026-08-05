@@ -509,6 +509,9 @@ class TestDefaultConfigurationTemplate:
                 "position-starting-at-one": True,
                 "print-resulting-status": True,
                 "verbose": False,
+                # The two collection subsections pin their table format
+                "collection-browse": {"format": "table"},
+                "collection-search": {"format": "table"},
             },
             "downloads": {
                 "create-download-manifest": True,

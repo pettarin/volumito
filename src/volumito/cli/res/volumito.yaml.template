@@ -198,9 +198,15 @@ output:
   verbose: false
 
   collection-browse:
+    # Browsing is meant for humans, so the table is its default format
+    format: table
+
     # Add your own overrides here
 
   collection-search:
+    # Searching is meant for humans, so the table is its default format
+    format: table
+
     # Add your own overrides here
 
   collection-statistics:

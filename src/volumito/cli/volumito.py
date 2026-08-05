@@ -51,6 +51,7 @@ from volumito.cli.click_helpers import (
     option_fields,
     option_file_name_template,
     option_format,
+    option_format_table,
     option_idle_timeout,
     option_limit,
     option_manifest_file,
@@ -1628,7 +1629,7 @@ def collection(ctx: click.Context) -> None:
 @option_albums_only
 @option_artists_only
 @option_best_result_only
-@option_format
+@option_format_table
 @option_limit
 @option_playlists_only
 @option_print_uri_toggle
@@ -1705,7 +1706,7 @@ def collection_browse(
 @option_artist
 @option_artists_only
 @option_best_result_only
-@option_format
+@option_format_table
 @option_limit
 @option_playlist
 @option_playlists_only

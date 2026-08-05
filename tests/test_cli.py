@@ -5201,7 +5201,7 @@ class TestCollectionBrowse:
         """Without a URI the root is asked for, and the navigation is printed."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["collection", "browse"])
+        result = runner.invoke(main, ["collection", "browse", "-F", "json"])
 
         assert result.exit_code == 0
         mock_client.browse.assert_called_once_with(None)
@@ -5296,11 +5296,21 @@ class TestCollectionBrowse:
         assert result.exit_code == 0
         assert '\n  "lists"' in result.output
 
+    def test_the_pretty_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F pretty prints the navigation with 4-space indentation and sorted keys."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "browse", "-F", "pretty"])
+
+        assert result.exit_code == 0
+        assert '\n    "info"' in result.output
+        assert json.loads(result.output)["prev"] == {"uri": "/"}
+
     def test_the_limit(self, runner: CliRunner, mocker: MockerFixture):
         """-l keeps at most that number of results in each list."""
         self._mock_client(mocker, self.ALBUM_ENVELOPE)
 
-        result = runner.invoke(main, ["collection", "browse", "-l", "2"])
+        result = runner.invoke(main, ["collection", "browse", "-l", "2", "-F", "json"])
 
         assert result.exit_code == 0
         assert [item["title"] for item in json.loads(result.output)["lists"][0]["items"]] == [
@@ -5312,7 +5322,7 @@ class TestCollectionBrowse:
         """-1 keeps the first result of each list, as --limit 1 does."""
         self._mock_client(mocker, self.ALBUM_ENVELOPE)
 
-        result = runner.invoke(main, ["collection", "browse", "-1"])
+        result = runner.invoke(main, ["collection", "browse", "-1", "-F", "json"])
 
         assert result.exit_code == 0
         assert [item["title"] for item in json.loads(result.output)["lists"][0]["items"]] == [
@@ -5342,7 +5352,7 @@ class TestCollectionBrowse:
     ):
         """A kind option keeps the results of that kind only."""
         self._mock_client(mocker, self.ALBUM_ENVELOPE)
-        arguments = ["collection", "browse", option]
+        arguments = ["collection", "browse", "-F", "json", option]
         if option == "--result-kinds":
             arguments.append("track")
             titles = ["Aguaplano", "Come Di"]
@@ -5597,7 +5607,7 @@ class TestCollectionSearch:
         """The query argument is what the host is asked for."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo Conte"])
+        result = runner.invoke(main, ["collection", "search", "Paolo Conte", "-F", "json"])
 
         assert result.exit_code == 0
         mock_client.search.assert_called_once_with("Paolo Conte")
@@ -5633,7 +5643,7 @@ class TestCollectionSearch:
         """The service option keeps the results of that source only."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "-s", "mpd"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-s", "mpd", "-F", "json"])
 
         assert result.exit_code == 0
         assert [block["title"] for block in json.loads(result.output)] == [
@@ -5667,6 +5677,8 @@ class TestCollectionSearch:
                 "--service",
                 "qobuz",
                 "--playlists-only",
+                "-F",
+                "json",
             ],
         )
 
@@ -5681,7 +5693,7 @@ class TestCollectionSearch:
 
         # A source answers with the playlists it finds related to the query, whose
         # titles rarely carry it, so they are kept whatever they are called
-        result = runner.invoke(main, ["collection", "search", "-y", "Mango"])
+        result = runner.invoke(main, ["collection", "search", "-y", "Mango", "-F", "json"])
 
         assert result.exit_code == 0
         mock_client.search.assert_called_once_with("Mango")
@@ -5719,6 +5731,19 @@ class TestCollectionSearch:
         assert result.exit_code == 0
         assert '\n    "title"' in result.output
 
+    def test_the_pretty_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F pretty prints the lists with 4-space indentation and sorted keys."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-F", "pretty"])
+
+        assert result.exit_code == 0
+        assert '\n        "items"' in result.output
+        assert [block["title"] for block in json.loads(result.output)] == [
+            "Found 1 Artist 'paolo conte'",
+            "QOBUZ Playlists",
+        ]
+
     def test_the_raw_format_is_the_payload_of_the_host(
         self, runner: CliRunner, mocker: MockerFixture
     ):
@@ -5745,7 +5770,7 @@ class TestCollectionSearch:
         """-l keeps at most that number of results in each list."""
         self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "-l", "2"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-l", "2", "-F", "json"])
 
         assert result.exit_code == 0
         assert [item["title"] for item in json.loads(result.output)[0]["items"]] == [
@@ -5778,7 +5803,7 @@ class TestCollectionSearch:
         """-b keeps the first result of each list, as --limit 1 does."""
         self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "-1"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-1", "-F", "json"])
 
         assert result.exit_code == 0
         assert [item["title"] for item in json.loads(result.output)[0]["items"]] == ["Aguaplano"]
@@ -5836,7 +5861,7 @@ class TestCollectionSearch:
         """Invoke a search over the payload of every kind and return the titles kept."""
         self._mock_client(mocker, self.ENVELOPE_OF_EVERY_KIND)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", *options])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-F", "json", *options])
 
         assert result.exit_code == 0
         return [item["title"] for block in json.loads(result.output) for item in block["items"]]
@@ -5884,7 +5909,7 @@ class TestCollectionSearch:
         mock_client = self._mock_client(mocker, self.ENVELOPE_OF_EVERY_KIND)
 
         result = runner.invoke(
-            main, ["collection", "search", "-a", "Paolo Conte", "--albums-only"]
+            main, ["collection", "search", "-a", "Paolo Conte", "--albums-only", "-F", "json"]
         )
 
         assert result.exit_code == 0
@@ -11828,9 +11853,10 @@ class TestConfigurationCommands:
                     "position-starting-at-one": True,
                     "print-resulting-status": True,
                     "verbose": False,
-                    # Subsections are present but empty (null) override placeholders.
-                    "collection-browse": None,
-                    "collection-search": None,
+                    # Subsections are present but empty (null) override placeholders,
+                    # except the two collection ones pinning their table format.
+                    "collection-browse": {"format": "table"},
+                    "collection-search": {"format": "table"},
                     "collection-statistics": None,
                     "notifications-list": None,
                     "notifications-listen": None,

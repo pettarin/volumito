@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Method `browse` on the REST API client, returning the new `BrowseResults` model,
   which filters and limits its own content
 
+### Changed
+
+- `collection browse` and `collection search` print the table format by default
+
 
 ## [0.0.38] - 2026-08-04
 
