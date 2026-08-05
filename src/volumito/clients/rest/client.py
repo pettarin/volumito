@@ -38,6 +38,9 @@ from volumito.clients.models import (
     Zones,
 )
 
+_MPD_LIBRARY_SCHEMES = frozenset({"albums", "artists", "genres", "playlists"})
+"""The URI schemes the local library of a Volumio instance is browsed by."""
+
 
 class VolumioRESTAPIClient:
     """Client for interacting with Volumio API."""
@@ -243,7 +246,9 @@ class VolumioRESTAPIClient:
         """
         return self._post_json("/api/v1/pluginEndpoint", {"endpoint": endpoint, "data": data})
 
-    def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _post_json(
+        self, path: str, payload: dict[str, Any] | list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """POST ``payload`` as JSON to ``path`` and parse the response as a JSON object.
 
         Args:
@@ -259,11 +264,31 @@ class VolumioRESTAPIClient:
         """
         return self._json_object(self._request(requests.post, path, payload))
 
+    def _queue_payload_items(self, uri: str) -> list[dict[str, Any]] | None:
+        """Return the browsed items a URI must be queued as, or None for the URI itself.
+
+        A Volumio instance explodes the URIs of its local library (``mpd``) into
+        tracks by itself, while the plugins of the other sources leave a container
+        URI silently unexploded, reporting a success and queueing nothing: for those,
+        the URI is browsed here and the items it lists are queued instead. A URI
+        listing nothing (a single track, for instance) is queued as itself.
+
+        Args:
+            uri: The URI to be queued
+
+        Returns:
+            The items to queue in place of the URI, or None to queue the URI itself
+        """
+        if self._uri_service(uri) == "mpd":
+            return None
+        items = [item.raw for item in self.browse(uri).items]
+        return items or None
+
     def _request(
         self,
         send: Callable[..., requests.Response],
         path: str,
-        payload: dict[str, Any] | None = None,
+        payload: dict[str, Any] | list[dict[str, Any]] | None = None,
     ) -> requests.Response:
         """Request ``{rest_base_url}{path}``, translating failures to Volumio errors.
 
@@ -383,8 +408,38 @@ class VolumioRESTAPIClient:
             return {"mbid": entity.value}
         return {key: entity.value}
 
+    @staticmethod
+    def _uri_service(uri: str) -> str:
+        """Return the name of the Volumio service a URI belongs to.
+
+        A Volumio instance routes a queued URI to the service named in its payload and,
+        when none is given, to ``mpd`` — which silently adds nothing for the URI of
+        another source. The service is therefore always sent, read from the URI: the
+        scheme names it (``qobuz://…``), except for the schemes the local library is
+        browsed by and the scheme-less local paths (``mpd``), the web URLs
+        (``webradio``), and the ``spotify:`` URIs (``spop``).
+
+        Args:
+            uri: The URI to name the service of
+
+        Returns:
+            The name of the service (e.g., ``"mpd"``, ``"qobuz"``, ``"webradio"``)
+        """
+        if uri.startswith(("http://", "https://")):
+            return "webradio"
+        if uri.startswith("spotify:"):
+            return "spop"
+        scheme, separator, _ = uri.partition("://")
+        if separator and scheme not in _MPD_LIBRARY_SCHEMES:
+            return scheme
+        return "mpd"
+
     def add_to_queue(self, uri: str) -> CommandResponse:
         """Add the content of a URI to the end of the queue, without touching playback.
+
+        The URI of a container of a source other than the local library is browsed
+        first and queued as the items it lists, since only the local library explodes
+        its containers by itself.
 
         Args:
             uri: The URI whose content to add, from a browse or a search
@@ -396,7 +451,11 @@ class VolumioRESTAPIClient:
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        return CommandResponse.from_raw(self._post_json("/api/v1/addToQueue", {"uri": uri}))
+        items = self._queue_payload_items(uri)
+        payload: dict[str, Any] | list[dict[str, Any]] = (
+            items if items is not None else {"service": self._uri_service(uri), "uri": uri}
+        )
+        return CommandResponse.from_raw(self._post_json("/api/v1/addToQueue", payload))
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -847,16 +906,19 @@ class VolumioRESTAPIClient:
     def replace_queue_and_play(self, uri: str, index: int | None = None) -> CommandResponse:
         """Replace the queue with the content of a URI and start playing it.
 
-        Without an index the host plays the first item. With one, the URI is browsed
-        first and its items are sent along with the index, since that is the only
-        payload the Volumio API starts at a chosen item with; a URI listing nothing
-        (a single track, for instance) falls back to the payload without an index
-        when the index is 0, whose first item is the wanted one.
+        Without an index the first item plays. With one, the URI is browsed first and
+        its items are sent along with the index, since that is the only payload the
+        Volumio API starts at a chosen item with; a URI listing nothing (a single
+        track, for instance) falls back to the payload without an index when the
+        index is 0, whose first item is the wanted one. Like :meth:`add_to_queue`,
+        the URI of a container of a source other than the local library is browsed
+        and sent as the items it lists even without an index, since only the local
+        library explodes its containers by itself.
 
         Args:
             uri: The URI whose content to play, from a browse or a search
             index: The position of the item to play first (0-based), or None for
-                the first without browsing the URI
+                the first
 
         Returns:
             The response of the Volumio API
@@ -880,8 +942,15 @@ class VolumioRESTAPIClient:
                     f"The URI lists {len(items)} items, not enough to play the one "
                     f"at index {index}"
                 )
+        else:
+            listed = self._queue_payload_items(uri)
+            if listed is not None:
+                return CommandResponse.from_raw(
+                    self._post_json("/api/v1/replaceAndPlay", {"list": listed, "index": 0})
+                )
+        item = {"service": self._uri_service(uri), "uri": uri}
         return CommandResponse.from_raw(
-            self._post_json("/api/v1/replaceAndPlay", {"item": {"uri": uri}})
+            self._post_json("/api/v1/replaceAndPlay", {"item": item})
         )
 
     def search(self, query: str) -> SearchResults:
