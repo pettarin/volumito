@@ -1257,8 +1257,11 @@ class TestResultKindsParamType:
         assert "album, artist, other, playlist, track" in str(exc_info.value)
 
     def test_the_metavar(self):
-        """The option shows the kinds it takes."""
-        assert ResultKindsParamType().get_metavar(None, None) == "[KINDS]"
+        """The --help metavar lists the accepted kinds."""
+        assert (
+            ResultKindsParamType().get_metavar(None, None)
+            == "[album|artist|other|playlist|track]"
+        )
 
 
 class TestParseTrackSelection:
@@ -5257,7 +5260,7 @@ class TestCollectionSearch:
         mock_client = self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["collection", "search", "--artist", "Paolo Conte", "--track", "Aguaplano"]
+            main, ["collection", "search", "-a", "Paolo Conte", "-t", "Aguaplano"]
         )
 
         assert result.exit_code == 0
@@ -5277,7 +5280,7 @@ class TestCollectionSearch:
         """The service option keeps the results of that source only."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "--service", "mpd"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-s", "mpd"])
 
         assert result.exit_code == 0
         assert [block["title"] for block in json.loads(result.output)] == [
@@ -5325,7 +5328,7 @@ class TestCollectionSearch:
 
         # A source answers with the playlists it finds related to the query, whose
         # titles rarely carry it, so they are kept whatever they are called
-        result = runner.invoke(main, ["collection", "search", "--playlist", "Mango"])
+        result = runner.invoke(main, ["collection", "search", "-y", "Mango"])
 
         assert result.exit_code == 0
         mock_client.search.assert_called_once_with("Mango")
@@ -5422,7 +5425,7 @@ class TestCollectionSearch:
         """-b keeps the first result of each list, as --limit 1 does."""
         self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "-b"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-1"])
 
         assert result.exit_code == 0
         assert [item["title"] for item in json.loads(result.output)[0]["items"]] == ["Aguaplano"]
@@ -5431,7 +5434,7 @@ class TestCollectionSearch:
         """The flag and the limit exclude each other."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "-b", "--limit", "3"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-1", "--limit", "3"])
 
         assert result.exit_code == 2
         assert "not both" in result.output
@@ -5441,9 +5444,7 @@ class TestCollectionSearch:
         """--print-uri prints the URI of each result under its line."""
         self._mock_client(mocker)
 
-        result = runner.invoke(
-            main, ["collection", "search", "Paolo", "--print-uri", "-F", "table"]
-        )
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-u", "-F", "table"])
 
         assert result.exit_code == 0
         assert "1. Paolo Conte\n   artists://Paolo%20Conte" in result.output
@@ -5473,7 +5474,7 @@ class TestCollectionSearch:
         """-F raw prints what the host answered, whatever the limit keeps."""
         self._mock_client(mocker, self.ENVELOPE_OF_A_LONG_LIST)
 
-        result = runner.invoke(main, ["collection", "search", "Paolo", "-b", "-F", "raw"])
+        result = runner.invoke(main, ["collection", "search", "Paolo", "-1", "-F", "raw"])
 
         assert result.exit_code == 0
         assert json.loads(result.output) == self.ENVELOPE_OF_A_LONG_LIST
@@ -5495,7 +5496,7 @@ class TestCollectionSearch:
 
     def test_several_result_kinds(self, runner: CliRunner, mocker: MockerFixture):
         """A comma-separated list keeps every kind it names."""
-        assert self._titles_of_every_kind(runner, mocker, "--result-kinds", "album,track") == [
+        assert self._titles_of_every_kind(runner, mocker, "-k", "album,track") == [
             "An Album",
             "A Track",
         ]
@@ -5510,9 +5511,13 @@ class TestCollectionSearch:
         ("option", "title"),
         [
             ("--albums-only", "An Album"),
+            ("-B", "An Album"),
             ("--artists-only", "An Artist"),
+            ("-A", "An Artist"),
             ("--playlists-only", "A Playlist"),
+            ("-Y", "A Playlist"),
             ("--tracks-only", "A Track"),
+            ("-T", "A Track"),
         ],
     )
     def test_the_only_flags(self, runner: CliRunner, mocker: MockerFixture, option, title):
@@ -5526,7 +5531,7 @@ class TestCollectionSearch:
         mock_client = self._mock_client(mocker, self.ENVELOPE_OF_EVERY_KIND)
 
         result = runner.invoke(
-            main, ["collection", "search", "--artist", "Paolo Conte", "--albums-only"]
+            main, ["collection", "search", "-a", "Paolo Conte", "--albums-only"]
         )
 
         assert result.exit_code == 0

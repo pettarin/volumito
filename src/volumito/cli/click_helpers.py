@@ -140,7 +140,7 @@ class ResultKindsParamType(click.ParamType):
             self.fail(str(e), param, ctx)
 
     def get_metavar(self, param: click.Parameter, ctx: click.Context) -> str:
-        return "[KINDS]"
+        return f"[{'|'.join(kind.value for kind in SearchResultItemKind)}]"
 
 
 class SchemeParamType(click.ParamType):
@@ -1004,9 +1004,10 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
 
 
 def option_album(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--album`` option to the collection search subcommand."""
+    """Add the ``-b``/``--album`` option to the collection search subcommand."""
     return click.option(
         "--album",
+        "-b",
         type=str,
         default=None,
         help="Keep the results of this album, and search for it when no query is given.",
@@ -1025,9 +1026,10 @@ def option_albumart_file_name_template(func: Callable[..., None]) -> Callable[..
 
 
 def option_albums_only(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--albums-only`` option to the collection search subcommand."""
+    """Add the ``-B``/``--albums-only`` option to the collection search subcommand."""
     return click.option(
         "--albums-only",
+        "-B",
         is_flag=True,
         default=False,
         help="Keep the albums found, whatever the other options match.",
@@ -1057,9 +1059,10 @@ def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., N
 
 
 def option_artist(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--artist`` option to the collection search subcommand."""
+    """Add the ``-a``/``--artist`` option to the collection search subcommand."""
     return click.option(
         "--artist",
+        "-a",
         type=str,
         default=None,
         help="Keep the results of this artist, and search for it when no query is given.",
@@ -1067,9 +1070,10 @@ def option_artist(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_artists_only(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--artists-only`` option to the collection search subcommand."""
+    """Add the ``-A``/``--artists-only`` option to the collection search subcommand."""
     return click.option(
         "--artists-only",
+        "-A",
         is_flag=True,
         default=False,
         help="Keep the artists found, whatever the other options match.",
@@ -1100,10 +1104,10 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-b``/``--best-result-only`` option to the collection search subcommand."""
+    """Add the ``-1``/``--best-result-only`` option to the collection search subcommand."""
     return click.option(
         "--best-result-only",
-        "-b",
+        "-1",
         is_flag=True,
         default=False,
         help="Keep the best result of each list only, as -l/--limit 1 does.",
@@ -1309,9 +1313,10 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
 
 
 def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--playlist`` option to the collection search subcommand."""
+    """Add the ``-y``/``--playlist`` option to the collection search subcommand."""
     return click.option(
         "--playlist",
+        "-y",
         type=str,
         default=None,
         help="Search for this text and keep the playlists found for it.",
@@ -1319,9 +1324,10 @@ def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_playlists_only(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--playlists-only`` option to the collection search subcommand."""
+    """Add the ``-Y``/``--playlists-only`` option to the collection search subcommand."""
     return click.option(
         "--playlists-only",
+        "-Y",
         is_flag=True,
         default=False,
         help="Keep the playlists found, whatever the other options match.",
@@ -1352,9 +1358,10 @@ def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., No
 
 
 def option_print_uri(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--print-uri`` option to the collection search subcommand."""
+    """Add the ``-u``/``--print-uri`` option to the collection search subcommand."""
     return click.option(
         "--print-uri",
+        "-u",
         is_flag=True,
         default=False,
         help="Print the URI of each result, under its line of the -F table output.",
@@ -1430,9 +1437,10 @@ def option_replace_characters_in_file_names_with(
 
 
 def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--result-kinds`` option to the collection search subcommand."""
+    """Add the ``-k``/``--result-kinds`` option to the collection search subcommand."""
     return click.option(
         "--result-kinds",
+        "-k",
         type=ResultKindsParamType(),
         default=None,
         help=(
@@ -1443,9 +1451,10 @@ def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_service(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--service`` option to the collection search subcommand."""
+    """Add the ``-s``/``--service`` option to the collection search subcommand."""
     return click.option(
         "--service",
+        "-s",
         type=click.Choice(SEARCH_SERVICES, case_sensitive=True),
         default=None,
         help="Keep the results of this source only.",
@@ -1479,9 +1488,10 @@ def option_timeout(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_track(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--track`` option to the collection search subcommand."""
+    """Add the ``-t``/``--track`` option to the collection search subcommand."""
     return click.option(
         "--track",
+        "-t",
         type=str,
         default=None,
         help="Keep the tracks with this title, and search for it when no query is given.",
@@ -1489,9 +1499,10 @@ def option_track(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_tracks_only(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--tracks-only`` option to the collection search subcommand."""
+    """Add the ``-T``/``--tracks-only`` option to the collection search subcommand."""
     return click.option(
         "--tracks-only",
+        "-T",
         is_flag=True,
         default=False,
         help="Keep the tracks found, whatever the other options match.",

@@ -107,7 +107,7 @@ SEARCH_KINDS_ERROR = (
 )
 """Error message when "collection search" is asked for two different kinds of result."""
 
-SEARCH_LIMIT_ERROR ="Expected the -b/--best-result-only or the -l/--limit option, not both."
+SEARCH_LIMIT_ERROR ="Expected the -1/--best-result-only or the -l/--limit option, not both."
 """Error message when "collection search" is given two limits on the results."""
 
 SEARCH_SERVICES = [
