@@ -1582,14 +1582,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.41" in result.output
+        assert "volumito, version 0.0.42" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.41"'
+        assert result.output.strip() == '"0.0.42"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1598,7 +1598,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.41"'
+        assert result.output.strip() == '"0.0.42"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -2964,6 +2964,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
+        assert "Connecting to http://volumio.local:3000... done" in result.output
         assert "Successfully retrieved state" in result.output
         # The MPD steps are logged by the (here mocked) client itself, not by the CLI
 

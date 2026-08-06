@@ -690,13 +690,14 @@ def download_uri_to(
             os.makedirs(output_directory, exist_ok=True)
         fetch_uri_to_file(uri, destination, timeout, host_configuration)
 
+        info(f"Downloading {label} to {destination}... done")
         info(f"{label.capitalize()} successfully downloaded to {destination}")
 
         if create_manifest:
             manifest_path = write_download_manifest(
                 destination, uri, state, host_configuration, entity, kind, add_cover_and_metadata
             )
-            debug(f"Manifest written to {manifest_path}...")
+            debug(f"Manifest written to {manifest_path}")
 
     except (requests.exceptions.RequestException, VolumioSSHError) as e:
         error(f"Download error: {e}")
@@ -767,7 +768,7 @@ def embed_track_tags(
         warning(f"Cannot embed metadata into {destination} ({e})")
         return
 
-    debug(f"Embedded metadata and cover into {destination}...")
+    debug(f"Embedded metadata and cover into {destination}")
 
 
 def execute_command(
@@ -793,6 +794,7 @@ def execute_command(
         )
         response = command_func(client)
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug(f"Response: {response}")
 
         info(f"Command '{command_name}' executed successfully")
@@ -889,7 +891,9 @@ def fetch_or_exit[T](
         client = create_client(
             host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
         )
-        return fetch(client)
+        fetched = fetch(client)
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        return fetched
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
         sys.exit(1)

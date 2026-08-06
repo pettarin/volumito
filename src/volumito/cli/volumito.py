@@ -854,6 +854,7 @@ def audio(
         client = create_client(host_configuration, rest_api_timeout)
         state = client.state
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved state")
 
         # Connect to MPD to get current track URI; the client logs its own steps
@@ -870,7 +871,7 @@ def audio(
                     embed_tags = False
                     debug(
                         "Not embedding the album art and the metadata, "
-                        "to preserve the file being copied..."
+                        "to preserve the file being copied"
                     )
                 else:
                     embed_tags = add_cover_and_metadata
@@ -961,6 +962,7 @@ def albumart(
         client = create_client(host_configuration, rest_api_timeout)
         state = client.state
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved state")
 
         # Extract albumart URI (relative URIs are made absolute against the base URL)
@@ -1042,6 +1044,7 @@ def queue_list(
         client = create_client(host_configuration, rest_api_timeout)
         queue_data = client.queue.raw
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved queue")
 
         # Determine output format
@@ -1162,6 +1165,7 @@ def queue_download(
         client = create_client(host_configuration, rest_api_timeout)
         tracks = client.queue.tracks
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved queue")
 
         if not tracks:
@@ -1319,7 +1323,7 @@ def queue_download(
                         attempt += 1
                         debug(
                             "Track metadata not yet updated, retrying "
-                            f"({attempt}/{number_retries_next_track})..."
+                            f"({attempt}/{number_retries_next_track})"
                         )
                     entry["source_uri"] = uri
                     if not fresh:
@@ -1937,9 +1941,11 @@ def playlist_download(
         client = create_client(host_configuration, rest_api_timeout)
         debug("Clearing the queue...")
         client.clear()
+        debug("Clearing the queue... done")
         rest_api_sleep(ctx)
         debug(f"Playing playlist {name}...")
         client.play_playlist(name)
+        debug(f"Playing playlist {name}... done")
         rest_api_sleep(ctx)
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
