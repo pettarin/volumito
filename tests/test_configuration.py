@@ -612,6 +612,32 @@ class TestLoadConfigurationWithErrors:
         assert len(errors) == 1
         assert "must be a mapping" in errors[0]
 
+    def test_valid_aliases_are_kept(self, tmp_path):
+        """The aliases section maps free-form names to command path strings."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("aliases:\n  cover: track albumart\n  play: playback play\n")
+
+        assert load_configuration_with_errors(str(config)) == (
+            {"aliases": {"cover": "track albumart", "play": "playback play"}},
+            [],
+        )
+
+    def test_invalid_aliases_are_reported(self, tmp_path):
+        """A non-string alias name, and a non-string or blank target, are reported."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(
+            "aliases:\n  1: playback play\n  bad: [not, a, string]\n"
+            '  blank: "  "\n  cover: track albumart\n'
+        )
+
+        result, errors = load_configuration_with_errors(str(config))
+
+        assert result == {"aliases": {"cover": "track albumart"}}
+        assert len(errors) == 3
+        assert "alias name 1 in configuration file" in errors[0]
+        assert "alias 'bad' in configuration file" in errors[1]
+        assert "alias 'blank' in configuration file" in errors[2]
+
 
 class TestFindDestinationConflicts:
     """Test cases for find_destination_conflicts."""

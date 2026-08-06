@@ -87,6 +87,26 @@ from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
 from volumito.clients.models import PlayerState, SearchResultItemKind, Story
 
 
+class AliasedGroup(click.Group):
+    """A group resolving also the aliases defined in the configuration file.
+
+    A built-in command always wins over an alias of the same name; an alias maps a new
+    top-level name to an existing command path (a group or a subcommand), and loading
+    the configuration refuses the aliases that shadow a command or target a path that
+    does not resolve. The aliases are not listed in the group help.
+    """
+
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
+        """Return the built-in command, or the target of the matching alias."""
+        command = super().get_command(ctx, cmd_name)
+        if command is not None:
+            return command
+        target = ((ctx.obj or {}).get("aliases") or {}).get(cmd_name)
+        if target is None:
+            return None
+        return resolve_command_path(self, ctx, target)
+
+
 class OnOffParamType(click.ParamType):
     """Click parameter type for an on/off toggle value.
 
@@ -392,6 +412,34 @@ def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tu
     return tuple(values)
 
 
+def alias_problems(
+    root: click.Group, ctx: click.Context, aliases: dict[str, str], path: str
+) -> list[str]:
+    """Return a problem message for every alias that shadows or does not resolve.
+
+    Args:
+        root: The top-level command group holding the built-in commands
+        ctx: Click context used to resolve the command tree
+        aliases: The alias name -> command path mapping read from the configuration
+        path: Path of the configuration file (for the messages)
+
+    Returns:
+        The problems found, one message per broken alias
+    """
+    problems: list[str] = []
+    for name, target in aliases.items():
+        if click.Group.get_command(root, ctx, name) is not None:
+            problems.append(
+                f"alias {name!r} in configuration file {path} shadows the command {name!r}"
+            )
+        elif resolve_command_path(root, ctx, target) is None:
+            problems.append(
+                f"alias {name!r} in configuration file {path} "
+                f"targets the unknown command {target!r}"
+            )
+    return problems
+
+
 def configuration_file_callback(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:
@@ -413,7 +461,22 @@ def configuration_file_callback(
     path = resolve_configuration_path(value)
     if path is not None:
         config = load_configuration(path)
-        ctx.default_map = {**(ctx.default_map or {}), **build_click_default_map(config)}
+        aliases = config.get("aliases", {})
+        if isinstance(ctx.command, click.Group):
+            problems = alias_problems(ctx.command, ctx, aliases, path)
+            if problems:
+                raise click.BadParameter(problems[0])
+        ctx.obj["aliases"] = aliases
+        default_map = build_click_default_map(config)
+        # Click reads default_map by invocation path, and an aliased command runs under
+        # the alias name, so the target's branch must also be reachable under it
+        for name, target in aliases.items():
+            branch: Any = default_map
+            for token in target.split():
+                branch = branch.get(token) if isinstance(branch, dict) else None
+            if isinstance(branch, dict) and branch:
+                default_map[name] = branch
+        ctx.default_map = {**(ctx.default_map or {}), **default_map}
     ctx.obj["configuration_file"] = path
     return value
 
@@ -2013,6 +2076,31 @@ def resolve_story_entity[E: MusicEntity](
         raise click.UsageError(STORY_ARTIST_ARGUMENT_ERROR)
     kind, values = reference
     return entity_class(values[0], is_mbid=kind == "mbid")
+
+
+def resolve_command_path(
+    root: click.Group, ctx: click.Context, path: str
+) -> click.Command | None:
+    """Resolve a space-separated command path against the command tree.
+
+    Only built-in names are followed, so an alias cannot target another alias.
+
+    Args:
+        root: The top-level command group
+        ctx: Click context used by the lookups
+        path: The command path (e.g., "track albumart")
+
+    Returns:
+        The command the path leads to, or None when it does not resolve
+    """
+    command: click.Command | None = root
+    for token in path.split():
+        if not isinstance(command, click.Group):
+            return None
+        command = click.Group.get_command(command, ctx, token)
+        if command is None:
+            return None
+    return command if command is not root else None
 
 
 def rest_api_sleep(ctx: click.Context) -> None:

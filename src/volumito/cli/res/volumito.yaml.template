@@ -2,6 +2,13 @@
 #
 # Generated with default values for version {VERSION}: edit as needed (and remove this comment)
 
+# Custom top-level aliases for existing (sub)commands: each alias maps a new
+# command name to an existing command path (a group or a subcommand, no options).
+# An alias cannot shadow a built-in command, and it is not listed in --help.
+# aliases:
+#   cover: track albumart
+#   play: playback play
+
 downloads:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
