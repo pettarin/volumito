@@ -12481,6 +12481,8 @@ class TestConfigurationCommands:
             with open("volumito.yaml", encoding="utf-8") as config_file:
                 document = yaml.safe_load(config_file)
             assert document == {
+                # The aliases section ships with every entry commented out
+                "aliases": None,
                 "volumio": {
                     "host": "volumio.local",
                     "scheme": "http",

@@ -2,12 +2,74 @@
 #
 # Generated with default values for version {VERSION}: edit as needed (and remove this comment)
 
-# Custom top-level aliases for existing (sub)commands: each alias maps a new
-# command name to an existing command path (a group or a subcommand, no options).
-# An alias cannot shadow a built-in command, and it is not listed in --help.
-# aliases:
-#   cover: track albumart
-#   play: playback play
+aliases:
+  # Aliases/shorthands for existing command paths (groups, commands, subcommands).
+  # Limitations:
+  # - An alias must resolve to an existing (sub)command, otherwise an error is produced
+  # - An alias cannot shadow a built-in command
+  # - Options are not supported in the definition of the alias (only command paths)
+  # - Aliases are not listed by --help: list them with "volumito alias list"
+  # a: alias
+  # al: alias list
+  # c: collection
+  # cb: collection browse
+  # conf: configuration
+  # cs: collection search
+  # dwa: track audio
+  # dwc: track albumart
+  # dwp: playlist download
+  # dwq: queue download
+  # exec: system execute
+  # mute: playback mute
+  # next: playback next
+  # not: notification
+  # notl: notification list
+  # notlis: notification listen
+  # notr: notification register
+  # notu: notification unregister
+  # p: playback
+  # pause: playback pause
+  # pd: playlist download
+  # ping: system ping
+  # pl: playlist list
+  # play: playback play
+  # pm: playback mute
+  # pnext: playback next
+  # pp: playlist play
+  # ppause: playback pause
+  # pplay: playback play
+  # pprev: playback previous
+  # prev: playback previous
+  # ps: playback status
+  # pseek: playback seek
+  # pstop: playback stop
+  # pt: playback toggle
+  # pu: playback unmute
+  # pv: playback volume
+  # q: queue
+  # qc: queue clear
+  # qd: queue download
+  # ql: queue list
+  # qr: queue replace
+  # s: story
+  # salb: story album
+  # sart: story artist
+  # scre: story credits
+  # seek: playback seek
+  # slab: story label
+  # spla: story place
+  # stop: playback stop
+  # sys: system
+  # sysi: system info
+  # sysv: system version
+  # t: track
+  # ta: track audio
+  # tc: track albumart
+  # ti: track info
+  # toggle: playback toggle
+  # unmute: playback unmute
+  # vol: playback volume
+
 
 downloads:
   # A key here applies to all relevant commands;
