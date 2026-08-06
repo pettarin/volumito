@@ -675,7 +675,7 @@ class SearchResultItem(VolumioModel):
 
         A Volumio host reports the tracks with the ``song`` type, and sometimes names
         the kind in the type outright (the entity a browse describes, for instance);
-        otherwise the URI tells (``artists://…`` and ``qobuz://artist/…`` for the
+        otherwise the URI tells (``artists://...`` and ``qobuz://artist/...`` for the
         artists, and likewise for the albums and the playlists), knowing that
         ``artists://X/Y`` is not an artist but an album of one, which is how a browsed
         artist lists its albums.

@@ -9912,8 +9912,8 @@ class TestPlaylistDownload:
         client.clear.assert_called_once()
         client.play_playlist.assert_called_once_with("Rock")
         # The queue is cleared and the playlist played before the download starts
-        # (the queue fetch is a property read, so "stop" — the download's first
-        # playback command — is the anchor visible in method_calls)
+        # (the queue fetch is a property read, so "stop" -- the download's first
+        # playback command -- is the anchor visible in method_calls)
         calls = [name for name, _, _ in client.method_calls]
         assert calls.index("clear") < calls.index("play_playlist") < calls.index("stop")
         run = tmp_path
