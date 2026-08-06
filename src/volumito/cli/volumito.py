@@ -113,8 +113,8 @@ from volumito.cli.constants import (
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_REGISTER_ERROR,
     MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR,
+    NOTIFICATION_ENDPOINT_ERROR,
     NOTIFICATION_TIMESTAMP_FORMAT,
-    NOTIFICATIONS_ENDPOINT_ERROR,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     REGISTER_ARGUMENT_ERROR,
@@ -2252,22 +2252,22 @@ def _compose_notification_url(ctx: click.Context, port: int, endpoint: str) -> s
         click.UsageError: If the endpoint does not start with a slash
     """
     if not endpoint.startswith("/"):
-        raise click.UsageError(NOTIFICATIONS_ENDPOINT_ERROR)
+        raise click.UsageError(NOTIFICATION_ENDPOINT_ERROR)
 
     return fetch_or_exit(ctx, lambda c: receiver_url(c.host_configuration, port, endpoint))
 
 
 @main.group()
 @click.pass_context
-def notifications(ctx: click.Context) -> None:
+def notification(ctx: click.Context) -> None:
     """Manage the URLs receiving the push notifications."""
     pass
 
 
-@notifications.command("list")
+@notification.command("list")
 @click.pass_context
 @option_format
-def notifications_list(ctx: click.Context, output_format: str) -> None:
+def notification_list(ctx: click.Context, output_format: str) -> None:
     """List the URLs registered to receive the push notifications."""
     urls = fetch_or_exit(ctx, lambda c: c.notifications.urls)
 
@@ -2283,7 +2283,7 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
     click.echo(output)
 
 
-@notifications.command("listen")
+@notification.command("listen")
 @click.pass_context
 @option_count
 @option_endpoint
@@ -2294,7 +2294,7 @@ def notifications_list(ctx: click.Context, output_format: str) -> None:
 @option_register_url_full
 @option_timeout
 @option_unregister_url_on_exit
-def notifications_listen(
+def notification_listen(
     ctx: click.Context,
     count: int | None,
     endpoint: str,
@@ -2340,13 +2340,13 @@ def notifications_listen(
             info(f"Unregistered notification URL: {url}")
 
 
-@notifications.command("register")
+@notification.command("register")
 @click.pass_context
 @click.argument("url", required=False, default=None, type=str)
 @option_autocompose_url
 @option_endpoint
 @option_port
-def notifications_register(
+def notification_register(
     ctx: click.Context,
     url: str | None,
     autocompose_url: bool,
@@ -2371,14 +2371,14 @@ def notifications_register(
     info(f"Registered notification URL: {target}")
 
 
-@notifications.command("unregister")
+@notification.command("unregister")
 @click.pass_context
 @click.argument("url", required=False, default=None, type=str)
 @option_all_notifications
 @option_autocompose_url
 @option_endpoint
 @option_port
-def notifications_unregister(
+def notification_unregister(
     ctx: click.Context,
     url: str | None,
     all_notifications: bool,

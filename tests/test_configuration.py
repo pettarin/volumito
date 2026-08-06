@@ -348,24 +348,24 @@ class TestLoadDefaultMap:
         with pytest.raises(click.BadParameter, match="'downloads.track-audio'.*must be a mapping"):
             load_configuration(str(config))
 
-    def test_notifications_listen_unknown_key_raises(self, tmp_path):
+    def test_notification_listen_unknown_key_raises(self, tmp_path):
         """An unrecognized key in the listen subsection raises BadParameter."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("notifications:\n  listen:\n    bogus: 1\n")
+        config.write_text("notification:\n  listen:\n    bogus: 1\n")
 
         with pytest.raises(
-            click.BadParameter, match="unknown key 'bogus' in section 'notifications.listen'"
+            click.BadParameter, match="unknown key 'bogus' in section 'notification.listen'"
         ):
             load_configuration(str(config))
 
-    def test_notifications_listen_key_at_the_section_level_raises(self, tmp_path):
+    def test_notification_listen_key_at_the_section_level_raises(self, tmp_path):
         """A key of the listen subsection is not accepted at the section level."""
         config = tmp_path / "volumito.yaml"
-        config.write_text("notifications:\n  register-url: true\n")
+        config.write_text("notification:\n  register-url: true\n")
 
         with pytest.raises(
             click.BadParameter,
-            match="unknown key 'register-url' in section 'notifications'",
+            match="unknown key 'register-url' in section 'notification'",
         ):
             load_configuration(str(config))
 
@@ -491,7 +491,7 @@ class TestDefaultConfigurationTemplate:
                 "check-seek-position": True,
                 "propagate-remote-exit-code": True,
             },
-            "notifications": {
+            "notification": {
                 "endpoint": "/volumionotifications",
                 "port": 3003,
                 "listen": {
@@ -732,7 +732,7 @@ class TestBuildClickDefaultMap:
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"list": formatting},
-            "notifications": {"list": format_only, "listen": format_only},
+            "notification": {"list": format_only, "listen": format_only},
             "playlist": {"list": format_only},
             "zones": {"list": formatting},
             "system": {
@@ -756,11 +756,11 @@ class TestBuildClickDefaultMap:
             "info": format_only,
         }
 
-    def test_notifications_keys_reach_their_commands(self):
+    def test_notification_keys_reach_their_commands(self):
         """The scalars reach the three subcommands, the listen keys only that one."""
         result = build_click_default_map(
             {
-                "notifications": {
+                "notification": {
                     "endpoint": "/hook",
                     "port": 9000,
                     "listen": {"count": 4, "idle-timeout": 5.0, "register-url": True},
@@ -768,7 +768,7 @@ class TestBuildClickDefaultMap:
             }
         )
 
-        assert result["notifications"] == {
+        assert result["notification"] == {
             "listen": {
                 "endpoint": "/hook",
                 "port": 9000,

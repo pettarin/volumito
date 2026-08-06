@@ -69,8 +69,8 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
-    "notifications-list": FORMAT_KEYS,
-    "notifications-listen": FORMAT_KEYS,
+    "notification-list": FORMAT_KEYS,
+    "notification-listen": FORMAT_KEYS,
     "zones-list": DISPLAY_KEYS,
     "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
@@ -99,11 +99,11 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "collection-statistics": [
         ["collection", "statistics"],
     ],
-    "notifications-list": [
-        ["notifications", "list"],
+    "notification-list": [
+        ["notification", "list"],
     ],
-    "notifications-listen": [
-        ["notifications", "listen"],
+    "notification-listen": [
+        ["notification", "listen"],
     ],
     "playback-status": [
         ["playback", "status"],
@@ -240,25 +240,25 @@ machine-readable, and position-starting-at-one are global; print-resulting-statu
 applies to the playback and queue action commands.
 """
 
-NOTIFICATIONS_KEY_PATHS: dict[str, list[list[str]]] = {
+NOTIFICATION_KEY_PATHS: dict[str, list[list[str]]] = {
     "endpoint": [
-        ["notifications", "listen"],
-        ["notifications", "register"],
-        ["notifications", "unregister"],
+        ["notification", "listen"],
+        ["notification", "register"],
+        ["notification", "unregister"],
     ],
     "port": [
-        ["notifications", "listen"],
-        ["notifications", "register"],
-        ["notifications", "unregister"],
+        ["notification", "listen"],
+        ["notification", "register"],
+        ["notification", "unregister"],
     ],
 }
-"""The scalar keys of the "notifications" section, shared by every subcommand (kept
+"""The scalar keys of the "notification" section, shared by every subcommand (kept
 before the hierarchical spec that references it):
 key -> the default_map path(s) of the command(s) it targets. The endpoint and the
 port describe one local listener, so they are not overridden per subcommand.
 """
 
-NOTIFICATIONS_LISTEN_KEYS: list[str] = [
+NOTIFICATION_LISTEN_KEYS: list[str] = [
     "count",
     "idle-timeout",
     "register-url",
@@ -268,21 +268,21 @@ NOTIFICATIONS_LISTEN_KEYS: list[str] = [
 ]
 """The keys accepted by the "listen" subsection: the options only that command has."""
 
-NOTIFICATIONS_SUBSECTION_KEYS: dict[str, list[str]] = {
-    "listen": NOTIFICATIONS_LISTEN_KEYS,
+NOTIFICATION_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "listen": NOTIFICATION_LISTEN_KEYS,
 }
-"""Each notifications subsection mapped to the keys it accepts."""
+"""Each notification subsection mapped to the keys it accepts."""
 
-NOTIFICATIONS_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+NOTIFICATION_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "listen": [
-        ["notifications", "listen"],
+        ["notification", "listen"],
     ],
 }
-"""Notifications subsection name -> the default_map path(s) of the command it targets."""
+"""Notification subsection name -> the default_map path(s) of the command it targets."""
 
 HIERARCHICAL_SPECS: dict[str, tuple[list[str], dict[str, list[str]]]] = {
     "downloads": (DOWNLOAD_SHARED_KEYS, DOWNLOAD_SUBSECTION_KEYS),
-    "notifications": (list(NOTIFICATIONS_KEY_PATHS), NOTIFICATIONS_SUBSECTION_KEYS),
+    "notification": (list(NOTIFICATION_KEY_PATHS), NOTIFICATION_SUBSECTION_KEYS),
     "output": (OUTPUT_SCALAR_KEYS, DISPLAY_SUBSECTION_KEYS),
 }
 """Per hierarchical section: (allowed shared scalar keys, per-subsection allowed keys).
@@ -349,7 +349,7 @@ Keys mirror the CLI long options minus the leading "--".
 RECOGNIZED_SECTIONS: list[str] = [
     *SECTION_KEYS,
     "downloads",
-    "notifications",
+    "notification",
     "output",
 ]
 """Every recognized top-level section."""
@@ -460,15 +460,15 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
         for command_path in MISCELLANEOUS_KEY_PATHS[key]:
             _assign_nested(result, command_path, _param_name(key), value)
 
-    notifications = config.get("notifications", {})
-    for key, value in notifications.items():
-        if key in NOTIFICATIONS_KEY_PATHS:
-            for command_path in NOTIFICATIONS_KEY_PATHS[key]:
+    notification = config.get("notification", {})
+    for key, value in notification.items():
+        if key in NOTIFICATION_KEY_PATHS:
+            for command_path in NOTIFICATION_KEY_PATHS[key]:
                 _assign_nested(result, command_path, _param_name(key), value)
     # Nothing flows down from the section into the subsection: the shared keys are
     # placed above, and the subsection holds the options of one command only
     _apply_hierarchical(
-        result, {}, notifications, NOTIFICATIONS_SUBSECTION_PATHS, NOTIFICATIONS_SUBSECTION_KEYS
+        result, {}, notification, NOTIFICATION_SUBSECTION_PATHS, NOTIFICATION_SUBSECTION_KEYS
     )
 
     output = config.get("output", {})
@@ -615,16 +615,16 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
             for key in DOWNLOAD_SUBSECTION_KEYS[subsection]
             if key in subvalues
         )
-    notifications = config.get("notifications", {})
+    notification = config.get("notification", {})
     pairs.extend(
-        (f"notifications.{key}", notifications[key])
-        for key in NOTIFICATIONS_KEY_PATHS
-        if key in notifications
+        (f"notification.{key}", notification[key])
+        for key in NOTIFICATION_KEY_PATHS
+        if key in notification
     )
-    for subsection, keys in NOTIFICATIONS_SUBSECTION_KEYS.items():
-        subvalues = notifications.get(subsection, {})
+    for subsection, keys in NOTIFICATION_SUBSECTION_KEYS.items():
+        subvalues = notification.get(subsection, {})
         pairs.extend(
-            (f"notifications.{subsection}.{key}", subvalues[key])
+            (f"notification.{subsection}.{key}", subvalues[key])
             for key in keys
             if key in subvalues
         )

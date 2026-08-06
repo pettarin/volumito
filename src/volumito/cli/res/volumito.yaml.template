@@ -118,7 +118,7 @@ miscellaneous:
   propagate-remote-exit-code: true
 
 
-notifications:
+notification:
   # A key here applies to the listen, register, and unregister commands;
   # the keys of the options only "listen" has are under its own section
 
@@ -154,8 +154,8 @@ output:
   # - collection-browse
   # - collection-search
   # - collection-statistics
-  # - notifications-list
-  # - notifications-listen
+  # - notification-list
+  # - notification-listen
   # - playback-status
   # - playlist-list
   # - queue-list
@@ -215,10 +215,10 @@ output:
   collection-statistics:
     # Add your own overrides here
 
-  notifications-list:
+  notification-list:
     # Add your own overrides here
 
-  notifications-listen:
+  notification-listen:
     # Add your own overrides here
 
   playback-status:

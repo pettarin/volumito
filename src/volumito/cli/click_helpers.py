@@ -1013,7 +1013,7 @@ def option_albums_only(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-a``/``--all`` option to the notifications unregister subcommand."""
+    """Add the ``-a``/``--all`` option to the notification unregister subcommand."""
     return click.option(
         "--all",
         "-a",
@@ -1069,7 +1069,7 @@ def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., 
 
 
 def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-A``/``--autocompose-url`` option to a notifications subcommand."""
+    """Add the ``-A``/``--autocompose-url`` option to a notification subcommand."""
     return click.option(
         "--autocompose-url",
         "-A",
@@ -1111,7 +1111,7 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
 
 
 def option_count(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-n``/``--count`` option to the notifications listen subcommand."""
+    """Add the ``-n``/``--count`` option to the notification listen subcommand."""
     return click.option(
         "--count",
         "-n",
@@ -1145,7 +1145,7 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-e``/``--endpoint`` option to the notifications listen subcommand."""
+    """Add the ``-e``/``--endpoint`` option to the notification listen subcommand."""
     return click.option(
         "--endpoint",
         "-e",
@@ -1207,7 +1207,7 @@ def option_format_table(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--idle-timeout`` option to the notifications listen subcommand."""
+    """Add the ``--idle-timeout`` option to the notification listen subcommand."""
     return click.option(
         "--idle-timeout",
         type=float,
@@ -1345,7 +1345,7 @@ def option_playlists_only(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_port(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-p``/``--port`` option to a notifications subcommand."""
+    """Add the ``-p``/``--port`` option to a notification subcommand."""
     return click.option(
         "--port",
         "-p",
@@ -1424,7 +1424,7 @@ def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url`` option to the notifications listen subcommand."""
+    """Add the ``--register-url`` option to the notification listen subcommand."""
     return click.option(
         "--register-url/--no-register-url",
         default=False,
@@ -1434,7 +1434,7 @@ def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
+    """Add the ``--register-url-full`` option to the notification listen subcommand."""
     return click.option(
         "--register-url-full",
         type=str,
@@ -1512,7 +1512,7 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_timeout(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--timeout`` option to the notifications listen subcommand."""
+    """Add the ``--timeout`` option to the notification listen subcommand."""
     return click.option(
         "--timeout",
         type=float,
@@ -1544,7 +1544,7 @@ def option_tracks_only(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--unregister-url-on-exit`` option to the notifications listen subcommand."""
+    """Add the ``--unregister-url-on-exit`` option to the notification listen subcommand."""
     return click.option(
         "--unregister-url-on-exit/--no-unregister-url-on-exit",
         default=True,

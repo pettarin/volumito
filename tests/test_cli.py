@@ -6677,7 +6677,7 @@ class TestScpCommands:
         assert result.output == ""
 
 
-class TestNotificationsCommands:
+class TestNotificationCommands:
     """Test cases for the notifications list, listen, register, and unregister commands."""
 
     LISTEN_URL = "http://192.168.1.50:3003/volumionotifications"
@@ -6719,8 +6719,8 @@ class TestNotificationsCommands:
         return mock_client
 
     def test_group_help(self, runner: CliRunner):
-        """The notifications group lists its three commands."""
-        result = runner.invoke(main, ["notifications", "--help"])
+        """The notification group lists its three commands."""
+        result = runner.invoke(main, ["notification", "--help"])
 
         assert result.exit_code == 0
         assert "list" in result.output
@@ -6728,10 +6728,10 @@ class TestNotificationsCommands:
         assert "unregister" in result.output
 
     def test_list_default_pretty(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications list prints the URLs as pretty JSON by default."""
+        """notification list prints the URLs as pretty JSON by default."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "list"])
+        result = runner.invoke(main, ["notification", "list"])
 
         assert result.exit_code == 0
         assert json.loads(result.output) == self.URLS
@@ -6739,29 +6739,29 @@ class TestNotificationsCommands:
         assert '\n    "http://192.168.1.100/receiver"' in result.output
 
     def test_list_json_format(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications list -F json prints JSON with 2-space indentation."""
+        """notification list -F json prints JSON with 2-space indentation."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "list", "-F", "json"])
+        result = runner.invoke(main, ["notification", "list", "-F", "json"])
 
         assert result.exit_code == 0
         assert json.loads(result.output) == self.URLS
         assert '\n  "http://192.168.1.100/receiver"' in result.output
 
     def test_list_raw_format(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications list -F raw prints the array as the host returns it."""
+        """notification list -F raw prints the array as the host returns it."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "list", "-F", "raw"])
+        result = runner.invoke(main, ["notification", "list", "-F", "raw"])
 
         assert result.exit_code == 0
         assert result.output.strip() == json.dumps(self.URLS)
 
     def test_list_table_format(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications list -F table prints a numbered list."""
+        """notification list -F table prints a numbered list."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "list", "-F", "table"])
+        result = runner.invoke(main, ["notification", "list", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -6770,16 +6770,16 @@ class TestNotificationsCommands:
         assert "2. http://192.168.1.101/other" in lines
 
     def test_list_empty(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications list reports an empty registration list."""
+        """notification list reports an empty registration list."""
         self._mock_client(mocker, urls=[])
 
-        result = runner.invoke(main, ["notifications", "list", "-F", "table"])
+        result = runner.invoke(main, ["notification", "list", "-F", "table"])
 
         assert result.exit_code == 0
         assert "(empty)" in result.output
 
     def test_list_connection_error(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications list exits 1 when the host cannot be reached."""
+        """notification list exits 1 when the host cannot be reached."""
         mock_client = mocker.Mock()
         _attach_property(
             mock_client, "notifications", side_effect=VolumioConnectionError("Connection failed")
@@ -6789,16 +6789,16 @@ class TestNotificationsCommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["notifications", "list"])
+        result = runner.invoke(main, ["notification", "list"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
 
     def test_register(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications register registers the URL and names it."""
+        """notification register registers the URL and names it."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
+        result = runner.invoke(main, ["notification", "register", self.URLS[0]])
 
         assert result.exit_code == 0
         assert result.output.strip() == f"[INFO] Registered notification URL: {self.URLS[0]}"
@@ -6811,7 +6811,7 @@ class TestNotificationsCommands:
             "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
         )
 
-        result = runner.invoke(main, ["notifications", "register", "--autocompose-url"])
+        result = runner.invoke(main, ["notification", "register", "--autocompose-url"])
 
         assert result.exit_code == 0
         assert result.output.strip() == f"[INFO] Registered notification URL: {self.LISTEN_URL}"
@@ -6828,7 +6828,7 @@ class TestNotificationsCommands:
         )
 
         result = runner.invoke(
-            main, ["notifications", "register", "-A", "-p", "9000", "-e", "/hook"]
+            main, ["notification", "register", "-A", "-p", "9000", "-e", "/hook"]
         )
 
         assert result.exit_code == 0
@@ -6839,7 +6839,7 @@ class TestNotificationsCommands:
         mock_client = self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["notifications", "register", "--autocompose-url", self.URLS[0]]
+            main, ["notification", "register", "--autocompose-url", self.URLS[0]]
         )
 
         assert result.exit_code == 2
@@ -6850,7 +6850,7 @@ class TestNotificationsCommands:
         """Without a URL and without --autocompose-url, the command says what it expects."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "register"])
+        result = runner.invoke(main, ["notification", "register"])
 
         assert result.exit_code == 2
         assert "Expected a URL argument, or the -A/--autocompose-url option." in result.output
@@ -6863,17 +6863,17 @@ class TestNotificationsCommands:
         self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["notifications", "register", "-A", "-e", "volumionotifications"]
+            main, ["notification", "register", "-A", "-e", "volumionotifications"]
         )
 
         assert result.exit_code == 2
         assert "The endpoint must start with a slash." in result.output
 
     def test_register_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications register prints nothing in machine-readable mode."""
+        """notification register prints nothing in machine-readable mode."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "notifications", "register", self.URLS[0]])
+        result = runner.invoke(main, ["-m", "notification", "register", self.URLS[0]])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -6883,7 +6883,7 @@ class TestNotificationsCommands:
         """A refused registration exits 1, reporting what the host said."""
         self._mock_client(mocker, response={"error": "Missing URL parameter"})
 
-        result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
+        result = runner.invoke(main, ["notification", "register", self.URLS[0]])
 
         assert result.exit_code == 1
         assert (
@@ -6895,7 +6895,7 @@ class TestNotificationsCommands:
         """A registration denied without an error message is still reported."""
         self._mock_client(mocker, response={"success": False})
 
-        result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
+        result = runner.invoke(main, ["notification", "register", self.URLS[0]])
 
         assert result.exit_code == 1
         assert (
@@ -6907,16 +6907,16 @@ class TestNotificationsCommands:
         """A refused registration prints nothing in machine-readable mode."""
         self._mock_client(mocker, response={"success": False})
 
-        result = runner.invoke(main, ["-m", "notifications", "register", self.URLS[0]])
+        result = runner.invoke(main, ["-m", "notification", "register", self.URLS[0]])
 
         assert result.exit_code == 1
         assert result.output == ""
 
     def test_unregister(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications unregister unregisters the URL and names it."""
+        """notification unregister unregisters the URL and names it."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "unregister", self.URLS[1]])
+        result = runner.invoke(main, ["notification", "unregister", self.URLS[1]])
 
         assert result.exit_code == 0
         assert result.output.strip() == f"[INFO] Unregistered notification URL: {self.URLS[1]}"
@@ -6926,7 +6926,7 @@ class TestNotificationsCommands:
         """Unregistering a URL the host does not know exits 1, reporting its error."""
         self._mock_client(mocker, response={"error": "No such URL is present"})
 
-        result = runner.invoke(main, ["notifications", "unregister", self.URLS[1]])
+        result = runner.invoke(main, ["notification", "unregister", self.URLS[1]])
 
         assert result.exit_code == 1
         assert (
@@ -6935,10 +6935,10 @@ class TestNotificationsCommands:
         )
 
     def test_unregister_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications unregister prints nothing in machine-readable mode."""
+        """notification unregister prints nothing in machine-readable mode."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "notifications", "unregister", self.URLS[1]])
+        result = runner.invoke(main, ["-m", "notification", "unregister", self.URLS[1]])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -6967,11 +6967,11 @@ class TestNotificationsCommands:
         return fake
 
     def test_listen_prints_the_notifications(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications listen prints each notification as pretty JSON by default."""
+        """notification listen prints each notification as pretty JSON by default."""
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, self.NOTIFICATIONS)
 
-        result = runner.invoke(main, ["notifications", "listen"])
+        result = runner.invoke(main, ["notification", "listen"])
 
         assert result.exit_code == 0
         lines = result.output.splitlines()
@@ -6984,31 +6984,31 @@ class TestNotificationsCommands:
         assert '"item": "queue"' in result.output
 
     def test_listen_json_format(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications listen -F json prints JSON with 2-space indentation."""
+        """notification listen -F json prints JSON with 2-space indentation."""
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, self.NOTIFICATIONS[:1])
 
-        result = runner.invoke(main, ["notifications", "listen", "-F", "json"])
+        result = runner.invoke(main, ["notification", "listen", "-F", "json"])
 
         assert result.exit_code == 0
         assert '\n  "item": "state"' in result.output
 
     def test_listen_raw_format(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications listen -F raw prints each payload as the host sent it."""
+        """notification listen -F raw prints each payload as the host sent it."""
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, self.NOTIFICATIONS[:1])
 
-        result = runner.invoke(main, ["notifications", "listen", "-F", "raw"])
+        result = runner.invoke(main, ["notification", "listen", "-F", "raw"])
 
         assert result.exit_code == 0
         assert json.dumps(self.NOTIFICATIONS[0]) in result.output
 
     def test_listen_table_format(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications listen -F table prints one line per notification."""
+        """notification listen -F table prints one line per notification."""
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, self.NOTIFICATIONS)
 
-        result = runner.invoke(main, ["notifications", "listen", "-F", "table"])
+        result = runner.invoke(main, ["notification", "listen", "-F", "table"])
         # The notification lines start with their [timestamp]; the [INFO] lines do not count
         lines = [line for line in result.output.splitlines() if line.startswith("[2")]
 
@@ -7028,7 +7028,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, self.NOTIFICATIONS)
 
-        result = runner.invoke(main, ["-m", "notifications", "listen"])
+        result = runner.invoke(main, ["-m", "notification", "listen"])
 
         assert result.exit_code == 0
         assert result.output.splitlines() == [
@@ -7040,7 +7040,7 @@ class TestNotificationsCommands:
         mock_client = self._mock_client(mocker, urls=[])
         self._mock_listener(mocker)
 
-        result = runner.invoke(main, ["notifications", "listen"])
+        result = runner.invoke(main, ["notification", "listen"])
 
         assert result.exit_code == 1
         assert (
@@ -7056,7 +7056,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[])
         self._mock_listener(mocker)
 
-        result = runner.invoke(main, ["-m", "notifications", "listen"])
+        result = runner.invoke(main, ["-m", "notification", "listen"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -7066,7 +7066,7 @@ class TestNotificationsCommands:
         mock_client = self._mock_client(mocker, urls=[])
         self._mock_listener(mocker, self.NOTIFICATIONS[:1])
 
-        result = runner.invoke(main, ["notifications", "listen", "--register-url"])
+        result = runner.invoke(main, ["notification", "listen", "--register-url"])
 
         assert result.exit_code == 0
         assert f"Registered notification URL: {self.LISTEN_URL}" in result.output
@@ -7081,7 +7081,7 @@ class TestNotificationsCommands:
 
         result = runner.invoke(
             main,
-            ["notifications", "listen", "--register-url", "--no-unregister-url-on-exit"],
+            ["notification", "listen", "--register-url", "--no-unregister-url-on-exit"],
         )
 
         assert result.exit_code == 0
@@ -7095,7 +7095,7 @@ class TestNotificationsCommands:
         mock_client = self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, self.NOTIFICATIONS[:1])
 
-        result = runner.invoke(main, ["notifications", "listen"])
+        result = runner.invoke(main, ["notification", "listen"])
 
         assert result.exit_code == 0
         mock_client.register_notification.assert_not_called()
@@ -7113,7 +7113,7 @@ class TestNotificationsCommands:
         mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
 
         result = runner.invoke(
-            main, ["notifications", "listen", "--register-url-full", advertised]
+            main, ["notification", "listen", "--register-url-full", advertised]
         )
 
         assert result.exit_code == 0
@@ -7124,7 +7124,7 @@ class TestNotificationsCommands:
         """An endpoint without a leading slash is a usage error."""
         self._mock_client(mocker, urls=[self.LISTEN_URL])
 
-        result = runner.invoke(main, ["notifications", "listen", "-e", "notifications"])
+        result = runner.invoke(main, ["notification", "listen", "-e", "notifications"])
 
         assert result.exit_code == 2
         assert "The endpoint must start with a slash." in result.output
@@ -7134,7 +7134,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, start_error=OSError("Address already in use"))
 
-        result = runner.invoke(main, ["notifications", "listen", "-p", "80"])
+        result = runner.invoke(main, ["notification", "listen", "-p", "80"])
 
         assert result.exit_code == 1
         assert "Cannot listen on port 80: Address already in use" in result.output
@@ -7144,7 +7144,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker, start_error=OSError("Address already in use"))
 
-        result = runner.invoke(main, ["-m", "notifications", "listen", "-p", "80"])
+        result = runner.invoke(main, ["-m", "notification", "listen", "-p", "80"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -7155,7 +7155,7 @@ class TestNotificationsCommands:
 
         self._mock_client(mocker, urls=[self.LISTEN_URL])
 
-        result = runner.invoke(main, ["notifications", "listen"])
+        result = runner.invoke(main, ["notification", "listen"])
 
         assert result.exit_code == 0
         fake.stop.assert_called_once()
@@ -7166,7 +7166,7 @@ class TestNotificationsCommands:
         fake = self._mock_listener(mocker, self.NOTIFICATIONS)
 
         result = runner.invoke(
-            main, ["notifications", "listen", "-n", "2", "--timeout", "30"]
+            main, ["notification", "listen", "-n", "2", "--timeout", "30"]
         )
 
         assert result.exit_code == 0
@@ -7182,7 +7182,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker)
 
-        result = runner.invoke(main, ["notifications", "listen", "--timeout", "2"])
+        result = runner.invoke(main, ["notification", "listen", "--timeout", "2"])
 
         assert result.exit_code == 0
         assert "Timed out after 2 seconds" in result.output
@@ -7192,7 +7192,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         fake = self._mock_listener(mocker, idle_timed_out=True)
 
-        result = runner.invoke(main, ["notifications", "listen", "--idle-timeout", "1.5"])
+        result = runner.invoke(main, ["notification", "listen", "--idle-timeout", "1.5"])
 
         assert result.exit_code == 0
         assert "Timed out after 1.5 seconds without notifications" in result.output
@@ -7206,7 +7206,7 @@ class TestNotificationsCommands:
         self._mock_listener(mocker, idle_timed_out=True)
 
         result = runner.invoke(
-            main, ["notifications", "listen", "--timeout", "60", "--idle-timeout", "3"]
+            main, ["notification", "listen", "--timeout", "60", "--idle-timeout", "3"]
         )
 
         assert result.exit_code == 0
@@ -7220,7 +7220,7 @@ class TestNotificationsCommands:
         self._mock_listener(mocker, self.NOTIFICATIONS[:1])
 
         result = runner.invoke(
-            main, ["notifications", "listen", "-n", "3", "--timeout", "2"]
+            main, ["notification", "listen", "-n", "3", "--timeout", "2"]
         )
 
         assert result.exit_code == 1
@@ -7231,7 +7231,7 @@ class TestNotificationsCommands:
         self._mock_client(mocker, urls=[self.LISTEN_URL])
         self._mock_listener(mocker)
 
-        result = runner.invoke(main, ["-m", "notifications", "listen", "--timeout", "2"])
+        result = runner.invoke(main, ["-m", "notification", "listen", "--timeout", "2"])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -7243,7 +7243,7 @@ class TestNotificationsCommands:
             "volumito.cli.volumito.receiver_url", return_value=self.LISTEN_URL
         )
 
-        result = runner.invoke(main, ["notifications", "unregister", "--autocompose-url"])
+        result = runner.invoke(main, ["notification", "unregister", "--autocompose-url"])
 
         assert result.exit_code == 0
         assert result.output.strip() == f"[INFO] Unregistered notification URL: {self.LISTEN_URL}"
@@ -7260,7 +7260,7 @@ class TestNotificationsCommands:
         )
 
         result = runner.invoke(
-            main, ["notifications", "unregister", "-A", "-p", "9000", "-e", "/hook"]
+            main, ["notification", "unregister", "-A", "-p", "9000", "-e", "/hook"]
         )
 
         assert result.exit_code == 0
@@ -7271,7 +7271,7 @@ class TestNotificationsCommands:
         mock_client = self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["notifications", "unregister", "--autocompose-url", "--all"]
+            main, ["notification", "unregister", "--autocompose-url", "--all"]
         )
 
         assert result.exit_code == 2
@@ -7279,10 +7279,10 @@ class TestNotificationsCommands:
         mock_client.unregister_notification.assert_not_called()
 
     def test_unregister_all(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications unregister --all unregisters every registered URL."""
+        """notification unregister --all unregisters every registered URL."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "unregister", "--all"])
+        result = runner.invoke(main, ["notification", "unregister", "--all"])
 
         assert result.exit_code == 0
         assert result.output.splitlines() == [
@@ -7296,7 +7296,7 @@ class TestNotificationsCommands:
         """The -a shorthand selects every registered URL as well."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "unregister", "-a"])
+        result = runner.invoke(main, ["notification", "unregister", "-a"])
 
         assert result.exit_code == 0
         assert mock_client.unregister_notification.call_count == len(self.URLS)
@@ -7304,10 +7304,10 @@ class TestNotificationsCommands:
     def test_unregister_all_without_registered_urls(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """notifications unregister --all reports that there is nothing to unregister."""
+        """notification unregister --all reports that there is nothing to unregister."""
         mock_client = self._mock_client(mocker, urls=[])
 
-        result = runner.invoke(main, ["notifications", "unregister", "--all"])
+        result = runner.invoke(main, ["notification", "unregister", "--all"])
 
         assert result.exit_code == 0
         assert "No notification URL is registered, nothing to unregister" in result.output
@@ -7319,16 +7319,16 @@ class TestNotificationsCommands:
         """The nothing-to-unregister message is suppressed in machine-readable mode."""
         self._mock_client(mocker, urls=[])
 
-        result = runner.invoke(main, ["-m", "notifications", "unregister", "--all"])
+        result = runner.invoke(main, ["-m", "notification", "unregister", "--all"])
 
         assert result.exit_code == 0
         assert result.output == ""
 
     def test_unregister_all_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
-        """notifications unregister --all prints nothing in machine-readable mode."""
+        """notification unregister --all prints nothing in machine-readable mode."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "notifications", "unregister", "--all"])
+        result = runner.invoke(main, ["-m", "notification", "unregister", "--all"])
 
         assert result.exit_code == 0
         assert result.output == ""
@@ -7342,7 +7342,7 @@ class TestNotificationsCommands:
             SuccessResponse.from_raw({"error": "No such URL is present"}),
         ]
 
-        result = runner.invoke(main, ["notifications", "unregister", "--all"])
+        result = runner.invoke(main, ["notification", "unregister", "--all"])
 
         assert result.exit_code == 1
         assert f"Unregistered notification URL: {self.URLS[0]}" in result.output
@@ -7355,7 +7355,7 @@ class TestNotificationsCommands:
         """A URL cannot be combined with --all."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "unregister", "--all", self.URLS[0]])
+        result = runner.invoke(main, ["notification", "unregister", "--all", self.URLS[0]])
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
@@ -7365,7 +7365,7 @@ class TestNotificationsCommands:
         """Without a URL and without --all, the command reports what it expects."""
         mock_client = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["notifications", "unregister"])
+        result = runner.invoke(main, ["notification", "unregister"])
 
         assert result.exit_code == 2
         assert (
@@ -11500,26 +11500,26 @@ class TestConfigurationFile:
         assert "Volumio Playlists" in result.output
         assert "1. Rock" in result.output
 
-    def test_output_subsection_sets_format_for_notifications_list(
+    def test_output_subsection_sets_format_for_notification_list(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The notifications-list subsection sets the format of the command."""
+        """The notification-list subsection sets the format of the command."""
         mock_client = self._mock_rest_client(mocker)
         _attach_property(mock_client, "notifications", return_value=["http://host/receiver"])
         config = self._write_config(
-            tmp_path, "output:\n  format: json\n  notifications-list:\n    format: table\n"
+            tmp_path, "output:\n  format: json\n  notification-list:\n    format: table\n"
         )
 
-        result = runner.invoke(main, ["-c", config, "notifications", "list"])
+        result = runner.invoke(main, ["-c", config, "notification", "list"])
 
         assert result.exit_code == 0
         assert "Volumio Notification URLs" in result.output
         assert "1. http://host/receiver" in result.output
 
-    def test_output_subsection_sets_format_for_notifications_listen(
+    def test_output_subsection_sets_format_for_notification_listen(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The notifications-listen subsection sets the format of the command."""
+        """The notification-listen subsection sets the format of the command."""
         mock_client = self._mock_rest_client(mocker)
         _attach_property(mock_client, "notifications", return_value=["http://host/receiver"])
         fake = mocker.Mock()
@@ -11527,18 +11527,18 @@ class TestConfigurationFile:
         mocker.patch("volumito.cli.volumito.NotificationListener", return_value=fake)
         mocker.patch("volumito.cli.volumito.receiver_url", return_value="http://host/receiver")
         config = self._write_config(
-            tmp_path, "output:\n  format: json\n  notifications-listen:\n    format: table\n"
+            tmp_path, "output:\n  format: json\n  notification-listen:\n    format: table\n"
         )
 
-        result = runner.invoke(main, ["-c", config, "notifications", "listen"])
+        result = runner.invoke(main, ["-c", config, "notification", "listen"])
 
         assert result.exit_code == 0
         assert "] state" in result.output
 
-    def test_notifications_section_configures_the_listener(
+    def test_notification_section_configures_the_listener(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """The notifications section configures the notifications listen command."""
+        """The notification section configures the notification listen command."""
         advertised = "http://receiver.lan:9000/hook"
         mock_client = self._mock_rest_client(mocker)
         _attach_property(mock_client, "notifications", return_value=[])
@@ -11556,7 +11556,7 @@ class TestConfigurationFile:
         )
         config = self._write_config(
             tmp_path,
-            "notifications:\n"
+            "notification:\n"
             "  endpoint: /hook\n"
             "  port: 9000\n"
             "  listen:\n"
@@ -11568,7 +11568,7 @@ class TestConfigurationFile:
             "    unregister-url-on-exit: false\n",
         )
 
-        result = runner.invoke(main, ["-c", config, "notifications", "listen"])
+        result = runner.invoke(main, ["-c", config, "notification", "listen"])
 
         assert result.exit_code == 0
         assert advertised in result.output
@@ -11577,7 +11577,7 @@ class TestConfigurationFile:
         mock_client.register_notification.assert_called_once_with(advertised)
         mock_client.unregister_notification.assert_not_called()
 
-    def test_notifications_section_configures_register_and_unregister(
+    def test_notification_section_configures_register_and_unregister(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
         """The port and the endpoint of the notifications section reach the two commands."""
@@ -11589,11 +11589,11 @@ class TestConfigurationFile:
             "volumito.cli.volumito.receiver_url", return_value="http://receiver.lan:9000/hook"
         )
         config = self._write_config(
-            tmp_path, "notifications:\n  endpoint: /hook\n  port: 9000\n"
+            tmp_path, "notification:\n  endpoint: /hook\n  port: 9000\n"
         )
 
         for command in ("register", "unregister"):
-            result = runner.invoke(main, ["-c", config, "notifications", command, "-A"])
+            result = runner.invoke(main, ["-c", config, "notification", command, "-A"])
 
             assert result.exit_code == 0
             assert composed.call_args.args[1:] == (9000, "/hook")
@@ -12085,7 +12085,7 @@ class TestConfigurationCommands:
                     "check-seek-position": True,
                     "propagate-remote-exit-code": True,
                 },
-                "notifications": {
+                "notification": {
                     "endpoint": "/volumionotifications",
                     "port": 3003,
                     "listen": {
@@ -12110,8 +12110,8 @@ class TestConfigurationCommands:
                     "collection-browse": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-statistics": None,
-                    "notifications-list": None,
-                    "notifications-listen": None,
+                    "notification-list": None,
+                    "notification-listen": None,
                     "playback-status": None,
                     "playlist-list": None,
                     "queue-list": None,
