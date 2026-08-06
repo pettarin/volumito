@@ -10696,8 +10696,8 @@ class TestQueueNavigationFlags:
         """Create a CliRunner instance."""
         return CliRunner()
 
-    def _mock_client(self, mocker: MockerFixture, name: str, value: bool):
-        """Mock VolumioRESTAPIClient whose named flag property returns value."""
+    def _mock_client(self, mocker: MockerFixture, name: str, value: object):
+        """Mock VolumioRESTAPIClient whose named property returns value."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, name, return_value=value)
         mocker.patch(
@@ -10731,6 +10731,58 @@ class TestQueueNavigationFlags:
 
         assert result.exit_code == 0
         assert result.output.strip() == "true"
+
+    _QUEUE_STATUS = {
+        "has_next": True,
+        "has_previous": False,
+        "length": 13,
+        "position": 0,
+    }
+
+    def test_queue_status_prints_the_dict(self, runner: CliRunner, mocker: MockerFixture):
+        """queue status prints the navigation state read from the client."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["queue", "status"])
+
+        assert result.exit_code == 0
+        # The pretty format displays the position per the one-based convention
+        assert json.loads(result.output) == {**self._QUEUE_STATUS, "position": 1}
+
+    def test_queue_status_format_table(self, runner: CliRunner, mocker: MockerFixture):
+        """The table format shows the heading and the one-based displayed position."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["queue", "status", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Queue Status" in result.output
+        assert "Position            : 1" in result.output
+        assert "Length              : 13" in result.output
+
+    def test_queue_status_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """In machine-readable mode queue status prints the compact JSON object."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["-m", "queue", "status"])
+
+        assert result.exit_code == 0
+        assert result.output == (
+            '{"has_next": true, "has_previous": false, "length": 13, "position": 0}\n'
+        )
+
+    def test_queue_status_format_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The queue-status subsection of the configuration sets the default format."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  queue-status:\n    format: table\n")
+
+        result = runner.invoke(main, ["-c", str(config), "queue", "status"])
+
+        assert result.exit_code == 0
+        assert "Volumio Queue Status" in result.output
 
 
 class TestQueueReplace:
@@ -12593,6 +12645,7 @@ class TestConfigurationCommands:
                     "playback-status": None,
                     "playlist-list": None,
                     "queue-list": None,
+                    "queue-status": None,
                     "story-album": None,
                     "story-artist": None,
                     "story-credits": None,

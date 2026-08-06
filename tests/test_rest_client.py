@@ -226,6 +226,12 @@ class TestVolumioRESTAPIClient:
             has_previous
         )
         assert self._client_with_queue_position(mocker, position, count).has_next is has_next
+        assert self._client_with_queue_position(mocker, position, count).queue_status == {
+            "has_next": has_next,
+            "has_previous": has_previous,
+            "length": count,
+            "position": position,
+        }
 
     def test_state_success(self, mocker: MockerFixture):
         """Test successful state property access."""

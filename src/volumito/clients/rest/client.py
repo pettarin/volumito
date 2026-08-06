@@ -322,6 +322,20 @@ class VolumioRESTAPIClient(VolumioBaseClient):
         )
         return items or None
 
+    def _queue_position_and_count(self) -> tuple[int | None, int]:
+        """Return the current queue position and the number of queued tracks.
+
+        Performs two HTTP requests (reading the playback state and the queue).
+
+        Returns:
+            The 0-based position of the current track (None without one) and the
+            number of tracks in the queue
+        """
+        position = self.state.position
+        count = len(self.queue)
+        self._log_debug(f"Current position: {position}, queue length: {count}")
+        return position, count
+
     def _request(
         self,
         send: Callable[..., requests.Response],
@@ -713,10 +727,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        position = self.state.position
-        count = len(self.queue)
-        self._log_debug(f"Current position: {position}, queue length: {count}")
-        return position is not None and position < count - 1
+        return bool(self.queue_status["has_next"])
 
     @property
     def has_previous(self) -> bool:
@@ -734,10 +745,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        position = self.state.position
-        count = len(self.queue)
-        self._log_debug(f"Current position: {position}, queue length: {count}")
-        return position is not None and count > 0 and position > 0
+        return bool(self.queue_status["has_previous"])
 
     def increase_volume(self) -> CommandResponse:
         """Increase the playback volume by one step.
@@ -990,6 +998,31 @@ class VolumioRESTAPIClient(VolumioBaseClient):
             VolumioAPIError: If the API returns an error response
         """
         return Queue.from_raw(self._get_json("/api/v1/getQueue"))
+
+    @property
+    def queue_status(self) -> dict[str, Any]:
+        """The navigation state of the queue, as a small mapping.
+
+        The keys are ``has_next`` and ``has_previous`` (whether the current track
+        has a neighbor in the queue), ``length`` (the number of queued tracks), and
+        ``position`` (the 0-based index of the current track, None without one).
+        Each access performs fresh HTTP requests (reading the playback state and
+        the queue).
+
+        Returns:
+            The navigation state of the queue
+
+        Raises:
+            VolumioConnectionError: If connection to the Volumio instance fails
+            VolumioAPIError: If the API returns an error response
+        """
+        position, count = self._queue_position_and_count()
+        return {
+            "has_next": position is not None and position < count - 1,
+            "has_previous": position is not None and count > 0 and position > 0,
+            "length": count,
+            "position": position,
+        }
 
     def randomize(self, value: bool | None = None) -> CommandResponse:
         """Set or toggle the random (shuffle) mode.

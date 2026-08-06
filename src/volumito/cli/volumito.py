@@ -1085,6 +1085,15 @@ def queue_has_previous(ctx: click.Context) -> None:
     click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
 
 
+@queue.command("status")
+@click.pass_context
+@option_format
+def queue_status(ctx: click.Context, output_format: str) -> None:
+    """Print the position, the length, and the neighbor flags of the queue."""
+    status = fetch_or_exit(ctx, lambda c: c.queue_status)
+    render_payload(ctx, status, output_format, "Volumio Queue Status")
+
+
 @queue.command("list")
 @click.pass_context
 @option_fields
