@@ -4,6 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import logging
 from types import TracebackType
 from typing import Any
 
@@ -20,15 +21,19 @@ class VolumioMPDClient:
         self,
         host_configuration: VolumioHostConfiguration,
         timeout: float = 5.0,
+        logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the MPD client.
 
         Args:
             host_configuration: The host configuration (scheme, host, and ports)
             timeout: Connection timeout in seconds (default: 5.0)
+            logger: The logger the client writes to; without one, the client logs
+                under its own name in the ``volumito`` hierarchy
         """
         self.host_configuration = host_configuration
         self.timeout = timeout
+        self.logger = logger if logger is not None else logging.getLogger(__name__)
         self._client = MPDClient()
         self._client.timeout = timeout
         self._connected = False

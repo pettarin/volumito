@@ -104,7 +104,7 @@ from volumito.cli.configuration import (
     probe_configuration_paths,
     resolve_configuration_path,
 )
-from volumito.cli.console import debug, error, info, setup_console
+from volumito.cli.console import LOGGER, debug, error, info, setup_console
 from volumito.cli.constants import (
     BROWSE_KINDS_ERROR,
     DEFAULT_VOLUMIO_VERSION,
@@ -861,7 +861,7 @@ def audio(
         )
 
         # Connect to MPD to get current track URI
-        with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
+        with VolumioMPDClient(host_configuration, mpd_timeout, LOGGER) as mpd_client:
             debug("Successfully connected to MPD")
 
             # Get track URI with localhost replaced
@@ -1293,7 +1293,7 @@ def queue_download(
         downloaded_covers: dict[str, str] = {}
         album_volumes = queue_album_volumes(tracks, replace_characters_in_file_names_with)
         client.stop()
-        with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
+        with VolumioMPDClient(host_configuration, mpd_timeout, LOGGER) as mpd_client:
             for index, entry in enumerate(entries):
                 if index not in selected:
                     continue

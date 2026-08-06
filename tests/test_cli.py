@@ -24,8 +24,10 @@ from volumito.cli.click_helpers import (
     SchemeParamType,
     SeekParamType,
     VolumeParamType,
+    create_client,
     render_output_filename,
 )
+from volumito.cli.console import LOGGER
 from volumito.cli.constants import (
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -73,6 +75,7 @@ from volumito.clients import (
     Place,
     RemoteCommandResult,
     SearchResults,
+    VolumioHostConfiguration,
 )
 from volumito.clients.errors import VolumioSCPError, VolumioSSHError
 from volumito.clients.models import (
@@ -1507,6 +1510,16 @@ class TestSchemeParamType:
     def test_metavar_lists_the_schemes(self):
         """The --help metavar lists the accepted schemes."""
         assert SchemeParamType().get_metavar(None, None) == "[http|https]"
+
+
+class TestCreateClient:
+    """Test cases for the create_client helper."""
+
+    def test_the_client_logs_to_the_cli_console(self):
+        """The clients the CLI builds write to the logger of the console."""
+        client = create_client(VolumioHostConfiguration(), 5.0)
+
+        assert client.logger is LOGGER
 
 
 class TestCLICommands:
@@ -5278,7 +5291,7 @@ class TestCollectionBrowse:
         )
 
         assert result.exit_code == 0
-        assert mock_class.call_args.args[1:] == (5.0, 120.0)
+        assert mock_class.call_args.args[1:] == (5.0, 120.0, LOGGER)
 
     def test_the_short_uri_flag_of_the_search_is_not_taken(
         self, runner: CliRunner, mocker: MockerFixture
@@ -10397,7 +10410,7 @@ class TestQueueReplace:
         )
 
         assert result.exit_code == 0
-        assert mock_class.call_args.args[1:] == (5.0, 120.0)
+        assert mock_class.call_args.args[1:] == (5.0, 120.0, LOGGER)
 
     def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A host that cannot be reached exits 1."""

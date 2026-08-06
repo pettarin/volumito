@@ -25,7 +25,7 @@ from volumito.cli.configuration import (
     load_configuration,
     resolve_configuration_path,
 )
-from volumito.cli.console import debug, error, info, warning
+from volumito.cli.console import LOGGER, debug, error, info, warning
 from volumito.cli.constants import (
     DEFAULT_MANIFEST_FILE,
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
@@ -432,9 +432,9 @@ def create_client(
             can take long, like replacing the queue
 
     Returns:
-        A configured VolumioRESTAPIClient instance
+        A configured VolumioRESTAPIClient instance, logging to the CLI console
     """
-    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints)
+    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints, LOGGER)
 
 
 def download_queue_albumart(

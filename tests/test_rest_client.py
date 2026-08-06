@@ -4,6 +4,8 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import logging
+
 import pytest
 import requests
 from pytest_mock import MockerFixture
@@ -53,6 +55,20 @@ class TestVolumioRESTAPIClient:
         )
 
         assert client.timeout == 10.0
+
+    def test_init_default_logger(self):
+        """Without a logger, the client logs under its own name in the volumito hierarchy."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        assert client.logger.name == "volumito.clients.rest.client"
+
+    def test_init_custom_logger(self):
+        """A passed logger is stored as given."""
+        logger = logging.getLogger("test.rest.custom")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
+
+        assert client.logger is logger
 
     def test_state_success(self, mocker: MockerFixture):
         """Test successful state property access."""

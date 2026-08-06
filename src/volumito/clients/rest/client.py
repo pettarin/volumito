@@ -5,6 +5,7 @@
 """
 
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
@@ -59,6 +60,7 @@ class VolumioRESTAPIClient:
         host_configuration: VolumioHostConfiguration,
         timeout: float = 5.0,
         timeout_slow_endpoints: float = 60.0,
+        logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the Volumio client.
 
@@ -67,10 +69,13 @@ class VolumioRESTAPIClient:
             timeout: Request timeout in seconds (default: 5.0)
             timeout_slow_endpoints: Request timeout, in seconds, for the endpoints
                 that can take long, like replacing the queue (default: 60.0)
+            logger: The logger the client writes to; without one, the client logs
+                under its own name in the ``volumito`` hierarchy
         """
         self.host_configuration = host_configuration
         self.timeout = timeout
         self.timeout_slow_endpoints = timeout_slow_endpoints
+        self.logger = logger if logger is not None else logging.getLogger(__name__)
 
     def _delete_json(
         self, path: str, payload: dict[str, Any] | None = None
