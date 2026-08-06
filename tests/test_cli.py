@@ -1585,14 +1585,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.43" in result.output
+        assert "volumito, version 0.0.44" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.43"'
+        assert result.output.strip() == '"0.0.44"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1601,7 +1601,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.43"'
+        assert result.output.strip() == '"0.0.44"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3294,7 +3294,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
 
         assert result.exit_code == 1
-        assert "already exists" in result.output
+        assert 'File already exists: "/tmp/track.flac"' in result.output
         # Nothing is downloaded or written
         mock_get.assert_not_called()
         mock_open.assert_not_called()
@@ -4203,7 +4203,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/cover.jpg"])
 
         assert result.exit_code == 1
-        assert "already exists" in result.output
+        assert 'File already exists: "/tmp/cover.jpg"' in result.output
         # Nothing is downloaded or written
         mock_get.assert_not_called()
         mock_open.assert_not_called()
@@ -8870,7 +8870,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "(kept)" in result.output
+        assert f'"{tmp_path / "a.flac"}" (kept)' in result.output
         assert "Downloaded 1, skipped 0, errors 0" in result.output
         assert f'Reading manifest file "{manifest}"' in result.output
         client.stop.assert_not_called()
@@ -12456,7 +12456,7 @@ class TestConfigurationCommands:
         result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 1
-        assert "already exists" in result.output
+        assert f'File already exists: "{target}"' in result.output
         assert target.read_text() == "old\n"
 
     def test_create_overwrite(self, runner: CliRunner, tmp_path):

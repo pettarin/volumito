@@ -678,7 +678,7 @@ def download_uri_to(
 
     if not overwrite and os.path.exists(destination):
         error(
-            f"File already exists: {destination} "
+            f'File already exists: "{destination}" '
             "(use --overwrite-existing-files to overwrite)"
         )
         sys.exit(1)

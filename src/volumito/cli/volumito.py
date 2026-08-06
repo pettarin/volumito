@@ -454,7 +454,7 @@ def configuration_create(
 
     if not overwrite_existing_files and os.path.exists(destination):
         error(
-            f"File already exists: {destination} "
+            f'File already exists: "{destination}" '
             "(use --overwrite-existing-files to overwrite)"
         )
         sys.exit(1)
@@ -1223,7 +1223,7 @@ def queue_download(
                 sys.exit(1)
             if not manifest_matches_queue(existing["tracks"], tracks):
                 error(
-                    f"The manifest file {log_path} does not match the current queue"
+                    f'The manifest file "{log_path}" does not match the current queue'
                 )
                 sys.exit(1)
             info(f'Reading manifest file "{log_path}"')
@@ -1319,7 +1319,7 @@ def queue_download(
                 if entry.get("status") in ("downloaded", "skipped"):
                     info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                        f"{entry.get('output_file_path')} (kept)"
+                        f"\"{entry.get('output_file_path')}\" (kept)"
                     )
                     continue
                 destination: str | None = None
