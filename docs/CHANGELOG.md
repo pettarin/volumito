@@ -13,9 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Commands `queue has_previous` and `queue has_next`, printing whether the current track
   has a previous or a next track in the queue
 - Read-only properties `has_previous` and `has_next` on the REST API client
-- Command `queue status`, printing the position, the length, and the neighbor flags of
-  the queue
+- Command `queue status`, printing the current track with the position, the length, and
+  the neighbor flags of the queue, honoring the usual fields and format options
 - Read-only property `queue_status` on the REST API client
+
+### Changed
+
+- The dotted fields selected with `-L`/`--fields` print inside their rebuilt nesting
+  (e.g., `data: {value: ...}`), instead of as flat dotted keys
 
 
 ## [0.0.45] - 2026-08-06

@@ -231,6 +231,7 @@ class TestVolumioRESTAPIClient:
             "has_previous": has_previous,
             "length": count,
             "position": position,
+            "track": {"status": "stop"} if position is None else {"position": position},
         }
 
     def test_state_success(self, mocker: MockerFixture):

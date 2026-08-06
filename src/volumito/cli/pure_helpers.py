@@ -23,6 +23,9 @@ from volumito.clients import VolumioHostConfiguration
 from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKind
 from volumito.clients.remote import is_local_file_uri
 
+_MISSING = object()
+"""Sentinel telling an unresolved dotted field path apart from a resolved None value."""
+
 
 def _append_result_lists(lines: list[str], lists: list[dict[str, Any]], print_uri: bool) -> None:
     """Append the lists of a navigation payload to the lines of a table.
@@ -56,6 +59,25 @@ def _append_result_lists(lines: list[str], lists: list[dict[str, Any]], print_ur
             lines.append(f"{index:>{width}}. {_result_details(item)}")
             if print_uri and item.get("uri"):
                 lines.append(f"{indent}{item['uri']}")
+
+
+def _dotted_field_value(data: dict[str, Any], key: str) -> object:
+    """Resolve a dotted field path into nested dictionaries.
+
+    Args:
+        data: The dictionary to resolve the path into
+        key: The dotted path (e.g., "track.title")
+
+    Returns:
+        The value the path leads to, or the ``_MISSING`` sentinel when it does not resolve
+    """
+    current: Any = data
+    for part in key.split("."):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return _MISSING
+    return current
 
 
 def _result_details(item: dict[str, Any]) -> str:
@@ -159,8 +181,9 @@ def filter_fields(
 
     A requested field that is not a top-level key but contains ``.`` is resolved as a
     dotted path into nested dictionaries (e.g., ``data.value``); when the full path
-    resolves, the value appears in the output keyed by the dotted string. Fields that
-    cannot be resolved are silently omitted.
+    resolves, the value appears in the output inside its rebuilt nesting (requesting
+    ``data.value`` yields ``{"data": {"value": ...}}``). Fields that cannot be
+    resolved are silently omitted.
 
     Args:
         state: The state dictionary from the Volumio API
@@ -178,14 +201,14 @@ def filter_fields(
         if key in state:
             filtered[key] = state[key]
         elif "." in key:
-            current: Any = state
-            for part in key.split("."):
-                if isinstance(current, dict) and part in current:
-                    current = current[part]
-                else:
-                    break
-            else:
-                filtered[key] = current
+            value = _dotted_field_value(state, key)
+            if value is _MISSING:
+                continue
+            node = filtered
+            parts = key.split(".")
+            for part in parts[:-1]:
+                node = node.setdefault(part, {})
+            node[parts[-1]] = value
     return filtered
 
 
@@ -351,6 +374,10 @@ def format_as_table(
 
     for label, key in field_list:
         value = state.get(key)
+        if value is None and "." in key:
+            # A dotted field sits inside its rebuilt nesting after the filtering
+            resolved = _dotted_field_value(state, key)
+            value = None if resolved is _MISSING else resolved
         if value is not None:
             if key == "position" and isinstance(value, int):
                 value = display_position(value, position_starting_at_one)

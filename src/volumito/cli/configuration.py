@@ -69,7 +69,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
-    "queue-status": FORMAT_KEYS,
+    "queue-status": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,

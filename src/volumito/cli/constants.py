@@ -177,6 +177,23 @@ SHORT_FORMAT_FIELDS_QUEUE_LIST = [
 ]
 """Short fields list for the "queue list" command."""
 
+# The track fields must stay in sync with SHORT_FORMAT_FIELDS_TRACK_INFO
+SHORT_FORMAT_FIELDS_QUEUE_STATUS = [
+    "track.position",
+    "track.title",
+    "track.artist",
+    "track.album",
+    "track.duration",
+    "track.trackType",
+    "track.samplerate",
+    "track.bitdepth",
+    "track.channels",
+    "length",
+    "has_previous",
+    "has_next",
+]
+"""Short fields list for the "queue status" command."""
+
 SHORT_FORMAT_FIELDS_STORY = [
     "data.value",
 ]

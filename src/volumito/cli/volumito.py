@@ -88,6 +88,7 @@ from volumito.cli.click_helpers import (
     option_with_albumart,
     option_yes,
     read_queue_log,
+    render_fields,
     render_output_filename,
     render_payload,
     render_state,
@@ -126,6 +127,7 @@ from volumito.cli.constants import (
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_QUEUE_STATUS,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
 )
@@ -1087,11 +1089,14 @@ def queue_has_previous(ctx: click.Context) -> None:
 
 @queue.command("status")
 @click.pass_context
+@option_fields
 @option_format
-def queue_status(ctx: click.Context, output_format: str) -> None:
-    """Print the position, the length, and the neighbor flags of the queue."""
+def queue_status(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the current track with the position, length, and neighbor flags of the queue."""
     status = fetch_or_exit(ctx, lambda c: c.queue_status)
-    render_payload(ctx, status, output_format, "Volumio Queue Status")
+    render_fields(
+        ctx, status, fields, output_format, SHORT_FORMAT_FIELDS_QUEUE_STATUS, "Volumio Queue Status"
+    )
 
 
 @queue.command("list")
