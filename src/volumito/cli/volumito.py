@@ -241,6 +241,7 @@ from volumito.clients import (
 )
 @click.option(
     "--pager/--no-pager",
+    "-G",
     default=False,
     show_default=True,
     help="Print the data output through a pager (when on a terminal).",

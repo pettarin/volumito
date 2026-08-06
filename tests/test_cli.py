@@ -1575,6 +1575,7 @@ class TestCLICommands:
         assert "--rest-api-retries-on-unexpected-state" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
         # Short options
+        assert "-G" in result.output
         assert "-H" in result.output
         assert "-M" in result.output
         assert "-P" in result.output
@@ -4862,7 +4863,7 @@ class TestPagerOption:
         """--machine-readable prints directly even with --pager."""
         _, mock_pager = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "--pager", "queue", "list"])
+        result = runner.invoke(main, ["-m", "-G", "queue", "list"])
 
         assert result.exit_code == 0
         mock_pager.assert_not_called()

@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Global option `--pager/--no-pager`, printing the data output through a pager, with its
-  configuration file key
+- Global option `-G`/`--pager` (`--no-pager` to disable), printing the data output
+  through a pager, with its configuration file key
 
 
 ## [0.0.42] - 2026-08-06
