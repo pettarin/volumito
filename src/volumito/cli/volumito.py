@@ -1478,9 +1478,11 @@ def queue_download(
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue."""
     execute_command(ctx, "clear", lambda c: c.clear())
-    # The host stops the playback on its own, but only an explicit stop refreshes the
-    # state it reports after clearing a track played in consume mode (e.g., qobuz)
     rest_api_sleep(ctx)
+    debug(
+        "Sending a stop as a workaround for a Volumio-side issue: without it, the host "
+        "keeps reporting the cleared track as playing (consume-mode services, e.g. qobuz)"
+    )
     execute_command(ctx, "stop", lambda c: c.stop())
     execute_conditionally(ctx, print_resulting_status, playback_status, expected_status="stop")
 

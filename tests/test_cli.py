@@ -10225,6 +10225,7 @@ class TestQueueActions:
             "Playback status 'play' does not match the expected 'stop', retrying (1/3)"
             in result.output
         )
+        assert "Sending a stop as a workaround for a Volumio-side issue" in result.output
         assert "StatusMarkerArtist" in result.output
         # One unexpected read, one settled read, one read for the print
         assert mock_client.state_property.call_count == 3
