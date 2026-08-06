@@ -24,6 +24,7 @@ from volumito.cli.click_helpers import (
     download_queue_albumart,
     download_queue_track,
     download_uri_to,
+    echo_data,
     embed_track_tags,
     execute_command,
     execute_conditionally,
@@ -239,6 +240,13 @@ from volumito.clients import (
     help="MPD connection timeout, in seconds.",
 )
 @click.option(
+    "--pager/--no-pager",
+    "-G",
+    default=False,
+    show_default=True,
+    help="Print the data output through a pager (when on a terminal).",
+)
+@click.option(
     "--position-starting-at-one/--position-starting-at-zero",
     default=True,
     show_default=True,
@@ -334,6 +342,7 @@ def main(
     machine_readable: bool,
     mpd_port: int,
     mpd_timeout: float,
+    pager: bool,
     position_starting_at_one: bool,
     rest_api_port: int,
     rest_api_retries_on_unexpected_state: int,
@@ -366,6 +375,7 @@ def main(
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
+    ctx.obj["pager"] = pager
     ctx.obj["position_starting_at_one"] = position_starting_at_one
 
     configuration_file = ctx.obj.get("configuration_file")
@@ -529,8 +539,9 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
         )
     else:
         info(f'Configuration file "{resolved}" is valid.')
-        for dotted, value in flatten_configuration(config):
-            click.echo(f"{dotted} = {value}")
+        listed = "\n".join(f"{dotted} = {value}" for dotted, value in flatten_configuration(config))
+        if listed:
+            echo_data(ctx, listed)
 
 
 @configuration.command("search")
@@ -558,16 +569,17 @@ def configuration_search(ctx: click.Context) -> None:
         )
         return
 
-    click.echo("Configuration file locations, in probing order, in decreasing order of priority:")
+    lines = ["Configuration file locations, in probing order, in decreasing order of priority:"]
     for path, found, used in rows:
         if not found:
-            click.echo(f"  {path}")
+            lines.append(f"  {path}")
         elif ignore:
-            click.echo(f"  {path} (found, ignored)")
+            lines.append(f"  {path} (found, ignored)")
         elif used:
-            click.echo(f"  {path} (found, used)")
+            lines.append(f"  {path} (found, used)")
         else:
-            click.echo(f"  {path} (found, NOT used)")
+            lines.append(f"  {path} (found, NOT used)")
+    echo_data(ctx, "\n".join(lines))
 
 
 @main.group()
@@ -1086,7 +1098,7 @@ def queue_list(
             else:  # pragma: no cover
                 output = json.dumps(tracks, indent=2)
 
-        click.echo(output)
+        echo_data(ctx, output)
 
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
@@ -1714,7 +1726,7 @@ def collection_browse(
             else:  # pretty
                 output = json.dumps(navigation, indent=4, sort_keys=True, ensure_ascii=False)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 @collection.command("search")
@@ -1811,7 +1823,7 @@ def collection_search(
         else:  # pretty
             output = json.dumps(lists, indent=4, sort_keys=True, ensure_ascii=False)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 @collection.command("statistics")
@@ -1850,7 +1862,7 @@ def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None
         else:  # pretty
             output = json.dumps(filtered_zones, indent=4, sort_keys=True, ensure_ascii=False)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 @main.group()
@@ -1876,7 +1888,7 @@ def playlist_list(ctx: click.Context, output_format: str) -> None:
     else:  # pretty
         output = json.dumps(names, indent=4, ensure_ascii=False)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 @playlist.command("play")
@@ -2295,7 +2307,7 @@ def notification_list(ctx: click.Context, output_format: str) -> None:
     else:  # pretty
         output = json.dumps(urls, indent=4, ensure_ascii=False)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 @notification.command("listen")

@@ -220,6 +220,7 @@ DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
 GLOBAL_OUTPUT_KEYS: list[str] = [
     "color",
     "machine-readable",
+    "pager",
     "position-starting-at-one",
     "verbose",
 ]
@@ -230,13 +231,14 @@ OUTPUT_SCALAR_KEYS: list[str] = [
     "verbose",
     "machine-readable",
     "position-starting-at-one",
+    "pager",
     "fields",
     "format",
     "print-resulting-status",
 ]
 """The "output" section is hierarchical: its scalar keys are shared, and optional
 per-command subsections override the display keys (fields/format). color, verbose,
-machine-readable, and position-starting-at-one are global; print-resulting-status
+machine-readable, position-starting-at-one, and pager are global; print-resulting-status
 applies to the playback and queue action commands.
 """
 

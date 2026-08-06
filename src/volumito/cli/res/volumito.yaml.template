@@ -191,6 +191,9 @@ output:
   # Produce machine-readable output only
   machine-readable: false
 
+  # Print the data output through a pager (true) or directly (false)
+  pager: false
+
   # Index queue positions starting at one (true) or zero (false)
   position-starting-at-one: true
 

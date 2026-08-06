@@ -509,6 +509,7 @@ class TestDefaultConfigurationTemplate:
                 "fields": "SHORT",
                 "format": "pretty",
                 "machine-readable": False,
+                "pager": False,
                 "position-starting-at-one": True,
                 "print-resulting-status": True,
                 "verbose": False,

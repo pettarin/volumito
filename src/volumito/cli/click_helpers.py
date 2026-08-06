@@ -709,6 +709,21 @@ def download_uri_to(
     return destination
 
 
+def echo_data(ctx: click.Context, output: str) -> None:
+    """Print a rendered output, through the pager when enabled.
+
+    Machine-readable output bypasses the pager.
+
+    Args:
+        ctx: Click context object containing shared options
+        output: The rendered output to print
+    """
+    if ctx.obj.get("pager") and not ctx.obj["machine_readable"]:
+        click.echo_via_pager(output)
+    else:
+        click.echo(output)
+
+
 def embed_track_tags(
     destination: str,
     state: PlayerState,
@@ -1781,7 +1796,7 @@ def render_payload(
     else:  # pretty
         output = format_as_pretty(data, ctx.obj["position_starting_at_one"])
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 def render_state(
@@ -1830,7 +1845,7 @@ def render_state(
         else:  # pretty
             output = format_as_pretty(filtered_state, position_starting_at_one)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 def render_story(
@@ -1881,7 +1896,7 @@ def render_story(
         else:  # pretty
             output = format_as_pretty(filtered_response, position_starting_at_one)
 
-    click.echo(output)
+    echo_data(ctx, output)
 
 
 def resolve_output_conflict(
