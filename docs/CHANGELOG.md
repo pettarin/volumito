@@ -17,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The messages are levelled (`[ERRO]`, `[WARN]`, `[INFO]`, `[DEBU]`) and printed to the
-  standard error, leaving the data alone on the standard output
+- The messages are levelled (`[ERRO]`, `[WARN]`, `[INFO]`, `[DEBU]`), timestamped in
+  UTC, and printed to the standard error, leaving the data alone on the standard output
 - Command group `notifications` renamed to `notification`, and `zones list` to
   `multiroom zones`; their configuration sections and subsections follow
 

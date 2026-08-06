@@ -6560,7 +6560,7 @@ class TestScpCommands:
         assert result.exit_code == 0
         assert (
             result.output.strip()
-            == "[INFO] Copied /tmp/remote_file from the Volumio host to ./local_file"
+            .endswith("[INFO] Copied /tmp/remote_file from the Volumio host to ./local_file")
         )
         assert copy.call_args.args[1:] == ("/tmp/remote_file", "./local_file")
         assert copy.call_args.kwargs == {"recursive": False}
@@ -6618,7 +6618,9 @@ class TestScpCommands:
         assert result.exit_code == 0
         assert (
             result.output.strip()
-            == "[INFO] Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
+            .endswith(
+                "[INFO] Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
+            )
         )
         assert copy.call_args.args[1:] == ("/tmp/local_file", "/mnt/INTERNAL/remote_file")
         assert copy.call_args.kwargs == {"recursive": False}
@@ -6814,7 +6816,9 @@ class TestNotificationCommands:
         result = runner.invoke(main, ["notification", "register", self.URLS[0]])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"[INFO] Registered notification URL: {self.URLS[0]}"
+        assert result.output.strip().endswith(
+            f"[INFO] Registered notification URL: {self.URLS[0]}"
+        )
         mock_client.register_notification.assert_called_once_with(self.URLS[0])
 
     def test_register_autocompose_url(self, runner: CliRunner, mocker: MockerFixture):
@@ -6827,7 +6831,9 @@ class TestNotificationCommands:
         result = runner.invoke(main, ["notification", "register", "--autocompose-url"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"[INFO] Registered notification URL: {self.LISTEN_URL}"
+        assert result.output.strip().endswith(
+            f"[INFO] Registered notification URL: {self.LISTEN_URL}"
+        )
         mock_client.register_notification.assert_called_once_with(self.LISTEN_URL)
         assert composed.call_args.args[1:] == (3003, "/volumionotifications")
 
@@ -6913,7 +6919,7 @@ class TestNotificationCommands:
         assert result.exit_code == 1
         assert (
             result.output.strip()
-            == f"[ERRO] The Volumio host did not register the URL: {self.URLS[0]}"
+            .endswith(f"[ERRO] The Volumio host did not register the URL: {self.URLS[0]}")
         )
 
     def test_register_refused_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
@@ -6932,7 +6938,9 @@ class TestNotificationCommands:
         result = runner.invoke(main, ["notification", "unregister", self.URLS[1]])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"[INFO] Unregistered notification URL: {self.URLS[1]}"
+        assert result.output.strip().endswith(
+            f"[INFO] Unregistered notification URL: {self.URLS[1]}"
+        )
         mock_client.unregister_notification.assert_called_once_with(self.URLS[1])
 
     def test_unregister_refused(self, runner: CliRunner, mocker: MockerFixture):
@@ -6988,11 +6996,11 @@ class TestNotificationCommands:
 
         assert result.exit_code == 0
         lines = result.output.splitlines()
-        assert lines[0] == (
+        assert lines[0].endswith(
             f"[INFO] Listening on port 3003 for the notifications sent to {self.LISTEN_URL}"
         )
         # The ways out are the last thing said before the wait begins
-        assert lines[1] == "[INFO] Terminate as soon as: CTRL+C is issued"
+        assert lines[1].endswith("[INFO] Terminate as soon as: CTRL+C is issued")
         assert '\n    "item": "state"' in result.output
         assert '"item": "queue"' in result.output
 
@@ -7023,7 +7031,11 @@ class TestNotificationCommands:
 
         result = runner.invoke(main, ["notification", "listen", "-F", "table"])
         # The notification lines start with their [timestamp]; the [INFO] lines do not count
-        lines = [line for line in result.output.splitlines() if line.startswith("[2")]
+        lines = [
+            line
+            for line in result.output.splitlines()
+            if line.startswith("[2") and "] [" not in line
+        ]
 
         assert result.exit_code == 0
         assert lines[0].endswith("state    play | Caterina - Francesco De Gregori")
@@ -7259,7 +7271,9 @@ class TestNotificationCommands:
         result = runner.invoke(main, ["notification", "unregister", "--autocompose-url"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"[INFO] Unregistered notification URL: {self.LISTEN_URL}"
+        assert result.output.strip().endswith(
+            f"[INFO] Unregistered notification URL: {self.LISTEN_URL}"
+        )
         mock_client.unregister_notification.assert_called_once_with(self.LISTEN_URL)
         assert composed.call_args.args[1:] == (3003, "/volumionotifications")
 
@@ -7298,9 +7312,10 @@ class TestNotificationCommands:
         result = runner.invoke(main, ["notification", "unregister", "--all"])
 
         assert result.exit_code == 0
-        assert result.output.splitlines() == [
-            f"[INFO] Unregistered notification URL: {url}" for url in self.URLS
-        ]
+        assert [
+            line.endswith(f"[INFO] Unregistered notification URL: {url}")
+            for line, url in zip(result.output.splitlines(), self.URLS, strict=True)
+        ] == [True, True]
         assert [
             call.args[0] for call in mock_client.unregister_notification.call_args_list
         ] == self.URLS
@@ -7960,7 +7975,9 @@ class TestStoryCommands:
         assert plain.exit_code == 0
         # The runner is not a terminal, so neither run carries ANSI codes
         assert "\x1b" not in colored.output
-        assert colored.output == plain.output
+        # The two runs differ only by their timestamps
+        stamp = re.compile(r"\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] ")
+        assert stamp.sub("", colored.output) == stamp.sub("", plain.output)
 
 
 class TestQueueAlbumVolumes:

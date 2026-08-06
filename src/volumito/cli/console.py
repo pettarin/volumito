@@ -2,7 +2,8 @@
 
 The messages of the tool flow through the standard :mod:`logging` machinery, under the
 ``volumito`` logger the client library shares: the CLI installs a handler on it that
-prefixes every message with its level (``[ERRO]``, ``[WARN]``, ``[INFO]``, ``[DEBU]``)
+prefixes every message with its UTC timestamp and its level (``[ERRO]``, ``[WARN]``,
+``[INFO]``, ``[DEBU]``)
 and prints it to the standard error, colored when the terminal supports it, leaving the
 standard output to the data alone.
 
@@ -11,10 +12,13 @@ standard output to the data alone.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 import click
 import colorama
+
+from volumito.cli.constants import NOTIFICATION_TIMESTAMP_FORMAT
 
 LOGGER = logging.getLogger("volumito.cli")
 """The logger of the CLI, a child of the ``volumito`` logger of the library."""
@@ -54,9 +58,11 @@ class ConsoleHandler(logging.Handler):
         Args:
             record: The record to print
         """
+        moment = datetime.fromtimestamp(record.created, UTC)
+        stamp = f"{moment.strftime(NOTIFICATION_TIMESTAMP_FORMAT)[:-3]}Z"
         for level, label, style in _STYLES:
             if record.levelno >= level:
-                line = f"{label} {record.getMessage()}"
+                line = f"[{stamp}] {label} {record.getMessage()}"
                 if style:
                     click.secho(line, err=True, color=self.color, **style)
                 else:

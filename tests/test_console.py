@@ -5,6 +5,7 @@
 """
 
 import logging
+import re
 
 import click
 import pytest
@@ -18,6 +19,16 @@ from volumito.cli.console import (
     setup_console,
     warning,
 )
+
+_STAMP = re.compile(r"^(?P<prefix>\x1b\[\d+m)?\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] ")
+"""The UTC timestamp opening every console line, after any color code."""
+
+
+def _unstamped(line: str) -> str:
+    """Return a console line without its timestamp, asserting it carried one."""
+    match = _STAMP.match(line)
+    assert match is not None, line
+    return (match.group("prefix") or "") + line[match.end():]
 
 
 @pytest.fixture(autouse=True)
@@ -57,25 +68,39 @@ class TestConsoleHandler:
         """Each level gets its label."""
         output = _run(False, lambda: (debug("d"), info("i"), warning("w"), error("e")))
 
-        assert output == "[DEBU] d\n[INFO] i\n[WARN] w\n[ERRO] e\n"
+        assert [_unstamped(line) for line in output.splitlines()] == [
+            "[DEBU] d",
+            "[INFO] i",
+            "[WARN] w",
+            "[ERRO] e",
+        ]
 
     def test_critical_is_an_error(self):
         """A level above ERROR still gets the error label."""
         output = _run(False, lambda: logging.getLogger("volumito.cli").critical("boom"))
 
-        assert output == "[ERRO] boom\n"
+        assert _unstamped(output.strip()) == "[ERRO] boom"
 
     def test_the_colors_when_forced(self):
         """With color forced on, the styled levels carry ANSI codes."""
         output = _run(True, lambda: (debug("d"), info("i"), warning("w"), error("e")))
 
-        lines = output.splitlines()
+        lines = [_unstamped(line) for line in output.splitlines()]
 
         assert lines[0] == "\x1b[2m[DEBU] d\x1b[0m"
         # An informational message stays in the default color
         assert lines[1] == "[INFO] i"
         assert lines[2] == "\x1b[33m[WARN] w\x1b[0m"
         assert lines[3] == "\x1b[31m[ERRO] e\x1b[0m"
+
+    def test_the_timestamp_opens_the_line(self):
+        """Every line starts with a millisecond UTC stamp in the listen format."""
+        output = _run(False, lambda: info("stamped"))
+
+        assert re.fullmatch(
+            r"\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] \[INFO\] stamped",
+            output.strip(),
+        )
 
     def test_no_colors_when_disabled(self):
         """With color off, no ANSI code is emitted."""
@@ -98,7 +123,7 @@ class TestSetupConsole:
 
         output = CliRunner().invoke(emit).output
 
-        assert output == "[INFO] shown\n"
+        assert _unstamped(output.strip()) == "[INFO] shown"
 
     def test_verbose_shows_debug(self):
         """With --verbose the debug messages appear."""
@@ -108,7 +133,7 @@ class TestSetupConsole:
         def emit() -> None:
             debug("shown")
 
-        assert CliRunner().invoke(emit).output == "[DEBU] shown\n"
+        assert _unstamped(CliRunner().invoke(emit).output.strip()) == "[DEBU] shown"
 
     def test_machine_readable_is_silent(self):
         """In machine-readable mode every message is silenced, errors included."""
@@ -139,7 +164,7 @@ class TestSetupConsole:
         def emit() -> None:
             info("once")
 
-        assert CliRunner().invoke(emit).output == "[INFO] once\n"
+        assert _unstamped(CliRunner().invoke(emit).output.strip()) == "[INFO] once"
 
     def test_the_library_logger_has_a_null_handler(self):
         """The volumito logger carries a NullHandler for the library users."""
