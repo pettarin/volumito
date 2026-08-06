@@ -506,7 +506,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
                 service = scheme
             else:
                 service = "mpd"
-        self._log_debug(f"Service of {uri}: {service}")
+        self._log_debug(f'Service of "{uri}": {service}')
         return service
 
     def add_to_queue(self, uri: str) -> CommandResponse:
@@ -526,7 +526,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error response
         """
-        self._log_debug(f"Adding {uri} to the queue...")
+        self._log_debug(f'Adding "{uri}" to the queue...')
         items = self._queue_payload_items(uri)
         payload: dict[str, Any] | list[dict[str, Any]] = (
             items if items is not None else {"service": self._uri_service(uri), "uri": uri}
@@ -534,7 +534,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
         response = CommandResponse.from_raw(
             self._post_json("/api/v1/addToQueue", payload, self.timeout_slow_endpoints)
         )
-        self._log_debug(f"Adding {uri} to the queue... done")
+        self._log_debug(f'Adding "{uri}" to the queue... done')
         return response
 
     def browse(self, uri: str | None = None, offset: int | None = None) -> BrowseResults:
@@ -1034,7 +1034,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
         if index is not None and index < 0:
             self._log_warning(f"Refusing the negative play index {index}")
             raise ValueError(f"The index must be 0 or greater, got {index}")
-        self._log_debug(f"Replacing the queue with {uri}...")
+        self._log_debug(f'Replacing the queue with "{uri}"...')
         if index is not None:
             items = [self._slim_queue_item(item.raw) for item in self.browse(uri).items]
             if len(items) > index:
@@ -1046,7 +1046,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
                         self.timeout_slow_endpoints,
                     )
                 )
-                self._log_debug(f"Replacing the queue with {uri}... done")
+                self._log_debug(f'Replacing the queue with "{uri}"... done')
                 return response
             if items or index > 0:
                 self._log_warning(
@@ -1067,7 +1067,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
                         self.timeout_slow_endpoints,
                     )
                 )
-                self._log_debug(f"Replacing the queue with {uri}... done")
+                self._log_debug(f'Replacing the queue with "{uri}"... done')
                 return response
         self._log_debug("Sending the URI as a single item, playing its first element")
         item = {"service": self._uri_service(uri), "uri": uri}
@@ -1076,7 +1076,7 @@ class VolumioRESTAPIClient(VolumioBaseClient):
                 "/api/v1/replaceAndPlay", {"item": item}, self.timeout_slow_endpoints
             )
         )
-        self._log_debug(f"Replacing the queue with {uri}... done")
+        self._log_debug(f'Replacing the queue with "{uri}"... done')
         return response
 
     def search(self, query: str) -> SearchResults:

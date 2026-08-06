@@ -364,7 +364,7 @@ def _materialize_albumart(
         else:
             fetch_uri_to_file(albumart_uri, cover_path, timeout, host_configuration)
     except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
-        warning(f"Cannot download album art to {cover_path} ({e})")
+        warning(f'Cannot download album art to "{cover_path}" ({e})')
         return None
     downloaded_covers.setdefault(albumart_uri, cover_path)
     return cover_path
@@ -683,20 +683,21 @@ def download_uri_to(
         )
         sys.exit(1)
 
-    info(f"Downloading {label} to {destination}...")
+    info(f'Downloading {label} to "{destination}"...')
 
     try:
         if output_directory is not None:
             os.makedirs(output_directory, exist_ok=True)
         fetch_uri_to_file(uri, destination, timeout, host_configuration)
 
-        info(f"{label.capitalize()} successfully downloaded to {destination}")
+        info(f'Downloading {label} to "{destination}"... done')
+        info(f'{label.capitalize()} successfully downloaded to "{destination}"')
 
         if create_manifest:
             manifest_path = write_download_manifest(
                 destination, uri, state, host_configuration, entity, kind, add_cover_and_metadata
             )
-            debug(f"Manifest written to {manifest_path}...")
+            debug(f'Manifest written to "{manifest_path}"')
 
     except (requests.exceptions.RequestException, VolumioSSHError) as e:
         error(f"Download error: {e}")
@@ -761,13 +762,13 @@ def embed_track_tags(
             cover=cover,
         )
     except UnsupportedAudioFormatError:
-        warning(f"Cannot embed metadata into {destination} (unsupported format)")
+        warning(f'Cannot embed metadata into "{destination}" (unsupported format)')
         return
     except Exception as e:
-        warning(f"Cannot embed metadata into {destination} ({e})")
+        warning(f'Cannot embed metadata into "{destination}" ({e})')
         return
 
-    debug(f"Embedded metadata and cover into {destination}...")
+    debug(f'Embedded metadata and cover into "{destination}"')
 
 
 def execute_command(
@@ -793,6 +794,7 @@ def execute_command(
         )
         response = command_func(client)
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug(f"Response: {response}")
 
         info(f"Command '{command_name}' executed successfully")
@@ -808,16 +810,40 @@ def execute_command(
         sys.exit(1)
 
 
-def execute_conditionally(ctx: click.Context, enabled: bool, command: click.Command) -> None:
+def execute_conditionally(
+    ctx: click.Context,
+    enabled: bool,
+    command: click.Command,
+    expected_status: str | None = None,
+) -> None:
     """When enabled, wait the configured delay and invoke the given command.
 
     Args:
         ctx: Click context object (its ``obj`` is inherited by the invoked command)
         enabled: Whether to invoke the command
         command: The Click command to invoke
+        expected_status: When set, re-read the playback status, up to the configured
+            number of retries, until it matches this value before invoking the command
     """
     if enabled:
         rest_api_sleep(ctx)
+        if expected_status is not None:
+            retries = ctx.obj["rest_api_retries_on_unexpected_state"]
+            attempt = 0
+            status = fetch_state_or_exit(ctx).status
+            while status != expected_status and attempt < retries:
+                attempt += 1
+                debug(
+                    f"Playback status '{status}' does not match the expected "
+                    f"'{expected_status}', retrying ({attempt}/{retries})"
+                )
+                rest_api_sleep(ctx)
+                status = fetch_state_or_exit(ctx).status
+            if status != expected_status:
+                warning(
+                    f"Playback status '{status}' still does not match the expected "
+                    f"'{expected_status}' after {retries} retries"
+                )
         ctx.invoke(command)
 
 
@@ -889,7 +915,9 @@ def fetch_or_exit[T](
         client = create_client(
             host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
         )
-        return fetch(client)
+        fetched = fetch(client)
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        return fetched
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
         sys.exit(1)

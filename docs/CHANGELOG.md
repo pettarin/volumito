@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.42] - 2026-08-06
+
+### Added
+
+- Global option `--rest-api-retries-on-unexpected-state`, with its configuration file key
+
+### Fixed
+
+- The messages opened with `...` close with their `... done`
+- `configuration check PATH` works with the ignore-configuration-file option
+- `queue clear` also stops the playback, and waits for the status to settle before printing it
+- The identifiers that can contain spaces (names, paths, URIs) are double-quoted in the messages
+
+
 ## [0.0.41] - 2026-08-06
 
 ### Added

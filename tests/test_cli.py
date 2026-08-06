@@ -1571,6 +1571,7 @@ class TestCLICommands:
         assert "--machine-readable" in result.output
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
+        assert "--rest-api-retries-on-unexpected-state" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
         # Short options
         assert "-H" in result.output
@@ -1582,14 +1583,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.41" in result.output
+        assert "volumito, version 0.0.42" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.41"'
+        assert result.output.strip() == '"0.0.42"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1598,7 +1599,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.41"'
+        assert result.output.strip() == '"0.0.42"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -2964,6 +2965,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
+        assert "Connecting to http://volumio.local:3000... done" in result.output
         assert "Successfully retrieved state" in result.output
         # The MPD steps are logged by the (here mocked) client itself, not by the CLI
 
@@ -3394,7 +3396,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
 
         assert result.exit_code == 0
-        assert "successfully downloaded to /tmp/track.flac" in result.output
+        assert 'successfully downloaded to "/tmp/track.flac"' in result.output
         mock_get.assert_not_called()
         assert copy.call_args.args[1:3] == (
             "/mnt/INTERNAL/music/album/01-track.flac",
@@ -3564,7 +3566,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
-        assert "Downloading track to /tmp/track.flac" in result.output
+        assert 'Downloading track to "/tmp/track.flac"' in result.output
         assert "successfully downloaded" in result.output
 
     def test_audio_file_write_error(self, runner: CliRunner, mocker: MockerFixture):
@@ -5018,7 +5020,7 @@ class TestSystemExecute:
         result = runner.invoke(main, ["system", "execute", "uptime"])
 
         assert result.exit_code == 1
-        assert "Refusing to execute the command without -y/--yes: uptime" in result.output
+        assert 'Refusing to execute the command without -y/--yes: "uptime"' in result.output
         execute.assert_not_called()
 
     def test_without_yes_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
@@ -6374,7 +6376,8 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         mock_client.play_playlist.assert_called_once_with("Jazz Classics")
-        assert "executed successfully" in result.output
+        # The double quotes delimit a name that contains spaces
+        assert "Command 'playplaylist \"Jazz Classics\"' executed successfully" in result.output
 
     def test_play_requires_the_name(self, runner: CliRunner, mocker: MockerFixture):
         """playlist play without a name is a usage error."""
@@ -6430,10 +6433,10 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "play", "Nope"])
 
         assert result.exit_code == 1
-        assert "Playlist not found: Nope" in result.output
+        assert 'Playlist not found: "Nope"' in result.output
         assert "Available playlists:" in result.output
         for name in self.PLAYLISTS:
-            assert f"  {name}" in result.output
+            assert f'  "{name}"' in result.output
         mock_client.play_playlist.assert_not_called()
 
     def test_play_unknown_name_is_case_sensitive(
@@ -6560,7 +6563,7 @@ class TestScpCommands:
         assert result.exit_code == 0
         assert (
             result.output.strip()
-            .endswith("[INFO] Copied /tmp/remote_file from the Volumio host to ./local_file")
+            .endswith('[INFO] Copied "/tmp/remote_file" from the Volumio host to "./local_file"')
         )
         assert copy.call_args.args[1:] == ("/tmp/remote_file", "./local_file")
         assert copy.call_args.kwargs == {"recursive": False}
@@ -6619,7 +6622,8 @@ class TestScpCommands:
         assert (
             result.output.strip()
             .endswith(
-                "[INFO] Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
+                '[INFO] Copied "/tmp/local_file" to "/mnt/INTERNAL/remote_file" '
+                "on the Volumio host"
             )
         )
         assert copy.call_args.args[1:] == ("/tmp/local_file", "/mnt/INTERNAL/remote_file")
@@ -6655,7 +6659,7 @@ class TestScpCommands:
 
         assert result.exit_code == 1
         assert (
-            "Refusing to copy to the Volumio host without -y/--yes: /mnt/INTERNAL/a"
+            'Refusing to copy to the Volumio host without -y/--yes: "/mnt/INTERNAL/a"'
             in result.output
         )
         copy.assert_not_called()
@@ -8235,7 +8239,7 @@ class TestQueueDownload:
         assert _played_positions(client) == [0, 1, 0]
         assert client.pause.call_count == 2
         assert "Downloaded 2, skipped 0, errors 0" in result.output
-        assert f"Creating manifest file {log_path}" in result.output
+        assert f'Creating manifest file "{log_path}"' in result.output
         assert str(log_path) in result.output
 
     def test_download_subdirectories(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
@@ -8811,7 +8815,7 @@ class TestQueueDownload:
         assert result.exit_code == 0
         assert "(kept)" in result.output
         assert "Downloaded 1, skipped 0, errors 0" in result.output
-        assert f"Reading manifest file {manifest}" in result.output
+        assert f'Reading manifest file "{manifest}"' in result.output
         client.stop.assert_not_called()
         client.play.assert_not_called()
         mpd_class.assert_not_called()
@@ -9924,7 +9928,7 @@ class TestPlaylistDownload:
         result = runner.invoke(main, ["-v", *self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "Playing playlist Rock..." in result.output
+        assert 'Playing playlist "Rock"...' in result.output
         client.playlists_property.assert_called_once()
         client.clear.assert_called_once()
         client.play_playlist.assert_called_once_with("Rock")
@@ -9946,7 +9950,7 @@ class TestPlaylistDownload:
         result = runner.invoke(main, ["playlist", "download", "Nope", "-d", str(tmp_path)])
 
         assert result.exit_code == 1
-        assert "Playlist not found: Nope" in result.output
+        assert 'Playlist not found: "Nope"' in result.output
         client.clear.assert_not_called()
         client.play_playlist.assert_not_called()
 
@@ -10144,6 +10148,7 @@ class TestQueueActions:
         _attach_property(mock_client, "state", return_value={
             "title": "Test Song",
             "artist": "StatusMarkerArtist",
+            "status": "stop",
         })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -10155,31 +10160,116 @@ class TestQueueActions:
     def test_clear_default_prints_resulting_status(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """By default, queue clear waits 1 second and prints the resulting playback status."""
+        """By default, queue clear stops the playback and prints the resulting status."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(main, ["queue", "clear"])
 
         assert result.exit_code == 0
-        # The message carries its level, on the standard error
+        # The messages carry their level, on the standard error
         assert "[INFO] Command 'clear' executed successfully" in result.output
+        assert "[INFO] Command 'stop' executed successfully" in result.output
         assert "StatusMarkerArtist" in result.output
+        # The status settles on the first read, so no retry: one read plus the print
+        assert "retrying" not in result.output
         mock_client.clear.assert_called_once()
-        mock_client.state_property.assert_called_once()
-        mock_sleep.assert_called_once_with(2.0)
+        mock_client.stop.assert_called_once()
+        assert mock_client.state_property.call_count == 2
+        # One sleep between clear and stop, one before the settle read
+        assert mock_sleep.call_args_list == [mocker.call(2.0), mocker.call(2.0)]
 
     def test_clear_no_print_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
-        """--no-print-resulting-status skips the sleep and the status print."""
+        """--no-print-resulting-status skips the status print, not the stop."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(main, ["queue", "clear", "--no-print-resulting-status"])
 
         assert result.exit_code == 0
         assert "Command 'clear' executed successfully" in result.output
+        assert "Command 'stop' executed successfully" in result.output
         assert "StatusMarkerArtist" not in result.output
         mock_client.clear.assert_called_once()
+        mock_client.stop.assert_called_once()
         mock_client.state_property.assert_not_called()
-        mock_sleep.assert_not_called()
+        # The configured sleep separates the two calls
+        mock_sleep.assert_called_once_with(2.0)
+
+    def _mock_client_with_states(self, mocker: MockerFixture, statuses: list[str]):
+        """Mock VolumioRESTAPIClient whose state reads walk the given statuses."""
+        mock_client = mocker.Mock()
+        mock_client.clear.return_value = {"response": "clearQueue"}
+        mock_client.stop.return_value = {"response": "stop"}
+        _attach_property(mock_client, "state", side_effect=[
+            {"title": "Test Song", "artist": "StatusMarkerArtist", "status": status}
+            for status in statuses
+        ])
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client, mock_sleep
+
+    def test_clear_retries_until_the_status_settles(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """queue clear re-reads the status until it leaves the unexpected state."""
+        mock_client, mock_sleep = self._mock_client_with_states(
+            mocker, ["play", "stop", "stop"]
+        )
+
+        result = runner.invoke(main, ["--verbose", "queue", "clear"])
+
+        assert result.exit_code == 0
+        assert (
+            "Playback status 'play' does not match the expected 'stop', retrying (1/3)"
+            in result.output
+        )
+        assert "Sending a stop as a workaround for a Volumio-side issue" in result.output
+        assert "StatusMarkerArtist" in result.output
+        # One unexpected read, one settled read, one read for the print
+        assert mock_client.state_property.call_count == 3
+        # One sleep between clear and stop, one before each of the first two reads
+        assert mock_sleep.call_count == 3
+
+    def test_clear_warns_when_the_status_never_settles(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """After the configured retries the warning fires and the status prints anyway."""
+        mock_client, mock_sleep = self._mock_client_with_states(mocker, ["play"] * 5)
+
+        result = runner.invoke(main, ["queue", "clear"])
+
+        assert result.exit_code == 0
+        assert (
+            "[WARN] Playback status 'play' still does not match the expected 'stop' "
+            "after 3 retries"
+        ) in result.output
+        # The retry messages stay at the debug level
+        assert "retrying" not in result.output
+        assert "StatusMarkerArtist" in result.output
+        # One initial read, three retried reads, one read for the print
+        assert mock_client.state_property.call_count == 5
+        # One sleep between clear and stop, one before each of the first four reads
+        assert mock_sleep.call_count == 5
+
+    def test_clear_respects_the_retries_option(self, runner: CliRunner, mocker: MockerFixture):
+        """--rest-api-retries-on-unexpected-state bounds the re-reads."""
+        mock_client, mock_sleep = self._mock_client_with_states(mocker, ["play"] * 3)
+
+        result = runner.invoke(
+            main, ["--rest-api-retries-on-unexpected-state", "1", "queue", "clear"]
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "Playback status 'play' still does not match the expected 'stop' "
+            "after 1 retries"
+        ) in result.output
+        # One initial read, one retried read, one read for the print
+        assert mock_client.state_property.call_count == 3
+        # One sleep between clear and stop, one before each of the first two reads
+        assert mock_sleep.call_count == 3
 
     def test_repeat_toggle(self, runner: CliRunner, mocker: MockerFixture):
         """queue repeat with no value toggles the repeat mode (None passed to the client)."""
@@ -11370,7 +11460,7 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         assert "https://myconfig.local:9999" in result.output
-        assert f"Using configuration file: {config}" in result.output
+        assert f'Using configuration file: "{config}"' in result.output
 
     def test_cli_flag_overrides_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -11405,7 +11495,7 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         assert "http://probed.local:3000" in result.output
-        assert f"Using configuration file: {config}" in result.output
+        assert f'Using configuration file: "{config}"' in result.output
 
     def test_ignore_configuration_file_skips_probing(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -12106,6 +12196,7 @@ class TestConfigurationCommands:
                     "rest-api-timeout-slow-endpoints": 60.0,
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 2.0,
+                    "rest-api-retries-on-unexpected-state": 3,
                 },
                 "miscellaneous": {
                     "add-cover-and-metadata": True,
@@ -12629,7 +12720,7 @@ class TestConfigurationCommands:
         ]
 
     def test_check_fails_when_ignoring(self, runner: CliRunner, tmp_path):
-        """With --ignore-configuration-file, configuration check fails."""
+        """With --ignore-configuration-file and no PATH, configuration check fails."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n  host: x.local\n")
 
@@ -12642,8 +12733,21 @@ class TestConfigurationCommands:
 
         assert without_path.exit_code == 1
         assert "the --ignore-configuration-file option is selected" in without_path.output
-        assert with_path.exit_code == 1
-        assert "the --ignore-configuration-file option is selected" in with_path.output
+        assert with_path.exit_code == 0
+        assert f'Configuration file "{config}" is valid.' in with_path.output
+
+    def test_check_invalid_path_when_ignoring(self, runner: CliRunner, tmp_path):
+        """With --ignore-configuration-file, an explicit invalid PATH is still checked."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: [\n")
+
+        result = runner.invoke(
+            main, ["--ignore-configuration-file", "configuration", "check", str(config)]
+        )
+
+        assert result.exit_code == 1
+        assert f'Configuration file "{config}" is NOT valid.' in result.output
+        assert "the --ignore-configuration-file option is selected" not in result.output
 
     def test_check_fails_when_ignoring_machine_readable(self, runner: CliRunner):
         """In machine-readable mode the ignoring check failure is a JSON envelope."""

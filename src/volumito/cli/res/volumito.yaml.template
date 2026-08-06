@@ -266,6 +266,9 @@ timeouts:
   # MPD connection timeout, in seconds
   mpd-timeout: 5.0
 
+  # Times to re-read the playback status until it reaches the expected state
+  rest-api-retries-on-unexpected-state: 3
+
   # Seconds to sleep before the next REST API call
   rest-api-sleep-before-next-call: 2.0
 

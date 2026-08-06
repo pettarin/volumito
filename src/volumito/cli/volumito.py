@@ -253,6 +253,16 @@ from volumito.clients import (
     help="REST API port of the Volumio instance.",
 )
 @click.option(
+    "--rest-api-retries-on-unexpected-state",
+    type=int,
+    default=3,
+    show_default=True,
+    help=(
+        "When a command expects the playback status to reach a given state, "
+        "re-read the status up to this many times."
+    ),
+)
+@click.option(
     "--rest-api-sleep-before-next-call",
     type=float,
     default=2.0,
@@ -326,6 +336,7 @@ def main(
     mpd_timeout: float,
     position_starting_at_one: bool,
     rest_api_port: int,
+    rest_api_retries_on_unexpected_state: int,
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     rest_api_timeout_slow_endpoints: float,
@@ -351,6 +362,7 @@ def main(
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["mpd_timeout"] = mpd_timeout
+    ctx.obj["rest_api_retries_on_unexpected_state"] = rest_api_retries_on_unexpected_state
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
@@ -358,7 +370,7 @@ def main(
 
     configuration_file = ctx.obj.get("configuration_file")
     if configuration_file is not None:
-        debug(f"Using configuration file: {configuration_file}")
+        debug(f'Using configuration file: "{configuration_file}"')
     elif ctx.obj.get("ignore_configuration_file"):
         debug("Ignoring configuration files")
 
@@ -446,13 +458,13 @@ def configuration_create(
         with open(destination, "w", encoding="utf-8") as config_file:
             config_file.write(content)
     except OSError as e:
-        error(f"Cannot write configuration file {destination}: {e}")
+        error(f'Cannot write configuration file "{destination}": {e}')
         sys.exit(1)
 
     if machine_readable:
         click.echo(json.dumps(destination))
     else:
-        info(f"Created configuration file {destination}")
+        info(f'Created configuration file "{destination}"')
 
 
 @configuration.command("check")
@@ -462,7 +474,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     """Check that a configuration file is correct and print the values read from it.
 
     Without PATH, check the file that would be used after probing the standard
-    locations. With --ignore-configuration-file, the command fails.
+    locations. With --ignore-configuration-file and no PATH, the command fails.
     """
     machine_readable = ctx.obj["machine_readable"]
 
@@ -476,13 +488,13 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
             }
             click.echo(json.dumps(payload))
         elif path_value is not None:
-            error(f"Configuration file {path_value} is NOT valid.")
+            error(f'Configuration file "{path_value}" is NOT valid.')
             error(message)
         else:
             error(message)
         sys.exit(1)
 
-    if ctx.obj.get("ignore_configuration_file"):
+    if path is None and ctx.obj.get("ignore_configuration_file"):
         fail(None, "the --ignore-configuration-file option is selected")
 
     try:
@@ -516,7 +528,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
             json.dumps({"path": os.path.abspath(resolved), "valid": True, "configuration": config})
         )
     else:
-        info(f"Configuration file {resolved} is valid.")
+        info(f'Configuration file "{resolved}" is valid.')
         for dotted, value in flatten_configuration(config):
             click.echo(f"{dotted} = {value}")
 
@@ -854,6 +866,7 @@ def audio(
         client = create_client(host_configuration, rest_api_timeout)
         state = client.state
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved state")
 
         # Connect to MPD to get current track URI; the client logs its own steps
@@ -870,7 +883,7 @@ def audio(
                     embed_tags = False
                     debug(
                         "Not embedding the album art and the metadata, "
-                        "to preserve the file being copied..."
+                        "to preserve the file being copied"
                     )
                 else:
                     embed_tags = add_cover_and_metadata
@@ -961,6 +974,7 @@ def albumart(
         client = create_client(host_configuration, rest_api_timeout)
         state = client.state
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved state")
 
         # Extract albumart URI (relative URIs are made absolute against the base URL)
@@ -969,7 +983,7 @@ def albumart(
             error("No album art URI found in current state")
             sys.exit(1)
 
-        debug(f"Album art URI: {albumart_uri}")
+        debug(f'Album art URI: "{albumart_uri}"')
 
         # Always print the URI (even in machine-readable mode);
         # in machine-readable mode print it quoted so it can be consumed by jq/yq
@@ -1042,6 +1056,7 @@ def queue_list(
         client = create_client(host_configuration, rest_api_timeout)
         queue_data = client.queue.raw
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved queue")
 
         # Determine output format
@@ -1162,6 +1177,7 @@ def queue_download(
         client = create_client(host_configuration, rest_api_timeout)
         tracks = client.queue.tracks
 
+        debug(f"Connecting to {host_configuration.rest_base_url}... done")
         debug("Successfully retrieved queue")
 
         if not tracks:
@@ -1191,14 +1207,14 @@ def queue_download(
         if os.path.exists(log_path):
             existing = read_queue_log(log_path)
             if existing is None:
-                error(f"Cannot read the manifest file {log_path}")
+                error(f'Cannot read the manifest file "{log_path}"')
                 sys.exit(1)
             if not manifest_matches_queue(existing["tracks"], tracks):
                 error(
                     f"The manifest file {log_path} does not match the current queue"
                 )
                 sys.exit(1)
-            info(f"Reading manifest file {log_path}")
+            info(f'Reading manifest file "{log_path}"')
             entries: list[dict[str, Any]] = existing["tracks"]
             for index, entry in enumerate(entries):
                 # A track left out of this run keeps the status it already had
@@ -1230,7 +1246,7 @@ def queue_download(
                 "volumito_version": __version__,
             }
         else:
-            info(f"Creating manifest file {log_path}")
+            info(f'Creating manifest file "{log_path}"')
             entries = [
                 {
                     "album": track.album,
@@ -1270,11 +1286,11 @@ def queue_download(
                     entry = entries[index]
                     info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                        f"{entry.get('output_file_path')} (kept)"
+                        f"\"{entry.get('output_file_path')}\" (kept)"
                     )
                 info(
                     f"{_download_summary(entries, selected, 0)}; "
-                    f"manifest written to {log_path}"
+                    f'manifest written to "{log_path}"'
                 )
             return
 
@@ -1319,7 +1335,7 @@ def queue_download(
                         attempt += 1
                         debug(
                             "Track metadata not yet updated, retrying "
-                            f"({attempt}/{number_retries_next_track})..."
+                            f"({attempt}/{number_retries_next_track})"
                         )
                     entry["source_uri"] = uri
                     if not fresh:
@@ -1423,7 +1439,7 @@ def queue_download(
                     errors += 1
                     entry["error"] = detail
                 write_queue_log(log_path, log)
-                outcome = detail if status == "error" else destination
+                outcome = detail if status == "error" else f'"{destination}"'
                 info(f"[{index + 1}/{len(entries)}] {status}: {outcome}")
 
         # Leave the player stopped at the first track
@@ -1436,7 +1452,7 @@ def queue_download(
         else:
             info(
                 f"{_download_summary(entries, selected, errors)}; "
-                f"manifest written to {log_path}"
+                f'manifest written to "{log_path}"'
             )
         if errors:
             sys.exit(1)
@@ -1462,7 +1478,13 @@ def queue_download(
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue."""
     execute_command(ctx, "clear", lambda c: c.clear())
-    execute_conditionally(ctx, print_resulting_status, playback_status)
+    rest_api_sleep(ctx)
+    debug(
+        "Sending a stop as a workaround for a Volumio-side issue: without it, the host "
+        "keeps reporting the cleared track as playing (consume-mode services, e.g. qobuz)"
+    )
+    execute_command(ctx, "stop", lambda c: c.stop())
+    execute_conditionally(ctx, print_resulting_status, playback_status, expected_status="stop")
 
 
 @queue.command()
@@ -1556,7 +1578,7 @@ def system_execute(
     host_configuration = ctx.obj["host_configuration"]
 
     if not yes:
-        error(f"Refusing to execute the command without -y/--yes: {command}")
+        error(f'Refusing to execute the command without -y/--yes: "{command}"')
         sys.exit(1)
 
     try:
@@ -1872,12 +1894,12 @@ def playlist_play(
     if check_playlist_name:
         names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
-            error(f"Playlist not found: {name}")
-            listed = "\n".join(f"  {available}" for available in names or ["(none)"])
+            error(f'Playlist not found: "{name}"')
+            listed = "\n".join(f'  "{available}"' for available in names) or "  (none)"
             error(f"Available playlists:\n{listed}")
             sys.exit(1)
 
-    execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name))
+    execute_command(ctx, f'playplaylist "{name}"', lambda c: c.play_playlist(name))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
@@ -1925,8 +1947,8 @@ def playlist_download(
     if check_playlist_name:
         names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
-            error(f"Playlist not found: {name}")
-            listed = "\n".join(f"  {available}" for available in names or ["(none)"])
+            error(f'Playlist not found: "{name}"')
+            listed = "\n".join(f'  "{available}"' for available in names) or "  (none)"
             error(f"Available playlists:\n{listed}")
             sys.exit(1)
 
@@ -1937,9 +1959,11 @@ def playlist_download(
         client = create_client(host_configuration, rest_api_timeout)
         debug("Clearing the queue...")
         client.clear()
+        debug("Clearing the queue... done")
         rest_api_sleep(ctx)
-        debug(f"Playing playlist {name}...")
+        debug(f'Playing playlist "{name}"...')
         client.play_playlist(name)
+        debug(f'Playing playlist "{name}"... done')
         rest_api_sleep(ctx)
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
@@ -2432,7 +2456,7 @@ def scp_get(ctx: click.Context, remote_path: str, local_path: str, recursive: bo
         error(str(e))
         sys.exit(1)
 
-    info(f"Copied {remote_path} from the Volumio host to {local_path}")
+    info(f'Copied "{remote_path}" from the Volumio host to "{local_path}"')
 
 
 @scp.command("put")
@@ -2451,7 +2475,7 @@ def scp_put(
     host_configuration = ctx.obj["host_configuration"]
 
     if not yes:
-        error(f"Refusing to copy to the Volumio host without -y/--yes: {remote_path}")
+        error(f'Refusing to copy to the Volumio host without -y/--yes: "{remote_path}"')
         sys.exit(1)
 
     try:
@@ -2460,7 +2484,7 @@ def scp_put(
         error(str(e))
         sys.exit(1)
 
-    info(f"Copied {local_path} to {remote_path} on the Volumio host")
+    info(f'Copied "{local_path}" to "{remote_path}" on the Volumio host')
 
 
 # "info" is a top-level synonym for "system info"

@@ -176,7 +176,7 @@ class TestVolumioRESTAPIClient:
         )
 
         debugged = [call.args[0] for call in logger.debug.call_args_list]
-        assert "Service of qobuz://album/123: qobuz" in debugged
+        assert 'Service of "qobuz://album/123": qobuz' in debugged
         assert "Browsing the URI to queue the items it lists... done (1 items)" in debugged
 
     def test_init_default_logger(self):
