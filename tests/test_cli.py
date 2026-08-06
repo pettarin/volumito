@@ -5017,6 +5017,75 @@ class TestAliases:
         # The static built-in alias stays listed
         assert "info" in result.output
 
+    def test_alias_list_prints_the_aliases(self, runner: CliRunner, tmp_path):
+        """alias list prints the aliases and their targets, sorted by name."""
+        config = self._write_config(
+            tmp_path, "aliases:\n  zzstatus: playback status\n  zzcover: track albumart\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "alias", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {
+            "zzcover": "track albumart",
+            "zzstatus": "playback status",
+        }
+        assert result.output.index("zzcover") < result.output.index("zzstatus")
+
+    def test_alias_list_format_table(self, runner: CliRunner, tmp_path):
+        """In table format alias list prints the aliases under the heading."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "alias", "list", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumito Command Aliases" in result.output
+        # The alias names appear as they are, not title-cased
+        assert "zzstatus" in result.output
+        assert "Zzstatus" not in result.output
+        assert "playback status" in result.output
+
+    def test_alias_list_format_raw(self, runner: CliRunner, tmp_path):
+        """In raw format alias list prints the compact JSON object."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "alias", "list", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert result.output == '{"zzstatus": "playback status"}\n'
+
+    def test_alias_list_format_from_the_configuration(self, runner: CliRunner, tmp_path):
+        """The alias-list subsection of the configuration sets the default format."""
+        config = self._write_config(
+            tmp_path,
+            "aliases:\n  zzstatus: playback status\n"
+            "output:\n  alias-list:\n    format: table\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "alias", "list"])
+
+        assert result.exit_code == 0
+        assert "Volumito Command Aliases" in result.output
+
+    def test_alias_list_machine_readable(self, runner: CliRunner, tmp_path):
+        """In machine-readable mode alias list prints the JSON object."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-m", "-c", config, "alias", "list"])
+
+        assert result.exit_code == 0
+        assert result.output == '{"zzstatus": "playback status"}\n'
+
+    def test_alias_list_without_aliases(self, runner: CliRunner):
+        """Without any alias defined, alias list prints an empty object."""
+        plain = runner.invoke(main, ["-i", "alias", "list"])
+        machine = runner.invoke(main, ["-m", "-i", "alias", "list"])
+
+        assert plain.exit_code == 0
+        assert json.loads(plain.output) == {}
+        assert machine.exit_code == 0
+        assert machine.output == "{}\n"
+
 
 class TestResolveCommandPath:
     """Test cases for the command-path resolver behind the aliases."""
@@ -12459,6 +12528,7 @@ class TestConfigurationCommands:
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders,
                     # except the two collection ones pinning their table format.
+                    "alias-list": None,
                     "collection-browse": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-statistics": None,

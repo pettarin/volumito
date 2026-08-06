@@ -158,6 +158,7 @@ notification:
 output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
+  # - alias-list
   # - collection-browse
   # - collection-search
   # - collection-statistics
@@ -209,6 +210,9 @@ output:
 
   # Enable verbose output
   verbose: false
+
+  alias-list:
+    # Add your own overrides here
 
   collection-browse:
     # Browsing is meant for humans, so the table is its default format

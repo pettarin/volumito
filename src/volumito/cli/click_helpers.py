@@ -1837,6 +1837,7 @@ def render_payload(
     data: dict[str, Any],
     output_format: str,
     heading: str,
+    verbatim_labels: bool = False,
 ) -> None:
     """Print a JSON payload per the format option, or compact in machine-readable mode.
 
@@ -1845,6 +1846,8 @@ def render_payload(
         data: The JSON object to print
         output_format: The output format ("json", "pretty", "raw", or "table")
         heading: The heading line for the table output format
+        verbatim_labels: When True, the table format prints the keys as they are
+            instead of title-casing them
     """
     if ctx.obj["machine_readable"] or output_format == "raw":
         output = json.dumps(data)
@@ -1855,6 +1858,7 @@ def render_payload(
             data,
             heading=heading,
             position_starting_at_one=ctx.obj["position_starting_at_one"],
+            verbatim_labels=verbatim_labels,
         )
     else:  # pretty
         output = format_as_pretty(data, ctx.obj["position_starting_at_one"])

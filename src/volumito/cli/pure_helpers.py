@@ -302,6 +302,7 @@ def format_as_table(
     heading: str = "Volumio Status",
     field_order: list[str] | None = None,
     position_starting_at_one: bool = True,
+    verbatim_labels: bool = False,
 ) -> str:
     """Format the state dictionary as a readable table.
 
@@ -312,6 +313,8 @@ def format_as_table(
             title-cased labels); otherwise labels and order are derived from the
             state (predefined labels for the short set, sorted keys otherwise)
         position_starting_at_one: Whether the displayed positions start at one
+        verbatim_labels: When True, print the keys as they are instead of
+            title-casing them (for user-defined keys such as the aliases)
 
     Returns:
         A formatted string representation of the state
@@ -323,7 +326,8 @@ def format_as_table(
     if field_order is not None:
         # Display the requested fields in the given order, with title-cased labels
         field_list = [
-            (key.replace("_", " ").replace(".", " ").title(), key) for key in field_order
+            (key if verbatim_labels else key.replace("_", " ").replace(".", " ").title(), key)
+            for key in field_order
         ]
     elif set(state.keys()).issubset(set(SHORT_FORMAT_FIELDS_PLAYER_STATE)):
         # Use predefined labels for the player short field set
@@ -340,7 +344,10 @@ def format_as_table(
         ]
     else:
         # Display all fields from the state
-        field_list = [(key.replace("_", " ").title(), key) for key in sorted(state.keys())]
+        field_list = [
+            (key if verbatim_labels else key.replace("_", " ").title(), key)
+            for key in sorted(state.keys())
+        ]
 
     for label, key in field_list:
         value = state.get(key)
@@ -358,7 +365,7 @@ def format_as_table(
                 # in the order returned by the API
                 lines.append(f"{label:20}:")
                 for sub_key, sub_value in value.items():
-                    sub_label = sub_key.replace("_", " ").title()
+                    sub_label = sub_key if verbatim_labels else sub_key.replace("_", " ").title()
                     lines.append(f"  {sub_label:18}: {sub_value}")
             else:
                 lines.append(f"{label:20}: {value}")

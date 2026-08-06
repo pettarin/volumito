@@ -757,6 +757,7 @@ class TestBuildClickDefaultMap:
         # The commands accepting only --format do not receive the shared fields value.
         format_only = {"output_format": "table"}
         assert result == {
+            "alias": {"list": format_only},
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"list": formatting},

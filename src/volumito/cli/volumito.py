@@ -589,6 +589,22 @@ def configuration_search(ctx: click.Context) -> None:
 
 @main.group()
 @click.pass_context
+def alias(ctx: click.Context) -> None:
+    """Query the user-defined command aliases."""
+    pass
+
+
+@alias.command("list")
+@click.pass_context
+@option_format
+def alias_list(ctx: click.Context, output_format: str) -> None:
+    """Print the user-defined aliases and the command paths they resolve to."""
+    aliases = dict(sorted(ctx.obj.get("aliases", {}).items()))
+    render_payload(ctx, aliases, output_format, "Volumito Command Aliases", verbatim_labels=True)
+
+
+@main.group()
+@click.pass_context
 def playback(ctx: click.Context) -> None:
     """Control the playback."""
     pass

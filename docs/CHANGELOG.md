@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Custom command aliases: the new `aliases` section of the configuration file maps a
   name to an existing command group or subcommand (e.g., `cover: track albumart`)
+- Command group `alias`, with `alias list` printing the user-defined aliases and their
+  command paths
 
 
 ## [0.0.44] - 2026-08-06
