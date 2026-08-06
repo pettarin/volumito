@@ -504,6 +504,7 @@ class TestDefaultConfigurationTemplate:
                 },
             },
             "output": {
+                "color": True,
                 "fields": "SHORT",
                 "format": "pretty",
                 "machine-readable": False,

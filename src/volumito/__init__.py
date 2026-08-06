@@ -4,6 +4,8 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import logging
+
 from volumito.clients import (
     VOLUMIO_INTERNAL_ROOT,
     VOLUMIO_MNT_ROOT,
@@ -53,7 +55,11 @@ from volumito.clients import (
     remote_music_path,
 )
 
-__version__ = "0.0.40"
+# The library logs under the "volumito" logger; without a handler of the user's (the
+# CLI installs its own), the records go nowhere, silently
+logging.getLogger("volumito").addHandler(logging.NullHandler())
+
+__version__ = "0.0.41"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 

@@ -104,6 +104,7 @@ from volumito.cli.configuration import (
     probe_configuration_paths,
     resolve_configuration_path,
 )
+from volumito.cli.console import debug, error, info, setup_console
 from volumito.cli.constants import (
     BROWSE_KINDS_ERROR,
     DEFAULT_VOLUMIO_VERSION,
@@ -172,6 +173,12 @@ from volumito.clients import (
 
 
 @click.group()
+@click.option(
+    "--color/--no-color",
+    default=True,
+    show_default=True,
+    help="Color the messages of the tool (when the terminal supports it).",
+)
 @click.option(
     "--configuration-file",
     "-c",
@@ -312,6 +319,7 @@ from volumito.clients import (
 @click.pass_context
 def main(
     ctx: click.Context,
+    color: bool,
     host: str,
     machine_readable: bool,
     mpd_port: int,
@@ -328,6 +336,7 @@ def main(
     verbose: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""
+    setup_console(verbose=verbose, machine_readable=machine_readable, color=color)
     # Store common options in context for subcommands to access
     ctx.ensure_object(dict)
     ctx.obj["host_configuration"] = VolumioHostConfiguration(
@@ -348,10 +357,10 @@ def main(
     ctx.obj["position_starting_at_one"] = position_starting_at_one
 
     configuration_file = ctx.obj.get("configuration_file")
-    if verbose and not machine_readable and configuration_file is not None:
-        click.echo(f"Using configuration file: {configuration_file}", err=True)
-    elif verbose and not machine_readable and ctx.obj.get("ignore_configuration_file"):
-        click.echo("Ignoring configuration files", err=True)
+    if configuration_file is not None:
+        debug(f"Using configuration file: {configuration_file}")
+    elif ctx.obj.get("ignore_configuration_file"):
+        debug("Ignoring configuration files")
 
 
 @main.command()
@@ -422,12 +431,10 @@ def configuration_create(
         destination = os.path.join(os.getcwd(), CONFIGURATION_FILENAMES[0])
 
     if not overwrite_existing_files and os.path.exists(destination):
-        if not machine_readable:
-            click.echo(
-                f"Error: file already exists: {destination} "
-                "(use --overwrite-existing-files to overwrite)",
-                err=True,
-            )
+        error(
+            f"File already exists: {destination} "
+            "(use --overwrite-existing-files to overwrite)"
+        )
         sys.exit(1)
 
     mpd_port = MPD_PORT_VOLUMIO_3 if volumio_version < 4 else MPD_PORT_VOLUMIO_4
@@ -439,14 +446,13 @@ def configuration_create(
         with open(destination, "w", encoding="utf-8") as config_file:
             config_file.write(content)
     except OSError as e:
-        if not machine_readable:
-            click.echo(f"Error: cannot write configuration file {destination}: {e}", err=True)
+        error(f"Cannot write configuration file {destination}: {e}")
         sys.exit(1)
 
     if machine_readable:
         click.echo(json.dumps(destination))
     else:
-        click.echo(f"Created configuration file {destination}")
+        info(f"Created configuration file {destination}")
 
 
 @configuration.command("check")
@@ -470,10 +476,10 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
             }
             click.echo(json.dumps(payload))
         elif path_value is not None:
-            click.echo(f"Configuration file {path_value} is NOT valid.\n", err=True)
-            click.echo(message, err=True)
+            error(f"Configuration file {path_value} is NOT valid.")
+            error(message)
         else:
-            click.echo(f"Error: {message}", err=True)
+            error(message)
         sys.exit(1)
 
     if ctx.obj.get("ignore_configuration_file"):
@@ -481,8 +487,8 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
 
     try:
         resolved = resolve_configuration_path(path)
-    except click.BadParameter as error:
-        fail(path, error.message)
+    except click.BadParameter as bad_path:
+        fail(path, bad_path.message)
     if resolved is None:
         fail(None, "no configuration file found")
 
@@ -510,7 +516,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
             json.dumps({"path": os.path.abspath(resolved), "valid": True, "configuration": config})
         )
     else:
-        click.echo(f"Configuration file {resolved} is valid.\n")
+        info(f"Configuration file {resolved} is valid.")
         for dotted, value in flatten_configuration(config):
             click.echo(f"{dotted} = {value}")
 
@@ -676,8 +682,7 @@ def seek(
         # seconds) to keep the millisecond precision of the printed position
         current = fetch_state_or_exit(ctx).seek
         if current is None:
-            if not ctx.obj["machine_readable"]:
-                click.echo("Error: no seek position found in current state", err=True)
+            error("No seek position found in current state")
             sys.exit(1)
         position = format_seek(current)
         click.echo(json.dumps(position) if ctx.obj["machine_readable"] else position)
@@ -687,12 +692,10 @@ def seek(
         duration = fetch_state_or_exit(ctx).duration
         # The duration is unknown for web radios and streams: skip the check
         if duration is not None and duration > 0 and value > duration:
-            if not ctx.obj["machine_readable"]:
-                click.echo(
-                    f"Error: seek position out of range: {format_duration(value)} "
-                    f"(current track duration: {format_duration(duration)})",
-                    err=True,
-                )
+            error(
+                f"Seek position out of range: {format_duration(value)} "
+                f"(current track duration: {format_duration(duration)})"
+            )
             sys.exit(1)
 
     if isinstance(value, int):
@@ -844,32 +847,27 @@ def audio(
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+    debug(f"Connecting to {host_configuration.rest_base_url}...")
 
     try:
         # Get current track metadata (also validates REST connectivity)
         client = create_client(host_configuration, rest_api_timeout)
         state = client.state
 
-        if verbose and not machine_readable:
-            click.echo("Successfully retrieved state", err=True)
-            click.echo(
-                f"Connecting to MPD at "
-                f"{host_configuration.host}:{host_configuration.mpd_port}...",
-                err=True,
-            )
+        debug("Successfully retrieved state")
+        debug(
+            f"Connecting to MPD at "
+            f"{host_configuration.host}:{host_configuration.mpd_port}..."
+        )
 
         # Connect to MPD to get current track URI
         with VolumioMPDClient(host_configuration, mpd_timeout) as mpd_client:
-            if verbose and not machine_readable:
-                click.echo("Successfully connected to MPD", err=True)
+            debug("Successfully connected to MPD")
 
             # Get track URI with localhost replaced
             uri = mpd_client.get_track_uri()
 
-            if verbose and not machine_readable:
-                click.echo(f"Track URI: {uri}", err=True)
+            debug(f"Track URI: {uri}")
 
             # Always print the URI (even in machine-readable mode);
             # in machine-readable mode print it quoted so it can be consumed by jq/yq
@@ -879,12 +877,10 @@ def audio(
             if output_file is not None or output_directory is not None:
                 if is_local_file_uri(uri):
                     embed_tags = False
-                    if verbose and not machine_readable:
-                        click.echo(
-                            "\nNot embedding the album art and the metadata, "
-                            "to preserve the file being copied...",
-                            err=True,
-                        )
+                    debug(
+                        "Not embedding the album art and the metadata, "
+                        "to preserve the file being copied..."
+                    )
                 else:
                     embed_tags = add_cover_and_metadata
                 destination = download_uri_to(
@@ -929,16 +925,13 @@ def audio(
         # swallowed by the generic handler below.
         raise
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
+        error(f"Unexpected error: {e}")
         sys.exit(1)
 
 
@@ -970,26 +963,22 @@ def albumart(
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+    debug(f"Connecting to {host_configuration.rest_base_url}...")
 
     try:
         # Get current state metadata
         client = create_client(host_configuration, rest_api_timeout)
         state = client.state
 
-        if verbose and not machine_readable:
-            click.echo("Successfully retrieved state", err=True)
+        debug("Successfully retrieved state")
 
         # Extract albumart URI (relative URIs are made absolute against the base URL)
         albumart_uri = resolve_albumart_uri(state, host_configuration)
         if albumart_uri is None:
-            if not machine_readable:
-                click.echo("Error: No album art URI found in current state", err=True)
+            error("No album art URI found in current state")
             sys.exit(1)
 
-        if verbose and not machine_readable:
-            click.echo(f"Album art URI: {albumart_uri}", err=True)
+        debug(f"Album art URI: {albumart_uri}")
 
         # Always print the URI (even in machine-readable mode);
         # in machine-readable mode print it quoted so it can be consumed by jq/yq
@@ -1025,16 +1014,13 @@ def albumart(
         # swallowed by the generic handler below.
         raise
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
+        error(f"Unexpected error: {e}")
         sys.exit(1)
 
 
@@ -1057,19 +1043,15 @@ def queue_list(
     """Print the playback queue."""
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
-    verbose = ctx.obj["verbose"]
-    machine_readable = ctx.obj["machine_readable"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
-    if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+    debug(f"Connecting to {host_configuration.rest_base_url}...")
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
         queue_data = client.queue.raw
 
-        if verbose and not machine_readable:
-            click.echo("Successfully retrieved queue", err=True)
+        debug("Successfully retrieved queue")
 
         # Determine output format
         if output_format == "raw":
@@ -1101,16 +1083,13 @@ def queue_list(
         click.echo(output)
 
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
+        error(f"Unexpected error: {e}")
         sys.exit(1)
 
 
@@ -1186,19 +1165,16 @@ def queue_download(
     if output_directory is None:
         raise click.UsageError(OUTPUT_DIRECTORY_REQUIRED_ERROR)
 
-    if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+    debug(f"Connecting to {host_configuration.rest_base_url}...")
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
         tracks = client.queue.tracks
 
-        if verbose and not machine_readable:
-            click.echo("Successfully retrieved queue", err=True)
+        debug("Successfully retrieved queue")
 
         if not tracks:
-            if not machine_readable:
-                click.echo("The queue is empty, nothing to download")
+            info("The queue is empty, nothing to download")
             return
 
         # The selected positions follow the indexing of the displayed ones
@@ -1212,11 +1188,9 @@ def queue_download(
                 if 0 <= position - offset < len(tracks)
             }
             if not selected:
-                if not machine_readable:
-                    click.echo("Error: no track of the queue is selected", err=True)
+                error("No track of the queue is selected")
                 sys.exit(1)
-            if not machine_readable:
-                click.echo(f"Downloading {len(selected)} of {len(tracks)} tracks")
+            info(f"Downloading {len(selected)} of {len(tracks)} tracks")
 
         timestamp = datetime.now(UTC).strftime(OUTPUT_DIRECTORY_TIMESTAMP_FORMAT)
         run_directory = expand_timestamp_placeholder(output_directory, timestamp)
@@ -1226,19 +1200,14 @@ def queue_download(
         if os.path.exists(log_path):
             existing = read_queue_log(log_path)
             if existing is None:
-                if not machine_readable:
-                    click.echo(f"Error: cannot read the manifest file {log_path}", err=True)
+                error(f"Cannot read the manifest file {log_path}")
                 sys.exit(1)
             if not manifest_matches_queue(existing["tracks"], tracks):
-                if not machine_readable:
-                    click.echo(
-                        f"Error: the manifest file {log_path} does not match "
-                        "the current queue",
-                        err=True,
-                    )
+                error(
+                    f"The manifest file {log_path} does not match the current queue"
+                )
                 sys.exit(1)
-            if not machine_readable:
-                click.echo(f"Reading manifest file {log_path}")
+            info(f"Reading manifest file {log_path}")
             entries: list[dict[str, Any]] = existing["tracks"]
             for index, entry in enumerate(entries):
                 # A track left out of this run keeps the status it already had
@@ -1270,8 +1239,7 @@ def queue_download(
                 "volumito_version": __version__,
             }
         else:
-            if not machine_readable:
-                click.echo(f"Creating manifest file {log_path}")
+            info(f"Creating manifest file {log_path}")
             entries = [
                 {
                     "album": track.album,
@@ -1309,12 +1277,12 @@ def queue_download(
             else:
                 for index in sorted(selected):
                     entry = entries[index]
-                    click.echo(
+                    info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
                         f"{entry.get('output_file_path')} (kept)"
                     )
-                click.echo(
-                    f"\n{_download_summary(entries, selected, 0)}; "
+                info(
+                    f"{_download_summary(entries, selected, 0)}; "
                     f"manifest written to {log_path}"
                 )
             return
@@ -1330,11 +1298,10 @@ def queue_download(
                 if index not in selected:
                     continue
                 if entry.get("status") in ("downloaded", "skipped"):
-                    if not machine_readable:
-                        click.echo(
-                            f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                            f"{entry.get('output_file_path')} (kept)"
-                        )
+                    info(
+                        f"[{index + 1}/{len(entries)}] {entry['status']}: "
+                        f"{entry.get('output_file_path')} (kept)"
+                    )
                     continue
                 destination: str | None = None
                 try:
@@ -1359,12 +1326,10 @@ def queue_download(
                             fresh = False
                             break
                         attempt += 1
-                        if verbose and not machine_readable:
-                            click.echo(
-                                "Track metadata not yet updated, retrying "
-                                f"({attempt}/{number_retries_next_track})...",
-                                err=True,
-                            )
+                        debug(
+                            "Track metadata not yet updated, retrying "
+                            f"({attempt}/{number_retries_next_track})..."
+                        )
                     entry["source_uri"] = uri
                     if not fresh:
                         status: str = "error"
@@ -1403,12 +1368,10 @@ def queue_download(
                                 filename = preserve_local_file_name(filename, uri)
                             if is_local_file_uri(uri):
                                 embed_tags = False
-                                if verbose and not machine_readable:
-                                    click.echo(
-                                        "Not embedding the album art and the metadata, "
-                                        "to preserve the file being copied",
-                                        err=True,
-                                    )
+                                debug(
+                                    "Not embedding the album art and the metadata, "
+                                    "to preserve the file being copied"
+                                )
                             else:
                                 embed_tags = add_cover_and_metadata
                             destination = os.path.join(run_directory, filename)
@@ -1469,9 +1432,8 @@ def queue_download(
                     errors += 1
                     entry["error"] = detail
                 write_queue_log(log_path, log)
-                if not machine_readable:
-                    outcome = detail if status == "error" else destination
-                    click.echo(f"[{index + 1}/{len(entries)}] {status}: {outcome}")
+                outcome = detail if status == "error" else destination
+                info(f"[{index + 1}/{len(entries)}] {status}: {outcome}")
 
         # Leave the player stopped at the first track
         client.play(0)
@@ -1481,8 +1443,8 @@ def queue_download(
         if machine_readable:
             click.echo(json.dumps(log_path))
         else:
-            click.echo(
-                f"\n{_download_summary(entries, selected, errors)}; "
+            info(
+                f"{_download_summary(entries, selected, errors)}; "
                 f"manifest written to {log_path}"
             )
         if errors:
@@ -1493,16 +1455,13 @@ def queue_download(
         # swallowed by the generic handler below.
         raise
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
+        error(f"Unexpected error: {e}")
         sys.exit(1)
 
 
@@ -1604,21 +1563,15 @@ def system_execute(
     IMPORTANT: the command runs on the Volumio host as its SSH user and may damage
     it; it is executed only when -y/--yes is given."""
     host_configuration = ctx.obj["host_configuration"]
-    machine_readable = ctx.obj["machine_readable"]
 
     if not yes:
-        if not machine_readable:
-            click.echo(
-                f"Error: refusing to execute the command without -y/--yes: {command}",
-                err=True,
-            )
+        error(f"Refusing to execute the command without -y/--yes: {command}")
         sys.exit(1)
 
     try:
         result = execute_on_host(host_configuration, command)
     except VolumioSSHError as e:
-        if not machine_readable:
-            click.echo(f"Error: {e}", err=True)
+        error(str(e))
         sys.exit(1)
 
     render_payload(
@@ -1928,11 +1881,9 @@ def playlist_play(
     if check_playlist_name:
         names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
-            if not ctx.obj["machine_readable"]:
-                click.echo(f"Error: playlist not found: {name}", err=True)
-                click.echo("Available playlists:", err=True)
-                for available in names or ["(none)"]:
-                    click.echo(f"  {available}", err=True)
+            error(f"Playlist not found: {name}")
+            listed = "\n".join(f"  {available}" for available in names or ["(none)"])
+            error(f"Available playlists:\n{listed}")
             sys.exit(1)
 
     execute_command(ctx, f"playplaylist {name}", lambda c: c.play_playlist(name))
@@ -1979,17 +1930,13 @@ def playlist_download(
     with_albumart: bool,
 ) -> None:
     """Download every track of the playlist specified by NAME."""
-    machine_readable = ctx.obj["machine_readable"]
-    verbose = ctx.obj["verbose"]
 
     if check_playlist_name:
         names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
-            if not machine_readable:
-                click.echo(f"Error: playlist not found: {name}", err=True)
-                click.echo("Available playlists:", err=True)
-                for available in names or ["(none)"]:
-                    click.echo(f"  {available}", err=True)
+            error(f"Playlist not found: {name}")
+            listed = "\n".join(f"  {available}" for available in names or ["(none)"])
+            error(f"Available playlists:\n{listed}")
             sys.exit(1)
 
     host_configuration = ctx.obj["host_configuration"]
@@ -1997,21 +1944,17 @@ def playlist_download(
 
     try:
         client = create_client(host_configuration, rest_api_timeout)
-        if verbose and not machine_readable:
-            click.echo("Clearing the queue...", err=True)
+        debug("Clearing the queue...")
         client.clear()
         rest_api_sleep(ctx)
-        if verbose and not machine_readable:
-            click.echo(f"Playing playlist {name}...", err=True)
+        debug(f"Playing playlist {name}...")
         client.play_playlist(name)
         rest_api_sleep(ctx)
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
 
     ctx.invoke(
@@ -2231,9 +2174,8 @@ def _exit_on_notification_failure(
     if response.is_success:
         return
 
-    if not ctx.obj["machine_readable"]:
-        detail = f" ({response.error})" if response.error else ""
-        click.echo(f"Error: the Volumio host did not {action} the URL: {url}{detail}", err=True)
+    detail = f" ({response.error})" if response.error else ""
+    error(f"The Volumio host did not {action} the URL: {url}{detail}")
     sys.exit(1)
 
 
@@ -2259,19 +2201,16 @@ def _listen_and_print(
         idle_timeout: Seconds to wait for each notification, or None
         output_format: The output format ("json", "pretty", "raw", or "table")
     """
-    machine_readable = ctx.obj["machine_readable"]
     listener = NotificationListener(port=port, endpoint=endpoint)
 
     try:
         listener.start()
     except OSError as e:
-        if not machine_readable:
-            click.echo(f"Error: cannot listen on port {port}: {e}", err=True)
+        error(f"Cannot listen on port {port}: {e}")
         sys.exit(1)
 
-    if not machine_readable:
-        click.echo(f"Listening on port {port} for the notifications sent to {url}")
-        click.echo(format_termination_conditions(count, timeout, idle_timeout))
+    info(f"Listening on port {port} for the notifications sent to {url}")
+    info(format_termination_conditions(count, timeout, idle_timeout))
 
     received = 0
     try:
@@ -2293,8 +2232,7 @@ def _listen_and_print(
     else:
         return
 
-    if not machine_readable:
-        click.echo(message)
+    info(message)
     if count is not None:
         sys.exit(1)
 
@@ -2376,24 +2314,20 @@ def notifications_listen(
 
     The command keeps listening until it is interrupted with Ctrl-C, or until one
     of -n/--count, --idle-timeout, and --timeout is reached."""
-    machine_readable = ctx.obj["machine_readable"]
     url = register_url_full or _compose_notification_url(ctx, port, endpoint)
 
     registered = fetch_or_exit(ctx, lambda c: url in c.notifications)
     if not registered and not register_url:
-        if not machine_readable:
-            click.echo(
-                f"Error: the URL is not registered on the Volumio host: {url} "
-                f"(use --register-url to register it)",
-                err=True,
-            )
+        error(
+            f"The URL is not registered on the Volumio host: {url} "
+            f"(use --register-url to register it)"
+        )
         sys.exit(1)
 
     if not registered:
         response = fetch_or_exit(ctx, lambda c: c.register_notification(url))
         _exit_on_notification_failure(ctx, response, "register", url)
-        if not machine_readable:
-            click.echo(f"Registered notification URL: {url}")
+        info(f"Registered notification URL: {url}")
 
     try:
         _listen_and_print(
@@ -2403,8 +2337,7 @@ def notifications_listen(
         if not registered and unregister_url_on_exit:
             response = fetch_or_exit(ctx, lambda c: c.unregister_notification(url))
             _exit_on_notification_failure(ctx, response, "unregister", url)
-            if not machine_readable:
-                click.echo(f"Unregistered notification URL: {url}")
+            info(f"Unregistered notification URL: {url}")
 
 
 @notifications.command("register")
@@ -2435,8 +2368,7 @@ def notifications_register(
     response = fetch_or_exit(ctx, lambda c: c.register_notification(target))
     _exit_on_notification_failure(ctx, response, "register", target)
 
-    if not ctx.obj["machine_readable"]:
-        click.echo(f"Registered notification URL: {target}")
+    info(f"Registered notification URL: {target}")
 
 
 @notifications.command("unregister")
@@ -2464,7 +2396,6 @@ def notifications_unregister(
     if not any(ways):
         raise click.UsageError(UNREGISTER_ARGUMENT_ERROR)
 
-    machine_readable = ctx.obj["machine_readable"]
     if url is not None:
         targets = [url]
     elif autocompose_url:
@@ -2473,8 +2404,7 @@ def notifications_unregister(
         targets = fetch_or_exit(ctx, lambda c: c.notifications.urls)
 
     if not targets:
-        if not machine_readable:
-            click.echo("No notification URL is registered, nothing to unregister")
+        info("No notification URL is registered, nothing to unregister")
         return
 
     outcomes = fetch_or_exit(
@@ -2483,8 +2413,7 @@ def notifications_unregister(
 
     for target, response in outcomes:
         _exit_on_notification_failure(ctx, response, "unregister", target)
-        if not machine_readable:
-            click.echo(f"Unregistered notification URL: {target}")
+        info(f"Unregistered notification URL: {target}")
 
 
 @main.group("scp")
@@ -2505,17 +2434,14 @@ def scp(ctx: click.Context) -> None:
 def scp_get(ctx: click.Context, remote_path: str, local_path: str, recursive: bool) -> None:
     """Copy REMOTE_PATH of the Volumio host to LOCAL_PATH."""
     host_configuration = ctx.obj["host_configuration"]
-    machine_readable = ctx.obj["machine_readable"]
 
     try:
         copy_from_host(host_configuration, remote_path, local_path, recursive=recursive)
     except VolumioSCPError as e:
-        if not machine_readable:
-            click.echo(f"Error: {e}", err=True)
+        error(str(e))
         sys.exit(1)
 
-    if not machine_readable:
-        click.echo(f"Copied {remote_path} from the Volumio host to {local_path}")
+    info(f"Copied {remote_path} from the Volumio host to {local_path}")
 
 
 @scp.command("put")
@@ -2532,26 +2458,18 @@ def scp_put(
     IMPORTANT: this command writes to the Volumio host and may damage its
     integrity; the copy is made only when -y/--yes is given."""
     host_configuration = ctx.obj["host_configuration"]
-    machine_readable = ctx.obj["machine_readable"]
 
     if not yes:
-        if not machine_readable:
-            click.echo(
-                "Error: refusing to copy to the Volumio host without -y/--yes: "
-                f"{remote_path}",
-                err=True,
-            )
+        error(f"Refusing to copy to the Volumio host without -y/--yes: {remote_path}")
         sys.exit(1)
 
     try:
         copy_to_host(host_configuration, local_path, remote_path, recursive=recursive)
     except VolumioSCPError as e:
-        if not machine_readable:
-            click.echo(f"Error: {e}", err=True)
+        error(str(e))
         sys.exit(1)
 
-    if not machine_readable:
-        click.echo(f"Copied {local_path} to {remote_path} on the Volumio host")
+    info(f"Copied {local_path} to {remote_path} on the Volumio host")
 
 
 # "info" is a top-level synonym for "system info"

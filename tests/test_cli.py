@@ -1569,14 +1569,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.40" in result.output
+        assert "volumito, version 0.0.41" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.40"'
+        assert result.output.strip() == '"0.0.41"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1585,7 +1585,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.40"'
+        assert result.output.strip() == '"0.0.41"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4152,7 +4152,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
 
         assert result.exit_code == 1
-        assert "cannot determine a file name" in result.output
+        assert "Cannot determine a file name" in result.output
 
     def test_albumart_output_file_and_dir_mutually_exclusive(
         self, runner: CliRunner, mocker: MockerFixture
@@ -4454,7 +4454,7 @@ class TestCLICommands:
         )
 
         assert result.exit_code == 0
-        assert "cannot fetch cover art" in result.output
+        assert "Cannot fetch cover art" in result.output
         assert embed.call_args.kwargs["cover"] is None
 
     def test_audio_embed_unsupported_format_warns(
@@ -4488,7 +4488,7 @@ class TestCLICommands:
         )
 
         assert result.exit_code == 0
-        assert "cannot embed metadata into" in result.output
+        assert "Cannot embed metadata into" in result.output
         assert "boom" in result.output
 
     def test_audio_embed_track_number_follows_indexing(
@@ -5005,7 +5005,7 @@ class TestSystemExecute:
         result = runner.invoke(main, ["system", "execute", "uptime"])
 
         assert result.exit_code == 1
-        assert "refusing to execute the command without -y/--yes: uptime" in result.output
+        assert "Refusing to execute the command without -y/--yes: uptime" in result.output
         execute.assert_not_called()
 
     def test_without_yes_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
@@ -5100,7 +5100,7 @@ class TestSystemExecute:
         result = runner.invoke(main, ["system", "execute", "-y", "uptime"])
 
         assert result.exit_code == 1
-        assert "Error: Authentication failed." in result.output
+        assert "Authentication failed." in result.output
 
     def test_a_failed_execution_machine_readable(
         self, runner: CliRunner, mocker: MockerFixture
@@ -5447,7 +5447,7 @@ class TestCollectionBrowse:
         result = runner.invoke(main, ["collection", "browse"])
 
         assert result.exit_code == 1
-        assert "Connection error" in result.output
+        assert "[ERRO] Connection error" in result.output
 
 
 class TestCollectionCommands:
@@ -6417,7 +6417,7 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "play", "Nope"])
 
         assert result.exit_code == 1
-        assert "playlist not found: Nope" in result.output
+        assert "Playlist not found: Nope" in result.output
         assert "Available playlists:" in result.output
         for name in self.PLAYLISTS:
             assert f"  {name}" in result.output
@@ -6547,7 +6547,7 @@ class TestScpCommands:
         assert result.exit_code == 0
         assert (
             result.output.strip()
-            == "Copied /tmp/remote_file from the Volumio host to ./local_file"
+            == "[INFO] Copied /tmp/remote_file from the Volumio host to ./local_file"
         )
         assert copy.call_args.args[1:] == ("/tmp/remote_file", "./local_file")
         assert copy.call_args.kwargs == {"recursive": False}
@@ -6580,7 +6580,7 @@ class TestScpCommands:
         result = runner.invoke(main, ["scp", "get", "/tmp/nope", "./nope"])
 
         assert result.exit_code == 1
-        assert "Error: No such file" in result.output
+        assert "No such file" in result.output
 
     def test_get_failing_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """A failed copy prints nothing in machine-readable mode."""
@@ -6605,7 +6605,7 @@ class TestScpCommands:
         assert result.exit_code == 0
         assert (
             result.output.strip()
-            == "Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
+            == "[INFO] Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
         )
         assert copy.call_args.args[1:] == ("/tmp/local_file", "/mnt/INTERNAL/remote_file")
         assert copy.call_args.kwargs == {"recursive": False}
@@ -6640,7 +6640,7 @@ class TestScpCommands:
 
         assert result.exit_code == 1
         assert (
-            "refusing to copy to the Volumio host without -y/--yes: /mnt/INTERNAL/a"
+            "Refusing to copy to the Volumio host without -y/--yes: /mnt/INTERNAL/a"
             in result.output
         )
         copy.assert_not_called()
@@ -6665,7 +6665,7 @@ class TestScpCommands:
         result = runner.invoke(main, ["scp", "put", "-y", "/tmp/a", "/mnt/a"])
 
         assert result.exit_code == 1
-        assert "Error: Permission denied" in result.output
+        assert "Permission denied" in result.output
 
     def test_put_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """scp put prints nothing in machine-readable mode."""
@@ -6801,7 +6801,7 @@ class TestNotificationsCommands:
         result = runner.invoke(main, ["notifications", "register", self.URLS[0]])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"Registered notification URL: {self.URLS[0]}"
+        assert result.output.strip() == f"[INFO] Registered notification URL: {self.URLS[0]}"
         mock_client.register_notification.assert_called_once_with(self.URLS[0])
 
     def test_register_autocompose_url(self, runner: CliRunner, mocker: MockerFixture):
@@ -6814,7 +6814,7 @@ class TestNotificationsCommands:
         result = runner.invoke(main, ["notifications", "register", "--autocompose-url"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"Registered notification URL: {self.LISTEN_URL}"
+        assert result.output.strip() == f"[INFO] Registered notification URL: {self.LISTEN_URL}"
         mock_client.register_notification.assert_called_once_with(self.LISTEN_URL)
         assert composed.call_args.args[1:] == (3003, "/volumionotifications")
 
@@ -6887,7 +6887,7 @@ class TestNotificationsCommands:
 
         assert result.exit_code == 1
         assert (
-            f"Error: the Volumio host did not register the URL: {self.URLS[0]} "
+            f"The Volumio host did not register the URL: {self.URLS[0]} "
             "(Missing URL parameter)" in result.output
         )
 
@@ -6900,7 +6900,7 @@ class TestNotificationsCommands:
         assert result.exit_code == 1
         assert (
             result.output.strip()
-            == f"Error: the Volumio host did not register the URL: {self.URLS[0]}"
+            == f"[ERRO] The Volumio host did not register the URL: {self.URLS[0]}"
         )
 
     def test_register_refused_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
@@ -6919,7 +6919,7 @@ class TestNotificationsCommands:
         result = runner.invoke(main, ["notifications", "unregister", self.URLS[1]])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"Unregistered notification URL: {self.URLS[1]}"
+        assert result.output.strip() == f"[INFO] Unregistered notification URL: {self.URLS[1]}"
         mock_client.unregister_notification.assert_called_once_with(self.URLS[1])
 
     def test_unregister_refused(self, runner: CliRunner, mocker: MockerFixture):
@@ -6930,7 +6930,7 @@ class TestNotificationsCommands:
 
         assert result.exit_code == 1
         assert (
-            f"Error: the Volumio host did not unregister the URL: {self.URLS[1]} "
+            f"The Volumio host did not unregister the URL: {self.URLS[1]} "
             "(No such URL is present)" in result.output
         )
 
@@ -6976,10 +6976,10 @@ class TestNotificationsCommands:
         assert result.exit_code == 0
         lines = result.output.splitlines()
         assert lines[0] == (
-            f"Listening on port 3003 for the notifications sent to {self.LISTEN_URL}"
+            f"[INFO] Listening on port 3003 for the notifications sent to {self.LISTEN_URL}"
         )
         # The ways out are the last thing said before the wait begins
-        assert lines[1] == "Terminate as soon as: CTRL+C is issued"
+        assert lines[1] == "[INFO] Terminate as soon as: CTRL+C is issued"
         assert '\n    "item": "state"' in result.output
         assert '"item": "queue"' in result.output
 
@@ -7009,7 +7009,8 @@ class TestNotificationsCommands:
         self._mock_listener(mocker, self.NOTIFICATIONS)
 
         result = runner.invoke(main, ["notifications", "listen", "-F", "table"])
-        lines = [line for line in result.output.splitlines() if line.startswith("[")]
+        # The notification lines start with their [timestamp]; the [INFO] lines do not count
+        lines = [line for line in result.output.splitlines() if line.startswith("[2")]
 
         assert result.exit_code == 0
         assert lines[0].endswith("state    play | Caterina - Francesco De Gregori")
@@ -7043,7 +7044,7 @@ class TestNotificationsCommands:
 
         assert result.exit_code == 1
         assert (
-            f"Error: the URL is not registered on the Volumio host: {self.LISTEN_URL} "
+            f"The URL is not registered on the Volumio host: {self.LISTEN_URL} "
             "(use --register-url to register it)" in result.output
         )
         mock_client.register_notification.assert_not_called()
@@ -7136,7 +7137,7 @@ class TestNotificationsCommands:
         result = runner.invoke(main, ["notifications", "listen", "-p", "80"])
 
         assert result.exit_code == 1
-        assert "Error: cannot listen on port 80: Address already in use" in result.output
+        assert "Cannot listen on port 80: Address already in use" in result.output
 
     def test_listen_port_in_use_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """The port error prints nothing in machine-readable mode."""
@@ -7245,7 +7246,7 @@ class TestNotificationsCommands:
         result = runner.invoke(main, ["notifications", "unregister", "--autocompose-url"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == f"Unregistered notification URL: {self.LISTEN_URL}"
+        assert result.output.strip() == f"[INFO] Unregistered notification URL: {self.LISTEN_URL}"
         mock_client.unregister_notification.assert_called_once_with(self.LISTEN_URL)
         assert composed.call_args.args[1:] == (3003, "/volumionotifications")
 
@@ -7285,7 +7286,7 @@ class TestNotificationsCommands:
 
         assert result.exit_code == 0
         assert result.output.splitlines() == [
-            f"Unregistered notification URL: {url}" for url in self.URLS
+            f"[INFO] Unregistered notification URL: {url}" for url in self.URLS
         ]
         assert [
             call.args[0] for call in mock_client.unregister_notification.call_args_list
@@ -7346,7 +7347,7 @@ class TestNotificationsCommands:
         assert result.exit_code == 1
         assert f"Unregistered notification URL: {self.URLS[0]}" in result.output
         assert (
-            f"Error: the Volumio host did not unregister the URL: {self.URLS[1]} "
+            f"The Volumio host did not unregister the URL: {self.URLS[1]} "
             "(No such URL is present)" in result.output
         )
 
@@ -7924,7 +7925,29 @@ class TestStoryCommands:
         result = runner.invoke(main, ["-v", "story", "album", "Mango", "Sirtaki"])
 
         assert result.exit_code == 0
-        assert "Successfully retrieved story" in result.output
+        assert "[DEBUG] Successfully retrieved story" in result.output
+
+    def test_not_verbose_hides_debug(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -v the debug messages stay hidden."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["story", "album", "Mango", "Sirtaki"])
+
+        assert result.exit_code == 0
+        assert "[DEBUG]" not in result.output
+
+    def test_the_color_options_are_accepted(self, runner: CliRunner, mocker: MockerFixture):
+        """--color and --no-color are accepted; the captured output stays plain."""
+        self._mock_client(mocker)
+
+        colored = runner.invoke(main, ["--color", "-v", "story", "album", "Mango", "Sirtaki"])
+        plain = runner.invoke(main, ["--no-color", "-v", "story", "album", "Mango", "Sirtaki"])
+
+        assert colored.exit_code == 0
+        assert plain.exit_code == 0
+        # The runner is not a terminal, so neither run carries ANSI codes
+        assert "\x1b" not in colored.output
+        assert colored.output == plain.output
 
 
 class TestQueueAlbumVolumes:
@@ -8582,7 +8605,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path), "-T", "7-9"])
 
         assert result.exit_code == 1
-        assert "no track of the queue is selected" in result.output
+        assert "No track of the queue is selected" in result.output
 
     def test_download_only_tracks_invalid_selection(self, runner: CliRunner):
         """A malformed selection is a usage error."""
@@ -8937,7 +8960,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 1
-        assert "cannot read the manifest file" in result.output
+        assert "Cannot read the manifest file" in result.output
 
     def test_download_resume_legacy_manifest(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -9592,7 +9615,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "Warning: cannot download album art" in result.output
+        assert "Cannot download album art" in result.output
         _, log = self._read_log(tmp_path)
         assert log["tracks"][0]["status"] == "downloaded"
         assert "albumart_file_path" not in log["tracks"][0]
@@ -9775,7 +9798,7 @@ class TestQueueDownload:
         result = runner.invoke(main, [*self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "Warning: cannot determine a file name for the album art" in result.output
+        assert "Cannot determine a file name for the album art" in result.output
         _, log = self._read_log(tmp_path)
         assert log["tracks"][0]["status"] == "downloaded"
         assert "albumart_file_path" not in log["tracks"][0]
@@ -9893,7 +9916,7 @@ class TestPlaylistDownload:
         result = runner.invoke(main, ["playlist", "download", "Nope", "-d", str(tmp_path)])
 
         assert result.exit_code == 1
-        assert "playlist not found: Nope" in result.output
+        assert "Playlist not found: Nope" in result.output
         client.clear.assert_not_called()
         client.play_playlist.assert_not_called()
 
@@ -10108,7 +10131,8 @@ class TestQueueActions:
         result = runner.invoke(main, ["queue", "clear"])
 
         assert result.exit_code == 0
-        assert "Command 'clear' executed successfully" in result.output
+        # The message carries its level, on the standard error
+        assert "[INFO] Command 'clear' executed successfully" in result.output
         assert "StatusMarkerArtist" in result.output
         mock_client.clear.assert_called_once()
         mock_client.state_property.assert_called_once()
@@ -10452,7 +10476,7 @@ class TestSeekCommand:
         result = runner.invoke(main, ["playback", "seek"])
 
         assert result.exit_code == 1
-        assert "no seek position found" in result.output
+        assert "No seek position found" in result.output
 
     def test_no_value_without_seek_in_state_machine_readable(
         self, runner: CliRunner, mocker: MockerFixture
@@ -10579,7 +10603,7 @@ class TestSeekCommand:
         result = runner.invoke(main, ["playback", "seek", "01:00:00"])
 
         assert result.exit_code == 1
-        assert "seek position out of range: 01:00:00" in result.output
+        assert "Seek position out of range: 01:00:00" in result.output
         assert "current track duration: 00:05:00" in result.output
         mock_client.seek_property.assert_not_called()
 
@@ -12074,6 +12098,7 @@ class TestConfigurationCommands:
                     },
                 },
                 "output": {
+                    "color": True,
                     "fields": "SHORT",
                     "format": "pretty",
                     "machine-readable": False,
@@ -12276,7 +12301,7 @@ class TestConfigurationCommands:
         result = runner.invoke(main, ["configuration", "create", "-o", str(target)])
 
         assert result.exit_code == 1
-        assert "cannot write configuration file" in result.output
+        assert "Cannot write configuration file" in result.output
 
     def test_check_valid_path(self, runner: CliRunner, tmp_path):
         """`configuration check PATH` validates and prints the values read."""
@@ -12298,12 +12323,10 @@ class TestConfigurationCommands:
         assert "output.playback-status.format = json" in result.output
         assert "downloads.output-directory = /shared" in result.output
         assert "downloads.track-audio.file-name-template = a.flac" in result.output
-        # The validity line is separated from the key lines by a blank line,
-        # and the keys are printed in lexicographic order
+        # The keys follow the validity line, printed in lexicographic order
         lines = result.output.splitlines()
         assert lines[0].endswith("is valid.")
-        assert lines[1] == ""
-        assert lines[2:] == sorted(lines[2:])
+        assert lines[1:] == sorted(lines[1:])
 
     def test_check_invalid_content(self, runner: CliRunner, tmp_path):
         """An unrecognized key makes check fail with a clean error."""
@@ -12315,7 +12338,6 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         lines = result.output.splitlines()
         assert lines[0].endswith("is NOT valid.")
-        assert lines[1] == ""
         assert "unknown key 'bogus'" in result.output
         assert "Usage:" not in result.output
 
@@ -12329,7 +12351,6 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         lines = result.output.splitlines()
         assert lines[0].endswith("is NOT valid.")
-        assert lines[1] == ""
         assert "cannot read configuration file" in result.output
         assert "Usage:" not in result.output
 
@@ -12357,7 +12378,6 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         lines = result.output.splitlines()
         assert lines[0].endswith("is NOT valid.")
-        assert lines[1] == ""
         assert (
             "1. output-file and output-directory are mutually exclusive: "
             "'track-albumart' takes output-file from the shared 'downloads' section "
@@ -12383,7 +12403,6 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         lines = result.output.splitlines()
         assert lines[0].endswith("is NOT valid.")
-        assert lines[1] == ""
         assert "1. unknown key 'foo' in section 'volumio'" in result.output
         assert (
             "2. output-file and output-directory are mutually exclusive: "
@@ -12433,7 +12452,6 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         lines = result.output.splitlines()
         assert lines[0].endswith("is NOT valid.")
-        assert lines[1] == ""
         assert "configuration file not found" in result.output
         assert "Usage:" not in result.output
 

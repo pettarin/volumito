@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "volumito"
-version = "0.0.40"
+version = "0.0.41"
 description = "Python client library and CLI tool for Volumio"
 authors = [
     {name = "Alberto Pettarin", email = "alberto@albertopettarin.it"}
@@ -26,6 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "click>=8.1.0",
+    "colorama>=0.4.6",
     "mutagen>=1.47.0",
     "packaging>=23.0",
     "pydantic>=2.9.0",

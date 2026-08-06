@@ -170,6 +170,9 @@ output:
   # - track-info
   # - zones-list
 
+  # Color the messages of the tool (when the terminal supports it)
+  color: true
+
   # Fields to display.
   # Specify one of: ALL, SHORT, or a comma-separated list of fields (e.g., "album,artist")
   # - ALL: all fields returned by the host
