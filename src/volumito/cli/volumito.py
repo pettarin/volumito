@@ -14,11 +14,13 @@ import click
 
 from volumito import __version__
 from volumito.cli.click_helpers import (
+    AliasedGroup,
     OnOffParamType,
     SchemeParamType,
     SeekParamType,
     VolumeParamType,
     VolumioVersionParamType,
+    alias_problems,
     configuration_file_callback,
     create_client,
     download_queue_albumart,
@@ -173,7 +175,7 @@ from volumito.clients import (
 )
 
 
-@click.group()
+@click.group(cls=AliasedGroup)
 @click.option(
     "--color/--no-color",
     default=True,
@@ -527,6 +529,9 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
         f"and output-directory from {describe(directory_origin)}"
         for subsection, file_origin, directory_origin in find_destination_conflicts(config)
     )
+    root = ctx.find_root().command
+    if isinstance(root, click.Group):
+        problems.extend(alias_problems(root, ctx, config.get("aliases", {}), resolved))
     if len(problems) == 1:
         fail(resolved, problems[0], errors=problems)
     if problems:
@@ -580,6 +585,22 @@ def configuration_search(ctx: click.Context) -> None:
         else:
             lines.append(f"  {path} (found, NOT used)")
     echo_data(ctx, "\n".join(lines))
+
+
+@main.group()
+@click.pass_context
+def alias(ctx: click.Context) -> None:
+    """Query the user-defined command aliases."""
+    pass
+
+
+@alias.command("list")
+@click.pass_context
+@option_format
+def alias_list(ctx: click.Context, output_format: str) -> None:
+    """Print the user-defined aliases and the command paths they resolve to."""
+    aliases = dict(sorted(ctx.obj.get("aliases", {}).items()))
+    render_payload(ctx, aliases, output_format, "Volumito Command Aliases", verbatim_labels=True)
 
 
 @main.group()

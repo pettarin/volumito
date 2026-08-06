@@ -26,6 +26,7 @@ from volumito.cli.click_helpers import (
     VolumeParamType,
     create_client,
     render_output_filename,
+    resolve_command_path,
 )
 from volumito.cli.console import LOGGER
 from volumito.cli.constants import (
@@ -1585,14 +1586,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.44" in result.output
+        assert "volumito, version 0.0.45" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.44"'
+        assert result.output.strip() == '"0.0.45"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1601,7 +1602,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.44"'
+        assert result.output.strip() == '"0.0.45"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -3382,7 +3383,7 @@ class TestCLICommands:
         mock_open.assert_called_once_with("/tmp/my_track.flac", "wb")
 
     def test_audio_of_a_file_of_the_host_library(
-        self, runner: CliRunner, mocker: MockerFixture
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
         """A URI without a scheme is copied from the Volumio host over SCP."""
         mock_client = mocker.Mock()
@@ -3394,15 +3395,18 @@ class TestCLICommands:
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
         copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+        # The download manifest is really written, so the destination must be a
+        # test-managed directory
+        destination = str(tmp_path / "track.flac")
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(main, ["track", "audio", "-o", destination])
 
         assert result.exit_code == 0
-        assert 'successfully downloaded to "/tmp/track.flac"' in result.output
+        assert f'successfully downloaded to "{destination}"' in result.output
         mock_get.assert_not_called()
         assert copy.call_args.args[1:3] == (
             "/mnt/INTERNAL/music/album/01-track.flac",
-            "/tmp/track.flac",
+            destination,
         )
         assert copy.call_args.args[0].ssh_username == "volumio"
 
@@ -3487,7 +3491,7 @@ class TestCLICommands:
         embed.assert_called_once()
 
     def test_audio_of_a_file_of_the_host_library_failing(
-        self, runner: CliRunner, mocker: MockerFixture
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
         """A failed copy exits 1, reporting what went wrong."""
         mock_client = mocker.Mock()
@@ -3502,12 +3506,16 @@ class TestCLICommands:
             side_effect=VolumioSCPError("Authentication failed"),
         )
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(tmp_path / "track.flac")]
+        )
 
         assert result.exit_code == 1
         assert "Download error: Authentication failed" in result.output
 
-    def test_audio_with_the_ssh_options(self, runner: CliRunner, mocker: MockerFixture):
+    def test_audio_with_the_ssh_options(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
         """The SSH options reach the copy through the host configuration."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "state", return_value={"title": "Test Song"})
@@ -3530,7 +3538,9 @@ class TestCLICommands:
                 "track",
                 "audio",
                 "-o",
-                "/tmp/track.flac",
+                # The download manifest is really written, so the destination must
+                # be a test-managed directory
+                str(tmp_path / "track.flac"),
             ],
         )
 
@@ -4868,6 +4878,247 @@ class TestPagerOption:
         assert result.exit_code == 0
         mock_pager.assert_not_called()
         assert "Paged Song" in result.output
+
+
+class TestAliases:
+    """Test cases for the user-defined command aliases."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _write_config(self, tmp_path, content: str) -> str:
+        """Write a configuration file with the given content, returning its path."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(content)
+        return str(config)
+
+    def _mock_state(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with a recognizable playback state."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={
+            "title": "AliasMarkerTitle",
+            "artist": "Artist",
+            "status": "stop",
+        })
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_alias_invokes_the_target(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An alias runs the subcommand its path leads to."""
+        self._mock_state(mocker)
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "zzstatus"])
+
+        assert result.exit_code == 0
+        assert "AliasMarkerTitle" in result.output
+
+    def test_alias_forwards_arguments(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The arguments after the alias reach the target command."""
+        self._mock_state(mocker)
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "zzstatus", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Status" in result.output
+
+    def test_alias_to_a_group(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """An alias may target a group, whose subcommands then resolve normally."""
+        self._mock_state(mocker)
+        config = self._write_config(tmp_path, "aliases:\n  zzpb: playback\n")
+
+        result = runner.invoke(main, ["-c", config, "zzpb", "status"])
+
+        assert result.exit_code == 0
+        assert "AliasMarkerTitle" in result.output
+
+    def test_alias_shadowing_a_command_is_refused(self, runner: CliRunner, tmp_path):
+        """An alias with the name of a built-in command refuses the invocation."""
+        config = self._write_config(tmp_path, "aliases:\n  info: system info\n")
+
+        result = runner.invoke(main, ["-c", config, "version"])
+
+        assert result.exit_code == 2
+        assert "shadows the command 'info'" in result.output
+
+    def test_alias_with_unknown_target_is_refused(self, runner: CliRunner, tmp_path):
+        """An alias whose target does not resolve refuses the invocation."""
+        config = self._write_config(tmp_path, "aliases:\n  zzbad: does not exist\n")
+
+        result = runner.invoke(main, ["-c", config, "version"])
+
+        assert result.exit_code == 2
+        assert "targets the unknown command 'does not exist'" in result.output
+
+    def test_check_reports_broken_aliases(self, runner: CliRunner, tmp_path):
+        """configuration check reports the shadowing and unresolved aliases."""
+        config = self._write_config(
+            tmp_path, "aliases:\n  info: system info\n  zzbad: no such\n"
+        )
+
+        result = runner.invoke(main, ["configuration", "check", config])
+
+        assert result.exit_code == 1
+        assert "shadows the command 'info'" in result.output
+        assert "targets the unknown command 'no such'" in result.output
+
+    def test_check_prints_the_aliases(self, runner: CliRunner, tmp_path):
+        """configuration check lists the aliases like the other keys."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["configuration", "check", config])
+
+        assert result.exit_code == 0
+        assert "aliases.zzstatus = playback status" in result.output
+
+    def test_ignore_configuration_file_disables_the_aliases(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With -i the aliases of the probed configuration do not exist."""
+        self._mock_state(mocker)
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+        mocker.patch(
+            "volumito.cli.configuration.configuration_paths", return_value=[config]
+        )
+
+        probed = runner.invoke(main, ["zzstatus"])
+        ignored = runner.invoke(main, ["-i", "zzstatus"])
+
+        assert probed.exit_code == 0
+        assert "AliasMarkerTitle" in probed.output
+        assert ignored.exit_code == 2
+        assert "No such command 'zzstatus'" in ignored.output
+
+    def test_alias_takes_the_target_subsection_defaults(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The per-command configuration defaults of the target apply under the alias."""
+        self._mock_state(mocker)
+        config = self._write_config(
+            tmp_path,
+            "aliases:\n  zzstatus: playback status\n"
+            "output:\n  playback-status:\n    format: table\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "zzstatus"])
+
+        assert result.exit_code == 0
+        assert "Volumio Status" in result.output
+
+    def test_aliases_are_not_listed_in_help(self, runner: CliRunner, tmp_path):
+        """The configuration-defined aliases do not appear in the group help."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "--help"])
+
+        assert result.exit_code == 0
+        assert "zzstatus" not in result.output
+        # The static built-in alias stays listed
+        assert "info" in result.output
+
+    def test_alias_list_prints_the_aliases(self, runner: CliRunner, tmp_path):
+        """alias list prints the aliases and their targets, sorted by name."""
+        config = self._write_config(
+            tmp_path, "aliases:\n  zzstatus: playback status\n  zzcover: track albumart\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "alias", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {
+            "zzcover": "track albumart",
+            "zzstatus": "playback status",
+        }
+        assert result.output.index("zzcover") < result.output.index("zzstatus")
+
+    def test_alias_list_format_table(self, runner: CliRunner, tmp_path):
+        """In table format alias list prints the aliases under the heading."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "alias", "list", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumito Command Aliases" in result.output
+        # The alias names appear as they are, not title-cased
+        assert "zzstatus" in result.output
+        assert "Zzstatus" not in result.output
+        assert "playback status" in result.output
+
+    def test_alias_list_format_raw(self, runner: CliRunner, tmp_path):
+        """In raw format alias list prints the compact JSON object."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-c", config, "alias", "list", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert result.output == '{"zzstatus": "playback status"}\n'
+
+    def test_alias_list_format_from_the_configuration(self, runner: CliRunner, tmp_path):
+        """The alias-list subsection of the configuration sets the default format."""
+        config = self._write_config(
+            tmp_path,
+            "aliases:\n  zzstatus: playback status\n"
+            "output:\n  alias-list:\n    format: table\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "alias", "list"])
+
+        assert result.exit_code == 0
+        assert "Volumito Command Aliases" in result.output
+
+    def test_alias_list_machine_readable(self, runner: CliRunner, tmp_path):
+        """In machine-readable mode alias list prints the JSON object."""
+        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
+
+        result = runner.invoke(main, ["-m", "-c", config, "alias", "list"])
+
+        assert result.exit_code == 0
+        assert result.output == '{"zzstatus": "playback status"}\n'
+
+    def test_alias_list_without_aliases(self, runner: CliRunner):
+        """Without any alias defined, alias list prints an empty object."""
+        plain = runner.invoke(main, ["-i", "alias", "list"])
+        machine = runner.invoke(main, ["-m", "-i", "alias", "list"])
+
+        assert plain.exit_code == 0
+        assert json.loads(plain.output) == {}
+        assert machine.exit_code == 0
+        assert machine.output == "{}\n"
+
+
+class TestResolveCommandPath:
+    """Test cases for the command-path resolver behind the aliases."""
+
+    def test_resolves_a_leaf(self):
+        """A two-token path leads to the subcommand."""
+        ctx = click.Context(main)
+
+        command = resolve_command_path(main, ctx, "track albumart")
+
+        assert command is not None
+        assert command.name == "albumart"
+
+    def test_an_empty_path_does_not_resolve(self):
+        """A path with no tokens resolves to nothing."""
+        ctx = click.Context(main)
+
+        assert resolve_command_path(main, ctx, "  ") is None
+
+    def test_a_path_through_a_leaf_does_not_resolve(self):
+        """A token after a subcommand (not a group) resolves to nothing."""
+        ctx = click.Context(main)
+
+        assert resolve_command_path(main, ctx, "playback status extra") is None
 
 
 class TestSystemCommands:
@@ -12239,6 +12490,8 @@ class TestConfigurationCommands:
             with open("volumito.yaml", encoding="utf-8") as config_file:
                 document = yaml.safe_load(config_file)
             assert document == {
+                # The aliases section ships with every entry commented out
+                "aliases": None,
                 "volumio": {
                     "host": "volumio.local",
                     "scheme": "http",
@@ -12286,6 +12539,7 @@ class TestConfigurationCommands:
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders,
                     # except the two collection ones pinning their table format.
+                    "alias-list": None,
                     "collection-browse": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-statistics": None,

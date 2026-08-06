@@ -65,6 +65,7 @@ FORMAT_KEYS: list[str] = [
 """Commands accepting only --format, not --fields."""
 
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "alias-list": FORMAT_KEYS,
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
@@ -90,6 +91,9 @@ DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
 """The display subsection names, in the order the keys map defines them."""
 
 DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "alias-list": [
+        ["alias", "list"],
+    ],
     "collection-browse": [
         ["collection", "browse"],
     ],
@@ -351,6 +355,7 @@ Keys mirror the CLI long options minus the leading "--".
 
 RECOGNIZED_SECTIONS: list[str] = [
     *SECTION_KEYS,
+    "aliases",
     "downloads",
     "notification",
     "output",
@@ -398,6 +403,25 @@ def _assign_nested(result: dict[str, Any], path: list[str], param: str, value: o
 def _param_name(key: str) -> str:
     """Return the CLI parameter name for a configuration key."""
     return KEY_PARAM_OVERRIDES.get(key, key.replace("-", "_"))
+
+
+def _validate_aliases(values: dict[str, Any], path: str, errors: list[str]) -> dict[str, str]:
+    """Validate the aliases section: free-form names mapping to command path strings.
+
+    Invalid entries are reported in ``errors`` and skipped; the valid ones are returned.
+    Whether a name shadows a built-in command, or a target resolves to an existing
+    command, is checked against the command tree by the CLI layer.
+    """
+    result: dict[str, str] = {}
+    for key, value in values.items():
+        if not isinstance(key, str):
+            errors.append(f"alias name {key!r} in configuration file {path} must be a string")
+            continue
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"alias {key!r} in configuration file {path} must map to a command path")
+            continue
+        result[key] = value
+    return result
 
 
 def _validate_flat_keys(
@@ -631,6 +655,8 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
             for key in keys
             if key in subvalues
         )
+    aliases = config.get("aliases", {})
+    pairs.extend((f"aliases.{key}", value) for key, value in aliases.items())
     return sorted(pairs)
 
 
@@ -682,7 +708,9 @@ def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]
         if not isinstance(values, dict):
             errors.append(f"section {section!r} in configuration file {path} must be a mapping")
             continue
-        if section in HIERARCHICAL_SPECS:
+        if section == "aliases":
+            config[section] = _validate_aliases(values, path, errors)
+        elif section in HIERARCHICAL_SPECS:
             scalar_keys, subsection_keys = HIERARCHICAL_SPECS[section]
             config[section] = _validate_hierarchical(
                 section, values, scalar_keys, subsection_keys, path, errors
