@@ -2,7 +2,7 @@
 
 The messages of the tool flow through the standard :mod:`logging` machinery, under the
 ``volumito`` logger the client library shares: the CLI installs a handler on it that
-prefixes every message with its level (``[ERRO]``, ``[WARN]``, ``[INFO]``, ``[DEBUG]``)
+prefixes every message with its level (``[ERRO]``, ``[WARN]``, ``[INFO]``, ``[DEBU]``)
 and prints it to the standard error, colored when the terminal supports it, leaving the
 standard output to the data alone.
 
@@ -26,7 +26,7 @@ _STYLES: list[tuple[int, str, dict[str, Any]]] = [
     (logging.ERROR, "[ERRO]", {"fg": "red"}),
     (logging.WARNING, "[WARN]", {"fg": "yellow"}),
     (logging.INFO, "[INFO]", {}),
-    (logging.DEBUG, "[DEBUG]", {"dim": True}),
+    (logging.DEBUG, "[DEBU]", {"dim": True}),
 ]
 """The label and the click style of each level, highest first."""
 

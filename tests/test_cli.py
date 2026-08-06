@@ -7925,7 +7925,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["-v", "story", "album", "Mango", "Sirtaki"])
 
         assert result.exit_code == 0
-        assert "[DEBUG] Successfully retrieved story" in result.output
+        assert "[DEBU] Successfully retrieved story" in result.output
 
     def test_not_verbose_hides_debug(self, runner: CliRunner, mocker: MockerFixture):
         """Without -v the debug messages stay hidden."""
@@ -7934,7 +7934,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "Mango", "Sirtaki"])
 
         assert result.exit_code == 0
-        assert "[DEBUG]" not in result.output
+        assert "[DEBU]" not in result.output
 
     def test_the_color_options_are_accepted(self, runner: CliRunner, mocker: MockerFixture):
         """--color and --no-color are accepted; the captured output stays plain."""

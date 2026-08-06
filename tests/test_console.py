@@ -57,7 +57,7 @@ class TestConsoleHandler:
         """Each level gets its label."""
         output = _run(False, lambda: (debug("d"), info("i"), warning("w"), error("e")))
 
-        assert output == "[DEBUG] d\n[INFO] i\n[WARN] w\n[ERRO] e\n"
+        assert output == "[DEBU] d\n[INFO] i\n[WARN] w\n[ERRO] e\n"
 
     def test_critical_is_an_error(self):
         """A level above ERROR still gets the error label."""
@@ -71,7 +71,7 @@ class TestConsoleHandler:
 
         lines = output.splitlines()
 
-        assert lines[0] == "\x1b[2m[DEBUG] d\x1b[0m"
+        assert lines[0] == "\x1b[2m[DEBU] d\x1b[0m"
         # An informational message stays in the default color
         assert lines[1] == "[INFO] i"
         assert lines[2] == "\x1b[33m[WARN] w\x1b[0m"
@@ -108,7 +108,7 @@ class TestSetupConsole:
         def emit() -> None:
             debug("shown")
 
-        assert CliRunner().invoke(emit).output == "[DEBUG] shown\n"
+        assert CliRunner().invoke(emit).output == "[DEBU] shown\n"
 
     def test_machine_readable_is_silent(self):
         """In machine-readable mode every message is silenced, errors included."""
