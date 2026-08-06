@@ -61,6 +61,37 @@ def _append_result_lists(lines: list[str], lists: list[dict[str, Any]], print_ur
                 lines.append(f"{indent}{item['uri']}")
 
 
+def _clean_display_values(state: dict[str, Any], position_starting_at_one: bool) -> dict[str, Any]:
+    """Return the state with its values cleaned for display, at every nesting level.
+
+    String values are stripped, positions are rebased per the display convention,
+    durations are formatted as HH:MM:SS, and seeks as HH:MM:SS.mmm; nested
+    dictionaries receive the same treatment.
+
+    Args:
+        state: The (potentially filtered) state dictionary from the Volumio API
+        position_starting_at_one: Whether the displayed positions start at one
+
+    Returns:
+        The cleaned dictionary
+    """
+    cleaned: dict[str, Any] = {}
+    for key, value in state.items():
+        if isinstance(value, dict):
+            cleaned[key] = _clean_display_values(value, position_starting_at_one)
+        elif isinstance(value, str):
+            cleaned[key] = value.strip()
+        elif key == "position" and isinstance(value, int):
+            cleaned[key] = display_position(value, position_starting_at_one)
+        elif key == "duration" and isinstance(value, int):
+            cleaned[key] = format_duration(value)
+        elif key == "seek" and isinstance(value, int):
+            cleaned[key] = format_seek(value)
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
 def _dotted_field_value(data: dict[str, Any], key: str) -> object:
     """Resolve a dotted field path into nested dictionaries.
 
@@ -303,19 +334,7 @@ def format_as_pretty(state: dict[str, Any], position_starting_at_one: bool = Tru
     Returns:
         A formatted JSON string with 4-space indentation
     """
-    # Strip leading/trailing spaces from string values and format duration
-    cleaned_state: dict[str, Any] = {}
-    for key, value in state.items():
-        if isinstance(value, str):
-            cleaned_state[key] = value.strip()
-        elif key == "position" and isinstance(value, int):
-            cleaned_state[key] = display_position(value, position_starting_at_one)
-        elif key == "duration" and isinstance(value, int):
-            cleaned_state[key] = format_duration(value)
-        elif key == "seek" and isinstance(value, int):
-            cleaned_state[key] = format_seek(value)
-        else:
-            cleaned_state[key] = value
+    cleaned_state = _clean_display_values(state, position_starting_at_one)
 
     return json.dumps(cleaned_state, indent=4, sort_keys=True, ensure_ascii=False)
 
@@ -379,17 +398,21 @@ def format_as_table(
             resolved = _dotted_field_value(state, key)
             value = None if resolved is _MISSING else resolved
         if value is not None:
-            if key == "position" and isinstance(value, int):
+            # A dotted field displays like its leaf key (e.g., track.position)
+            leaf = key.rsplit(".", 1)[-1]
+            if leaf == "position" and isinstance(value, int):
                 value = display_position(value, position_starting_at_one)
             # Format duration as HH:MM:SS
-            if key == "duration" and isinstance(value, int):
+            if leaf == "duration" and isinstance(value, int):
                 value = format_duration(value)
             # Format seek (milliseconds) as HH:MM:SS.mmm
-            if key == "seek" and isinstance(value, int):
+            if leaf == "seek" and isinstance(value, int):
                 value = format_seek(value)
             if isinstance(value, dict):
                 # Print a nested object as one indented key/value line per sub-key,
-                # in the order returned by the API
+                # in the order returned by the API, with its values cleaned like the
+                # top-level ones
+                value = _clean_display_values(value, position_starting_at_one)
                 lines.append(f"{label:20}:")
                 for sub_key, sub_value in value.items():
                     sub_label = sub_key if verbatim_labels else sub_key.replace("_", " ").title()

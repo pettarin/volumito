@@ -188,6 +188,7 @@ SHORT_FORMAT_FIELDS_QUEUE_STATUS = [
     "track.samplerate",
     "track.bitdepth",
     "track.channels",
+    "position",
     "length",
     "has_previous",
     "has_next",

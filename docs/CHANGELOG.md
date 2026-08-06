@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.47] - 2026-08-06
+
+### Fixed
+
+- The SHORT fields of `queue status` include the top-level `position`
+- The position, duration, and seek values nested in the output display like the
+  top-level ones
+
+
 ## [0.0.46] - 2026-08-06
 
 ### Added
