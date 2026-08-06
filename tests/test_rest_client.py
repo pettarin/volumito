@@ -4,6 +4,9 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import logging
+from unittest.mock import Mock
+
 import pytest
 import requests
 from pytest_mock import MockerFixture
@@ -53,6 +56,142 @@ class TestVolumioRESTAPIClient:
         )
 
         assert client.timeout == 10.0
+
+    def test_a_happy_request_logs_its_steps(self, mocker: MockerFixture):
+        """A successful GET leaves the request pair and the status at debug, never info."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "play"}
+        mocker.patch("requests.get", return_value=mock_response)
+        logger = Mock()
+
+        _ = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger).state
+
+        debugged = [call.args[0] for call in logger.debug.call_args_list]
+        assert any(line.startswith("Requesting REQUEST http://") for line in debugged)
+        assert any(line.endswith("... done") for line in debugged)
+        assert "Response status: 200" in debugged
+        logger.info.assert_not_called()
+        logger.warning.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("side_effect", "detail"),
+        [
+            (requests.exceptions.ConnectionError("down"), "Cannot connect"),
+            (requests.exceptions.Timeout("slow"), "did not answer within"),
+            (requests.exceptions.RequestException("odd"), "request to the Volumio API failed"),
+        ],
+    )
+    def test_a_transport_failure_logs_a_warning(
+        self, mocker: MockerFixture, side_effect, detail
+    ):
+        """Each anticipated transport failure warns once and still raises."""
+        mocker.patch("requests.get", side_effect=side_effect)
+        logger = Mock()
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(VolumioConnectionError):
+            _ = client.state
+
+        logger.warning.assert_called_once()
+        assert detail in logger.warning.call_args.args[0]
+
+    def test_an_http_error_logs_a_warning(self, mocker: MockerFixture):
+        """An HTTP error answer warns once, naming the status, and still raises."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 500
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("boom")
+        mocker.patch("requests.get", return_value=mock_response)
+        logger = Mock()
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(VolumioAPIError):
+            _ = client.state
+
+        logger.warning.assert_called_once()
+        assert "HTTP 500" in logger.warning.call_args.args[0]
+
+    @pytest.mark.parametrize(
+        ("body", "detail"),
+        [
+            (ValueError("not json"), "The response is not JSON"),
+            (["an", "array"], "The response is not a JSON object"),
+        ],
+        ids=["not-json", "not-an-object"],
+    )
+    def test_an_unparsable_answer_logs_a_warning(self, mocker: MockerFixture, body, detail):
+        """An answer that is not the expected JSON warns once and still raises."""
+        mock_response = mocker.Mock()
+        mock_response.status_code = 200
+        if isinstance(body, Exception):
+            mock_response.json.side_effect = body
+        else:
+            mock_response.json.return_value = body
+        mocker.patch("requests.get", return_value=mock_response)
+        logger = Mock()
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(VolumioAPIError):
+            _ = client.state
+
+        logger.warning.assert_called_once()
+        assert detail in logger.warning.call_args.args[0]
+
+    def test_the_refusals_log_a_warning(self, mocker: MockerFixture):
+        """The self-raised refusals warn before raising, with nothing sent."""
+        mock_post = mocker.patch("requests.post")
+        logger = Mock()
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(ValueError):
+            client.replace_queue_and_play("albums://X/Y", -1)
+
+        assert "negative play index" in logger.warning.call_args.args[0]
+
+        with pytest.raises(ValueError):
+            client.browse("music-library", -1)
+
+        assert "negative browse offset" in logger.warning.call_args.args[0]
+        assert logger.warning.call_count == 2
+        mock_post.assert_not_called()
+
+    def test_adding_a_container_logs_the_decision(self, mocker: MockerFixture):
+        """Queueing a non-local container logs the browse-to-queue path taken."""
+        item = {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
+        browse_response = mocker.Mock()
+        browse_response.status_code = 200
+        browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
+        mocker.patch("requests.get", return_value=browse_response)
+        post_response = mocker.Mock()
+        post_response.status_code = 200
+        post_response.json.return_value = {"response": "success"}
+        mocker.patch("requests.post", return_value=post_response)
+        logger = Mock()
+
+        VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger).add_to_queue(
+            "qobuz://album/123"
+        )
+
+        debugged = [call.args[0] for call in logger.debug.call_args_list]
+        assert "Service of qobuz://album/123: qobuz" in debugged
+        assert "Browsing the URI to queue the items it lists... done (1 items)" in debugged
+
+    def test_init_default_logger(self):
+        """Without a logger, the client logs under its own name in the volumito hierarchy."""
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        assert client.logger.name == "volumito.clients.rest.client"
+
+    def test_init_custom_logger(self):
+        """A passed logger is stored as given."""
+        logger = logging.getLogger("test.rest.custom")
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
+
+        assert client.logger is logger
 
     def test_state_success(self, mocker: MockerFixture):
         """Test successful state property access."""

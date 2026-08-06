@@ -60,15 +60,15 @@ MUTUALLY_EXCLUSIVE_OUTPUT_ERROR = (
 MUTUALLY_EXCLUSIVE_REGISTER_ERROR = (
     "Option -A/--autocompose-url and the URL argument are mutually exclusive."
 )
-"""Error message when "notifications register" combines --autocompose-url with a URL."""
+"""Error message when "notification register" combines --autocompose-url with a URL."""
 
 MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR = (
     "Options -a/--all, -A/--autocompose-url, and the URL argument are mutually exclusive."
 )
-"""Error message when "notifications unregister" combines its ways of naming a URL."""
+"""Error message when "notification unregister" combines its ways of naming a URL."""
 
-NOTIFICATIONS_ENDPOINT_ERROR = "The endpoint must start with a slash."
-"""Error message when a "notifications" subcommand is given an endpoint without a slash."""
+NOTIFICATION_ENDPOINT_ERROR = "The endpoint must start with a slash."
+"""Error message when a "notification" subcommand is given an endpoint without a slash."""
 
 NOTIFICATION_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 """strftime format of the UTC time a notification was received, trimmed to milliseconds."""
@@ -100,7 +100,7 @@ OUTPUT_FORMATS = [
 """Accepted values of the -F/--format option."""
 
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
-"""Error message when "notifications register" is given neither a URL nor --autocompose-url."""
+"""Error message when "notification register" is given neither a URL nor --autocompose-url."""
 
 REPLACE_POSITION_ERROR = "Expected the -p/--position option only together with --play."
 """Error message when "queue replace" is asked for a position without playing."""
@@ -135,6 +135,19 @@ Only "mpd", "qobuz", and "webradio" are verified against a host: each value mark
 verified is the name its plugin registers itself with, or a guess where the plugin is not
 public.
 """
+
+SHORT_FORMAT_FIELDS_MULTIROOM_ZONES = [
+    "host",
+    "name",
+    "isSelf",
+    "state",
+]
+"""Short fields list for the "multiroom zones" command."""
+
+SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE = [
+    "albumart",
+]
+"""Keys of the "state" subdictionary omitted by the short fields of "multiroom zones"."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
@@ -182,19 +195,6 @@ SHORT_FORMAT_FIELDS_TRACK_INFO = [
 ]
 """Short fields list for the "track info" command."""
 
-SHORT_FORMAT_FIELDS_ZONES_LIST = [
-    "host",
-    "name",
-    "isSelf",
-    "state",
-]
-"""Short fields list for the "zones list" command."""
-
-SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE = [
-    "albumart",
-]
-"""Keys of the "state" subdictionary omitted by the short fields of "zones list"."""
-
 STORY_ARGUMENT_TYPES = [
     "autodetect",
     "mbid",
@@ -216,4 +216,4 @@ STORY_CURRENT_TRACK_METADATA_ERROR = "The current track does not provide the req
 UNREGISTER_ARGUMENT_ERROR = (
     "Expected a URL argument, or one of the -a/--all and -A/--autocompose-url options."
 )
-"""Error message when "notifications unregister" is given no way of naming a URL."""
+"""Error message when "notification unregister" is given no way of naming a URL."""

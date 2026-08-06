@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.41] - 2026-08-06
+
+### Added
+
+- Global option `--color/--no-color`, coloring the level-prefixed messages of the tool
+- The REST API and MPD clients accept a `logger`, defaulting to their own under the
+  `volumito` hierarchy, through the new `VolumioBaseClient` base class they share
+- The MPD and REST API clients log what they do, debug breadcrumbs included
+
+### Changed
+
+- The messages are levelled (`[ERRO]`, `[WARN]`, `[INFO]`, `[DEBU]`), timestamped in
+  UTC, and printed to the standard error, leaving the data alone on the standard output
+- Command group `notifications` renamed to `notification`, and `zones list` to
+  `multiroom zones`; their configuration sections and subsections follow
+
+
 ## [0.0.40] - 2026-08-05
 
 ### Added

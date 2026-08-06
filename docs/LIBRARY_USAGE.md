@@ -225,6 +225,11 @@ typed and validated. A few things worth knowing:
 Units follow the Volumio API: `PlayerState.seek` is in **milliseconds**, while
 `duration` and the `seek` property of the client are in **seconds**.
 
+The library logs under the standard `volumito` logger, which carries a
+`logging.NullHandler` by default: attach your own handler
+(`logging.getLogger("volumito").addHandler(...)`) to see its records. The clients also
+accept a `logger` argument, for callers who manage their own.
+
 
 ## Reference
 

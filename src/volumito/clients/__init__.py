@@ -4,6 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+from volumito.clients.base import VolumioBaseClient
 from volumito.clients.entities import Album, Artist, Label, Place
 from volumito.clients.errors import (
     VolumioAPIError,
@@ -92,6 +93,7 @@ __all__ = [
     "execute_on_host",
     "is_local_file_uri",
     "remote_music_path",
+    "VolumioBaseClient",
     "VolumioHostConfiguration",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",

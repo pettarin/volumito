@@ -14,10 +14,10 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER,
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
+    SHORT_FORMAT_FIELDS_MULTIROOM_ZONES,
+    SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
-    SHORT_FORMAT_FIELDS_ZONES_LIST,
-    SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE,
 )
 from volumito.clients import VolumioHostConfiguration
 from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKind
@@ -235,7 +235,7 @@ def filter_zones_fields(
         keyword the "state" subdictionary is trimmed too
     """
     zones = zones_data.get("zones", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_ZONES_LIST)
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_MULTIROOM_ZONES)
     if selected is None:  # ALL
         return [zone.copy() for zone in zones]
 
@@ -248,7 +248,7 @@ def filter_zones_fields(
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
-                if key not in SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE
+                if key not in SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE
             }
         filtered_zones.append(filtered_zone)
     return filtered_zones
@@ -614,7 +614,7 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
         A formatted string representation of the zones
     """
     lines = []
-    lines.append("Volumio Zones")
+    lines.append("Volumio Multiroom Zones")
     lines.append("=" * 50)
 
     if not zones:

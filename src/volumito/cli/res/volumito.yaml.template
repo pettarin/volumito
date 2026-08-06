@@ -118,7 +118,7 @@ miscellaneous:
   propagate-remote-exit-code: true
 
 
-notifications:
+notification:
   # A key here applies to the listen, register, and unregister commands;
   # the keys of the options only "listen" has are under its own section
 
@@ -154,8 +154,9 @@ output:
   # - collection-browse
   # - collection-search
   # - collection-statistics
-  # - notifications-list
-  # - notifications-listen
+  # - multiroom-zones
+  # - notification-list
+  # - notification-listen
   # - playback-status
   # - playlist-list
   # - queue-list
@@ -168,7 +169,9 @@ output:
   # - system-info
   # - system-version
   # - track-info
-  # - zones-list
+
+  # Color the messages of the tool (when the terminal supports it)
+  color: true
 
   # Fields to display.
   # Specify one of: ALL, SHORT, or a comma-separated list of fields (e.g., "album,artist")
@@ -212,10 +215,13 @@ output:
   collection-statistics:
     # Add your own overrides here
 
-  notifications-list:
+  multiroom-zones:
     # Add your own overrides here
 
-  notifications-listen:
+  notification-list:
+    # Add your own overrides here
+
+  notification-listen:
     # Add your own overrides here
 
   playback-status:
@@ -254,8 +260,6 @@ output:
   track-info:
     # Add your own overrides here
 
-  zones-list:
-    # Add your own overrides here
 
 
 timeouts:

@@ -25,6 +25,7 @@ from volumito.cli.configuration import (
     load_configuration,
     resolve_configuration_path,
 )
+from volumito.cli.console import LOGGER, debug, error, info, warning
 from volumito.cli.constants import (
     DEFAULT_MANIFEST_FILE,
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
@@ -363,8 +364,7 @@ def _materialize_albumart(
         else:
             fetch_uri_to_file(albumart_uri, cover_path, timeout, host_configuration)
     except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
-        if not machine_readable:
-            click.echo(f"\nWarning: cannot download album art to {cover_path} ({e})", err=True)
+        warning(f"Cannot download album art to {cover_path} ({e})")
         return None
     downloaded_covers.setdefault(albumart_uri, cover_path)
     return cover_path
@@ -386,8 +386,7 @@ def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tu
     for key in keys:
         value = getattr(state, key, None)
         if not isinstance(value, str) or not value.strip():
-            if not ctx.obj["machine_readable"]:
-                click.echo(f"Error: {STORY_CURRENT_TRACK_METADATA_ERROR}", err=True)
+            error(STORY_CURRENT_TRACK_METADATA_ERROR)
             sys.exit(1)
         values.append(value.strip())
     return tuple(values)
@@ -433,9 +432,9 @@ def create_client(
             can take long, like replacing the queue
 
     Returns:
-        A configured VolumioRESTAPIClient instance
+        A configured VolumioRESTAPIClient instance, logging to the CLI console
     """
-    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints)
+    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints, LOGGER)
 
 
 def download_queue_albumart(
@@ -521,8 +520,7 @@ def download_queue_albumart(
 
     cover_path = resolve_cover_path(album_volume)
     if cover_path is None:
-        if not machine_readable:
-            click.echo("\nWarning: cannot determine a file name for the album art", err=True)
+        warning("Cannot determine a file name for the album art")
         return None
     result = _materialize_albumart(
         albumart_uri,
@@ -672,47 +670,39 @@ def download_uri_to(
             replace_characters_in_file_names_with,
         )
         if not filename:
-            if not machine_readable:
-                click.echo("\nError: cannot determine a file name for the download", err=True)
+            error("Cannot determine a file name for the download")
             sys.exit(1)
         if not allow_local_file_rename:
             filename = preserve_local_file_name(filename, uri)
         destination = os.path.join(output_directory, filename)  # type: ignore[arg-type]
 
     if not overwrite and os.path.exists(destination):
-        if not machine_readable:
-            click.echo(
-                f"\nError: file already exists: {destination} "
-                "(use --overwrite-existing-files to overwrite)",
-                err=True,
-            )
+        error(
+            f"File already exists: {destination} "
+            "(use --overwrite-existing-files to overwrite)"
+        )
         sys.exit(1)
 
-    if verbose and not machine_readable:
-        click.echo(f"\nDownloading {label} to {destination}...", err=True)
+    info(f"Downloading {label} to {destination}...")
 
     try:
         if output_directory is not None:
             os.makedirs(output_directory, exist_ok=True)
         fetch_uri_to_file(uri, destination, timeout, host_configuration)
 
-        if not machine_readable:
-            click.echo(f"\n{label.capitalize()} successfully downloaded to {destination}")
+        info(f"{label.capitalize()} successfully downloaded to {destination}")
 
         if create_manifest:
             manifest_path = write_download_manifest(
                 destination, uri, state, host_configuration, entity, kind, add_cover_and_metadata
             )
-            if verbose and not machine_readable:
-                click.echo(f"\nManifest written to {manifest_path}...", err=True)
+            debug(f"Manifest written to {manifest_path}...")
 
     except (requests.exceptions.RequestException, VolumioSSHError) as e:
-        if not machine_readable:
-            click.echo(f"\nDownload error: {e}", err=True)
+        error(f"Download error: {e}")
         sys.exit(1)
     except OSError as e:
-        if not machine_readable:
-            click.echo(f"\nFile write error: {e}", err=True)
+        error(f"File write error: {e}")
         sys.exit(1)
 
     return destination
@@ -771,19 +761,13 @@ def embed_track_tags(
             cover=cover,
         )
     except UnsupportedAudioFormatError:
-        if not machine_readable:
-            click.echo(
-                f"\nWarning: cannot embed metadata into {destination} (unsupported format)",
-                err=True,
-            )
+        warning(f"Cannot embed metadata into {destination} (unsupported format)")
         return
     except Exception as e:
-        if not machine_readable:
-            click.echo(f"\nWarning: cannot embed metadata into {destination} ({e})", err=True)
+        warning(f"Cannot embed metadata into {destination} ({e})")
         return
 
-    if verbose and not machine_readable:
-        click.echo(f"\nEmbedded metadata and cover into {destination}...", err=True)
+    debug(f"Embedded metadata and cover into {destination}...")
 
 
 def execute_command(
@@ -800,11 +784,8 @@ def execute_command(
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
-    verbose = ctx.obj["verbose"]
-    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+    debug(f"Connecting to {host_configuration.rest_base_url}...")
 
     try:
         client = create_client(
@@ -812,23 +793,18 @@ def execute_command(
         )
         response = command_func(client)
 
-        if verbose and not machine_readable:
-            click.echo(f"Response: {response}", err=True)
+        debug(f"Response: {response}")
 
-        if not machine_readable:
-            click.echo(f"Command '{command_name}' executed successfully")
+        info(f"Command '{command_name}' executed successfully")
 
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
+        error(f"Unexpected error: {e}")
         sys.exit(1)
 
 
@@ -886,8 +862,7 @@ def fetch_cover(
         response.raise_for_status()
         return b"".join(response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE))
     except requests.exceptions.RequestException as e:
-        if not machine_readable:
-            click.echo(f"\nWarning: cannot fetch cover art ({e})", err=True)
+        warning(f"Cannot fetch cover art ({e})")
         return None
 
 
@@ -907,11 +882,8 @@ def fetch_or_exit[T](
     """
     host_configuration = ctx.obj["host_configuration"]
     rest_api_timeout = ctx.obj["rest_api_timeout"]
-    verbose = ctx.obj["verbose"]
-    machine_readable = ctx.obj["machine_readable"]
 
-    if verbose and not machine_readable:
-        click.echo(f"Connecting to {host_configuration.rest_base_url}...", err=True)
+    debug(f"Connecting to {host_configuration.rest_base_url}...")
 
     try:
         client = create_client(
@@ -919,20 +891,16 @@ def fetch_or_exit[T](
         )
         return fetch(client)
     except VolumioConnectionError as e:
-        if not machine_readable:
-            click.echo(f"Connection error: {e}", err=True)
+        error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioStoryError as e:
-        if not machine_readable:
-            click.echo(f"Story error: {e}", err=True)
+        error(f"Story error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
-        if not machine_readable:
-            click.echo(f"API error: {e}", err=True)
+        error(f"API error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
-        if not machine_readable:
-            click.echo(f"Unexpected error: {e}", err=True)
+        error(f"Unexpected error: {e}")
         sys.exit(1)
 
 
@@ -1045,7 +1013,7 @@ def option_albums_only(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-a``/``--all`` option to the notifications unregister subcommand."""
+    """Add the ``-a``/``--all`` option to the notification unregister subcommand."""
     return click.option(
         "--all",
         "-a",
@@ -1101,7 +1069,7 @@ def option_audio_file_name_template(func: Callable[..., None]) -> Callable[..., 
 
 
 def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-A``/``--autocompose-url`` option to a notifications subcommand."""
+    """Add the ``-A``/``--autocompose-url`` option to a notification subcommand."""
     return click.option(
         "--autocompose-url",
         "-A",
@@ -1143,7 +1111,7 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
 
 
 def option_count(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-n``/``--count`` option to the notifications listen subcommand."""
+    """Add the ``-n``/``--count`` option to the notification listen subcommand."""
     return click.option(
         "--count",
         "-n",
@@ -1177,7 +1145,7 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-e``/``--endpoint`` option to the notifications listen subcommand."""
+    """Add the ``-e``/``--endpoint`` option to the notification listen subcommand."""
     return click.option(
         "--endpoint",
         "-e",
@@ -1239,7 +1207,7 @@ def option_format_table(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--idle-timeout`` option to the notifications listen subcommand."""
+    """Add the ``--idle-timeout`` option to the notification listen subcommand."""
     return click.option(
         "--idle-timeout",
         type=float,
@@ -1377,7 +1345,7 @@ def option_playlists_only(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_port(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``-p``/``--port`` option to a notifications subcommand."""
+    """Add the ``-p``/``--port`` option to a notification subcommand."""
     return click.option(
         "--port",
         "-p",
@@ -1456,7 +1424,7 @@ def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url`` option to the notifications listen subcommand."""
+    """Add the ``--register-url`` option to the notification listen subcommand."""
     return click.option(
         "--register-url/--no-register-url",
         default=False,
@@ -1466,7 +1434,7 @@ def option_register_url(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_register_url_full(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--register-url-full`` option to the notifications listen subcommand."""
+    """Add the ``--register-url-full`` option to the notification listen subcommand."""
     return click.option(
         "--register-url-full",
         type=str,
@@ -1544,7 +1512,7 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_timeout(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--timeout`` option to the notifications listen subcommand."""
+    """Add the ``--timeout`` option to the notification listen subcommand."""
     return click.option(
         "--timeout",
         type=float,
@@ -1576,7 +1544,7 @@ def option_tracks_only(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--unregister-url-on-exit`` option to the notifications listen subcommand."""
+    """Add the ``--unregister-url-on-exit`` option to the notification listen subcommand."""
     return click.option(
         "--unregister-url-on-exit/--no-unregister-url-on-exit",
         default=True,
@@ -1804,16 +1772,13 @@ def render_state(
         short_fields: The list of keys to keep when ``fields`` is "short"
         heading: The heading line for the table output format
     """
-    verbose = ctx.obj["verbose"]
-    machine_readable = ctx.obj["machine_readable"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
     # The display pipeline works on the payload the Volumio host returned, since the
     # fields and formats are defined over its own field names
     state = fetch_state_or_exit(ctx).raw
 
-    if verbose and not machine_readable:
-        click.echo("Successfully retrieved state", err=True)
+    debug("Successfully retrieved state")
 
     # Determine output format
     if output_format == "raw":
@@ -1861,14 +1826,11 @@ def render_story(
         output_format: The output format ("json", "pretty", "raw", or "table")
         heading: The heading line for the table output format
     """
-    verbose = ctx.obj["verbose"]
-    machine_readable = ctx.obj["machine_readable"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
     response = fetch_or_exit(ctx, fetch).raw
 
-    if verbose and not machine_readable:
-        click.echo("Successfully retrieved story", err=True)
+    debug("Successfully retrieved story")
 
     if output_format == "raw":
         # Raw JSON without formatting (ignores fields filter)
