@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The messages are levelled (`[ERRO]`, `[WARN]`, `[INFO]`, `[DEBU]`) and printed to the
   standard error, leaving the data alone on the standard output
-- Command group `notifications` renamed to `notification`, like the other groups; its
-  configuration section and subsections follow
+- Command group `notifications` renamed to `notification`, and `zones list` to
+  `multiroom zones`; their configuration sections and subsections follow
 
 
 ## [0.0.40] - 2026-08-05

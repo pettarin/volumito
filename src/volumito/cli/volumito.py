@@ -1812,16 +1812,16 @@ def collection_statistics(ctx: click.Context, output_format: str) -> None:
 
 @main.group()
 @click.pass_context
-def zones(ctx: click.Context) -> None:
-    """Query the multiroom zones."""
+def multiroom(ctx: click.Context) -> None:
+    """Query the multiroom state."""
     pass
 
 
-@zones.command("list")
+@multiroom.command("zones")
 @click.pass_context
 @option_fields
 @option_format
-def zones_list(ctx: click.Context, fields: str, output_format: str) -> None:
+def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None:
     """Print the multiroom zones seen by the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.zones.raw)
 

@@ -136,6 +136,19 @@ verified is the name its plugin registers itself with, or a guess where the plug
 public.
 """
 
+SHORT_FORMAT_FIELDS_MULTIROOM_ZONES = [
+    "host",
+    "name",
+    "isSelf",
+    "state",
+]
+"""Short fields list for the "multiroom zones" command."""
+
+SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE = [
+    "albumart",
+]
+"""Keys of the "state" subdictionary omitted by the short fields of "multiroom zones"."""
+
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
     "position",
@@ -181,19 +194,6 @@ SHORT_FORMAT_FIELDS_TRACK_INFO = [
     "channels",
 ]
 """Short fields list for the "track info" command."""
-
-SHORT_FORMAT_FIELDS_ZONES_LIST = [
-    "host",
-    "name",
-    "isSelf",
-    "state",
-]
-"""Short fields list for the "zones list" command."""
-
-SHORT_FORMAT_FIELDS_ZONES_LIST_EXCLUDED_FROM_STATE = [
-    "albumart",
-]
-"""Keys of the "state" subdictionary omitted by the short fields of "zones list"."""
 
 STORY_ARGUMENT_TYPES = [
     "autodetect",

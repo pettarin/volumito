@@ -154,6 +154,7 @@ output:
   # - collection-browse
   # - collection-search
   # - collection-statistics
+  # - multiroom-zones
   # - notification-list
   # - notification-listen
   # - playback-status
@@ -168,7 +169,6 @@ output:
   # - system-info
   # - system-version
   # - track-info
-  # - zones-list
 
   # Color the messages of the tool (when the terminal supports it)
   color: true
@@ -215,6 +215,9 @@ output:
   collection-statistics:
     # Add your own overrides here
 
+  multiroom-zones:
+    # Add your own overrides here
+
   notification-list:
     # Add your own overrides here
 
@@ -257,8 +260,6 @@ output:
   track-info:
     # Add your own overrides here
 
-  zones-list:
-    # Add your own overrides here
 
 
 timeouts:

@@ -6041,7 +6041,7 @@ class TestCollectionSearch:
         assert "Connection error" in result.output
 
 
-class TestZonesCommands:
+class TestMultiroomCommands:
     """Test cases for the zones list command."""
 
     ZONES = {
@@ -6081,10 +6081,10 @@ class TestZonesCommands:
         return mock_client
 
     def test_get_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list prints pretty JSON with the short fields, including the state."""
+        """multiroom zones prints pretty JSON with the short fields, including the state."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "list"])
+        result = runner.invoke(main, ["multiroom", "zones"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -6098,10 +6098,10 @@ class TestZonesCommands:
         assert "albumart" not in output_data[0]["state"]
 
     def test_get_all_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list -L all keeps every field of each zone."""
+        """multiroom zones -L all keeps every field of each zone."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "list", "-L", "ALL"])
+        result = runner.invoke(main, ["multiroom", "zones", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -6112,24 +6112,24 @@ class TestZonesCommands:
         assert output_data[0]["state"]["albumart"] == "/art1.png"
 
     def test_get_json_format(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list -F json prints JSON with 2-space indentation."""
+        """multiroom zones -F json prints JSON with 2-space indentation."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "list", "-F", "json"])
+        result = runner.invoke(main, ["multiroom", "zones", "-F", "json"])
 
         assert result.exit_code == 0
         assert '\n    "' in result.output
         assert json.loads(result.output)[1]["name"] == "Volumio Studio"
 
     def test_get_table_format(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list -F table prints numbered blocks with aligned labels."""
+        """multiroom zones -F table prints numbered blocks with aligned labels."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "list", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
-        assert "Volumio Zones" in lines
+        assert "Volumio Multiroom Zones" in lines
         assert "1. Volumio" in lines
         assert "2. Volumio Studio" in lines
         # The labels are indented to start at the column of the zone name
@@ -6142,7 +6142,7 @@ class TestZonesCommands:
         """The nested state is printed one key/value per line, also with the short fields."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "list", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -6165,7 +6165,7 @@ class TestZonesCommands:
         }
         self._mock_client(mocker, zones=zones)
 
-        result = runner.invoke(main, ["zones", "list", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -6179,20 +6179,20 @@ class TestZonesCommands:
         assert f"      {'Status':15}: play" in lines
 
     def test_get_table_format_empty(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list -F table reports an empty zone list."""
+        """multiroom zones -F table reports an empty zone list."""
         self._mock_client(mocker, zones={"zones": []})
 
-        result = runner.invoke(main, ["zones", "list", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
 
         assert result.exit_code == 0
-        assert "Volumio Zones" in result.output
+        assert "Volumio Multiroom Zones" in result.output
         assert "(empty)" in result.output
 
     def test_get_raw_format(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list -F raw prints the unfiltered payload as compact JSON."""
+        """multiroom zones -F raw prints the unfiltered payload as compact JSON."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["zones", "list", "-F", "raw"])
+        result = runner.invoke(main, ["multiroom", "zones", "-F", "raw"])
 
         assert result.exit_code == 0
         assert "\n" not in result.output.strip()
@@ -6204,19 +6204,19 @@ class TestZonesCommands:
         """In machine-readable mode zones list still honors the format option."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "zones", "list", "-F", "raw"])
+        result = runner.invoke(main, ["-m", "multiroom", "zones", "-F", "raw"])
 
         assert result.exit_code == 0
         assert json.loads(result.output)["zones"][1]["name"] == "Volumio Studio"
 
     def test_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
-        """zones list exits 1 on a connection error."""
+        """multiroom zones exits 1 on a connection error."""
         mock_client = self._mock_client(mocker)
         _attach_property(
             mock_client, "zones", side_effect=VolumioConnectionError("Connection failed")
         )
 
-        result = runner.invoke(main, ["zones", "list"])
+        result = runner.invoke(main, ["multiroom", "zones"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -12124,7 +12124,7 @@ class TestConfigurationCommands:
                     "system-info": None,
                     "system-version": None,
                     "track-info": None,
-                    "zones-list": None,
+                    "multiroom-zones": None,
                 },
                 "downloads": {
                     "create-download-manifest": True,
