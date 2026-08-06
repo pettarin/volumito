@@ -253,6 +253,16 @@ from volumito.clients import (
     help="REST API port of the Volumio instance.",
 )
 @click.option(
+    "--rest-api-retries-on-unexpected-state",
+    type=int,
+    default=3,
+    show_default=True,
+    help=(
+        "When a command expects the playback status to reach a given state, "
+        "re-read the status up to this many times."
+    ),
+)
+@click.option(
     "--rest-api-sleep-before-next-call",
     type=float,
     default=2.0,
@@ -326,6 +336,7 @@ def main(
     mpd_timeout: float,
     position_starting_at_one: bool,
     rest_api_port: int,
+    rest_api_retries_on_unexpected_state: int,
     rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     rest_api_timeout_slow_endpoints: float,
@@ -351,6 +362,7 @@ def main(
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["mpd_timeout"] = mpd_timeout
+    ctx.obj["rest_api_retries_on_unexpected_state"] = rest_api_retries_on_unexpected_state
     ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
@@ -1466,7 +1478,11 @@ def queue_download(
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue."""
     execute_command(ctx, "clear", lambda c: c.clear())
-    execute_conditionally(ctx, print_resulting_status, playback_status)
+    # The host stops the playback on its own, but only an explicit stop refreshes the
+    # state it reports after clearing a track played in consume mode (e.g., qobuz)
+    rest_api_sleep(ctx)
+    execute_command(ctx, "stop", lambda c: c.stop())
+    execute_conditionally(ctx, print_resulting_status, playback_status, expected_status="stop")
 
 
 @queue.command()

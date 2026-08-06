@@ -810,16 +810,40 @@ def execute_command(
         sys.exit(1)
 
 
-def execute_conditionally(ctx: click.Context, enabled: bool, command: click.Command) -> None:
+def execute_conditionally(
+    ctx: click.Context,
+    enabled: bool,
+    command: click.Command,
+    expected_status: str | None = None,
+) -> None:
     """When enabled, wait the configured delay and invoke the given command.
 
     Args:
         ctx: Click context object (its ``obj`` is inherited by the invoked command)
         enabled: Whether to invoke the command
         command: The Click command to invoke
+        expected_status: When set, re-read the playback status, up to the configured
+            number of retries, until it matches this value before invoking the command
     """
     if enabled:
         rest_api_sleep(ctx)
+        if expected_status is not None:
+            retries = ctx.obj["rest_api_retries_on_unexpected_state"]
+            attempt = 0
+            status = fetch_state_or_exit(ctx).status
+            while status != expected_status and attempt < retries:
+                attempt += 1
+                debug(
+                    f"Playback status '{status}' does not match the expected "
+                    f"'{expected_status}', retrying ({attempt}/{retries})"
+                )
+                rest_api_sleep(ctx)
+                status = fetch_state_or_exit(ctx).status
+            if status != expected_status:
+                warning(
+                    f"Playback status '{status}' still does not match the expected "
+                    f"'{expected_status}' after {retries} retries"
+                )
         ctx.invoke(command)
 
 

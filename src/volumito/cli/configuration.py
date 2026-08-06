@@ -339,6 +339,7 @@ SECTION_KEYS: dict[str, list[str]] = {
         "rest-api-timeout-slow-endpoints",
         "mpd-timeout",
         "rest-api-sleep-before-next-call",
+        "rest-api-retries-on-unexpected-state",
     ],
     "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
 }
