@@ -33,11 +33,13 @@ class VolumioMPDClient(VolumioBaseClient):
                 under its own name in the ``volumito`` hierarchy
         """
         super().__init__(logger)
+        self._log_debug("Initializing the MPD client...")
         self.host_configuration = host_configuration
         self.timeout = timeout
         self._client = MPDClient()
         self._client.timeout = timeout
         self._connected = False
+        self._log_debug("Initializing the MPD client... done")
 
     def connect(self) -> None:
         """Connect to the MPD server.
@@ -47,21 +49,27 @@ class VolumioMPDClient(VolumioBaseClient):
         """
         host = self.host_configuration.host
         mpd_port = self.host_configuration.mpd_port
+        self._log_debug(f"Connecting to MPD at {host}:{mpd_port}...")
         try:
             self._client.connect(host, mpd_port)
             self._connected = True
         except ConnectionRefusedError as e:
+            self._log_warning(f"Connection refused by MPD at {host}:{mpd_port}: {e}")
             raise VolumioConnectionError(
                 f"Connection refused to MPD at {host}:{mpd_port}: {e}"
             ) from e
         except OSError as e:
+            self._log_warning(f"MPD connection error at {host}:{mpd_port}: {e}")
             raise VolumioConnectionError(
                 f"MPD connection error at {host}:{mpd_port}: {e}"
             ) from e
         except Exception as e:
+            self._log_exception(f"Unexpected error connecting to MPD at {host}:{mpd_port}")
             raise VolumioConnectionError(
                 f"Failed to connect to MPD at {host}:{mpd_port}: {e}"
             ) from e
+        self._log_debug(f"Connecting to MPD at {host}:{mpd_port}... done")
+        self._log_debug("Connected to MPD")
 
     def disconnect(self) -> None:
         """Disconnect from the MPD server.
@@ -69,36 +77,46 @@ class VolumioMPDClient(VolumioBaseClient):
         This method is safe to call multiple times and will not raise exceptions.
         """
         if self._connected:
+            self._log_debug("Disconnecting from MPD...")
             try:
                 self._client.close()
                 self._client.disconnect()
-            except Exception:  # pragma: no cover
-                # Ignore errors during cleanup
-                pass
+            except Exception as e:
+                self._log_warning(f"Ignoring an error while disconnecting from MPD: {e}")
             finally:
                 self._connected = False
+            self._log_debug("Disconnecting from MPD... done")
+            self._log_debug("Disconnected from MPD")
 
     def get_current_song(self) -> dict[str, Any]:
         """Get information about the current song.
 
         Returns:
-            A dictionary containing the current song information
+            A dictionary containing the current song information, whose keys depend
+            on what is playing (see :meth:`get_track_uri` for the file URI)
 
         Raises:
             VolumioConnectionError: If not connected or no track is playing
         """
+        self._log_debug("Reading the current song from MPD...")
         if not self._connected:
+            self._log_debug("Not connected to MPD")
             raise VolumioConnectionError("Not connected to MPD")
 
         try:
             current_song = self._client.currentsong()
         except Exception as e:
+            self._log_exception("Unexpected error reading the current song from MPD")
             raise VolumioConnectionError(f"MPD error: {e}") from e
 
-        if not current_song or "file" not in current_song:
+        if not current_song:
+            self._log_debug("No track currently playing")
             raise VolumioConnectionError("No track currently playing")
 
-        return dict(current_song)
+        song = dict(current_song)
+        self._log_debug(f"Current song: {song}")
+        self._log_debug("Reading the current song from MPD... done")
+        return song
 
     def get_track_uri(self) -> str:
         """Get the URI of the current track, as the Volumio host reports it.
@@ -110,9 +128,14 @@ class VolumioMPDClient(VolumioBaseClient):
             The URI of the current track
 
         Raises:
-            VolumioConnectionError: If not connected or no track is playing
+            VolumioConnectionError: If not connected, no track is playing, or the
+                current song carries no file URI
         """
-        return str(self.get_current_song()["file"])
+        song = self.get_current_song()
+        if "file" not in song:
+            self._log_warning("The current song carries no file URI")
+            raise VolumioConnectionError("No track currently playing")
+        return str(song["file"])
 
     def __enter__(self) -> "VolumioMPDClient":
         """Context manager entry - connects to MPD.

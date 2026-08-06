@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Global option `--color/--no-color`, coloring the level-prefixed messages of the tool
 - The REST API and MPD clients accept a `logger`, defaulting to their own under the
   `volumito` hierarchy, through the new `VolumioBaseClient` base class they share
+- The MPD client logs what it does, debug breadcrumbs included
 
 ### Changed
 

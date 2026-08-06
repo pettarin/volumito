@@ -5,6 +5,7 @@
 """
 
 import logging
+from unittest.mock import Mock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -51,15 +52,18 @@ class TestVolumioMPDClient:
         assert client.logger is logger
 
     def test_connect_success(self, mocker: MockerFixture):
-        """Test successful connection to MPD."""
+        """Test successful connection to MPD, kept quiet at the debug level."""
         mock_mpd = mocker.Mock()
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
 
-        client = VolumioMPDClient(VolumioHostConfiguration())
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
         client.connect()
 
         mock_mpd.connect.assert_called_once_with("volumio.local", 6600)
         assert client._connected is True
+        assert ("Connected to MPD",) in [call.args for call in logger.debug.call_args_list]
+        logger.info.assert_not_called()
 
     def test_connect_connection_refused(self, mocker: MockerFixture):
         """Test connection with ConnectionRefusedError."""
@@ -101,18 +105,65 @@ class TestVolumioMPDClient:
 
         assert "Failed to connect to MPD" in str(exc_info.value)
 
+    def test_connect_refused_logs_a_warning(self, mocker: MockerFixture):
+        """A refused connection warns, naming host and port, and still raises."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.connect.side_effect = ConnectionRefusedError("Connection refused")
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(VolumioConnectionError):
+            client.connect()
+
+        logger.warning.assert_called_once()
+        assert "volumio.local:6600" in logger.warning.call_args.args[0]
+
+    def test_connect_os_error_logs_a_warning(self, mocker: MockerFixture):
+        """An OS-level failure warns and still raises."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.connect.side_effect = OSError("Network unreachable")
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(VolumioConnectionError):
+            client.connect()
+
+        logger.warning.assert_called_once()
+
+    def test_connect_unexpected_logs_the_exception(self, mocker: MockerFixture):
+        """An unexpected failure logs with the traceback attached, and still raises."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.connect.side_effect = RuntimeError("boom")
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+
+        with pytest.raises(VolumioConnectionError):
+            client.connect()
+
+        logger.exception.assert_called_once()
+        logger.warning.assert_not_called()
+
     def test_disconnect_when_connected(self, mocker: MockerFixture):
-        """Test disconnect when connected."""
+        """Test disconnect when connected, kept quiet at the debug level."""
         mock_mpd = mocker.Mock()
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
 
-        client = VolumioMPDClient(VolumioHostConfiguration())
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
         client.connect()
         client.disconnect()
 
         mock_mpd.close.assert_called_once()
         mock_mpd.disconnect.assert_called_once()
         assert client._connected is False
+        assert ("Disconnected from MPD",) in [call.args for call in logger.debug.call_args_list]
+        logger.info.assert_not_called()
 
     def test_disconnect_when_not_connected(self, mocker: MockerFixture):
         """Test disconnect when not connected (should be no-op)."""
@@ -124,6 +175,60 @@ class TestVolumioMPDClient:
 
         mock_mpd.close.assert_not_called()
         mock_mpd.disconnect.assert_not_called()
+
+    def test_disconnect_swallows_a_cleanup_error_with_a_warning(self, mocker: MockerFixture):
+        """A failure while disconnecting is swallowed, warned about, and leaves it clean."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.close.side_effect = RuntimeError("socket already gone")
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+        client.connect()
+        client.disconnect()
+
+        logger.warning.assert_called_once()
+        assert "disconnecting" in logger.warning.call_args.args[0]
+        assert client._connected is False
+
+    def test_get_current_song_logs_its_steps(self, mocker: MockerFixture):
+        """A happy read leaves debug breadcrumbs and neither warns nor errors."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.currentsong.return_value = {"file": "INTERNAL/music/track.flac"}
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+        client.connect()
+        client.get_current_song()
+
+        debugged = [call.args[0] for call in logger.debug.call_args_list]
+        assert "Reading the current song from MPD..." in debugged
+        assert "Current song: {'file': 'INTERNAL/music/track.flac'}" in debugged
+        assert "Reading the current song from MPD... done" in debugged
+        logger.warning.assert_not_called()
+        logger.exception.assert_not_called()
+
+    def test_get_current_song_no_track_does_not_log_an_exception(
+        self, mocker: MockerFixture
+    ):
+        """The anticipated no-track and not-connected paths stay at debug."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.currentsong.return_value = {}
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+        client.connect()
+        with pytest.raises(VolumioConnectionError):
+            client.get_current_song()
+
+        disconnected = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+        with pytest.raises(VolumioConnectionError):
+            disconnected.get_current_song()
+
+        logger.exception.assert_not_called()
+        logger.warning.assert_not_called()
 
     def test_get_current_song_success(self, mocker: MockerFixture):
         """Test successful get_current_song() call."""
@@ -167,7 +272,7 @@ class TestVolumioMPDClient:
         assert "No track currently playing" in str(exc_info.value)
 
     def test_get_current_song_no_file_field(self, mocker: MockerFixture):
-        """Test get_current_song() when response has no file field."""
+        """A current song without a file URI is returned as it is: the URI is not its job."""
         mock_mpd = mocker.Mock()
         mock_mpd.currentsong.return_value = {"title": "Test"}
         mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
@@ -175,10 +280,25 @@ class TestVolumioMPDClient:
         client = VolumioMPDClient(VolumioHostConfiguration())
         client.connect()
 
+        assert client.get_current_song() == {"title": "Test"}
+
+    def test_get_track_uri_without_a_file_field(self, mocker: MockerFixture):
+        """A current song without a file URI has no track URI to give."""
+        mock_mpd = mocker.Mock()
+        mock_mpd.currentsong.return_value = {"title": "Test"}
+        mocker.patch("volumito.clients.mpd.client.MPDClient", return_value=mock_mpd)
+        logger = Mock()
+
+        client = VolumioMPDClient(VolumioHostConfiguration(), logger=logger)
+        client.connect()
+
         with pytest.raises(VolumioConnectionError) as exc_info:
-            client.get_current_song()
+            client.get_track_uri()
 
         assert "No track currently playing" in str(exc_info.value)
+        # A song without a file URI is an anomaly of the host, worth a warning
+        logger.warning.assert_called_once_with("The current song carries no file URI")
+        logger.exception.assert_not_called()
 
     def test_get_current_song_mpd_error(self, mocker: MockerFixture):
         """Test get_current_song() with MPD error."""

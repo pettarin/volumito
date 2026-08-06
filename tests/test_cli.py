@@ -2965,7 +2965,7 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Connecting to" in result.output
         assert "Successfully retrieved state" in result.output
-        assert "Connecting to MPD" in result.output
+        # The MPD steps are logged by the (here mocked) client itself, not by the CLI
 
     def test_audio_with_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio command with --machine-readable flag."""

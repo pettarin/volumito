@@ -855,19 +855,10 @@ def audio(
         state = client.state
 
         debug("Successfully retrieved state")
-        debug(
-            f"Connecting to MPD at "
-            f"{host_configuration.host}:{host_configuration.mpd_port}..."
-        )
 
-        # Connect to MPD to get current track URI
+        # Connect to MPD to get current track URI; the client logs its own steps
         with VolumioMPDClient(host_configuration, mpd_timeout, LOGGER) as mpd_client:
-            debug("Successfully connected to MPD")
-
-            # Get track URI with localhost replaced
             uri = mpd_client.get_track_uri()
-
-            debug(f"Track URI: {uri}")
 
             # Always print the URI (even in machine-readable mode);
             # in machine-readable mode print it quoted so it can be consumed by jq/yq
