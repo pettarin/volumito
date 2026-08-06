@@ -364,7 +364,7 @@ def _materialize_albumart(
         else:
             fetch_uri_to_file(albumart_uri, cover_path, timeout, host_configuration)
     except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
-        warning(f"Cannot download album art to {cover_path} ({e})")
+        warning(f'Cannot download album art to "{cover_path}" ({e})')
         return None
     downloaded_covers.setdefault(albumart_uri, cover_path)
     return cover_path
@@ -683,21 +683,21 @@ def download_uri_to(
         )
         sys.exit(1)
 
-    info(f"Downloading {label} to {destination}...")
+    info(f'Downloading {label} to "{destination}"...')
 
     try:
         if output_directory is not None:
             os.makedirs(output_directory, exist_ok=True)
         fetch_uri_to_file(uri, destination, timeout, host_configuration)
 
-        info(f"Downloading {label} to {destination}... done")
-        info(f"{label.capitalize()} successfully downloaded to {destination}")
+        info(f'Downloading {label} to "{destination}"... done')
+        info(f'{label.capitalize()} successfully downloaded to "{destination}"')
 
         if create_manifest:
             manifest_path = write_download_manifest(
                 destination, uri, state, host_configuration, entity, kind, add_cover_and_metadata
             )
-            debug(f"Manifest written to {manifest_path}")
+            debug(f'Manifest written to "{manifest_path}"')
 
     except (requests.exceptions.RequestException, VolumioSSHError) as e:
         error(f"Download error: {e}")
@@ -762,13 +762,13 @@ def embed_track_tags(
             cover=cover,
         )
     except UnsupportedAudioFormatError:
-        warning(f"Cannot embed metadata into {destination} (unsupported format)")
+        warning(f'Cannot embed metadata into "{destination}" (unsupported format)')
         return
     except Exception as e:
-        warning(f"Cannot embed metadata into {destination} ({e})")
+        warning(f'Cannot embed metadata into "{destination}" ({e})')
         return
 
-    debug(f"Embedded metadata and cover into {destination}")
+    debug(f'Embedded metadata and cover into "{destination}"')
 
 
 def execute_command(

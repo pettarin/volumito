@@ -3396,7 +3396,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
 
         assert result.exit_code == 0
-        assert "successfully downloaded to /tmp/track.flac" in result.output
+        assert 'successfully downloaded to "/tmp/track.flac"' in result.output
         mock_get.assert_not_called()
         assert copy.call_args.args[1:3] == (
             "/mnt/INTERNAL/music/album/01-track.flac",
@@ -3566,7 +3566,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
-        assert "Downloading track to /tmp/track.flac" in result.output
+        assert 'Downloading track to "/tmp/track.flac"' in result.output
         assert "successfully downloaded" in result.output
 
     def test_audio_file_write_error(self, runner: CliRunner, mocker: MockerFixture):
@@ -5020,7 +5020,7 @@ class TestSystemExecute:
         result = runner.invoke(main, ["system", "execute", "uptime"])
 
         assert result.exit_code == 1
-        assert "Refusing to execute the command without -y/--yes: uptime" in result.output
+        assert 'Refusing to execute the command without -y/--yes: "uptime"' in result.output
         execute.assert_not_called()
 
     def test_without_yes_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
@@ -6376,7 +6376,8 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         mock_client.play_playlist.assert_called_once_with("Jazz Classics")
-        assert "executed successfully" in result.output
+        # The double quotes delimit a name that contains spaces
+        assert "Command 'playplaylist \"Jazz Classics\"' executed successfully" in result.output
 
     def test_play_requires_the_name(self, runner: CliRunner, mocker: MockerFixture):
         """playlist play without a name is a usage error."""
@@ -6432,10 +6433,10 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "play", "Nope"])
 
         assert result.exit_code == 1
-        assert "Playlist not found: Nope" in result.output
+        assert 'Playlist not found: "Nope"' in result.output
         assert "Available playlists:" in result.output
         for name in self.PLAYLISTS:
-            assert f"  {name}" in result.output
+            assert f'  "{name}"' in result.output
         mock_client.play_playlist.assert_not_called()
 
     def test_play_unknown_name_is_case_sensitive(
@@ -6562,7 +6563,7 @@ class TestScpCommands:
         assert result.exit_code == 0
         assert (
             result.output.strip()
-            .endswith("[INFO] Copied /tmp/remote_file from the Volumio host to ./local_file")
+            .endswith('[INFO] Copied "/tmp/remote_file" from the Volumio host to "./local_file"')
         )
         assert copy.call_args.args[1:] == ("/tmp/remote_file", "./local_file")
         assert copy.call_args.kwargs == {"recursive": False}
@@ -6621,7 +6622,8 @@ class TestScpCommands:
         assert (
             result.output.strip()
             .endswith(
-                "[INFO] Copied /tmp/local_file to /mnt/INTERNAL/remote_file on the Volumio host"
+                '[INFO] Copied "/tmp/local_file" to "/mnt/INTERNAL/remote_file" '
+                "on the Volumio host"
             )
         )
         assert copy.call_args.args[1:] == ("/tmp/local_file", "/mnt/INTERNAL/remote_file")
@@ -6657,7 +6659,7 @@ class TestScpCommands:
 
         assert result.exit_code == 1
         assert (
-            "Refusing to copy to the Volumio host without -y/--yes: /mnt/INTERNAL/a"
+            'Refusing to copy to the Volumio host without -y/--yes: "/mnt/INTERNAL/a"'
             in result.output
         )
         copy.assert_not_called()
@@ -8237,7 +8239,7 @@ class TestQueueDownload:
         assert _played_positions(client) == [0, 1, 0]
         assert client.pause.call_count == 2
         assert "Downloaded 2, skipped 0, errors 0" in result.output
-        assert f"Creating manifest file {log_path}" in result.output
+        assert f'Creating manifest file "{log_path}"' in result.output
         assert str(log_path) in result.output
 
     def test_download_subdirectories(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
@@ -8813,7 +8815,7 @@ class TestQueueDownload:
         assert result.exit_code == 0
         assert "(kept)" in result.output
         assert "Downloaded 1, skipped 0, errors 0" in result.output
-        assert f"Reading manifest file {manifest}" in result.output
+        assert f'Reading manifest file "{manifest}"' in result.output
         client.stop.assert_not_called()
         client.play.assert_not_called()
         mpd_class.assert_not_called()
@@ -9926,7 +9928,7 @@ class TestPlaylistDownload:
         result = runner.invoke(main, ["-v", *self._BASE, "-d", str(tmp_path)])
 
         assert result.exit_code == 0
-        assert "Playing playlist Rock..." in result.output
+        assert 'Playing playlist "Rock"...' in result.output
         client.playlists_property.assert_called_once()
         client.clear.assert_called_once()
         client.play_playlist.assert_called_once_with("Rock")
@@ -9948,7 +9950,7 @@ class TestPlaylistDownload:
         result = runner.invoke(main, ["playlist", "download", "Nope", "-d", str(tmp_path)])
 
         assert result.exit_code == 1
-        assert "Playlist not found: Nope" in result.output
+        assert 'Playlist not found: "Nope"' in result.output
         client.clear.assert_not_called()
         client.play_playlist.assert_not_called()
 
@@ -11457,7 +11459,7 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         assert "https://myconfig.local:9999" in result.output
-        assert f"Using configuration file: {config}" in result.output
+        assert f'Using configuration file: "{config}"' in result.output
 
     def test_cli_flag_overrides_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -11492,7 +11494,7 @@ class TestConfigurationFile:
 
         assert result.exit_code == 0
         assert "http://probed.local:3000" in result.output
-        assert f"Using configuration file: {config}" in result.output
+        assert f'Using configuration file: "{config}"' in result.output
 
     def test_ignore_configuration_file_skips_probing(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -12731,7 +12733,7 @@ class TestConfigurationCommands:
         assert without_path.exit_code == 1
         assert "the --ignore-configuration-file option is selected" in without_path.output
         assert with_path.exit_code == 0
-        assert f"Configuration file {config} is valid." in with_path.output
+        assert f'Configuration file "{config}" is valid.' in with_path.output
 
     def test_check_invalid_path_when_ignoring(self, runner: CliRunner, tmp_path):
         """With --ignore-configuration-file, an explicit invalid PATH is still checked."""
@@ -12743,7 +12745,7 @@ class TestConfigurationCommands:
         )
 
         assert result.exit_code == 1
-        assert f"Configuration file {config} is NOT valid." in result.output
+        assert f'Configuration file "{config}" is NOT valid.' in result.output
         assert "the --ignore-configuration-file option is selected" not in result.output
 
     def test_check_fails_when_ignoring_machine_readable(self, runner: CliRunner):
