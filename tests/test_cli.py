@@ -1571,6 +1571,7 @@ class TestCLICommands:
         assert "--machine-readable" in result.output
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
+        assert "--pager" in result.output
         assert "--rest-api-retries-on-unexpected-state" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
         # Short options
@@ -1583,14 +1584,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.42" in result.output
+        assert "volumito, version 0.0.43" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.42"'
+        assert result.output.strip() == '"0.0.43"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1599,7 +1600,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.42"'
+        assert result.output.strip() == '"0.0.43"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4811,6 +4812,61 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Volumio Queue" in result.output
         assert "(empty)" in result.output
+
+
+class TestPagerOption:
+    """Test cases for the global --pager/--no-pager option."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient with a one-track queue; mock the pager."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "queue", return_value={
+            "queue": [{"title": "Paged Song", "artist": "Paged Artist", "service": "mpd"}]
+        })
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        mock_pager = mocker.patch("volumito.cli.click_helpers.click.echo_via_pager")
+        return mock_client, mock_pager
+
+    def test_pager_routes_the_data_output(self, runner: CliRunner, mocker: MockerFixture):
+        """With --pager the rendered data goes through echo_via_pager."""
+        _, mock_pager = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["--pager", "queue", "list"])
+
+        assert result.exit_code == 0
+        mock_pager.assert_called_once()
+        assert "Paged Song" in mock_pager.call_args.args[0]
+        assert "Paged Song" not in result.output
+
+    def test_no_pager_is_the_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Without --pager the data prints directly to the standard output."""
+        _, mock_pager = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "list"])
+
+        assert result.exit_code == 0
+        mock_pager.assert_not_called()
+        assert "Paged Song" in result.output
+
+    def test_machine_readable_bypasses_the_pager(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """--machine-readable prints directly even with --pager."""
+        _, mock_pager = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["-m", "--pager", "queue", "list"])
+
+        assert result.exit_code == 0
+        mock_pager.assert_not_called()
+        assert "Paged Song" in result.output
 
 
 class TestSystemCommands:
@@ -12223,6 +12279,7 @@ class TestConfigurationCommands:
                     "fields": "SHORT",
                     "format": "pretty",
                     "machine-readable": False,
+                    "pager": False,
                     "position-starting-at-one": True,
                     "print-resulting-status": True,
                     "verbose": False,
@@ -12748,6 +12805,17 @@ class TestConfigurationCommands:
         assert result.exit_code == 1
         assert f'Configuration file "{config}" is NOT valid.' in result.output
         assert "the --ignore-configuration-file option is selected" not in result.output
+
+    def test_check_valid_empty_file(self, runner: CliRunner, tmp_path):
+        """An empty configuration file is valid and lists no keys."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("")
+
+        result = runner.invoke(main, ["configuration", "check", str(config)])
+
+        assert result.exit_code == 0
+        assert f'Configuration file "{config}" is valid.' in result.output
+        assert "=" not in result.output
 
     def test_check_fails_when_ignoring_machine_readable(self, runner: CliRunner):
         """In machine-readable mode the ignoring check failure is a JSON envelope."""
