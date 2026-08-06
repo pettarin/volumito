@@ -20,7 +20,7 @@ Rough plan, broken down by milestone:
 
 ## v1.0.0
 
-- CLI: code cleanup
+- CLI: code review/cleanup
 - Establish a CI/CD workflow for the `volumito` package
 - Establish a CI/CD workflow for the Sphinx documentation
 - Review info for contributors
