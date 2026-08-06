@@ -12,6 +12,7 @@ from urllib.parse import quote
 
 import requests
 
+from volumito.clients.base import VolumioBaseClient
 from volumito.clients.entities import (
     Album,
     Artist,
@@ -52,7 +53,7 @@ _QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
 (the album art URL above all) only grow the payload toward the body size limit."""
 
 
-class VolumioRESTAPIClient:
+class VolumioRESTAPIClient(VolumioBaseClient):
     """Client for interacting with Volumio API."""
 
     def __init__(
@@ -72,10 +73,10 @@ class VolumioRESTAPIClient:
             logger: The logger the client writes to; without one, the client logs
                 under its own name in the ``volumito`` hierarchy
         """
+        super().__init__(logger)
         self.host_configuration = host_configuration
         self.timeout = timeout
         self.timeout_slow_endpoints = timeout_slow_endpoints
-        self.logger = logger if logger is not None else logging.getLogger(__name__)
 
     def _delete_json(
         self, path: str, payload: dict[str, Any] | None = None
