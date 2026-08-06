@@ -1586,14 +1586,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.46" in result.output
+        assert "volumito, version 0.0.47" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.46"'
+        assert result.output.strip() == '"0.0.47"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1602,7 +1602,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.46"'
+        assert result.output.strip() == '"0.0.47"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -10753,13 +10753,15 @@ class TestQueueNavigationFlags:
         result = runner.invoke(main, ["queue", "status"])
 
         assert result.exit_code == 0
-        # The dotted fields rebuild their nesting; the missing track fields are omitted
+        # The dotted fields rebuild their nesting; the missing track fields are omitted;
+        # every position displays per the one-based convention
         assert json.loads(result.output) == {
             "track": {
-                "position": 0,
+                "position": 1,
                 "title": "QS Song",
                 "artist": "QS Artist",
             },
+            "position": 1,
             "length": 13,
             "has_previous": False,
             "has_next": True,
@@ -10772,8 +10774,12 @@ class TestQueueNavigationFlags:
         result = runner.invoke(main, ["queue", "status", "-L", "ALL"])
 
         assert result.exit_code == 0
-        # The pretty format displays the top-level position per the one-based convention
-        assert json.loads(result.output) == {**self._QUEUE_STATUS, "position": 1}
+        # The pretty format displays every position per the one-based convention
+        assert json.loads(result.output) == {
+            **self._QUEUE_STATUS,
+            "position": 1,
+            "track": {**self._QUEUE_STATUS["track"], "position": 1},
+        }
 
     def test_queue_status_explicit_fields(self, runner: CliRunner, mocker: MockerFixture):
         """An explicit field list mixes the queue keys and the dotted track paths."""
@@ -10792,7 +10798,9 @@ class TestQueueNavigationFlags:
 
         assert result.exit_code == 0
         assert "Volumio Queue Status" in result.output
+        assert "Track Position      : 1" in result.output
         assert "Track Title         : QS Song" in result.output
+        assert "Position            : 1" in result.output
         assert "Length              : 13" in result.output
         assert "Has Next            : True" in result.output
 
