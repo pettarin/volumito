@@ -760,7 +760,7 @@ class TestBuildClickDefaultMap:
             "alias": {"list": format_only},
             "playback": {"status": formatting},
             "track": {"info": formatting},
-            "queue": {"list": formatting},
+            "queue": {"list": formatting, "status": formatting},
             "notification": {"list": format_only, "listen": format_only},
             "playlist": {"list": format_only},
             "multiroom": {"zones": formatting},

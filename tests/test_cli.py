@@ -363,12 +363,12 @@ class TestFilterFields:
         assert list(result.keys()) == ["artist", "album"]
 
     def test_filter_fields_dotted_path(self):
-        """A dotted field resolves into nested dictionaries, keyed by the dotted string."""
+        """A dotted field resolves into nested dictionaries, inside its rebuilt nesting."""
         state = {"success": True, "data": {"type": "story", "value": "A story."}}
 
         result = filter_fields(state, "data.value")
 
-        assert result == {"data.value": "A story."}
+        assert result == {"data": {"value": "A story."}}
 
     def test_filter_fields_dotted_path_missing_leaf(self):
         """A dotted field whose leaf is missing is silently omitted."""
@@ -1586,14 +1586,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.45" in result.output
+        assert "volumito, version 0.0.46" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.45"'
+        assert result.output.strip() == '"0.0.46"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1602,7 +1602,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.45"'
+        assert result.output.strip() == '"0.0.46"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -7857,7 +7857,7 @@ class TestStoryCommands:
         mock_client.get_story.assert_called_once_with(
             album=Album("Sirtaki"), artist=Artist("Mango")
         )
-        assert json.loads(result.output)["data.value"] == "A long story."
+        assert json.loads(result.output)["data"]["value"] == "A long story."
         # Explicit arguments never trigger a state fetch
         mock_client.state_property.assert_not_called()
 
@@ -8195,7 +8195,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "Mango", "Sirtaki"])
 
         assert result.exit_code == 0
-        assert json.loads(result.output) == {"data.value": "A long story."}
+        assert json.loads(result.output) == {"data": {"value": "A long story."}}
 
     def test_format_raw(self, runner: CliRunner, mocker: MockerFixture):
         """story album -F raw prints the compact full envelope, ignoring the fields filter."""
@@ -8218,7 +8218,7 @@ class TestStoryCommands:
 
         assert result.exit_code == 0
         assert result.output.startswith("{\n  ")
-        assert json.loads(result.output) == {"data.value": "A long story."}
+        assert json.loads(result.output) == {"data": {"value": "A long story."}}
 
     def test_format_table(self, runner: CliRunner, mocker: MockerFixture):
         """story album -F table prints the heading and the dotted field label."""
@@ -8254,8 +8254,7 @@ class TestStoryCommands:
 
         assert result.exit_code == 0
         assert json.loads(result.output) == {
-            "data.type": "story",
-            "data.value": "A long story.",
+            "data": {"type": "story", "value": "A long story."},
         }
 
     def test_verbose(self, runner: CliRunner, mocker: MockerFixture):
@@ -10688,6 +10687,139 @@ class TestQueueActions:
         mock_client.clear.assert_called_once()
 
 
+class TestQueueNavigationFlags:
+    """Test cases for the queue has_previous/has_next commands."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, name: str, value: object):
+        """Mock VolumioRESTAPIClient whose named property returns value."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, name, return_value=value)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    @pytest.mark.parametrize("command", ["has_next", "has_previous"])
+    @pytest.mark.parametrize("value", [True, False])
+    def test_the_flag_is_printed(
+        self, runner: CliRunner, mocker: MockerFixture, command: str, value: bool
+    ):
+        """queue has_next/has_previous print the flag read from the client."""
+        mock_client = self._mock_client(mocker, command, value)
+
+        result = runner.invoke(main, ["queue", command])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == str(value)
+        getattr(mock_client, f"{command}_property").assert_called_once_with()
+
+    @pytest.mark.parametrize("command", ["has_next", "has_previous"])
+    def test_the_flag_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture, command: str
+    ):
+        """In machine-readable mode the flag is printed as a JSON boolean."""
+        self._mock_client(mocker, command, True)
+
+        result = runner.invoke(main, ["-m", "queue", command])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "true"
+
+    _QUEUE_STATUS = {
+        "has_next": True,
+        "has_previous": False,
+        "length": 13,
+        "position": 0,
+        "track": {
+            "position": 0,
+            "title": "QS Song",
+            "artist": "QS Artist",
+            "status": "play",
+        },
+    }
+
+    def test_queue_status_prints_the_short_view(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """By default queue status prints the SHORT fields (dotted track paths)."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["queue", "status"])
+
+        assert result.exit_code == 0
+        # The dotted fields rebuild their nesting; the missing track fields are omitted
+        assert json.loads(result.output) == {
+            "track": {
+                "position": 0,
+                "title": "QS Song",
+                "artist": "QS Artist",
+            },
+            "length": 13,
+            "has_previous": False,
+            "has_next": True,
+        }
+
+    def test_queue_status_all_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """-L ALL prints the whole composite, with the nested track dict."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["queue", "status", "-L", "ALL"])
+
+        assert result.exit_code == 0
+        # The pretty format displays the top-level position per the one-based convention
+        assert json.loads(result.output) == {**self._QUEUE_STATUS, "position": 1}
+
+    def test_queue_status_explicit_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """An explicit field list mixes the queue keys and the dotted track paths."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["queue", "status", "-L", "length,track.title"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"length": 13, "track": {"title": "QS Song"}}
+
+    def test_queue_status_format_table(self, runner: CliRunner, mocker: MockerFixture):
+        """The table format shows the heading and the SHORT field labels."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["queue", "status", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Queue Status" in result.output
+        assert "Track Title         : QS Song" in result.output
+        assert "Length              : 13" in result.output
+        assert "Has Next            : True" in result.output
+
+    def test_queue_status_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """The raw format prints the whole compact JSON object, ignoring the fields."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+
+        result = runner.invoke(main, ["-m", "queue", "status", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self._QUEUE_STATUS
+        assert "\n" not in result.output.strip()
+
+    def test_queue_status_format_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The queue-status subsection of the configuration sets the default format."""
+        self._mock_client(mocker, "queue_status", self._QUEUE_STATUS)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  queue-status:\n    format: table\n")
+
+        result = runner.invoke(main, ["-c", str(config), "queue", "status"])
+
+        assert result.exit_code == 0
+        assert "Volumio Queue Status" in result.output
+
+
 class TestQueueReplace:
     """Test cases for the queue replace command."""
 
@@ -12548,6 +12680,7 @@ class TestConfigurationCommands:
                     "playback-status": None,
                     "playlist-list": None,
                     "queue-list": None,
+                    "queue-status": None,
                     "story-album": None,
                     "story-artist": None,
                     "story-credits": None,

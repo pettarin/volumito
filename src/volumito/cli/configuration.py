@@ -69,6 +69,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
+    "queue-status": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,
@@ -120,6 +121,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "queue-list": [
         ["queue", "list"],
+    ],
+    "queue-status": [
+        ["queue", "status"],
     ],
     "story-album": [
         ["story", "album"],

@@ -88,6 +88,7 @@ from volumito.cli.click_helpers import (
     option_with_albumart,
     option_yes,
     read_queue_log,
+    render_fields,
     render_output_filename,
     render_payload,
     render_state,
@@ -126,6 +127,7 @@ from volumito.cli.constants import (
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_QUEUE_STATUS,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
 )
@@ -1067,6 +1069,34 @@ def albumart(
 def queue(ctx: click.Context) -> None:
     """Manage the playback queue."""
     pass
+
+
+@queue.command("has_next")
+@click.pass_context
+def queue_has_next(ctx: click.Context) -> None:
+    """Print whether the current track has a next track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_next)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@queue.command("has_previous")
+@click.pass_context
+def queue_has_previous(ctx: click.Context) -> None:
+    """Print whether the current track has a previous track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_previous)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@queue.command("status")
+@click.pass_context
+@option_fields
+@option_format
+def queue_status(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the current track with the position, length, and neighbor flags of the queue."""
+    status = fetch_or_exit(ctx, lambda c: c.queue_status)
+    render_fields(
+        ctx, status, fields, output_format, SHORT_FORMAT_FIELDS_QUEUE_STATUS, "Volumio Queue Status"
+    )
 
 
 @queue.command("list")

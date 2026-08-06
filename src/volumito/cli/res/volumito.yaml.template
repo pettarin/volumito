@@ -51,6 +51,7 @@ aliases:
   # qd: queue download
   # ql: queue list
   # qr: queue replace
+  # qs: queue status
   # s: story
   # salb: story album
   # sart: story artist
@@ -230,6 +231,7 @@ output:
   # - playback-status
   # - playlist-list
   # - queue-list
+  # - queue-status
   # - story-album
   # - story-artist
   # - story-credits
@@ -307,6 +309,9 @@ output:
     # Add your own overrides here
 
   queue-list:
+    # Add your own overrides here
+
+  queue-status:
     # Add your own overrides here
 
   story-album:

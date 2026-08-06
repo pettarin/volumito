@@ -1703,6 +1703,54 @@ def read_queue_log(path: str) -> dict[str, Any] | None:
     return data
 
 
+def render_fields(
+    ctx: click.Context,
+    data: dict[str, Any],
+    fields: str,
+    output_format: str,
+    short_fields: list[str],
+    heading: str,
+) -> None:
+    """Print a payload per the fields/format options.
+
+    The fields and formats are defined over the field names the Volumio host
+    returns, so ``data`` is expected to be (or to wrap) a raw payload.
+
+    Args:
+        ctx: Click context object containing shared options
+        data: The payload to print
+        fields: The fields option ("short" or "all")
+        output_format: The output format ("json", "pretty", "raw", or "table")
+        short_fields: The list of keys to keep when ``fields`` is "short"
+        heading: The heading line for the table output format
+    """
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
+
+    # Determine output format
+    if output_format == "raw":
+        # Raw JSON without formatting (ignores fields filter)
+        output = json.dumps(data)
+    else:
+        # Apply fields filter for all formatted outputs
+        filtered = filter_fields(data, fields, short_fields)
+
+        if output_format == "table":
+            # Preserve the requested field order (and labels) in the table; None => all
+            field_order = resolve_output_fields(fields, short_fields)
+            output = format_as_table(
+                filtered,
+                heading=heading,
+                field_order=field_order,
+                position_starting_at_one=position_starting_at_one,
+            )
+        elif output_format == "json":
+            output = format_as_json(filtered)
+        else:  # pretty
+            output = format_as_pretty(filtered, position_starting_at_one)
+
+    echo_data(ctx, output)
+
+
 def render_output_filename(
     template: str,
     uri: str,
@@ -1882,37 +1930,11 @@ def render_state(
         short_fields: The list of keys to keep when ``fields`` is "short"
         heading: The heading line for the table output format
     """
-    position_starting_at_one = ctx.obj["position_starting_at_one"]
-
-    # The display pipeline works on the payload the Volumio host returned, since the
-    # fields and formats are defined over its own field names
     state = fetch_state_or_exit(ctx).raw
 
     debug("Successfully retrieved state")
 
-    # Determine output format
-    if output_format == "raw":
-        # Raw JSON without formatting (ignores fields filter)
-        output = json.dumps(state)
-    else:
-        # Apply fields filter for all formatted outputs
-        filtered_state = filter_fields(state, fields, short_fields)
-
-        if output_format == "table":
-            # Preserve the requested field order (and labels) in the table; None => all
-            field_order = resolve_output_fields(fields, short_fields)
-            output = format_as_table(
-                filtered_state,
-                heading=heading,
-                field_order=field_order,
-                position_starting_at_one=position_starting_at_one,
-            )
-        elif output_format == "json":
-            output = format_as_json(filtered_state)
-        else:  # pretty
-            output = format_as_pretty(filtered_state, position_starting_at_one)
-
-    echo_data(ctx, output)
+    render_fields(ctx, state, fields, output_format, short_fields, heading)
 
 
 def render_story(
