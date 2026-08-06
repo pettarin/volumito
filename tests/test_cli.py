@@ -3383,7 +3383,7 @@ class TestCLICommands:
         mock_open.assert_called_once_with("/tmp/my_track.flac", "wb")
 
     def test_audio_of_a_file_of_the_host_library(
-        self, runner: CliRunner, mocker: MockerFixture
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
         """A URI without a scheme is copied from the Volumio host over SCP."""
         mock_client = mocker.Mock()
@@ -3395,15 +3395,18 @@ class TestCLICommands:
         self._mock_mpd_client(mocker, track_uri="INTERNAL/music/album/01-track.flac")
         copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
+        # The download manifest is really written, so the destination must be a
+        # test-managed directory
+        destination = str(tmp_path / "track.flac")
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(main, ["track", "audio", "-o", destination])
 
         assert result.exit_code == 0
-        assert 'successfully downloaded to "/tmp/track.flac"' in result.output
+        assert f'successfully downloaded to "{destination}"' in result.output
         mock_get.assert_not_called()
         assert copy.call_args.args[1:3] == (
             "/mnt/INTERNAL/music/album/01-track.flac",
-            "/tmp/track.flac",
+            destination,
         )
         assert copy.call_args.args[0].ssh_username == "volumio"
 
@@ -3488,7 +3491,7 @@ class TestCLICommands:
         embed.assert_called_once()
 
     def test_audio_of_a_file_of_the_host_library_failing(
-        self, runner: CliRunner, mocker: MockerFixture
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
         """A failed copy exits 1, reporting what went wrong."""
         mock_client = mocker.Mock()
@@ -3503,12 +3506,16 @@ class TestCLICommands:
             side_effect=VolumioSCPError("Authentication failed"),
         )
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(
+            main, ["track", "audio", "-o", str(tmp_path / "track.flac")]
+        )
 
         assert result.exit_code == 1
         assert "Download error: Authentication failed" in result.output
 
-    def test_audio_with_the_ssh_options(self, runner: CliRunner, mocker: MockerFixture):
+    def test_audio_with_the_ssh_options(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
         """The SSH options reach the copy through the host configuration."""
         mock_client = mocker.Mock()
         _attach_property(mock_client, "state", return_value={"title": "Test Song"})
@@ -3531,7 +3538,9 @@ class TestCLICommands:
                 "track",
                 "audio",
                 "-o",
-                "/tmp/track.flac",
+                # The download manifest is really written, so the destination must
+                # be a test-managed directory
+                str(tmp_path / "track.flac"),
             ],
         )
 
