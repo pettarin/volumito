@@ -12630,7 +12630,7 @@ class TestConfigurationCommands:
         ]
 
     def test_check_fails_when_ignoring(self, runner: CliRunner, tmp_path):
-        """With --ignore-configuration-file, configuration check fails."""
+        """With --ignore-configuration-file and no PATH, configuration check fails."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n  host: x.local\n")
 
@@ -12643,8 +12643,21 @@ class TestConfigurationCommands:
 
         assert without_path.exit_code == 1
         assert "the --ignore-configuration-file option is selected" in without_path.output
-        assert with_path.exit_code == 1
-        assert "the --ignore-configuration-file option is selected" in with_path.output
+        assert with_path.exit_code == 0
+        assert f"Configuration file {config} is valid." in with_path.output
+
+    def test_check_invalid_path_when_ignoring(self, runner: CliRunner, tmp_path):
+        """With --ignore-configuration-file, an explicit invalid PATH is still checked."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("volumio:\n  host: [\n")
+
+        result = runner.invoke(
+            main, ["--ignore-configuration-file", "configuration", "check", str(config)]
+        )
+
+        assert result.exit_code == 1
+        assert f"Configuration file {config} is NOT valid." in result.output
+        assert "the --ignore-configuration-file option is selected" not in result.output
 
     def test_check_fails_when_ignoring_machine_readable(self, runner: CliRunner):
         """In machine-readable mode the ignoring check failure is a JSON envelope."""

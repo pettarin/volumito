@@ -462,7 +462,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     """Check that a configuration file is correct and print the values read from it.
 
     Without PATH, check the file that would be used after probing the standard
-    locations. With --ignore-configuration-file, the command fails.
+    locations. With --ignore-configuration-file and no PATH, the command fails.
     """
     machine_readable = ctx.obj["machine_readable"]
 
@@ -482,7 +482,7 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
             error(message)
         sys.exit(1)
 
-    if ctx.obj.get("ignore_configuration_file"):
+    if path is None and ctx.obj.get("ignore_configuration_file"):
         fail(None, "the --ignore-configuration-file option is selected")
 
     try:
