@@ -1586,14 +1586,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.45" in result.output
+        assert "volumito, version 0.0.46" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.45"'
+        assert result.output.strip() == '"0.0.46"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1602,7 +1602,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.45"'
+        assert result.output.strip() == '"0.0.46"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -10686,6 +10686,51 @@ class TestQueueActions:
         assert result.exit_code == 0
         assert "executed successfully" not in result.output
         mock_client.clear.assert_called_once()
+
+
+class TestQueueNavigationFlags:
+    """Test cases for the queue has_previous/has_next commands."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, name: str, value: bool):
+        """Mock VolumioRESTAPIClient whose named flag property returns value."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, name, return_value=value)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    @pytest.mark.parametrize("command", ["has_next", "has_previous"])
+    @pytest.mark.parametrize("value", [True, False])
+    def test_the_flag_is_printed(
+        self, runner: CliRunner, mocker: MockerFixture, command: str, value: bool
+    ):
+        """queue has_next/has_previous print the flag read from the client."""
+        mock_client = self._mock_client(mocker, command, value)
+
+        result = runner.invoke(main, ["queue", command])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == str(value)
+        getattr(mock_client, f"{command}_property").assert_called_once_with()
+
+    @pytest.mark.parametrize("command", ["has_next", "has_previous"])
+    def test_the_flag_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture, command: str
+    ):
+        """In machine-readable mode the flag is printed as a JSON boolean."""
+        self._mock_client(mocker, command, True)
+
+        result = runner.invoke(main, ["-m", "queue", command])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "true"
 
 
 class TestQueueReplace:

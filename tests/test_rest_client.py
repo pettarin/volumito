@@ -193,6 +193,40 @@ class TestVolumioRESTAPIClient:
 
         assert client.logger is logger
 
+    def _client_with_queue_position(self, mocker: MockerFixture, position, count):
+        """Mock a client whose state carries the position and whose queue has count tracks."""
+        state = {"status": "stop"} if position is None else {"position": position}
+        queue = {"queue": [{"name": f"track-{index}"} for index in range(count)]}
+
+        def answer(url, **kwargs):
+            response = Mock()
+            response.status_code = 200
+            response.json.return_value = queue if "getQueue" in url else state
+            return response
+
+        mocker.patch("requests.get", side_effect=answer)
+        return VolumioRESTAPIClient(VolumioHostConfiguration())
+
+    @pytest.mark.parametrize(
+        ("position", "count", "has_previous", "has_next"),
+        [
+            (1, 3, True, True),
+            (0, 3, False, True),
+            (2, 3, True, False),
+            (0, 1, False, False),
+            (0, 0, False, False),
+            (None, 3, False, False),
+        ],
+    )
+    def test_the_navigation_flags_follow_the_position(
+        self, mocker: MockerFixture, position, count, has_previous, has_next
+    ):
+        """has_previous and has_next answer from the position and the queue length."""
+        assert self._client_with_queue_position(mocker, position, count).has_previous is (
+            has_previous
+        )
+        assert self._client_with_queue_position(mocker, position, count).has_next is has_next
+
     def test_state_success(self, mocker: MockerFixture):
         """Test successful state property access."""
         # Mock response

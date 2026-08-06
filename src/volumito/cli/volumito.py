@@ -1069,6 +1069,22 @@ def queue(ctx: click.Context) -> None:
     pass
 
 
+@queue.command("has_next")
+@click.pass_context
+def queue_has_next(ctx: click.Context) -> None:
+    """Print whether the current track has a next track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_next)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@queue.command("has_previous")
+@click.pass_context
+def queue_has_previous(ctx: click.Context) -> None:
+    """Print whether the current track has a previous track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_previous)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
 @queue.command("list")
 @click.pass_context
 @option_fields
