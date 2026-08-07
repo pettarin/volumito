@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.49] - 2026-08-07
+
+### Added
+
+- Global option `--strict-parsing-configuration-file`, turning the configuration file
+  problems into errors, with its configuration file key
+
+### Changed
+
+- The configuration file is parsed leniently: the problems (unreadable file, unknown
+  keys, broken aliases) are warnings and the valid parts apply; `configuration check`
+  still fails on them
+
+### Fixed
+
+- Every line of a multi-problem message carries its own timestamp and level prefix
+
+
 ## [0.0.48] - 2026-08-07
 
 ### Added

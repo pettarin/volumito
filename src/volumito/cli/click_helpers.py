@@ -22,7 +22,7 @@ from packaging.version import InvalidVersion, Version
 from volumito import __version__
 from volumito.cli.configuration import (
     build_click_default_map,
-    load_configuration,
+    load_configuration_with_errors,
     resolve_configuration_path,
 )
 from volumito.cli.console import LOGGER, debug, error, info, warning
@@ -97,12 +97,19 @@ class AliasedGroup(click.Group):
     """
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
-        """Return the built-in command, or the target of the matching alias."""
+        """Return the built-in command, or the target of the matching alias.
+
+        Invoking an alias dropped at configuration load time fails with the problem
+        that dropped it, instead of an unexplained unknown-command error.
+        """
         command = super().get_command(ctx, cmd_name)
         if command is not None:
             return command
         target = ((ctx.obj or {}).get("aliases") or {}).get(cmd_name)
         if target is None:
+            problem = ((ctx.obj or {}).get("dropped_aliases") or {}).get(cmd_name)
+            if problem is not None:
+                raise click.UsageError(problem)
             return None
         return resolve_command_path(self, ctx, target)
 
@@ -414,8 +421,8 @@ def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tu
 
 def alias_problems(
     root: click.Group, ctx: click.Context, aliases: dict[str, str], path: str
-) -> list[str]:
-    """Return a problem message for every alias that shadows or does not resolve.
+) -> list[tuple[str, str]]:
+    """Return the name and a problem message for every alias that shadows or does not resolve.
 
     Args:
         root: The top-level command group holding the built-in commands
@@ -424,18 +431,25 @@ def alias_problems(
         path: Path of the configuration file (for the messages)
 
     Returns:
-        The problems found, one message per broken alias
+        The problems found, one (alias name, message) pair per broken alias
     """
-    problems: list[str] = []
+    problems: list[tuple[str, str]] = []
     for name, target in aliases.items():
         if click.Group.get_command(root, ctx, name) is not None:
             problems.append(
-                f"alias {name!r} in configuration file {path} shadows the command {name!r}"
+                (
+                    name,
+                    f'alias {name!r} in configuration file "{path}" '
+                    f"shadows the command {name!r}",
+                )
             )
         elif resolve_command_path(root, ctx, target) is None:
             problems.append(
-                f"alias {name!r} in configuration file {path} "
-                f"targets the unknown command {target!r}"
+                (
+                    name,
+                    f"alias {name!r} in configuration file \"{path}\" "
+                    f"targets the unknown command {target!r}",
+                )
             )
     return problems
 
@@ -450,6 +464,10 @@ def configuration_file_callback(
     With ``--ignore-configuration-file`` the lookup is skipped entirely (an explicit
     ``-c`` combined with it is a usage error; both eager callbacks perform the check,
     since Click processes eager parameters in command-line order).
+
+    The file is parsed leniently: an unreadable file, an unknown key, or a broken
+    alias never refuses the invocation -- the broken parts are ignored, the valid
+    ones apply, and each problem is warned about once the console is up.
     """
     ctx.ensure_object(dict)
     ctx.obj["configuration_file_option"] = value
@@ -460,13 +478,19 @@ def configuration_file_callback(
         return value
     path = resolve_configuration_path(value)
     if path is not None:
-        config = load_configuration(path)
-        aliases = config.get("aliases", {})
+        config, problems = load_configuration_with_errors(path)
+        aliases = dict(config.get("aliases", {}))
+        dropped: dict[str, str] = {}
         if isinstance(ctx.command, click.Group):
-            problems = alias_problems(ctx.command, ctx, aliases, path)
-            if problems:
-                raise click.BadParameter(problems[0])
+            for name, problem in alias_problems(ctx.command, ctx, aliases, path):
+                problems.append(problem)
+                dropped[name] = problem
+                del aliases[name]
         ctx.obj["aliases"] = aliases
+        ctx.obj["dropped_aliases"] = dropped
+        # The console is not set up yet (this callback is eager), so the problems are
+        # stashed here and warned about by the group callback
+        ctx.obj["configuration_problems"] = problems
         default_map = build_click_default_map(config)
         # Click reads default_map by invocation path, and an aliased command runs under
         # the alias name, so the target's branch must also be reachable under it

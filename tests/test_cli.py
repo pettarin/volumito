@@ -1575,6 +1575,7 @@ class TestCLICommands:
         assert "--pager" in result.output
         assert "--rest-api-retries-on-unexpected-state" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
+        assert "--strict-parsing-configuration-file" in result.output
         # Short options
         assert "-G" in result.output
         assert "-H" in result.output
@@ -1586,14 +1587,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.48" in result.output
+        assert "volumito, version 0.0.49" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.48"'
+        assert result.output.strip() == '"0.0.49"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1602,7 +1603,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.48"'
+        assert result.output.strip() == '"0.0.49"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4942,23 +4943,37 @@ class TestAliases:
         assert result.exit_code == 0
         assert "AliasMarkerTitle" in result.output
 
-    def test_alias_shadowing_a_command_is_refused(self, runner: CliRunner, tmp_path):
-        """An alias with the name of a built-in command refuses the invocation."""
-        config = self._write_config(tmp_path, "aliases:\n  info: system info\n")
+    def test_alias_shadowing_a_command_is_dropped(self, runner: CliRunner, tmp_path):
+        """An alias with the name of a built-in command warns and is dropped."""
+        config = self._write_config(
+            tmp_path, "aliases:\n  info: system version\n  zzver: version\n"
+        )
 
-        result = runner.invoke(main, ["-c", config, "version"])
+        result = runner.invoke(main, ["-c", config, "zzver"])
+
+        assert result.exit_code == 0
+        assert "shadows the command 'info'" in result.output
+        # The valid alias of the same file still resolves
+        assert "volumito, version" in result.output
+
+    def test_alias_with_unknown_target_is_dropped(self, runner: CliRunner, tmp_path):
+        """A dropped alias does not resolve, and invoking it names the problem."""
+        config = self._write_config(tmp_path, "aliases:\n  zzbad: does not exist\n")
+
+        result = runner.invoke(main, ["-c", config, "zzbad"])
 
         assert result.exit_code == 2
-        assert "shadows the command 'info'" in result.output
+        assert "targets the unknown command 'does not exist'" in result.output
 
-    def test_alias_with_unknown_target_is_refused(self, runner: CliRunner, tmp_path):
-        """An alias whose target does not resolve refuses the invocation."""
+    def test_broken_alias_warns_on_other_commands(self, runner: CliRunner, tmp_path):
+        """A dropped alias warns without refusing the other invocations."""
         config = self._write_config(tmp_path, "aliases:\n  zzbad: does not exist\n")
 
         result = runner.invoke(main, ["-c", config, "version"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
         assert "targets the unknown command 'does not exist'" in result.output
+        assert "volumito, version" in result.output
 
     def test_check_reports_broken_aliases(self, runner: CliRunner, tmp_path):
         """configuration check reports the shadowing and unresolved aliases."""
@@ -6765,6 +6780,18 @@ class TestPlaylistCommands:
         mock_client, _ = self._mock_client(mocker, playlists=[])
 
         result = runner.invoke(main, ["playlist", "play", "Rock"])
+
+        assert result.exit_code == 1
+        assert "Available playlists:" in result.output
+        assert "  (none)" in result.output
+
+    def test_download_unknown_name_with_no_playlists(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The download twin of the empty-playlists error reports none as well."""
+        mock_client, _ = self._mock_client(mocker, playlists=[])
+
+        result = runner.invoke(main, ["playlist", "download", "Rock"])
 
         assert result.exit_code == 1
         assert "Available playlists:" in result.output
@@ -12573,41 +12600,120 @@ class TestConfigurationFile:
         assert result.exit_code == 2
         assert "configuration file not found" in result.output
 
-    def test_malformed_config_errors(
+    def test_malformed_config_warns_and_runs(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """Malformed YAML in the config file exits 2."""
+        """Malformed YAML in the config file warns; the command still runs."""
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "volumio: [unterminated\n")
 
-        result = runner.invoke(main, ["-c", config, "info"])
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
+        assert "[WARN]" in result.output
         assert "cannot read configuration file" in result.output
 
-    def test_non_utf8_config_errors(
+    def test_non_utf8_config_warns_and_runs(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """A non-UTF-8 (binary) config file exits 2 with a readable message."""
+        """A non-UTF-8 (binary) config file warns; the command still runs."""
         self._mock_rest_client(mocker)
         config = tmp_path / "volumito.yaml"
         config.write_bytes(b"\xff\xfe\x00\x01")
 
-        result = runner.invoke(main, ["-c", str(config), "info"])
+        result = runner.invoke(main, ["-c", str(config), "playback", "status"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
         assert "is not a valid YAML file" in result.output
 
-    def test_unknown_key_errors(
+    def test_unknown_key_warns_and_runs(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """An unrecognized key in the config file exits 2."""
+        """An unrecognized key warns; the valid keys of the config still apply."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path, "volumio:\n  bogus: 1\n  host: lenient.local\n"
+        )
+
+        result = runner.invoke(main, ["--verbose", "-c", config, "playback", "status"])
+
+        assert result.exit_code == 0
+        assert "unknown key 'bogus'" in result.output
+        # The valid host key of the same section still applies
+        assert "Connecting to http://lenient.local:3000" in result.output
+
+    def test_config_problems_are_silent_in_machine_readable_mode(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """In machine-readable mode the configuration warnings are suppressed."""
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
 
-        result = runner.invoke(main, ["-c", config, "info"])
+        result = runner.invoke(main, ["-m", "-c", config, "playback", "status"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
+        assert "unknown key" not in result.output
+
+    def test_strict_parsing_turns_the_problems_into_errors(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With strict parsing a configuration problem errors the invocation out."""
+        mock_client = self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
+
+        result = runner.invoke(
+            main,
+            ["--strict-parsing-configuration-file", "-c", config, "playback", "status"],
+        )
+
+        assert result.exit_code == 1
+        assert "[ERRO]" in result.output
+        assert "unknown key 'bogus'" in result.output
+        mock_client.state_property.assert_not_called()
+
+    def test_strict_parsing_with_a_clean_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With strict parsing a clean configuration runs normally."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  host: clean.local\n")
+
+        result = runner.invoke(
+            main,
+            ["--strict-parsing-configuration-file", "-c", config, "playback", "status"],
+        )
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+
+    def test_strict_parsing_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """In machine-readable mode the strict errors are silent, the exit code signals."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
+
+        result = runner.invoke(
+            main,
+            ["-m", "--strict-parsing-configuration-file", "-c", config, "playback", "status"],
+        )
+
+        assert result.exit_code == 1
+        assert "unknown key" not in result.output
+
+    def test_strict_parsing_from_the_configuration_key(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The configuration key applies the strictness to its own file's problems."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path,
+            "volumio:\n  bogus: 1\noutput:\n  strict-parsing-configuration-file: true\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
+
+        assert result.exit_code == 1
         assert "unknown key 'bogus'" in result.output
 
 
@@ -12676,6 +12782,7 @@ class TestConfigurationCommands:
                     "pager": False,
                     "position-starting-at-one": True,
                     "print-resulting-status": True,
+                    "strict-parsing-configuration-file": False,
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders,
                     # except the two collection ones pinning their table format.
@@ -12911,7 +13018,7 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert "unknown key 'bogus'" in result.output
         assert "Usage:" not in result.output
 
@@ -12924,7 +13031,7 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert "cannot read configuration file" in result.output
         assert "Usage:" not in result.output
 
@@ -12951,7 +13058,7 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert (
             "1. output-file and output-directory are mutually exclusive: "
             "'track-albumart' takes output-file from the shared 'downloads' section "
@@ -12976,13 +13083,15 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert "1. unknown key 'foo' in section 'volumio'" in result.output
         assert (
             "2. output-file and output-directory are mutually exclusive: "
             "'track-audio' takes output-file from the 'track-audio' subsection "
             "and output-directory from the shared 'downloads' section" in result.output
         )
+        # Every line carries its own timestamp and level prefix
+        assert all(line.startswith("[2") for line in lines if line)
 
     def test_check_reports_all_unknown_keys(self, runner: CliRunner, tmp_path):
         """Every unknown key is reported, not only the first one."""
@@ -13199,7 +13308,10 @@ class TestConfigurationCommands:
         )
 
         assert result.exit_code == 1
-        assert f'Configuration file "{config}" is NOT valid.' in result.output
+        assert (
+            f'Configuration file "{config}" contains the following problem(s)'
+            in result.output
+        )
         assert "the --ignore-configuration-file option is selected" not in result.output
 
     def test_check_valid_empty_file(self, runner: CliRunner, tmp_path):

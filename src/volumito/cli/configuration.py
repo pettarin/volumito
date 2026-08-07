@@ -230,6 +230,7 @@ GLOBAL_OUTPUT_KEYS: list[str] = [
     "machine-readable",
     "pager",
     "position-starting-at-one",
+    "strict-parsing-configuration-file",
     "verbose",
 ]
 """Keys of the "output" section mapping to a global (top-level group) option."""
@@ -240,14 +241,16 @@ OUTPUT_SCALAR_KEYS: list[str] = [
     "machine-readable",
     "position-starting-at-one",
     "pager",
+    "strict-parsing-configuration-file",
     "fields",
     "format",
     "print-resulting-status",
 ]
 """The "output" section is hierarchical: its scalar keys are shared, and optional
 per-command subsections override the display keys (fields/format). color, verbose,
-machine-readable, position-starting-at-one, and pager are global; print-resulting-status
-applies to the playback and queue action commands.
+machine-readable, position-starting-at-one, pager, and
+strict-parsing-configuration-file are global; print-resulting-status applies to the
+playback and queue action commands.
 """
 
 NOTIFICATION_KEY_PATHS: dict[str, list[list[str]]] = {
@@ -419,10 +422,12 @@ def _validate_aliases(values: dict[str, Any], path: str, errors: list[str]) -> d
     result: dict[str, str] = {}
     for key, value in values.items():
         if not isinstance(key, str):
-            errors.append(f"alias name {key!r} in configuration file {path} must be a string")
+            errors.append(f"alias name {key!r} in configuration file \"{path}\" must be a string")
             continue
         if not isinstance(value, str) or not value.strip():
-            errors.append(f"alias {key!r} in configuration file {path} must map to a command path")
+            errors.append(
+                f'alias {key!r} in configuration file "{path}" must map to a command path'
+            )
             continue
         result[key] = value
     return result
@@ -435,7 +440,7 @@ def _validate_flat_keys(
     for key in values:
         if key not in allowed:
             errors.append(
-                f"unknown key {key!r} in section {section!r} of configuration file {path}"
+                f"unknown key {key!r} in section {section!r} of configuration file \"{path}\""
             )
 
 
@@ -458,7 +463,7 @@ def _validate_hierarchical(
                 continue
             if not isinstance(value, dict):
                 errors.append(
-                    f"section '{name}.{key}' in configuration file {path} must be a mapping"
+                    f"section '{name}.{key}' in configuration file \"{path}\" must be a mapping"
                 )
                 continue
             _validate_flat_keys(f"{name}.{key}", value, subsection_keys[key], path, errors)
@@ -467,7 +472,7 @@ def _validate_hierarchical(
             result[key] = value
         else:
             errors.append(
-                f"unknown key {key!r} in section {name!r} of configuration file {path}"
+                f"unknown key {key!r} in section {name!r} of configuration file \"{path}\""
             )
     return result
 
@@ -664,53 +669,42 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     return sorted(pairs)
 
 
-def load_configuration(path: str) -> dict[str, Any]:
-    """Read and validate a configuration file into a nested, by-section mapping.
-
-    The returned dict mirrors the recognized file structure, keyed by config keys
-    (hyphenated), holding only present keys, e.g.
-    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``.
-    Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
-    :class:`click.BadParameter` with the first problem found. An empty file yields
-    an empty mapping.
-    """
-    config, errors = load_configuration_with_errors(path)
-    if errors:
-        raise click.BadParameter(errors[0])
-    return config
-
-
 def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]]:
     """Read and validate a configuration file, collecting every problem found.
 
-    Like :func:`load_configuration`, but instead of raising on the first problem,
+    The returned mapping mirrors the recognized file structure, keyed by config keys
+    (hyphenated), holding only the valid present keys, e.g.
+    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``:
     the invalid parts are skipped and all the error messages are returned together
-    with the mapping built from the valid parts. A file that cannot be read or
-    parsed at all yields an empty mapping and a single error message.
+    with it. A file that cannot be read or parsed at all yields an empty mapping and
+    a single error message; an empty file yields an empty mapping and no errors.
     """
     try:
         with open(path, encoding="utf-8") as config_file:
             data = yaml.safe_load(config_file)
     except UnicodeDecodeError:
-        return {}, [f"configuration file {path} is not a valid YAML file"]
+        return {}, [f"configuration file \"{path}\" is not a valid YAML file"]
     except (OSError, yaml.YAMLError) as error:
-        return {}, [f"cannot read configuration file {path}: {error}"]
+        # The YAML errors span several lines: flatten them, so the problem message
+        # stays a single (timestamped) line
+        detail = " ".join(str(error).split())
+        return {}, [f'cannot read configuration file "{path}": {detail}']
 
     if data is None:
         return {}, []
     if not isinstance(data, dict):
-        return {}, [f"configuration file {path} must contain a mapping at the top level"]
+        return {}, [f"configuration file \"{path}\" must contain a mapping at the top level"]
 
     config: dict[str, Any] = {}
     errors: list[str] = []
     for section, values in data.items():
         if section not in RECOGNIZED_SECTIONS:
-            errors.append(f"unknown section {section!r} in configuration file {path}")
+            errors.append(f"unknown section {section!r} in configuration file \"{path}\"")
             continue
         if values is None:
             continue
         if not isinstance(values, dict):
-            errors.append(f"section {section!r} in configuration file {path} must be a mapping")
+            errors.append(f"section {section!r} in configuration file \"{path}\" must be a mapping")
             continue
         if section == "aliases":
             config[section] = _validate_aliases(values, path, errors)
@@ -751,7 +745,7 @@ def resolve_configuration_path(explicit: str | None) -> str | None:
     """
     if explicit is not None:
         if not os.path.isfile(explicit):
-            raise click.BadParameter(f"configuration file not found: {explicit}")
+            raise click.BadParameter(f'configuration file not found: "{explicit}"')
         return explicit
     for path in configuration_paths():
         if os.path.isfile(path):
