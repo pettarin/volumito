@@ -58,6 +58,7 @@ volumito/
 ├── docs/
 │   ├── CHANGELOG.md                        # releases and their changes
 │   ├── CLI_USAGE.md                        # volumito CLI tool documentation
+│   ├── CODE_OF_CONDUCT.md                  # ground rules of the project spaces
 │   ├── CONTRIBUTING.md                     # how to report issues and contribute code
 │   ├── DEVELOPMENT.md                      # this file
 │   ├── LIBRARY_USAGE.md                    # Python library documentation
