@@ -28,18 +28,18 @@ are handled by creating a new issue in
 Before submitting a PR, please make sure:
 
 - You read carefully this document and the
-  [DEVELOPMENT](DEVELOPMENT.md)
+  [DEVELOPMENT](https://github.com/pettarin/volumito/blob/main/docs/DEVELOPMENT.md)
   one.
 - You are legally able to and comfortable with applying the current
-  [license](../LICENSE)
+  [license](https://github.com/pettarin/volumito/blob/main/LICENSE)
   to your code contribution.
 - If you used an automated tool (e.g., a LLM/AI tool) to generate it,
   you reviewed and understand the implementation,
   and you took care of removing any unnecessary code (a.k.a., "AI slop").
 - You run all the tests with the `make test-all` command as explained in the
-  [DEVELOPMENT](DEVELOPMENT.md)
+  [DEVELOPMENT](https://github.com/pettarin/volumito/blob/main/docs/DEVELOPMENT.md)
   document, and they all pass.
 - Your PR is from a fix branch or feature branch (ideally branched off
   a recent state of the `devel` branch), and its target is the `devel` branch,
   following the
-  [Branching And Versioning Policy](DEVELOPMENT.md#branching-and-versioning-policy).
+  [Branching And Versioning Policy](https://github.com/pettarin/volumito/blob/main/docs/DEVELOPMENT.md#branching-and-versioning-policy).
