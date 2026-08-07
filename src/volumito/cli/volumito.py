@@ -506,31 +506,46 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     """
     machine_readable = ctx.obj["machine_readable"]
 
-    def fail(path_value: str | None, message: str, errors: list[str] | None = None) -> NoReturn:
+    def fail(
+        path_value: str | None,
+        messages: list[str],
+        errors: list[str] | None = None,
+        heading: str | None = None,
+    ) -> NoReturn:
         if machine_readable:
             absolute = os.path.abspath(path_value) if path_value is not None else None
             payload = {
                 "path": absolute,
                 "valid": False,
-                "errors": errors if errors is not None else [message],
+                "errors": errors if errors is not None else messages,
             }
             click.echo(json.dumps(payload))
-        elif path_value is not None:
-            error(f'Configuration file "{path_value}" is NOT valid.')
-            error(message)
         else:
-            error(message)
+            if heading is not None:
+                error(heading)
+            for message in messages:
+                error(message)
         sys.exit(1)
 
+    def problems_heading(path_value: str) -> str:
+        return (
+            f'Configuration file "{path_value}" contains the following problem(s), '
+            f"ignored when running in --no-strict-parsing-configuration-file mode:"
+        )
+
     if path is None and ctx.obj.get("ignore_configuration_file"):
-        fail(None, "the --ignore-configuration-file option is selected")
+        fail(None, ["the --ignore-configuration-file option is selected"])
 
     try:
         resolved = resolve_configuration_path(path)
     except click.BadParameter as bad_path:
-        fail(path, bad_path.message)
+        fail(
+            path,
+            [bad_path.message],
+            heading=f'Configuration file "{path}" is NOT valid.' if path is not None else None,
+        )
     if resolved is None:
-        fail(None, "no configuration file found")
+        fail(None, ["no configuration file found"])
 
     config, problems = load_configuration_with_errors(resolved)
 
@@ -550,11 +565,9 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
         problems.extend(
             message for _, message in alias_problems(root, ctx, config.get("aliases", {}), resolved)
         )
-    if len(problems) == 1:
-        fail(resolved, problems[0], errors=problems)
     if problems:
-        numbered = "\n".join(f"{index}. {problem}" for index, problem in enumerate(problems, 1))
-        fail(resolved, numbered, errors=problems)
+        numbered = [f"{index}. {problem}" for index, problem in enumerate(problems, 1)]
+        fail(resolved, numbered, errors=problems, heading=problems_heading(resolved))
 
     if machine_readable:
         click.echo(
@@ -1974,8 +1987,11 @@ def playlist_play(
         names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
             error(f'Playlist not found: "{name}"')
-            listed = "\n".join(f'  "{available}"' for available in names) or "  (none)"
-            error(f"Available playlists:\n{listed}")
+            error("Available playlists:")
+            for available in names:
+                error(f'  "{available}"')
+            if not names:
+                error("  (none)")
             sys.exit(1)
 
     execute_command(ctx, f'playplaylist "{name}"', lambda c: c.play_playlist(name))
@@ -2027,8 +2043,11 @@ def playlist_download(
         names = fetch_or_exit(ctx, lambda c: c.playlists.names)
         if name not in names:
             error(f'Playlist not found: "{name}"')
-            listed = "\n".join(f'  "{available}"' for available in names) or "  (none)"
-            error(f"Available playlists:\n{listed}")
+            error("Available playlists:")
+            for available in names:
+                error(f'  "{available}"')
+            if not names:
+                error("  (none)")
             sys.exit(1)
 
     host_configuration = ctx.obj["host_configuration"]

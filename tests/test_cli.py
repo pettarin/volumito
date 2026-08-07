@@ -6784,6 +6784,18 @@ class TestPlaylistCommands:
         assert result.exit_code == 1
         assert "Available playlists:" in result.output
         assert "  (none)" in result.output
+
+    def test_download_unknown_name_with_no_playlists(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The download twin of the empty-playlists error reports none as well."""
+        mock_client, _ = self._mock_client(mocker, playlists=[])
+
+        result = runner.invoke(main, ["playlist", "download", "Rock"])
+
+        assert result.exit_code == 1
+        assert "Available playlists:" in result.output
+        assert "  (none)" in result.output
         mock_client.play_playlist.assert_not_called()
 
     def test_play_unknown_name_machine_readable(
@@ -13006,7 +13018,7 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert "unknown key 'bogus'" in result.output
         assert "Usage:" not in result.output
 
@@ -13019,7 +13031,7 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert "cannot read configuration file" in result.output
         assert "Usage:" not in result.output
 
@@ -13046,7 +13058,7 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert (
             "1. output-file and output-directory are mutually exclusive: "
             "'track-albumart' takes output-file from the shared 'downloads' section "
@@ -13071,13 +13083,15 @@ class TestConfigurationCommands:
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
+        assert lines[0].endswith("when running in --no-strict-parsing-configuration-file mode:")
         assert "1. unknown key 'foo' in section 'volumio'" in result.output
         assert (
             "2. output-file and output-directory are mutually exclusive: "
             "'track-audio' takes output-file from the 'track-audio' subsection "
             "and output-directory from the shared 'downloads' section" in result.output
         )
+        # Every line carries its own timestamp and level prefix
+        assert all(line.startswith("[2") for line in lines if line)
 
     def test_check_reports_all_unknown_keys(self, runner: CliRunner, tmp_path):
         """Every unknown key is reported, not only the first one."""
@@ -13294,7 +13308,10 @@ class TestConfigurationCommands:
         )
 
         assert result.exit_code == 1
-        assert f'Configuration file "{config}" is NOT valid.' in result.output
+        assert (
+            f'Configuration file "{config}" contains the following problem(s)'
+            in result.output
+        )
         assert "the --ignore-configuration-file option is selected" not in result.output
 
     def test_check_valid_empty_file(self, runner: CliRunner, tmp_path):

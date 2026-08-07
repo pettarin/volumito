@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keys, broken aliases) are warnings and the valid parts apply; `configuration check`
   still fails on them
 
+### Fixed
+
+- Every line of a multi-problem message carries its own timestamp and level prefix
+
 
 ## [0.0.48] - 2026-08-07
 
