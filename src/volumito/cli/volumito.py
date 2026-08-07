@@ -108,7 +108,7 @@ from volumito.cli.configuration import (
     probe_configuration_paths,
     resolve_configuration_path,
 )
-from volumito.cli.console import LOGGER, debug, error, info, setup_console
+from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
     BROWSE_KINDS_ERROR,
     DEFAULT_VOLUMIO_VERSION,
@@ -387,6 +387,8 @@ def main(
         debug(f'Using configuration file: "{configuration_file}"')
     elif ctx.obj.get("ignore_configuration_file"):
         debug("Ignoring configuration files")
+    for problem in ctx.obj.get("configuration_problems", []):
+        warning(problem)
 
 
 @main.command()
@@ -533,7 +535,9 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
     )
     root = ctx.find_root().command
     if isinstance(root, click.Group):
-        problems.extend(alias_problems(root, ctx, config.get("aliases", {}), resolved))
+        problems.extend(
+            message for _, message in alias_problems(root, ctx, config.get("aliases", {}), resolved)
+        )
     if len(problems) == 1:
         fail(resolved, problems[0], errors=problems)
     if problems:

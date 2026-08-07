@@ -16,7 +16,6 @@ from volumito.cli.configuration import (
     default_configuration_template,
     find_destination_conflicts,
     flatten_configuration,
-    load_configuration,
     load_configuration_with_errors,
     probe_configuration_paths,
     resolve_configuration_path,
@@ -216,7 +215,12 @@ class TestResolveConfigurationPath:
 
 
 class TestLoadDefaultMap:
-    """Test cases for load_configuration."""
+    """Test cases for the validation performed by load_configuration_with_errors."""
+
+    def _errors(self, config) -> list[str]:
+        """Load the file and return only the collected error messages."""
+        _, errors = load_configuration_with_errors(str(config))
+        return errors
 
     def test_full_file(self, tmp_path):
         """A full config is returned as a validated nested, by-section mapping."""
@@ -240,212 +244,205 @@ class TestLoadDefaultMap:
             "    file-name-template: '{title}.{extension}'\n"
         )
 
-        result = load_configuration(str(config))
+        result = load_configuration_with_errors(str(config))
 
-        assert result == {
-            "volumio": {"host": "myconfig.local", "scheme": "https"},
-            "timeouts": {"rest-api-timeout": 7.5},
-            "output": {"verbose": True, "format": "table", "playback-status": {"format": "json"}},
-            "downloads": {
-                "output-directory": "/shared",
-                "track-audio": {"output-directory": "/music"},
-                "track-albumart": {"file-name-template": "{title}.{extension}"},
+        assert result == (
+            {
+                "volumio": {"host": "myconfig.local", "scheme": "https"},
+                "timeouts": {"rest-api-timeout": 7.5},
+                "output": {
+                    "verbose": True,
+                    "format": "table",
+                    "playback-status": {"format": "json"},
+                },
+                "downloads": {
+                    "output-directory": "/shared",
+                    "track-audio": {"output-directory": "/music"},
+                    "track-albumart": {"file-name-template": "{title}.{extension}"},
+                },
             },
-        }
+            [],
+        )
 
-    def test_output_unknown_key_raises(self, tmp_path):
-        """An unrecognized key directly under output raises BadParameter."""
+    def test_output_unknown_key_reported(self, tmp_path):
+        """An unrecognized key directly under output is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("output:\n  bogus: 1\n")
 
-        with pytest.raises(click.BadParameter, match="unknown key 'bogus' in section 'output'"):
-            load_configuration(str(config))
+        assert "unknown key 'bogus' in section 'output'" in self._errors(config)[0]
 
     def test_output_raw_key_no_longer_recognized(self, tmp_path):
         """The removed raw key is now reported as an unrecognized key."""
         config = tmp_path / "volumito.yaml"
         config.write_text("output:\n  raw: true\n")
 
-        with pytest.raises(click.BadParameter, match="unknown key 'raw' in section 'output'"):
-            load_configuration(str(config))
+        assert "unknown key 'raw' in section 'output'" in self._errors(config)[0]
 
-    def test_output_subsection_unknown_key_raises(self, tmp_path):
-        """An unrecognized key in an output subsection raises BadParameter."""
+    def test_output_subsection_unknown_key_reported(self, tmp_path):
+        """An unrecognized key in an output subsection is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("output:\n  playback-status:\n    verbose: true\n")
 
-        with pytest.raises(
-            click.BadParameter, match="unknown key 'verbose' in section 'output.playback-status'"
-        ):
-            load_configuration(str(config))
+        assert (
+            "unknown key 'verbose' in section 'output.playback-status'"
+            in self._errors(config)[0]
+        )
 
-    def test_output_subsection_non_mapping_raises(self, tmp_path):
-        """An output subsection that is not a mapping raises BadParameter."""
+    def test_output_subsection_non_mapping_reported(self, tmp_path):
+        """An output subsection that is not a mapping is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("output:\n  track-info: 5\n")
 
-        with pytest.raises(click.BadParameter, match="'output.track-info'.*must be a mapping"):
-            load_configuration(str(config))
+        error = self._errors(config)[0]
+        assert "'output.track-info'" in error
+        assert "must be a mapping" in error
 
     def test_miscellaneous_section(self, tmp_path):
         """The miscellaneous section accepts check-playlist-name."""
         config = tmp_path / "volumito.yaml"
         config.write_text("miscellaneous:\n  check-playlist-name: false\n")
 
-        assert load_configuration(str(config)) == {
-            "miscellaneous": {"check-playlist-name": False}
-        }
+        assert load_configuration_with_errors(str(config)) == (
+            {"miscellaneous": {"check-playlist-name": False}},
+            [],
+        )
 
     def test_miscellaneous_section_seek(self, tmp_path):
         """The miscellaneous section accepts check-seek-position."""
         config = tmp_path / "volumito.yaml"
         config.write_text("miscellaneous:\n  check-seek-position: false\n")
 
-        assert load_configuration(str(config)) == {
-            "miscellaneous": {"check-seek-position": False}
-        }
+        assert load_configuration_with_errors(str(config)) == (
+            {"miscellaneous": {"check-seek-position": False}},
+            [],
+        )
 
-    def test_miscellaneous_unknown_key_raises(self, tmp_path):
-        """An unrecognized key under miscellaneous raises BadParameter."""
+    def test_miscellaneous_unknown_key_reported(self, tmp_path):
+        """An unrecognized key under miscellaneous is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("miscellaneous:\n  check-name: false\n")
 
-        with pytest.raises(
-            click.BadParameter, match="unknown key 'check-name' in section 'miscellaneous'"
-        ):
-            load_configuration(str(config))
+        assert "unknown key 'check-name' in section 'miscellaneous'" in self._errors(config)[0]
 
-    def test_downloads_unknown_key_raises(self, tmp_path):
-        """An unrecognized key directly under downloads raises BadParameter."""
+    def test_downloads_unknown_key_reported(self, tmp_path):
+        """An unrecognized key directly under downloads is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  bogus: 1\n")
 
-        with pytest.raises(click.BadParameter, match="unknown key 'bogus' in section 'downloads'"):
-            load_configuration(str(config))
+        assert "unknown key 'bogus' in section 'downloads'" in self._errors(config)[0]
 
-    def test_downloads_subsection_unknown_key_raises(self, tmp_path):
-        """An unrecognized key in a downloads subsection raises BadParameter."""
+    def test_downloads_subsection_unknown_key_reported(self, tmp_path):
+        """An unrecognized key in a downloads subsection is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  track-audio:\n    bogus: 1\n")
 
-        with pytest.raises(
-            click.BadParameter, match="unknown key 'bogus' in section 'downloads.track-audio'"
-        ):
-            load_configuration(str(config))
+        assert (
+            "unknown key 'bogus' in section 'downloads.track-audio'" in self._errors(config)[0]
+        )
 
     def test_downloads_null_subsection_skipped(self, tmp_path):
         """A downloads subsection present but empty (null) contributes nothing."""
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  track-audio:\n")
 
-        assert load_configuration(str(config)) == {"downloads": {}}
+        assert load_configuration_with_errors(str(config)) == ({"downloads": {}}, [])
 
-    def test_downloads_subsection_non_mapping_raises(self, tmp_path):
-        """A downloads subsection that is not a mapping raises BadParameter."""
+    def test_downloads_subsection_non_mapping_reported(self, tmp_path):
+        """A downloads subsection that is not a mapping is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  track-audio: 5\n")
 
-        with pytest.raises(click.BadParameter, match="'downloads.track-audio'.*must be a mapping"):
-            load_configuration(str(config))
+        error = self._errors(config)[0]
+        assert "'downloads.track-audio'" in error
+        assert "must be a mapping" in error
 
-    def test_notification_listen_unknown_key_raises(self, tmp_path):
-        """An unrecognized key in the listen subsection raises BadParameter."""
+    def test_notification_listen_unknown_key_reported(self, tmp_path):
+        """An unrecognized key in the listen subsection is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("notification:\n  listen:\n    bogus: 1\n")
 
-        with pytest.raises(
-            click.BadParameter, match="unknown key 'bogus' in section 'notification.listen'"
-        ):
-            load_configuration(str(config))
+        assert (
+            "unknown key 'bogus' in section 'notification.listen'" in self._errors(config)[0]
+        )
 
-    def test_notification_listen_key_at_the_section_level_raises(self, tmp_path):
+    def test_notification_listen_key_at_the_section_level_reported(self, tmp_path):
         """A key of the listen subsection is not accepted at the section level."""
         config = tmp_path / "volumito.yaml"
         config.write_text("notification:\n  register-url: true\n")
 
-        with pytest.raises(
-            click.BadParameter,
-            match="unknown key 'register-url' in section 'notification'",
-        ):
-            load_configuration(str(config))
+        assert (
+            "unknown key 'register-url' in section 'notification'" in self._errors(config)[0]
+        )
 
     def test_empty_file(self, tmp_path):
         """An empty file yields an empty mapping."""
         config = tmp_path / "volumito.yaml"
         config.write_text("")
 
-        assert load_configuration(str(config)) == {}
+        assert load_configuration_with_errors(str(config)) == ({}, [])
 
     def test_null_section_skipped(self, tmp_path):
         """A section present but empty (null) contributes nothing."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n")
 
-        assert load_configuration(str(config)) == {}
+        assert load_configuration_with_errors(str(config)) == ({}, [])
 
-    def test_non_mapping_top_level_raises(self, tmp_path):
-        """A top-level document that is not a mapping raises BadParameter."""
+    def test_non_mapping_top_level_reported(self, tmp_path):
+        """A top-level document that is not a mapping is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("- a\n- b\n")
 
-        with pytest.raises(click.BadParameter, match="must contain a mapping"):
-            load_configuration(str(config))
+        assert "must contain a mapping" in self._errors(config)[0]
 
-    def test_unknown_section_raises(self, tmp_path):
-        """An unrecognized section raises BadParameter."""
+    def test_unknown_section_reported(self, tmp_path):
+        """An unrecognized section is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("bogus:\n  host: x\n")
 
-        with pytest.raises(click.BadParameter, match="unknown section 'bogus'"):
-            load_configuration(str(config))
+        assert "unknown section 'bogus'" in self._errors(config)[0]
 
-    def test_non_mapping_section_raises(self, tmp_path):
-        """A section whose value is not a mapping raises BadParameter."""
+    def test_non_mapping_section_reported(self, tmp_path):
+        """A section whose value is not a mapping is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio: 5\n")
 
-        with pytest.raises(click.BadParameter, match="must be a mapping"):
-            load_configuration(str(config))
+        assert "must be a mapping" in self._errors(config)[0]
 
-    def test_unknown_key_raises(self, tmp_path):
-        """An unrecognized key within a known section raises BadParameter."""
+    def test_unknown_key_reported(self, tmp_path):
+        """An unrecognized key within a known section is reported."""
         config = tmp_path / "volumito.yaml"
         config.write_text("volumio:\n  bad-key: 1\n")
 
-        with pytest.raises(click.BadParameter, match="unknown key 'bad-key'"):
-            load_configuration(str(config))
+        assert "unknown key 'bad-key'" in self._errors(config)[0]
 
     def test_queue_download_rejects_file_name_template(self, tmp_path):
         """The queue-download subsection takes audio-file-name-template only."""
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  queue-download:\n    file-name-template: '{title}'\n")
 
-        with pytest.raises(click.BadParameter, match="unknown key 'file-name-template'"):
-            load_configuration(str(config))
+        assert "unknown key 'file-name-template'" in self._errors(config)[0]
 
     def test_miscellaneous_rejects_moved_download_keys(self, tmp_path):
         """The keys moved to the downloads section are unknown under miscellaneous."""
         config = tmp_path / "volumito.yaml"
         config.write_text("miscellaneous:\n  with-albumart: true\n")
 
-        with pytest.raises(click.BadParameter, match="unknown key 'with-albumart'"):
-            load_configuration(str(config))
+        assert "unknown key 'with-albumart'" in self._errors(config)[0]
 
-    def test_malformed_yaml_raises(self, tmp_path):
-        """Invalid YAML raises BadParameter."""
+    def test_malformed_yaml_reported(self, tmp_path):
+        """Invalid YAML is reported as a single error."""
         config = tmp_path / "volumito.yaml"
         config.write_text("host: [unterminated\n")
 
-        with pytest.raises(click.BadParameter, match="cannot read configuration file"):
-            load_configuration(str(config))
+        assert "cannot read configuration file" in self._errors(config)[0]
 
-    def test_non_utf8_file_raises(self, tmp_path):
-        """A non-UTF-8 (e.g., binary) file raises BadParameter, not UnicodeDecodeError."""
+    def test_non_utf8_file_reported(self, tmp_path):
+        """A non-UTF-8 (e.g., binary) file is reported, without UnicodeDecodeError."""
         config = tmp_path / "volumito.yaml"
         config.write_bytes(b"\xff\xfe\x00\x01")
 
-        with pytest.raises(click.BadParameter, match="is not a valid YAML file"):
-            load_configuration(str(config))
+        assert "is not a valid YAML file" in self._errors(config)[0]
 
 
 class TestDefaultConfigurationTemplate:
@@ -467,7 +464,9 @@ class TestDefaultConfigurationTemplate:
         config = tmp_path / "volumito.yaml"
         config.write_text(default_configuration_template("1.2.3"))
 
-        assert load_configuration(str(config)) == {
+        config_map, errors = load_configuration_with_errors(str(config))
+        assert errors == []
+        assert config_map == {
             "volumio": {
                 "host": "volumio.local",
                 "scheme": "http",
@@ -554,7 +553,8 @@ class TestDefaultConfigurationTemplate:
         config = tmp_path / "volumito.yaml"
         config.write_text(default_configuration_template("1.2.3", MPD_PORT_VOLUMIO_3))
 
-        assert load_configuration(str(config))["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
+        config_map, _ = load_configuration_with_errors(str(config))
+        assert config_map["volumio"]["mpd-port"] == MPD_PORT_VOLUMIO_3
 
 
 class TestLoadConfigurationWithErrors:

@@ -1586,14 +1586,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.48" in result.output
+        assert "volumito, version 0.0.49" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.48"'
+        assert result.output.strip() == '"0.0.49"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1602,7 +1602,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.48"'
+        assert result.output.strip() == '"0.0.49"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4942,23 +4942,37 @@ class TestAliases:
         assert result.exit_code == 0
         assert "AliasMarkerTitle" in result.output
 
-    def test_alias_shadowing_a_command_is_refused(self, runner: CliRunner, tmp_path):
-        """An alias with the name of a built-in command refuses the invocation."""
-        config = self._write_config(tmp_path, "aliases:\n  info: system info\n")
+    def test_alias_shadowing_a_command_is_dropped(self, runner: CliRunner, tmp_path):
+        """An alias with the name of a built-in command warns and is dropped."""
+        config = self._write_config(
+            tmp_path, "aliases:\n  info: system version\n  zzver: version\n"
+        )
 
-        result = runner.invoke(main, ["-c", config, "version"])
+        result = runner.invoke(main, ["-c", config, "zzver"])
+
+        assert result.exit_code == 0
+        assert "shadows the command 'info'" in result.output
+        # The valid alias of the same file still resolves
+        assert "volumito, version" in result.output
+
+    def test_alias_with_unknown_target_is_dropped(self, runner: CliRunner, tmp_path):
+        """A dropped alias does not resolve, and invoking it names the problem."""
+        config = self._write_config(tmp_path, "aliases:\n  zzbad: does not exist\n")
+
+        result = runner.invoke(main, ["-c", config, "zzbad"])
 
         assert result.exit_code == 2
-        assert "shadows the command 'info'" in result.output
+        assert "targets the unknown command 'does not exist'" in result.output
 
-    def test_alias_with_unknown_target_is_refused(self, runner: CliRunner, tmp_path):
-        """An alias whose target does not resolve refuses the invocation."""
+    def test_broken_alias_warns_on_other_commands(self, runner: CliRunner, tmp_path):
+        """A dropped alias warns without refusing the other invocations."""
         config = self._write_config(tmp_path, "aliases:\n  zzbad: does not exist\n")
 
         result = runner.invoke(main, ["-c", config, "version"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
         assert "targets the unknown command 'does not exist'" in result.output
+        assert "volumito, version" in result.output
 
     def test_check_reports_broken_aliases(self, runner: CliRunner, tmp_path):
         """configuration check reports the shadowing and unresolved aliases."""
@@ -12573,42 +12587,59 @@ class TestConfigurationFile:
         assert result.exit_code == 2
         assert "configuration file not found" in result.output
 
-    def test_malformed_config_errors(
+    def test_malformed_config_warns_and_runs(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """Malformed YAML in the config file exits 2."""
+        """Malformed YAML in the config file warns; the command still runs."""
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "volumio: [unterminated\n")
 
-        result = runner.invoke(main, ["-c", config, "info"])
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
+        assert "[WARN]" in result.output
         assert "cannot read configuration file" in result.output
 
-    def test_non_utf8_config_errors(
+    def test_non_utf8_config_warns_and_runs(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """A non-UTF-8 (binary) config file exits 2 with a readable message."""
+        """A non-UTF-8 (binary) config file warns; the command still runs."""
         self._mock_rest_client(mocker)
         config = tmp_path / "volumito.yaml"
         config.write_bytes(b"\xff\xfe\x00\x01")
 
-        result = runner.invoke(main, ["-c", str(config), "info"])
+        result = runner.invoke(main, ["-c", str(config), "playback", "status"])
 
-        assert result.exit_code == 2
+        assert result.exit_code == 0
         assert "is not a valid YAML file" in result.output
 
-    def test_unknown_key_errors(
+    def test_unknown_key_warns_and_runs(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
-        """An unrecognized key in the config file exits 2."""
+        """An unrecognized key warns; the valid keys of the config still apply."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path, "volumio:\n  bogus: 1\n  host: lenient.local\n"
+        )
+
+        result = runner.invoke(main, ["--verbose", "-c", config, "playback", "status"])
+
+        assert result.exit_code == 0
+        assert "unknown key 'bogus'" in result.output
+        # The valid host key of the same section still applies
+        assert "Connecting to http://lenient.local:3000" in result.output
+
+    def test_config_problems_are_silent_in_machine_readable_mode(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """In machine-readable mode the configuration warnings are suppressed."""
         self._mock_rest_client(mocker)
         config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
 
-        result = runner.invoke(main, ["-c", config, "info"])
+        result = runner.invoke(main, ["-m", "-c", config, "playback", "status"])
 
-        assert result.exit_code == 2
-        assert "unknown key 'bogus'" in result.output
+        assert result.exit_code == 0
+        assert "unknown key" not in result.output
 
 
 class TestConfigurationCommands:

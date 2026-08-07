@@ -664,29 +664,15 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     return sorted(pairs)
 
 
-def load_configuration(path: str) -> dict[str, Any]:
-    """Read and validate a configuration file into a nested, by-section mapping.
-
-    The returned dict mirrors the recognized file structure, keyed by config keys
-    (hyphenated), holding only present keys, e.g.
-    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``.
-    Unknown sections/keys, a non-mapping document/section, or invalid YAML raise
-    :class:`click.BadParameter` with the first problem found. An empty file yields
-    an empty mapping.
-    """
-    config, errors = load_configuration_with_errors(path)
-    if errors:
-        raise click.BadParameter(errors[0])
-    return config
-
-
 def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]]:
     """Read and validate a configuration file, collecting every problem found.
 
-    Like :func:`load_configuration`, but instead of raising on the first problem,
+    The returned mapping mirrors the recognized file structure, keyed by config keys
+    (hyphenated), holding only the valid present keys, e.g.
+    ``{"volumio": {"host": ...}, "downloads": {"output-directory": ..., "audio": {...}}}``:
     the invalid parts are skipped and all the error messages are returned together
-    with the mapping built from the valid parts. A file that cannot be read or
-    parsed at all yields an empty mapping and a single error message.
+    with it. A file that cannot be read or parsed at all yields an empty mapping and
+    a single error message; an empty file yields an empty mapping and no errors.
     """
     try:
         with open(path, encoding="utf-8") as config_file:
