@@ -437,13 +437,17 @@ def alias_problems(
     for name, target in aliases.items():
         if click.Group.get_command(root, ctx, name) is not None:
             problems.append(
-                (name, f"alias {name!r} in configuration file {path} shadows the command {name!r}")
+                (
+                    name,
+                    f'alias {name!r} in configuration file "{path}" '
+                    f"shadows the command {name!r}",
+                )
             )
         elif resolve_command_path(root, ctx, target) is None:
             problems.append(
                 (
                     name,
-                    f"alias {name!r} in configuration file {path} "
+                    f"alias {name!r} in configuration file \"{path}\" "
                     f"targets the unknown command {target!r}",
                 )
             )

@@ -272,7 +272,7 @@ output:
   # After a playback or queue command like pause or clear, print the resulting playback status
   print-resulting-status: true
 
-  # Turn the problems of this very file into errors (only applies when the file parses)
+  # Turn non-fatal problems in this very file into errors, instead of ignoring them
   strict-parsing-configuration-file: false
 
   # Enable verbose output

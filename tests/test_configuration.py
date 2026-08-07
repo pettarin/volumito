@@ -431,11 +431,13 @@ class TestLoadDefaultMap:
         assert "unknown key 'with-albumart'" in self._errors(config)[0]
 
     def test_malformed_yaml_reported(self, tmp_path):
-        """Invalid YAML is reported as a single error."""
+        """Invalid YAML is reported as a single, single-line error."""
         config = tmp_path / "volumito.yaml"
         config.write_text("host: [unterminated\n")
 
-        assert "cannot read configuration file" in self._errors(config)[0]
+        error = self._errors(config)[0]
+        assert "cannot read configuration file" in error
+        assert "\n" not in error
 
     def test_non_utf8_file_reported(self, tmp_path):
         """A non-UTF-8 (e.g., binary) file is reported, without UnicodeDecodeError."""

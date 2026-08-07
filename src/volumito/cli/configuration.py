@@ -422,10 +422,12 @@ def _validate_aliases(values: dict[str, Any], path: str, errors: list[str]) -> d
     result: dict[str, str] = {}
     for key, value in values.items():
         if not isinstance(key, str):
-            errors.append(f"alias name {key!r} in configuration file {path} must be a string")
+            errors.append(f"alias name {key!r} in configuration file \"{path}\" must be a string")
             continue
         if not isinstance(value, str) or not value.strip():
-            errors.append(f"alias {key!r} in configuration file {path} must map to a command path")
+            errors.append(
+                f'alias {key!r} in configuration file "{path}" must map to a command path'
+            )
             continue
         result[key] = value
     return result
@@ -438,7 +440,7 @@ def _validate_flat_keys(
     for key in values:
         if key not in allowed:
             errors.append(
-                f"unknown key {key!r} in section {section!r} of configuration file {path}"
+                f"unknown key {key!r} in section {section!r} of configuration file \"{path}\""
             )
 
 
@@ -461,7 +463,7 @@ def _validate_hierarchical(
                 continue
             if not isinstance(value, dict):
                 errors.append(
-                    f"section '{name}.{key}' in configuration file {path} must be a mapping"
+                    f"section '{name}.{key}' in configuration file \"{path}\" must be a mapping"
                 )
                 continue
             _validate_flat_keys(f"{name}.{key}", value, subsection_keys[key], path, errors)
@@ -470,7 +472,7 @@ def _validate_hierarchical(
             result[key] = value
         else:
             errors.append(
-                f"unknown key {key!r} in section {name!r} of configuration file {path}"
+                f"unknown key {key!r} in section {name!r} of configuration file \"{path}\""
             )
     return result
 
@@ -681,25 +683,28 @@ def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]
         with open(path, encoding="utf-8") as config_file:
             data = yaml.safe_load(config_file)
     except UnicodeDecodeError:
-        return {}, [f"configuration file {path} is not a valid YAML file"]
+        return {}, [f"configuration file \"{path}\" is not a valid YAML file"]
     except (OSError, yaml.YAMLError) as error:
-        return {}, [f"cannot read configuration file {path}: {error}"]
+        # The YAML errors span several lines: flatten them, so the problem message
+        # stays a single (timestamped) line
+        detail = " ".join(str(error).split())
+        return {}, [f'cannot read configuration file "{path}": {detail}']
 
     if data is None:
         return {}, []
     if not isinstance(data, dict):
-        return {}, [f"configuration file {path} must contain a mapping at the top level"]
+        return {}, [f"configuration file \"{path}\" must contain a mapping at the top level"]
 
     config: dict[str, Any] = {}
     errors: list[str] = []
     for section, values in data.items():
         if section not in RECOGNIZED_SECTIONS:
-            errors.append(f"unknown section {section!r} in configuration file {path}")
+            errors.append(f"unknown section {section!r} in configuration file \"{path}\"")
             continue
         if values is None:
             continue
         if not isinstance(values, dict):
-            errors.append(f"section {section!r} in configuration file {path} must be a mapping")
+            errors.append(f"section {section!r} in configuration file \"{path}\" must be a mapping")
             continue
         if section == "aliases":
             config[section] = _validate_aliases(values, path, errors)
@@ -740,7 +745,7 @@ def resolve_configuration_path(explicit: str | None) -> str | None:
     """
     if explicit is not None:
         if not os.path.isfile(explicit):
-            raise click.BadParameter(f"configuration file not found: {explicit}")
+            raise click.BadParameter(f'configuration file not found: "{explicit}"')
         return explicit
     for path in configuration_paths():
         if os.path.isfile(path):
