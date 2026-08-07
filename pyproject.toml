@@ -7,9 +7,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "volumito"
-version = "0.0.47"
+version = "0.0.48"
 description = "Python client library and CLI tool for Volumio"
 authors = [
+    {name = "Alberto Pettarin", email = "alberto@albertopettarin.it"}
+]
+maintainers = [
     {name = "Alberto Pettarin", email = "alberto@albertopettarin.it"}
 ]
 readme = "README.md"
@@ -53,6 +56,14 @@ dev = [
     "types-requests>=2.31.0",
     "wheel>=0.45.1",
 ]
+
+[project.urls]
+Documentation = "https://www.albertopettarin.it/volumito/docs/"
+Download = "https://github.com/pettarin/volumito#installation"
+Homepage = "https://github.com/pettarin/volumito"
+"Release Notes" = "https://github.com/pettarin/volumito/blob/main/docs/CHANGELOG.md"
+Source = "https://github.com/pettarin/volumito"
+Tracker = "https://github.com/pettarin/volumito/issues"
 
 [project.scripts]
 volumito = "volumito.cli:main"
