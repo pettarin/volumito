@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.49] - 2026-08-07
 
+### Added
+
+- Global option `--strict-parsing-configuration-file`, turning the configuration file
+  problems into errors, with its configuration file key
+
 ### Changed
 
 - The configuration file is parsed leniently: the problems (unreadable file, unknown

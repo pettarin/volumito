@@ -332,6 +332,12 @@ from volumito.clients import (
     help="SSH user name on the Volumio instance.",
 )
 @click.option(
+    "--strict-parsing-configuration-file/--no-strict-parsing-configuration-file",
+    default=False,
+    show_default=True,
+    help="Turn the configuration file problems into errors (or warn and continue).",
+)
+@click.option(
     "--verbose",
     "-v",
     is_flag=True,
@@ -357,6 +363,7 @@ def main(
     ssh_password: str | None,
     ssh_port: int,
     ssh_username: str,
+    strict_parsing_configuration_file: bool,
     verbose: bool,
 ) -> None:
     """volumito - CLI tool for Volumio."""
@@ -387,7 +394,12 @@ def main(
         debug(f'Using configuration file: "{configuration_file}"')
     elif ctx.obj.get("ignore_configuration_file"):
         debug("Ignoring configuration files")
-    for problem in ctx.obj.get("configuration_problems", []):
+    problems = ctx.obj.get("configuration_problems", [])
+    if problems and strict_parsing_configuration_file:
+        for problem in problems:
+            error(problem)
+        sys.exit(1)
+    for problem in problems:
         warning(problem)
 
 

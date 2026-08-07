@@ -230,6 +230,7 @@ GLOBAL_OUTPUT_KEYS: list[str] = [
     "machine-readable",
     "pager",
     "position-starting-at-one",
+    "strict-parsing-configuration-file",
     "verbose",
 ]
 """Keys of the "output" section mapping to a global (top-level group) option."""
@@ -240,14 +241,16 @@ OUTPUT_SCALAR_KEYS: list[str] = [
     "machine-readable",
     "position-starting-at-one",
     "pager",
+    "strict-parsing-configuration-file",
     "fields",
     "format",
     "print-resulting-status",
 ]
 """The "output" section is hierarchical: its scalar keys are shared, and optional
 per-command subsections override the display keys (fields/format). color, verbose,
-machine-readable, position-starting-at-one, and pager are global; print-resulting-status
-applies to the playback and queue action commands.
+machine-readable, position-starting-at-one, pager, and
+strict-parsing-configuration-file are global; print-resulting-status applies to the
+playback and queue action commands.
 """
 
 NOTIFICATION_KEY_PATHS: dict[str, list[list[str]]] = {

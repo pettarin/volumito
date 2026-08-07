@@ -1575,6 +1575,7 @@ class TestCLICommands:
         assert "--pager" in result.output
         assert "--rest-api-retries-on-unexpected-state" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
+        assert "--strict-parsing-configuration-file" in result.output
         # Short options
         assert "-G" in result.output
         assert "-H" in result.output
@@ -12641,6 +12642,68 @@ class TestConfigurationFile:
         assert result.exit_code == 0
         assert "unknown key" not in result.output
 
+    def test_strict_parsing_turns_the_problems_into_errors(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With strict parsing a configuration problem errors the invocation out."""
+        mock_client = self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
+
+        result = runner.invoke(
+            main,
+            ["--strict-parsing-configuration-file", "-c", config, "playback", "status"],
+        )
+
+        assert result.exit_code == 1
+        assert "[ERRO]" in result.output
+        assert "unknown key 'bogus'" in result.output
+        mock_client.state_property.assert_not_called()
+
+    def test_strict_parsing_with_a_clean_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With strict parsing a clean configuration runs normally."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  host: clean.local\n")
+
+        result = runner.invoke(
+            main,
+            ["--strict-parsing-configuration-file", "-c", config, "playback", "status"],
+        )
+
+        assert result.exit_code == 0
+        assert "Test Song" in result.output
+
+    def test_strict_parsing_machine_readable(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """In machine-readable mode the strict errors are silent, the exit code signals."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(tmp_path, "volumio:\n  bogus: 1\n")
+
+        result = runner.invoke(
+            main,
+            ["-m", "--strict-parsing-configuration-file", "-c", config, "playback", "status"],
+        )
+
+        assert result.exit_code == 1
+        assert "unknown key" not in result.output
+
+    def test_strict_parsing_from_the_configuration_key(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The configuration key applies the strictness to its own file's problems."""
+        self._mock_rest_client(mocker)
+        config = self._write_config(
+            tmp_path,
+            "volumio:\n  bogus: 1\noutput:\n  strict-parsing-configuration-file: true\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "playback", "status"])
+
+        assert result.exit_code == 1
+        assert "unknown key 'bogus'" in result.output
+
 
 class TestConfigurationCommands:
     """Test cases for the `configuration` command group (create/check/search)."""
@@ -12707,6 +12770,7 @@ class TestConfigurationCommands:
                     "pager": False,
                     "position-starting-at-one": True,
                     "print-resulting-status": True,
+                    "strict-parsing-configuration-file": False,
                     "verbose": False,
                     # Subsections are present but empty (null) override placeholders,
                     # except the two collection ones pinning their table format.

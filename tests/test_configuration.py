@@ -511,6 +511,7 @@ class TestDefaultConfigurationTemplate:
                 "pager": False,
                 "position-starting-at-one": True,
                 "print-resulting-status": True,
+                "strict-parsing-configuration-file": False,
                 "verbose": False,
                 # The two collection subsections pin their table format
                 "collection-browse": {"format": "table"},
