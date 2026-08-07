@@ -1587,14 +1587,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.49" in result.output
+        assert "volumito, version 0.0.50" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.49"'
+        assert result.output.strip() == '"0.0.50"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1603,7 +1603,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.49"'
+        assert result.output.strip() == '"0.0.50"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -13127,15 +13127,15 @@ class TestConfigurationCommands:
         ]
 
     def test_check_missing_path(self, runner: CliRunner, tmp_path):
-        """A nonexistent explicit PATH makes check fail with a clean error."""
-        result = runner.invoke(
-            main, ["configuration", "check", str(tmp_path / "missing.yaml")]
-        )
+        """A nonexistent explicit PATH makes check fail with one self-contained line."""
+        missing = tmp_path / "missing.yaml"
+
+        result = runner.invoke(main, ["configuration", "check", str(missing)])
 
         assert result.exit_code == 1
         lines = result.output.splitlines()
-        assert lines[0].endswith("is NOT valid.")
-        assert "configuration file not found" in result.output
+        assert len(lines) == 1
+        assert lines[0].endswith(f'Configuration file "{missing}" is not found.')
         assert "Usage:" not in result.output
 
     def test_check_probe(self, runner: CliRunner, tmp_path, mocker: MockerFixture):

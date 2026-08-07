@@ -538,12 +538,8 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
 
     try:
         resolved = resolve_configuration_path(path)
-    except click.BadParameter as bad_path:
-        fail(
-            path,
-            [bad_path.message],
-            heading=f'Configuration file "{path}" is NOT valid.' if path is not None else None,
-        )
+    except click.BadParameter:
+        fail(path, [f'Configuration file "{path}" is not found.'])
     if resolved is None:
         fail(None, ["no configuration file found"])
 
