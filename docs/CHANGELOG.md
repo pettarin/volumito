@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The PyPI project links (documentation, download, homepage, release notes, source,
   tracker) and the maintainer
+- The CONTRIBUTING document, moved out of the DEVELOPMENT one
 
 ### Fixed
 

@@ -409,7 +409,11 @@ document.
 Consult the
 [DEVELOPMENT](https://github.com/pettarin/volumito/blob/main/docs/DEVELOPMENT.md)
 document to learn how to set up a development environment,
-run the tests, browse the project structure, and contribute.
+run the tests, and browse the project structure.
+
+The
+[CONTRIBUTING](https://github.com/pettarin/volumito/blob/main/docs/CONTRIBUTING.md)
+document explains how to report issues and propose changes.
 
 
 ## License
