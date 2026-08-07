@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.48] - 2026-08-07
+
+### Added
+
+- The PyPI project links (documentation, download, homepage, release notes, source,
+  tracker) and the maintainer
+
+
 ## [0.0.47] - 2026-08-06
 
 ### Fixed
