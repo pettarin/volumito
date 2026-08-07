@@ -296,8 +296,9 @@ Command 'playplaylist my awesome playlist' executed successfully
 }
 ```
 
-The document
-[docs/CLI_USAGE.md](docs/CLI_USAGE.md)
+The
+[CLI_USAGE](https://github.com/pettarin/volumito/blob/main/docs/CLI_USAGE.md)
+document
 describes all the commands, subcommands, and options
 of the CLI tool `volumito`.
 
@@ -389,8 +390,9 @@ else:
     print(f"No such playlist: '{playlist_name}'")
 ```
 
-The document
-[docs/LIBRARY_USAGE.md](docs/LIBRARY_USAGE.md)
+The
+[LIBRARY_USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
+document
 contains the API reference of the Python library `volumito`.
 
 
@@ -398,14 +400,14 @@ contains the API reference of the Python library `volumito`.
 
 The list of releases and their changes is contained
 in the
-[docs/CHANGELOG.md](docs/CHANGELOG.md)
+[CHANGELOG](https://github.com/pettarin/volumito/blob/main/docs/CHANGELOG.md)
 document.
 
 
 ## Development
 
 Consult the
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+[DEVELOPMENT](https://github.com/pettarin/volumito/blob/main/docs/DEVELOPMENT.md)
 document to learn how to set up a development environment,
 run the tests, browse the project structure, and contribute.
 
@@ -416,7 +418,7 @@ This project is licensed under
 the GNU General Public License v3.0 or later (GPLv3+).
 
 See the
-[LICENSE](LICENSE)
+[LICENSE](https://github.com/pettarin/volumito/blob/main/LICENSE)
 file for details.
 
 

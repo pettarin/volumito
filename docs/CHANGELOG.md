@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The PyPI project links (documentation, download, homepage, release notes, source,
   tracker) and the maintainer
 
+### Fixed
+
+- The links of the README are absolute, so they work on the PyPI page too
+
 
 ## [0.0.47] - 2026-08-06
 
