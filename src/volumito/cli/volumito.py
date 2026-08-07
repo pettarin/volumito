@@ -534,7 +534,13 @@ def configuration_check(ctx: click.Context, path: str | None) -> None:
         )
 
     if path is None and ctx.obj.get("ignore_configuration_file"):
-        fail(None, ["the --ignore-configuration-file option is selected"])
+        fail(
+            None,
+            [
+                "option -i/--ignore-configuration-file is mutually exclusive with an "
+                "omitted PATH (which probes the default locations)"
+            ],
+        )
 
     try:
         resolved = resolve_configuration_path(path)

@@ -13294,7 +13294,7 @@ class TestConfigurationCommands:
         )
 
         assert without_path.exit_code == 1
-        assert "the --ignore-configuration-file option is selected" in without_path.output
+        assert "mutually exclusive with an omitted PATH" in without_path.output
         assert with_path.exit_code == 0
         assert f'Configuration file "{config}" is valid.' in with_path.output
 
@@ -13312,7 +13312,7 @@ class TestConfigurationCommands:
             f'Configuration file "{config}" contains the following problem(s)'
             in result.output
         )
-        assert "the --ignore-configuration-file option is selected" not in result.output
+        assert "mutually exclusive with an omitted PATH" not in result.output
 
     def test_check_valid_empty_file(self, runner: CliRunner, tmp_path):
         """An empty configuration file is valid and lists no keys."""

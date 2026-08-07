@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `configuration check` reports a missing file with a single line
+- The pathless `configuration check` with the ignore option explains the mutual
+  exclusion
 
 
 ## [0.0.49] - 2026-08-07
