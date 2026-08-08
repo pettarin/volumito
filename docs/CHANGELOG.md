@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Command `alias list` is now `command aliases`, with its configuration file
-  subsection, and the `alias` group is removed
+- Command `alias list` is now `command alias`, printing one line per alias like
+  `command list` does, and the `alias` group is removed
 
 
 ## [0.0.50] - 2026-08-07

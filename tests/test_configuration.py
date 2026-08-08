@@ -770,7 +770,6 @@ class TestBuildClickDefaultMap:
         format_only = {"output_format": "table"}
         assert result == {
             # "command list" takes neither fields nor format, so nothing reaches it
-            "command": {"aliases": format_only},
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"list": formatting, "status": formatting},

@@ -8,11 +8,11 @@ aliases:
   # - An alias must resolve to an existing (sub)command, otherwise an error is produced
   # - An alias cannot shadow a built-in command
   # - Options are not supported in the definition of the alias (only command paths)
-  # - Aliases are not listed by --help: list them with "volumito command aliases"
+  # - Aliases are not listed by --help: list them with "volumito command alias"
   # c: collection
   # cb: collection browse
   # cmd: command
-  # cmda: command aliases
+  # cmda: command alias
   # cmdl: command list
   # conf: configuration
   # cs: collection search
@@ -225,7 +225,6 @@ output:
   # - collection-browse
   # - collection-search
   # - collection-statistics
-  # - command-aliases
   # - command-list
   # - multiroom-zones
   # - notification-list
@@ -293,9 +292,6 @@ output:
     # Add your own overrides here
 
   collection-statistics:
-    # Add your own overrides here
-
-  command-aliases:
     # Add your own overrides here
 
   command-list:

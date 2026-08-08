@@ -632,13 +632,18 @@ def command(ctx: click.Context) -> None:
     pass
 
 
-@command.command("aliases")
+@command.command("alias")
 @click.pass_context
-@option_format
-def command_aliases(ctx: click.Context, output_format: str) -> None:
+def command_alias(ctx: click.Context) -> None:
     """Print the user-defined aliases and the command paths they resolve to."""
     aliases = dict(sorted(ctx.obj.get("aliases", {}).items()))
-    render_payload(ctx, aliases, output_format, "Volumito Command Aliases", verbatim_labels=True)
+
+    if ctx.obj["machine_readable"]:
+        click.echo(json.dumps(aliases))
+        return
+
+    if aliases:
+        echo_data(ctx, "\n".join(f"{name} : {target}" for name, target in aliases.items()))
 
 
 @command.command("list")

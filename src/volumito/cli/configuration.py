@@ -44,6 +44,14 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
 )
 """--print-resulting-status lives on the playback and queue action commands."""
 
+COMMAND_LIST_KEYS: list[str] = [
+    "aliases",
+    "tree",
+]
+"""The keys accepted by the "command-list" subsection: the layout of its own listing,
+not the display keys the other subsections share.
+"""
+
 CONFIGURATION_FILENAMES: list[str] = [
     "volumito.yaml",
     ".volumito.yaml",
@@ -52,14 +60,6 @@ CONFIGURATION_FILENAMES: list[str] = [
 
 DEFAULT_CONFIGURATION_TEMPLATE: str = "volumito.yaml.template"
 """File name of the packaged default-configuration template (in the cli "res" directory)."""
-
-COMMAND_LIST_KEYS: list[str] = [
-    "aliases",
-    "tree",
-]
-"""The keys accepted by the "command-list" subsection: the layout of its own listing,
-not the display keys the other subsections share.
-"""
 
 DISPLAY_KEYS: list[str] = [
     "fields",
@@ -73,7 +73,6 @@ FORMAT_KEYS: list[str] = [
 """Commands accepting only --format, not --fields."""
 
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
-    "command-aliases": FORMAT_KEYS,
     "command-list": COMMAND_LIST_KEYS,
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
@@ -109,9 +108,6 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "collection-statistics": [
         ["collection", "statistics"],
-    ],
-    "command-aliases": [
-        ["command", "aliases"],
     ],
     "command-list": [
         ["command", "list"],

@@ -5041,72 +5041,36 @@ class TestAliases:
         # The static built-in alias stays listed
         assert "info" in result.output
 
-    def test_command_aliases_prints_the_aliases(self, runner: CliRunner, tmp_path):
-        """alias list prints the aliases and their targets, sorted by name."""
+    def test_command_alias_prints_the_aliases(self, runner: CliRunner, tmp_path):
+        """command alias prints one line per alias, sorted, followed by its target."""
         config = self._write_config(
             tmp_path, "aliases:\n  zzstatus: playback status\n  zzcover: track albumart\n"
         )
 
-        result = runner.invoke(main, ["-c", config, "command", "aliases"])
+        result = runner.invoke(main, ["-c", config, "command", "alias"])
 
         assert result.exit_code == 0
-        assert json.loads(result.output) == {
-            "zzcover": "track albumart",
-            "zzstatus": "playback status",
-        }
-        assert result.output.index("zzcover") < result.output.index("zzstatus")
+        assert result.output.splitlines() == [
+            "zzcover : track albumart",
+            "zzstatus : playback status",
+        ]
 
-    def test_command_aliases_format_table(self, runner: CliRunner, tmp_path):
-        """In table format alias list prints the aliases under the heading."""
+    def test_command_alias_machine_readable(self, runner: CliRunner, tmp_path):
+        """In machine-readable mode command alias prints the JSON object."""
         config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
 
-        result = runner.invoke(main, ["-c", config, "command", "aliases", "-F", "table"])
-
-        assert result.exit_code == 0
-        assert "Volumito Command Aliases" in result.output
-        # The alias names appear as they are, not title-cased
-        assert "zzstatus" in result.output
-        assert "Zzstatus" not in result.output
-        assert "playback status" in result.output
-
-    def test_command_aliases_format_raw(self, runner: CliRunner, tmp_path):
-        """In raw format alias list prints the compact JSON object."""
-        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
-
-        result = runner.invoke(main, ["-c", config, "command", "aliases", "-F", "raw"])
+        result = runner.invoke(main, ["-m", "-c", config, "command", "alias"])
 
         assert result.exit_code == 0
         assert result.output == '{"zzstatus": "playback status"}\n'
 
-    def test_command_aliases_format_from_the_configuration(self, runner: CliRunner, tmp_path):
-        """The command-aliases subsection of the configuration sets the default format."""
-        config = self._write_config(
-            tmp_path,
-            "aliases:\n  zzstatus: playback status\n"
-            "output:\n  command-aliases:\n    format: table\n",
-        )
-
-        result = runner.invoke(main, ["-c", config, "command", "aliases"])
-
-        assert result.exit_code == 0
-        assert "Volumito Command Aliases" in result.output
-
-    def test_command_aliases_machine_readable(self, runner: CliRunner, tmp_path):
-        """In machine-readable mode alias list prints the JSON object."""
-        config = self._write_config(tmp_path, "aliases:\n  zzstatus: playback status\n")
-
-        result = runner.invoke(main, ["-m", "-c", config, "command", "aliases"])
-
-        assert result.exit_code == 0
-        assert result.output == '{"zzstatus": "playback status"}\n'
-
-    def test_command_aliases_without_aliases(self, runner: CliRunner):
-        """Without any alias defined, alias list prints an empty object."""
-        plain = runner.invoke(main, ["-i", "command", "aliases"])
-        machine = runner.invoke(main, ["-m", "-i", "command", "aliases"])
+    def test_command_alias_without_aliases(self, runner: CliRunner):
+        """Without any alias defined, command alias prints nothing (an empty object with -m)."""
+        plain = runner.invoke(main, ["-i", "command", "alias"])
+        machine = runner.invoke(main, ["-m", "-i", "command", "alias"])
 
         assert plain.exit_code == 0
-        assert json.loads(plain.output) == {}
+        assert plain.output == ""
         assert machine.exit_code == 0
         assert machine.output == "{}\n"
 
@@ -12962,7 +12926,6 @@ class TestConfigurationCommands:
                     "collection-browse": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-statistics": None,
-                    "command-aliases": None,
                     "command-list": None,
                     "notification-list": None,
                     "notification-listen": None,
