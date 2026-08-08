@@ -16,11 +16,10 @@ aliases:
   # cmdl: command list
   # conf: configuration
   # cs: collection search
-  # dwa: track audio
-  # dwc: track albumart
-  # dwp: playlist download
-  # dwq: queue download
   # exec: system execute
+  # i: info
+  # mlt: multiroom
+  # mltz: multiroom zones
   # mute: playback mute
   # next: playback next
   # not: notification
@@ -30,13 +29,14 @@ aliases:
   # notu: notification unregister
   # p: playback
   # pause: playback pause
-  # pd: playlist download
   # ping: system ping
-  # pl: playlist list
+  # pl: playlist
   # play: playback play
+  # pld: playlist download
+  # pll: playlist list
+  # plp: playlist play
   # pm: playback mute
   # pnext: playback next
-  # pp: playlist play
   # ppause: playback pause
   # pplay: playback play
   # pprev: playback previous
@@ -62,7 +62,9 @@ aliases:
   # spla: story place
   # stop: playback stop
   # sys: system
+  # syse: system execute
   # sysi: system info
+  # sysp: system ping
   # sysv: system version
   # t: track
   # ta: track audio
