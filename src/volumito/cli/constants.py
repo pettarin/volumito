@@ -99,6 +99,9 @@ OUTPUT_FORMATS = [
 ]
 """Accepted values of the -F/--format option."""
 
+PROGRAM_NAME = "volumito"
+"""Name of the CLI tool, heading the command tree."""
+
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notification register" is given neither a URL nor --autocompose-url."""
 

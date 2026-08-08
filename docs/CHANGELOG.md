@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.0.51] - 2026-08-07
+
+### Added
+
+- Command group `command`, with `command list` printing the available command paths
+  and the aliases pointing at them (`-a`/`--aliases`), as a tree (`-t`/`--tree`,
+  default) or flat, with their configuration file keys
+
+### Changed
+
+- Command `alias list` is now `command alias`, printing one line per alias like
+  `command list` does, and the `alias` group is removed
+
+
 ## [0.0.50] - 2026-08-07
 
 ### Fixed

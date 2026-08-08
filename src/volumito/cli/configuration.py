@@ -44,6 +44,14 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
 )
 """--print-resulting-status lives on the playback and queue action commands."""
 
+COMMAND_LIST_KEYS: list[str] = [
+    "aliases",
+    "tree",
+]
+"""The keys accepted by the "command-list" subsection: the layout of its own listing,
+not the display keys the other subsections share.
+"""
+
 CONFIGURATION_FILENAMES: list[str] = [
     "volumito.yaml",
     ".volumito.yaml",
@@ -65,7 +73,7 @@ FORMAT_KEYS: list[str] = [
 """Commands accepting only --format, not --fields."""
 
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
-    "alias-list": FORMAT_KEYS,
+    "command-list": COMMAND_LIST_KEYS,
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
@@ -92,9 +100,6 @@ DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
 """The display subsection names, in the order the keys map defines them."""
 
 DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
-    "alias-list": [
-        ["alias", "list"],
-    ],
     "collection-browse": [
         ["collection", "browse"],
     ],
@@ -103,6 +108,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "collection-statistics": [
         ["collection", "statistics"],
+    ],
+    "command-list": [
+        ["command", "list"],
     ],
     "multiroom-zones": [
         ["multiroom", "zones"],
@@ -637,7 +645,7 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
         subvalues = output.get(subsection, {})
         pairs.extend(
             (f"output.{subsection}.{key}", subvalues[key])
-            for key in DISPLAY_KEYS
+            for key in DISPLAY_SUBSECTION_KEYS[subsection]
             if key in subvalues
         )
     downloads = config.get("downloads", {})

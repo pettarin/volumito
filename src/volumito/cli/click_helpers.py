@@ -419,6 +419,21 @@ def _story_current_track_values(ctx: click.Context, keys: tuple[str, ...]) -> tu
     return tuple(values)
 
 
+def aliases_by_command_path(aliases: dict[str, str]) -> dict[str, list[str]]:
+    """Invert an alias mapping into the alias names of each aliased command path.
+
+    Args:
+        aliases: The alias name -> command path mapping read from the configuration
+
+    Returns:
+        Each aliased command path mapped to its alias names, sorted
+    """
+    result: dict[str, list[str]] = {}
+    for name in sorted(aliases):
+        result.setdefault(" ".join(aliases[name].split()), []).append(name)
+    return result
+
+
 def alias_problems(
     root: click.Group, ctx: click.Context, aliases: dict[str, str], path: str
 ) -> list[tuple[str, str]]:
@@ -503,6 +518,73 @@ def configuration_file_callback(
         ctx.default_map = {**(ctx.default_map or {}), **default_map}
     ctx.obj["configuration_file"] = path
     return value
+
+
+def command_nodes(
+    root: click.Group,
+    ctx: click.Context,
+    aliases: dict[str, list[str]] | None = None,
+    prefix: str = "",
+) -> list[dict[str, Any]]:
+    """Describe the built-in commands of a group, as a list of nested node mappings.
+
+    Each node carries the ``aliases`` pointing at it (unless ``aliases`` is None),
+    its ``path``, its ``type`` ("group" or "command"), and, for a group, the
+    ``subcommands`` it holds. Only the built-in names are walked, so the aliases the
+    configuration defines (which :class:`AliasedGroup` resolves but never lists) stay
+    out of the tree, and each level is sorted lexicographically.
+
+    Args:
+        root: The group to walk
+        ctx: Click context used by the lookups
+        aliases: The alias names of each command path, or None to omit them
+        prefix: The path of the group being walked (empty at the top level)
+
+    Returns:
+        The nodes of the group, one per command it holds
+    """
+    nodes: list[dict[str, Any]] = []
+    for name in sorted(click.Group.list_commands(root, ctx)):
+        command = click.Group.get_command(root, ctx, name)
+        path = f"{prefix} {name}" if prefix else name
+        node: dict[str, Any] = {}
+        if aliases is not None:
+            node["aliases"] = aliases.get(path, [])
+        node["path"] = name
+        node["type"] = "group" if isinstance(command, click.Group) else "command"
+        if isinstance(command, click.Group):
+            node["subcommands"] = command_nodes(command, ctx, aliases, path)
+        nodes.append(node)
+    return nodes
+
+
+def command_nodes_flattened(
+    nodes: list[dict[str, Any]], prefix: str = ""
+) -> list[dict[str, Any]]:
+    """Flatten nested command nodes into one node per command, holding its full path.
+
+    The groups are kept (typed as such), before the commands they hold, so the
+    flattened nodes are ordered by their path.
+
+    Args:
+        nodes: The nested nodes, as :func:`command_nodes` returns them
+        prefix: The path of the group holding the nodes (empty at the top level)
+
+    Returns:
+        The flattened nodes, without their ``subcommands``
+    """
+    flat: list[dict[str, Any]] = []
+    for node in nodes:
+        path = f"{prefix} {node['path']}" if prefix else node["path"]
+        flat.append(
+            {
+                key: (path if key == "path" else value)
+                for key, value in node.items()
+                if key != "subcommands"
+            }
+        )
+        flat.extend(command_nodes_flattened(node.get("subcommands", []), path))
+    return flat
 
 
 def create_client(

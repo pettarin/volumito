@@ -457,6 +457,29 @@ def format_browse_results_as_table(
     return "\n".join(lines)
 
 
+def format_command_nodes(nodes: list[dict[str, Any]], indent: int = 0) -> list[str]:
+    """Format command nodes as one line per node, with the aliases in parentheses.
+
+    Nested nodes are indented by four spaces per level, so the nodes of a command
+    tree draw the tree, and flattened nodes (whose names are their full paths, and
+    which hold no subcommands) draw the flat listing.
+
+    Args:
+        nodes: The command nodes, as the command-node helpers return them
+        indent: The indentation level of the nodes
+
+    Returns:
+        The formatted lines, one per node
+    """
+    lines: list[str] = []
+    for node in nodes:
+        aliases = node.get("aliases") or []
+        suffix = f" ({', '.join(aliases)})" if aliases else ""
+        lines.append(f"{'    ' * indent}{node['path']}{suffix}")
+        lines.extend(format_command_nodes(node.get("subcommands", []), indent + 1))
+    return lines
+
+
 def format_duration(seconds: int) -> str:
     """Convert duration in seconds to HH:MM:SS format.
 
