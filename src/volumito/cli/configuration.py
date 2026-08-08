@@ -73,7 +73,7 @@ FORMAT_KEYS: list[str] = [
 """Commands accepting only --format, not --fields."""
 
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
-    "alias-list": FORMAT_KEYS,
+    "command-aliases": FORMAT_KEYS,
     "command-list": COMMAND_LIST_KEYS,
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
@@ -101,9 +101,6 @@ DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
 """The display subsection names, in the order the keys map defines them."""
 
 DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
-    "alias-list": [
-        ["alias", "list"],
-    ],
     "collection-browse": [
         ["collection", "browse"],
     ],
@@ -112,6 +109,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "collection-statistics": [
         ["collection", "statistics"],
+    ],
+    "command-aliases": [
+        ["command", "aliases"],
     ],
     "command-list": [
         ["command", "list"],

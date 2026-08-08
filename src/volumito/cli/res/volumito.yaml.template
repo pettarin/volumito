@@ -8,12 +8,11 @@ aliases:
   # - An alias must resolve to an existing (sub)command, otherwise an error is produced
   # - An alias cannot shadow a built-in command
   # - Options are not supported in the definition of the alias (only command paths)
-  # - Aliases are not listed by --help: list them with "volumito alias list"
-  # a: alias
-  # al: alias list
+  # - Aliases are not listed by --help: list them with "volumito command aliases"
   # c: collection
   # cb: collection browse
   # cmd: command
+  # cmda: command aliases
   # cmdl: command list
   # conf: configuration
   # cs: collection search
@@ -223,10 +222,10 @@ notification:
 output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
-  # - alias-list
   # - collection-browse
   # - collection-search
   # - collection-statistics
+  # - command-aliases
   # - command-list
   # - multiroom-zones
   # - notification-list
@@ -281,9 +280,6 @@ output:
   # Enable verbose output
   verbose: false
 
-  alias-list:
-    # Add your own overrides here
-
   collection-browse:
     # Browsing is meant for humans, so the table is its default format
     format: table
@@ -297,6 +293,9 @@ output:
     # Add your own overrides here
 
   collection-statistics:
+    # Add your own overrides here
+
+  command-aliases:
     # Add your own overrides here
 
   command-list:

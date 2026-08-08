@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the aliases pointing at them (`-a`/`--aliases`), as a tree (`-t`/`--tree`,
   default) or flat, with their configuration file keys
 
+### Changed
+
+- Command `alias list` is now `command aliases`, with its configuration file
+  subsection, and the `alias` group is removed
+
 
 ## [0.0.50] - 2026-08-07
 
