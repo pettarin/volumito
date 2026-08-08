@@ -1587,14 +1587,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.50" in result.output
+        assert "volumito, version 0.0.51" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.50"'
+        assert result.output.strip() == '"0.0.51"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1603,7 +1603,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.50"'
+        assert result.output.strip() == '"0.0.51"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -5109,6 +5109,179 @@ class TestAliases:
         assert json.loads(plain.output) == {}
         assert machine.exit_code == 0
         assert machine.output == "{}\n"
+
+
+class TestCommandList:
+    """Test cases for the command list command."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _write_config(self, tmp_path, content: str) -> str:
+        """Write a configuration file with the given content, returning its path."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(content)
+        return str(config)
+
+    _ALIASES = (
+        "aliases:\n"
+        "  q: queue\n"
+        "  qc: queue clear\n"
+        "  clr: queue clear\n"
+    )
+
+    def test_tree_is_the_default(self, runner: CliRunner):
+        """The tree heads with the program name and indents each level by four spaces."""
+        result = runner.invoke(main, ["-i", "command", "list"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert lines[0] == "volumito"
+        assert "    queue" in lines
+        assert "        clear" in lines
+        # The groups of each level are listed lexicographically
+        top = [line[4:] for line in lines if line.startswith("    ") and line[4] != " "]
+        assert top == sorted(top)
+
+    def test_tree_lists_the_new_commands(self, runner: CliRunner):
+        """The command group and its list subcommand list themselves."""
+        result = runner.invoke(main, ["-i", "command", "list"])
+
+        assert result.exit_code == 0
+        assert "    command" in result.output.splitlines()
+        assert "        list" in result.output.splitlines()
+
+    def test_no_tree_prints_sorted_paths(self, runner: CliRunner):
+        """--no-tree prints the full command paths, sorted, groups included."""
+        result = runner.invoke(main, ["-i", "command", "list", "--no-tree"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert lines == sorted(lines)
+        assert "queue" in lines
+        assert "queue clear" in lines
+        assert "info" in lines
+
+    def test_tree_shows_the_aliases(self, runner: CliRunner, tmp_path):
+        """The aliases of a path follow its name, sorted and comma-separated."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        result = runner.invoke(main, ["-c", config, "command", "list"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "    queue (q)" in lines
+        assert "        clear (clr, qc)" in lines
+
+    def test_no_tree_shows_the_aliases(self, runner: CliRunner, tmp_path):
+        """The flat paths carry the same alias suffixes."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        result = runner.invoke(main, ["-c", config, "command", "list", "--no-tree"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "queue (q)" in lines
+        assert "queue clear (clr, qc)" in lines
+
+    def test_machine_readable_is_the_node_tree(self, runner: CliRunner, tmp_path):
+        """In machine-readable mode the tree is a list of typed, nested nodes."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        result = runner.invoke(main, ["-m", "-c", config, "command", "list"])
+
+        assert result.exit_code == 0
+        nodes = json.loads(result.output)
+        assert [node["path"] for node in nodes] == sorted(node["path"] for node in nodes)
+        queue = next(node for node in nodes if node["path"] == "queue")
+        assert list(queue) == ["aliases", "path", "type", "subcommands"]
+        assert queue["aliases"] == ["q"]
+        assert queue["type"] == "group"
+        clear = next(node for node in queue["subcommands"] if node["path"] == "clear")
+        assert clear == {"aliases": ["clr", "qc"], "path": "clear", "type": "command"}
+        # A command without aliases carries an empty list
+        info = next(node for node in nodes if node["path"] == "info")
+        assert info == {"aliases": [], "path": "info", "type": "command"}
+
+    def test_machine_readable_no_tree_flattens_the_nodes(
+        self, runner: CliRunner, tmp_path
+    ):
+        """--no-tree flattens the nodes, holding its full path."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        result = runner.invoke(main, ["-m", "-c", config, "command", "list", "--no-tree"])
+
+        assert result.exit_code == 0
+        nodes = json.loads(result.output)
+        names = [node["path"] for node in nodes]
+        assert names == sorted(names)
+        assert all("subcommands" not in node for node in nodes)
+        assert {"aliases": ["q"], "path": "queue", "type": "group"} in nodes
+        assert {
+            "aliases": ["clr", "qc"],
+            "path": "queue clear",
+            "type": "command",
+        } in nodes
+
+    @pytest.mark.parametrize("extra", [[], ["--no-tree"]])
+    def test_no_aliases_omits_them(self, runner: CliRunner, tmp_path, extra: list[str]):
+        """--no-aliases drops the parenthesized suffixes from both layouts."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        result = runner.invoke(
+            main, ["-c", config, "command", "list", "--no-aliases", *extra]
+        )
+
+        assert result.exit_code == 0
+        assert "(" not in result.output
+        assert "clear" in result.output
+
+    def test_the_configuration_keys(self, runner: CliRunner, tmp_path):
+        """The command-list subsection sets the defaults of both switches."""
+        config = self._write_config(
+            tmp_path,
+            self._ALIASES + "output:\n  command-list:\n    aliases: false\n    tree: false\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "command", "list"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        # Flat (no volumito heading, full paths) and without the alias suffixes
+        assert lines[0] != "volumito"
+        assert "queue clear" in lines
+        assert "(" not in result.output
+
+    def test_the_shorthands(self, runner: CliRunner, tmp_path):
+        """-a and -t are the shorthands of --aliases and --tree."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        flat = runner.invoke(main, ["-c", config, "command", "list", "-a", "--no-tree"])
+        tree = runner.invoke(main, ["-c", config, "command", "list", "-a", "-t"])
+
+        assert flat.exit_code == 0
+        assert "queue (q)" in flat.output.splitlines()
+        assert tree.exit_code == 0
+        assert tree.output.splitlines()[0] == "volumito"
+        assert "    queue (q)" in tree.output.splitlines()
+
+    def test_no_aliases_machine_readable_drops_the_key(
+        self, runner: CliRunner, tmp_path
+    ):
+        """In machine-readable mode --no-aliases leaves the aliases key out."""
+        config = self._write_config(tmp_path, self._ALIASES)
+
+        result = runner.invoke(
+            main, ["-m", "-c", config, "command", "list", "--no-aliases"]
+        )
+
+        assert result.exit_code == 0
+        nodes = json.loads(result.output)
+        queue = next(node for node in nodes if node["path"] == "queue")
+        assert list(queue) == ["path", "type", "subcommands"]
+        assert {"path": "clear", "type": "command"} in queue["subcommands"]
 
 
 class TestResolveCommandPath:
@@ -12790,6 +12963,7 @@ class TestConfigurationCommands:
                     "collection-browse": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-statistics": None,
+                    "command-list": None,
                     "notification-list": None,
                     "notification-listen": None,
                     "playback-status": None,

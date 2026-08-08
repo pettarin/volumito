@@ -21,6 +21,9 @@ from volumito.cli.click_helpers import (
     VolumeParamType,
     VolumioVersionParamType,
     alias_problems,
+    aliases_by_command_path,
+    command_nodes,
+    command_nodes_flattened,
     configuration_file_callback,
     create_client,
     download_queue_albumart,
@@ -121,6 +124,7 @@ from volumito.cli.constants import (
     NOTIFICATION_TIMESTAMP_FORMAT,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
+    PROGRAM_NAME,
     REGISTER_ARGUMENT_ERROR,
     REPLACE_POSITION_ERROR,
     SEARCH_ARGUMENT_ERROR,
@@ -138,6 +142,7 @@ from volumito.cli.pure_helpers import (
     filter_queue_fields,
     filter_zones_fields,
     format_browse_results_as_table,
+    format_command_nodes,
     format_duration,
     format_names_as_table,
     format_notification_as_line,
@@ -634,6 +639,45 @@ def alias_list(ctx: click.Context, output_format: str) -> None:
     """Print the user-defined aliases and the command paths they resolve to."""
     aliases = dict(sorted(ctx.obj.get("aliases", {}).items()))
     render_payload(ctx, aliases, output_format, "Volumito Command Aliases", verbatim_labels=True)
+
+
+@main.group()
+@click.pass_context
+def command(ctx: click.Context) -> None:
+    """Query the available commands."""
+    pass
+
+
+@command.command("list")
+@click.pass_context
+@click.option(
+    "--aliases/--no-aliases",
+    "-a",
+    default=True,
+    show_default=True,
+    help="Print the aliases next to the command paths they point at.",
+)
+@click.option(
+    "--tree/--no-tree",
+    "-t",
+    default=True,
+    show_default=True,
+    help="Print the command tree (or the flat command paths).",
+)
+def command_list(ctx: click.Context, aliases: bool, tree: bool) -> None:
+    """Print the available command paths, with the aliases pointing at them."""
+    root = ctx.find_root().command
+    indexed = aliases_by_command_path(ctx.obj.get("aliases", {})) if aliases else None
+    nodes = command_nodes(root, ctx, indexed) if isinstance(root, click.Group) else []
+    if not tree:
+        nodes = command_nodes_flattened(nodes)
+
+    if ctx.obj["machine_readable"]:
+        click.echo(json.dumps(nodes))
+        return
+
+    lines = format_command_nodes(nodes, indent=1) if tree else format_command_nodes(nodes)
+    echo_data(ctx, "\n".join([PROGRAM_NAME, *lines] if tree else lines))
 
 
 @main.group()

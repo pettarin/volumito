@@ -13,6 +13,8 @@ aliases:
   # al: alias list
   # c: collection
   # cb: collection browse
+  # cmd: command
+  # cmdl: command list
   # conf: configuration
   # cs: collection search
   # dwa: track audio
@@ -225,6 +227,7 @@ output:
   # - collection-browse
   # - collection-search
   # - collection-statistics
+  # - command-list
   # - multiroom-zones
   # - notification-list
   # - notification-listen
@@ -294,6 +297,15 @@ output:
     # Add your own overrides here
 
   collection-statistics:
+    # Add your own overrides here
+
+  command-list:
+    # Print the aliases next to the command paths they point at
+    # aliases: true
+
+    # Print the command tree (true) or the flat command paths (false)
+    # tree: true
+
     # Add your own overrides here
 
   multiroom-zones:

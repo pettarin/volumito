@@ -734,6 +734,15 @@ class TestFlattenConfiguration:
             ("volumio.rest-api-port", 9999),
         ]
 
+    def test_flattens_the_keys_of_each_subsection(self):
+        """A subsection contributes the keys it accepts, not only fields and format."""
+        config = {"output": {"command-list": {"aliases": False, "tree": False}}}
+
+        assert flatten_configuration(config) == [
+            ("output.command-list.aliases", False),
+            ("output.command-list.tree", False),
+        ]
+
     def test_empty_config_yields_empty(self):
         """An empty config flattens to an empty list."""
         assert flatten_configuration({}) == []
@@ -761,6 +770,7 @@ class TestBuildClickDefaultMap:
         format_only = {"output_format": "table"}
         assert result == {
             "alias": {"list": format_only},
+            # "command list" takes neither fields nor format, so nothing reaches it
             "playback": {"status": formatting},
             "track": {"info": formatting},
             "queue": {"list": formatting, "status": formatting},
