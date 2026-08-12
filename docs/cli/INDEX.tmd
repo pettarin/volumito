@@ -24,6 +24,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Queue Status](#queue-status)
   - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
+- [Playlists](#playlists)
+  - [List All Playlists](#list-all-playlists)
+  - [Play A Playlist](#play-a-playlist)
+  - [Playlist Help](#playlist-help)
 - [Download](#download)
   - [Download Track](#download-track)
     - [Download Track Albumart (Cover)](#download-track-albumart-cover)
@@ -52,6 +56,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 
 ```markdown lucio command=include path="./INSPECT_CURRENT_QUEUE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./PLAYLISTS.md" style=literal
 ```
 
 

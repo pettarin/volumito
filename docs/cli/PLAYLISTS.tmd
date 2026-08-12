@@ -1,0 +1,34 @@
+## Playlists
+
+### List All Playlists
+
+The `playlist list` command prints the identifiers
+of all the Volumio playlists:
+
+```bash lucio command=execute
+volumito playlist list
+```
+
+### Play A Playlist
+
+A Volumio playlist can be played,
+replacing the current playback queue with its contents.
+To do so, issue the `playlist play` command
+followed by the playlist identifier:
+
+```bash lucio command=execute
+volumito playlist play "qobuz queue test"
+```
+
+Note: you might want to use double quotes if the identifier contains spaces.
+
+### Playlist Help
+
+These are all subcommands of the `playlist` group:
+
+```bash lucio command=execute
+volumito playlist --help
+```
+
+The `download` subcommand is described
+in the Section [Download](#download) below.

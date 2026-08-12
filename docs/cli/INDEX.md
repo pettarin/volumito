@@ -26,6 +26,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Queue Status](#queue-status)
   - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
+- [Playlists](#playlists)
+  - [List All Playlists](#list-all-playlists)
+  - [Play A Playlist](#play-a-playlist)
+  - [Playlist Help](#playlist-help)
 - [Download](#download)
   - [Download Track](#download-track)
     - [Download Track Albumart (Cover)](#download-track-albumart-cover)
@@ -1560,6 +1564,76 @@ Commands:
 ```
 
 The `download` and `replace` subcommands are described
+in the Section [Download](#download) below.
+
+
+## Playlists
+
+### List All Playlists
+
+The `playlist list` command prints the identifiers
+of all the Volumio playlists:
+
+```bash
+volumito playlist list
+[
+    "int fdg titanic 5",
+    "qobuz fdg titanic",
+    "qobuz norah hd five tracks",
+    "qobuz queue test",
+    "trptk elegy"
+]
+```
+
+### Play A Playlist
+
+A Volumio playlist can be played,
+replacing the current playback queue with its contents.
+To do so, issue the `playlist play` command
+followed by the playlist identifier:
+
+```bash
+volumito playlist play "qobuz queue test"
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.511",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
+}
+[2026-08-12T20:14:05.213Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
+```
+
+Note: you might want to use double quotes if the identifier contains spaces.
+
+### Playlist Help
+
+These are all subcommands of the `playlist` group:
+
+```bash
+volumito playlist --help
+Usage: volumito playlist [OPTIONS] COMMAND [ARGS]...
+
+  Query, play, and download the saved playlists.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  download  Download every track of the playlist specified by NAME.
+  list      List the Volumio playlists saved by the current user.
+  play      Start playback of the playlist specified by NAME.
+```
+
+The `download` subcommand is described
 in the Section [Download](#download) below.
 
 
