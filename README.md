@@ -297,7 +297,7 @@ Command 'playplaylist my awesome playlist' executed successfully
 ```
 
 The
-[CLI_USAGE](https://github.com/pettarin/volumito/blob/main/docs/CLI_USAGE.md)
+[CLI USAGE](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
 document
 describes all the commands, subcommands, and options
 of the CLI tool `volumito`.

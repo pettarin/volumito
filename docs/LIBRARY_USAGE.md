@@ -1,7 +1,7 @@
 # Library Usage
 
 This document describes how to use `volumito` as a Python library.
-For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
+For the command-line tool, see [CLI USAGE](cli/INDEX.md).
 
 
 ## Contents
