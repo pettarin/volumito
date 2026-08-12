@@ -1,0 +1,59 @@
+## Check Your Volumito Configuration
+
+**NOTE**: `volumito` can be used without a configuration file;
+          however creating a configuration file is strongly suggested,
+          as it allows storing preferences that otherwise need
+          to specified at each invokation of the `volumito` CLI tool.
+          You can skip this section if you do not intend
+          to use a configuration file for `volumito`.
+
+You might want to run the `configuration search` command
+to check whether you already have a configuration file in your system:
+
+```bash lucio command=execute
+volumito configuration search
+```
+
+In the above example, a file named `.volumito.yaml`
+was found in the user home directory.
+
+If you do not have a configuration file, you can create one with
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to make sure no ./volumito.yaml already exists
+rm -f ./volumito.yaml
+```
+
+```bash lucio command=execute
+# create a volumito.yaml file in the current working directory
+volumito configuration create
+```
+
+It might be convenient to save it to your user home directory,
+so that it will be read and applied no matter the directory `volumito` is run from:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to make sure no ~/volumito.yaml already exists
+rm -f ~/volumito.yaml
+```
+
+```bash lucio command=execute
+# create a volumito.yaml file in the home directory
+volumito configuration create -o ~/volumito.yaml
+```
+
+The contents of the generated file are as follows:
+
+```yaml lucio command=include path=~/volumito.yaml
+```
+
+You might want to edit the configuration file according to your preferences,
+for example you might want to change the value of the `volumio.host` key,
+setting the IP or local name of the Volumio host you want to control via `volumito`.
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to cleanup files created by the commands executed above
+rm -f ./volumito.yaml
+rm -f ~/volumito.yaml
+```
+

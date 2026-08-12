@@ -1,0 +1,19 @@
+## Verify Your Installation
+
+Follow the directions in the main [README](../../README.md) to install `volumito`.
+
+If the installation went well, you should be able to run the `version` command,
+printing the version of the `volumito` tool itself:
+
+```bash lucio command=execute
+volumito version
+```
+
+Check that you can connect to the Volumio host by issuing the `info` command:
+
+```bash lucio command=execute
+volumito --host volumio.local info
+```
+
+where `volumio.local` is the local name of the Volumio host.
+(You can also use its IP address, if you know it.)
