@@ -3,11 +3,18 @@
 This document describes the `volumito` command-line tool.
 For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.md).
 
-<!-- TODO Add an index here -->
+
+<!-- TODO add a linked TOC here -->
+
 
 ```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
 ```
 
+
 ```markdown lucio command=include path="./SETUP_CONFIGURATION_FILE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./GETTING_HELP.md" style=literal
 ```
 
