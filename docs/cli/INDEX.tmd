@@ -9,6 +9,13 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 - [Getting Help](#getting-help)
+- [Control The Playback](#control-the-playback)
+  - [Playback Status](#playback-status)
+  - [Pause And Stop](#pause-and-stop)
+  - [Play Track At A Given Position](#play-track-at-a-given-position)
+  - [Seeking](#seeking)
+  - [Volume Control](#volume-control)
+  - [Playback Help](#playback-help)
 - [Inspect The Current Track](#inspecting-the-current-track)
   - [Track Info](#track-info)
   - [Track Help](#track-help)
@@ -33,6 +40,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 
 ```markdown lucio command=include path="./GETTING_HELP.md" style=literal
+```
+
+
+```markdown lucio command=include path="./CONTROL_PLAYBACK.md" style=literal
 ```
 
 

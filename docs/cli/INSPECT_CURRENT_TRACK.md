@@ -10,80 +10,71 @@ of the current track being played:
 ```bash
 volumito track info
 {
-    "album": "Polvere",
+    "album": "La Vie En Rouge",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
-    "position": 1,
+    "duration": "00:04:08",
+    "position": 3,
     "samplerate": "44.1 kHz",
-    "title": "Va tutto bene",
+    "title": "La Vie En Rouge",
     "trackType": "qobuz"
 }
 ```
 
-A tabular format can also be output:
+The `--format`, `--fields`, `--machine-readable` options
+apply to this command as well:
 
 ```bash
 volumito track info --format table
 Track Info
 ==================================================
-Position            : 1
-Title               : Va tutto bene
+Position            : 3
+Title               : La Vie En Rouge
 Artist              : Enrico Ruggeri
-Album               : Polvere
-Duration            : 00:03:16
+Album               : La Vie En Rouge
+Duration            : 00:04:08
 Tracktype           : qobuz
 Samplerate          : 44.1 kHz
 Bitdepth            : 16 bit
 Channels            : 2
 ```
 
-as well as selecting all the fields present in the response
-from the REST API:
-
 ```bash
 volumito track info --fields ALL
 {
-    "album": "Polvere",
-    "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+    "album": "La Vie En Rouge",
+    "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "bitrate": "1 Kbps",
+    "bitrate": "930 Kbps",
     "channels": 2,
     "consume": true,
     "dbVolume": null,
     "disableVolumeControl": false,
-    "duration": "00:03:16",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
+    "position": 3,
     "random": false,
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:03.530",
+    "seek": "00:03:19.762",
     "service": "qobuz",
     "status": "play",
     "stream": false,
-    "title": "Va tutto bene",
+    "title": "La Vie En Rouge",
     "trackType": "qobuz",
     "updatedb": false,
-    "uri": "qobuz://song/2833718",
+    "uri": "qobuz://song/167919",
     "volatile": false,
-    "volume": 70
+    "volume": 20
 }
 ```
 
-Note: the `-F / --format` and `-L / --fields` options
-apply to several other `volumito` commands.
-
-Note: if the `-m / --machine-readable` option is given,
-the `volumito` output is always produced as valid JSON
-that can be consumed by a downstream application.
-
 ```bash
 volumito -m track info -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 64030, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 70, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 2, "title": "La Vie En Rouge", "artist": "Enrico Ruggeri", "album": "La Vie En Rouge", "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg", "uri": "qobuz://song/167919", "trackType": "qobuz", "seek": 200151, "duration": 248, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "930 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Track Help

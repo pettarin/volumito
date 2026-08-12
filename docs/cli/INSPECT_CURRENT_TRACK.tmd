@@ -9,25 +9,16 @@ of the current track being played:
 volumito track info
 ```
 
-A tabular format can also be output:
+The `--format`, `--fields`, `--machine-readable` options
+apply to this command as well:
 
 ```bash lucio command=execute
 volumito track info --format table
 ```
 
-as well as selecting all the fields present in the response
-from the REST API:
-
 ```bash lucio command=execute
 volumito track info --fields ALL
 ```
-
-Note: the `-F / --format` and `-L / --fields` options
-apply to several other `volumito` commands.
-
-Note: if the `-m / --machine-readable` option is given,
-the `volumito` output is always produced as valid JSON
-that can be consumed by a downstream application.
 
 ```bash lucio command=execute
 volumito -m track info -F raw -L ALL

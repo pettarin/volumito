@@ -1,0 +1,153 @@
+## Control The Playback
+
+### Playback Status
+
+To know the status of the playback,
+issue the `playback status` command:
+
+```bash lucio command=execute
+volumito playback status
+```
+
+A tabular format can also be output:
+
+```bash lucio command=execute
+volumito playback status --format table
+```
+
+as well as selecting all the fields present in the response
+from the REST API:
+
+```bash lucio command=execute
+volumito playback status --fields ALL
+```
+
+Note: the `-F / --format` and `-L / --fields` options
+apply to several other `volumito` commands.
+
+Note: if the `-m / --machine-readable` option is given,
+the `volumito` output is always produced as valid JSON
+that can be consumed by a downstream application.
+
+```bash lucio command=execute
+volumito -m playback status -F raw -L ALL
+```
+
+### Pause And Stop
+
+To pause the playback, use `playback pause`:
+
+```bash lucio command=execute
+volumito playback pause
+```
+
+By default, the resulting status of the playback is printed.
+This behavior is controlled by the option
+`-r, --print-resulting-status / --no-print-resulting-status`.
+
+To toggle between pause and play, use `playback toggle`:
+
+```bash lucio command=execute
+volumito playback toggle
+```
+
+To stop the playback, use `playback stop`:
+
+```bash lucio command=execute
+volumito playback stop
+```
+
+### Play Track At A Given Position
+
+The `playback play` command starts playing the current queue.
+
+```bash lucio command=execute
+volumito playback play
+```
+
+It accepts an optional positional argument
+that can be used to specify the position in the queue
+of the track to be played.
+For example, to play the third track:
+
+```bash lucio command=execute
+volumito playback play 3
+```
+
+### Seeking
+
+The playback position within the current track
+can be queried with `playback seek`:
+
+```bash lucio command=execute
+volumito playback seek
+```
+
+and it can be set by providing a new value,
+either in seconds:
+
+```bash lucio command=execute
+volumito playback seek 42
+```
+
+or in `HH:MM:SS` format:
+
+```bash lucio command=execute
+volumito playback seek 00:01:42
+```
+
+or `plus/increase/up/forward` and `minus/decrease/down/backward`:
+
+```bash lucio command=execute
+volumito playback seek forward
+```
+
+```bash lucio command=execute
+volumito playback seek minus
+```
+
+### Volume Control
+
+The current volume level,
+expressed as an integer between `0` and `100`,
+can be queried with `playback volume`:
+
+```bash lucio command=execute
+volumito playback volume
+```
+
+and it can be set by providing a new value, either numerical:
+
+```bash lucio command=execute
+volumito playback volume 20
+```
+
+or `plus/increase/up` and `minus/decrease/down`:
+
+```bash lucio command=execute
+volumito playback volume plus
+```
+
+```bash lucio command=execute
+volumito playback volume down
+```
+
+The playback volume can be muted and unmuted with
+`playback mute` and `playback unmute`:
+
+```bash lucio command=execute
+volumito playback mute
+```
+
+```bash lucio command=execute
+volumito playback unmute
+```
+
+### Playback Help
+
+These are all subcommands of the `playback` group:
+
+```bash lucio command=execute
+volumito playback --help
+```
+
