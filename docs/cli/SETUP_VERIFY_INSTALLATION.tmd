@@ -16,4 +16,24 @@ volumito --host volumio.local info
 ```
 
 where `volumio.local` is the local name of the Volumio host.
-(You can also use its IP address, if you know it.)
+You can also use its IP address, if you know it.
+Clearly you can also use the shorthand `-H`
+instead of the full option name `--host`.
+
+If your Volumio host runs on ports different than the default ones,
+you might need to add:
+
+- `-M / --mpd-port INTEGER` (default: `6600`)
+- `-P / --rest-api-port INTEGER` (default: `3000`)
+- `--scheme [http|https]` (default: `http`).
+
+**NOTE**: the MPD port is `6600` in Volumio >= 4,
+and `6599` in Volumio < 4.
+
+For example, to connect to a Volumio 3 instance at local IP address `192.168.1.3`
+whose REST API is proxied to port 4567:
+
+```bash
+volumito -H 192.168.1.3 -M 6599 -P 4567 ...
+```
+
