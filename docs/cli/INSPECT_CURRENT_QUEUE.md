@@ -123,16 +123,16 @@ volumito queue status
     "has_next": true,
     "has_previous": true,
     "length": 11,
-    "position": 8,
+    "position": 3,
     "track": {
-        "album": "Sirtaki",
-        "artist": "Mango",
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
         "channels": 2,
-        "duration": "00:04:42",
-        "position": 8,
+        "duration": "00:04:08",
+        "position": 3,
         "samplerate": "44 KHz",
-        "title": "Come Monna Lisa",
+        "title": "La Vie En Rouge",
         "trackType": "qobuz"
     }
 }
@@ -170,3 +170,6 @@ Commands:
   replace       Replace the queue with the content of URI, playing it...
   status        Print the current track with the position, length, and...
 ```
+
+The `download` and `replace` subcommands are described
+in the Section [Download](#download) below.

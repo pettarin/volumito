@@ -16,6 +16,12 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Queue Status](#queue-status)
   - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
+- [Download](#download)
+  - [Download Track](#download-track)
+    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
+    - [Download Track Audio](#download-track-audio)
+  - [Download Queue](#download-queue)
+  - [Download Playlist](#download-playlist)
 
 ## Verify Your Installation
 
@@ -937,16 +943,16 @@ volumito queue status
     "has_next": true,
     "has_previous": true,
     "length": 11,
-    "position": 8,
+    "position": 3,
     "track": {
-        "album": "Sirtaki",
-        "artist": "Mango",
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
         "channels": 2,
-        "duration": "00:04:42",
-        "position": 8,
+        "duration": "00:04:08",
+        "position": 3,
         "samplerate": "44 KHz",
-        "title": "Come Monna Lisa",
+        "title": "La Vie En Rouge",
         "trackType": "qobuz"
     }
 }
@@ -984,3 +990,59 @@ Commands:
   replace       Replace the queue with the content of URI, playing it...
   status        Print the current track with the position, length, and...
 ```
+
+The `download` and `replace` subcommands are described
+in the Section [Download](#download) below.
+
+
+## Download
+
+### Download Track
+
+#### Download Track Albumart (Cover)
+
+```bash
+# use the template defined in the configuration file
+volumito track albumart
+<REDACTED>
+[2026-08-12T18:23:53.042Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
+[2026-08-12T18:23:53.133Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
+[2026-08-12T18:23:53.134Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
+```
+
+```bash
+# override the configuration file, use an explicit output path
+volumito track albumart -o /tmp/cover.jpg
+<REDACTED>
+[2026-08-12T18:23:53.625Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
+[2026-08-12T18:23:53.685Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
+[2026-08-12T18:23:53.685Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
+```
+
+#### Download Track Audio
+
+```bash
+# use the template defined in the configuration file
+volumito track audio
+<REDACTED>
+[2026-08-12T18:23:54.159Z] [INFO] Downloading track to "/tmp/o/002___Fuoco_sui_giocattoli___Polvere___Enrico_Ruggeri.flac"...
+[2026-08-12T18:23:55.090Z] [INFO] Downloading track to "/tmp/o/002___Fuoco_sui_giocattoli___Polvere___Enrico_Ruggeri.flac"... done
+[2026-08-12T18:23:55.091Z] [INFO] Track successfully downloaded to "/tmp/o/002___Fuoco_sui_giocattoli___Polvere___Enrico_Ruggeri.flac"
+```
+
+```bash
+# override the configuration file, use an explicit output path
+volumito track audio -o /tmp/audio.flac
+<REDACTED>
+[2026-08-12T18:23:55.682Z] [INFO] Downloading track to "/tmp/audio.flac"...
+[2026-08-12T18:23:56.582Z] [INFO] Downloading track to "/tmp/audio.flac"... done
+[2026-08-12T18:23:56.583Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
+```
+
+### Download Queue
+
+TODO
+
+### Download Playlist
+
+TODO

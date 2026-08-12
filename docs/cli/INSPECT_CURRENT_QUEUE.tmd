@@ -33,3 +33,6 @@ These are all subcommands of the `queue` group:
 ```bash lucio command=execute
 volumito queue --help
 ```
+
+The `download` and `replace` subcommands are described
+in the Section [Download](#download) below.
