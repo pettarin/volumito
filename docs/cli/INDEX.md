@@ -11,6 +11,9 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 - [Getting Help](#getting-help)
+- [Inspect The Current Track](#inspecting-the-current-track)
+  - [Track Info](#track-info)
+  - [Track Help](#track-help)
 - [Inspect The Current Queue](#inspecting-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
@@ -818,6 +821,115 @@ Note that the `configuration create` command
 produces a configuration file with suggested aliases,
 but all of them are not active,
 as they are commented out in the generated YAML file.
+
+
+## Inspect The Current Track
+
+### Track Info
+
+Command `track info` provides the details
+of the current track being played:
+
+```bash
+volumito track info
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "title": "Va tutto bene",
+    "trackType": "qobuz"
+}
+```
+
+A tabular format can also be output:
+
+```bash
+volumito track info --format table
+Track Info
+==================================================
+Position            : 1
+Title               : Va tutto bene
+Artist              : Enrico Ruggeri
+Album               : Polvere
+Duration            : 00:03:16
+Tracktype           : qobuz
+Samplerate          : 44.1 kHz
+Bitdepth            : 16 bit
+Channels            : 2
+```
+
+as well as selecting all the fields present in the response
+from the REST API:
+
+```bash
+volumito track info --fields ALL
+{
+    "album": "Polvere",
+    "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "bitrate": "1 Kbps",
+    "channels": 2,
+    "consume": true,
+    "dbVolume": null,
+    "disableVolumeControl": false,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "random": false,
+    "repeat": false,
+    "repeatSingle": false,
+    "samplerate": "44.1 kHz",
+    "seek": "00:01:03.530",
+    "service": "qobuz",
+    "status": "play",
+    "stream": false,
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "updatedb": false,
+    "uri": "qobuz://song/2833718",
+    "volatile": false,
+    "volume": 70
+}
+```
+
+Note: the `-F / --format` and `-L / --fields` options
+apply to several other `volumito` commands.
+
+Note: if the `-m / --machine-readable` option is given,
+the `volumito` output is always produced as valid JSON
+that can be consumed by a downstream application.
+
+```bash
+volumito -m track info -F raw -L ALL
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 64030, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 70, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+```
+
+### Track Help
+
+These are all subcommands of the `track` group:
+
+```bash
+volumito track --help
+Usage: volumito track [OPTIONS] COMMAND [ARGS]...
+
+  Query the current track (information, audio, album art).
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  albumart  Print the URI of and/or download the album art of the current...
+  audio     Print the URI of and/or download the audio of the current track.
+  info      Print the information of the current track.
+```
+
+The `albumart` and `audio` subcommands are described
+in the Section [Download](#download) below.
 
 
 ## Inspect The Current Queue

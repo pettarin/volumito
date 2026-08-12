@@ -9,6 +9,9 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 - [Getting Help](#getting-help)
+- [Inspect The Current Track](#inspecting-the-current-track)
+  - [Track Info](#track-info)
+  - [Track Help](#track-help)
 - [Inspect The Current Queue](#inspecting-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
@@ -30,6 +33,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 
 ```markdown lucio command=include path="./GETTING_HELP.md" style=literal
+```
+
+
+```markdown lucio command=include path="./INSPECT_CURRENT_TRACK.md" style=literal
 ```
 
 
