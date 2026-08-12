@@ -6,7 +6,11 @@ This document describes the `volumito` command-line tool.
 For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.md).
 
 
-<!-- TODO add a linked TOC here -->
+## Table Of Contents
+
+- [Verify Your Installation](#verify-your-installation)
+- [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
+- [Getting Help](#getting-help)
 
 
 ## Verify Your Installation
@@ -73,7 +77,7 @@ volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 ```
 
 
-## Check Your Volumito Configuration
+## Check Your Volumito Configuration File
 
 **NOTE**: `volumito` can be used without a configuration file;
           however creating a configuration file is strongly suggested,
@@ -110,7 +114,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-08-12T17:01:25.198Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-08-12T17:46:14.413Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -119,7 +123,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-08-12T17:01:25.645Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-12T17:46:14.869Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 The contents of the generated file are as follows:

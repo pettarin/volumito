@@ -4,7 +4,11 @@ This document describes the `volumito` command-line tool.
 For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.md).
 
 
-<!-- TODO add a linked TOC here -->
+## Table Of Contents
+
+- [Verify Your Installation](#verify-your-installation)
+- [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
+- [Getting Help](#getting-help)
 
 
 ```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
