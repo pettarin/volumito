@@ -35,11 +35,25 @@ volumito track audio -o /tmp/audio.flac
 
 ### Download Queue
 
-TODO
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure no directory used in this section exist
+rm -rf /tmp/o/
+```
+
+```bash lucio command=execute
+volumito queue download
+```
 
 ### Download Playlist
 
-TODO
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure no directory used in this section exist
+rm -rf /tmp/o/
+```
+
+```bash lucio command=execute
+volumito playlist download "qobuz queue test"
+```
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to cleanup the files/directories used in the example above
