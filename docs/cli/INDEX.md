@@ -2373,30 +2373,619 @@ section of the Volumio REST API documentation for the details.
 
 ```bash
 volumito story album "The Beatles" "Yellow Submarine"
+{
+    "data": {
+        "value": "Yellow Submarine is the tenth studio album by the English rock band the Beatles, released in January 1969. It is the soundtrack to the animated film of the same name, which premiered in London in July 1968. The album contains six songs by the Beatles, including four new songs and the previously released \"Yellow Submarine\" and \"All You Need Is Love\". The remainder of the album is a re-recording of selections from the film's orchestral soundtrack by the band's producer, George Martin. \nThe project was regarded as a contractual obligation by the Beatles, who were asked to supply four new songs for the film. Some were written and recorded specifically for the soundtrack, while others were unreleased tracks from other projects. The album was recorded before – and issued two months after – the band's self-titled double LP (also known as the \"White Album\") and was not viewed by the band as a significant release. An EP containing only the new songs had been considered, and was mastered, but left unreleased. The original mono mixes were later included in the 2009 compilation Mono Masters.\nYellow Submarine reached the top 5 in the UK and the US. It has since been afforded a mixed reception from music critics, some of whom consider that it falls short of the high standard generally associated with the Beatles' work. Another version of the album, Yellow Submarine Songtrack, was issued on the film's 30th anniversary. It dispenses with the George Martin orchestral works, and includes the six Beatles songs from the original album, along with an additional nine songs heard in the film, all newly remixed."
+    }
+}
 ```
 
 ### Album Credits
 
 ```bash
 volumito story credits "The Beatles" "Yellow Submarine"
+{
+    "data": {
+        "value": [
+            {
+                "key": "tambourine",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    },
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    },
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "acoustic guitar",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    }
+                ]
+            },
+            {
+                "key": "bass guitar",
+                "values": [
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    }
+                ]
+            },
+            {
+                "key": "drums (drum set)",
+                "values": [
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    }
+                ]
+            },
+            {
+                "key": "bass drum",
+                "values": [
+                    {
+                        "name": "Mal Evans",
+                        "uri": "mbid:/artist/f8df9750-4f73-4c6c-b16b-24cbc57d10f6"
+                    }
+                ]
+            },
+            {
+                "key": "ocarina",
+                "values": [
+                    {
+                        "name": "Brian Jones",
+                        "uri": "mbid:/artist/a704bc81-1d32-4b21-a1fd-ffaa6a1d86e1"
+                    }
+                ]
+            },
+            {
+                "key": "lead vocals",
+                "values": [
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    },
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    }
+                ]
+            },
+            {
+                "key": "background vocals",
+                "values": [
+                    {
+                        "name": "Geoff Emerick",
+                        "uri": "mbid:/artist/3ff7a3d9-a800-4de4-94a6-41a35c96c0ae"
+                    },
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    },
+                    {
+                        "name": "Neil Aspinall",
+                        "uri": "mbid:/artist/aada1ac9-37cf-4fc0-af06-b2ed0bd99670"
+                    },
+                    {
+                        "name": "Alf Bicknell",
+                        "uri": "mbid:/artist/3feb22b7-8c7d-4e3e-9b80-2180f07e8910"
+                    },
+                    {
+                        "name": "Pattie Boyd",
+                        "uri": "mbid:/artist/301bd202-5a57-49d5-b719-8012eef480d4"
+                    },
+                    {
+                        "name": "Mal Evans",
+                        "uri": "mbid:/artist/f8df9750-4f73-4c6c-b16b-24cbc57d10f6"
+                    },
+                    {
+                        "name": "Marianne Faithfull",
+                        "uri": "mbid:/artist/14ed9dea-1bb0-4743-ba32-39674a71da89"
+                    },
+                    {
+                        "name": "Brian Jones",
+                        "uri": "mbid:/artist/a704bc81-1d32-4b21-a1fd-ffaa6a1d86e1"
+                    },
+                    {
+                        "name": "George Martin",
+                        "uri": "mbid:/artist/26fa8b67-6c7f-406c-ad64-a1d070092df2"
+                    },
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    },
+                    {
+                        "name": "Jane Asher",
+                        "uri": "mbid:/artist/ab9f13d7-d2cb-4962-b266-f16b2551056c"
+                    },
+                    {
+                        "name": "Eric Clapton",
+                        "uri": "mbid:/artist/618b6900-0618-4f1e-b835-bccb17f84294"
+                    },
+                    {
+                        "name": "Mick Jagger",
+                        "uri": "mbid:/artist/b5ffc3aa-b868-4b88-905f-d73d51dbe51c"
+                    },
+                    {
+                        "name": "Mike McGear",
+                        "uri": "mbid:/artist/d417d843-2c9d-40c6-a714-3a8c97d16ed4"
+                    },
+                    {
+                        "name": "Keith Moon",
+                        "uri": "mbid:/artist/e64bf907-c90f-4cf1-bd0c-81593b42d4d9"
+                    },
+                    {
+                        "name": "Graham Nash",
+                        "uri": "mbid:/artist/2ed8ecda-5bb9-4d9f-8c99-0bf9b85b3624"
+                    },
+                    {
+                        "name": "Keith Richards",
+                        "uri": "mbid:/artist/f0ed72a3-ae8f-4cf7-b51d-2696a2330230"
+                    },
+                    {
+                        "name": "Gary Walker",
+                        "uri": "mbid:/artist/6822ef44-8620-4aa4-b67b-74919c95dcd2"
+                    }
+                ]
+            },
+            {
+                "key": "spoken vocals",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    },
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    }
+                ]
+            },
+            {
+                "key": "additional",
+                "values": [
+                    {
+                        "name": "Pattie Boyd",
+                        "uri": "mbid:/artist/301bd202-5a57-49d5-b719-8012eef480d4"
+                    },
+                    {
+                        "name": "Geoff Emerick",
+                        "uri": "mbid:/artist/3ff7a3d9-a800-4de4-94a6-41a35c96c0ae"
+                    },
+                    {
+                        "name": "George Martin",
+                        "uri": "mbid:/artist/26fa8b67-6c7f-406c-ad64-a1d070092df2"
+                    }
+                ]
+            },
+            {
+                "key": "guest",
+                "values": [
+                    {
+                        "name": "Pattie Boyd",
+                        "uri": "mbid:/artist/301bd202-5a57-49d5-b719-8012eef480d4"
+                    },
+                    {
+                        "name": "David Mason",
+                        "uri": "mbid:/artist/d7e98dcd-3b72-4ac0-a7e6-80ea7f16b2fd"
+                    },
+                    {
+                        "name": "Jane Asher",
+                        "uri": "mbid:/artist/ab9f13d7-d2cb-4962-b266-f16b2551056c"
+                    },
+                    {
+                        "name": "Eric Clapton",
+                        "uri": "mbid:/artist/618b6900-0618-4f1e-b835-bccb17f84294"
+                    },
+                    {
+                        "name": "Marianne Faithfull",
+                        "uri": "mbid:/artist/14ed9dea-1bb0-4743-ba32-39674a71da89"
+                    },
+                    {
+                        "name": "Mick Jagger",
+                        "uri": "mbid:/artist/b5ffc3aa-b868-4b88-905f-d73d51dbe51c"
+                    },
+                    {
+                        "name": "Mike McGear",
+                        "uri": "mbid:/artist/d417d843-2c9d-40c6-a714-3a8c97d16ed4"
+                    },
+                    {
+                        "name": "Keith Moon",
+                        "uri": "mbid:/artist/e64bf907-c90f-4cf1-bd0c-81593b42d4d9"
+                    },
+                    {
+                        "name": "Graham Nash",
+                        "uri": "mbid:/artist/2ed8ecda-5bb9-4d9f-8c99-0bf9b85b3624"
+                    },
+                    {
+                        "name": "Keith Richards",
+                        "uri": "mbid:/artist/f0ed72a3-ae8f-4cf7-b51d-2696a2330230"
+                    },
+                    {
+                        "name": "Gary Walker",
+                        "uri": "mbid:/artist/6822ef44-8620-4aa4-b67b-74919c95dcd2"
+                    }
+                ]
+            },
+            {
+                "key": "label",
+                "values": [
+                    {
+                        "name": "EMI Records Ltd.",
+                        "uri": "mbid:/label/618a22b7-308f-49a5-bceb-3368e0d25768"
+                    },
+                    {
+                        "name": "The Gramophone Co. Ltd.",
+                        "uri": "mbid:/label/79a28420-8f8c-46d6-987b-63c250d8b74b"
+                    },
+                    {
+                        "name": "Capitol Records–EMI of Canada",
+                        "uri": "mbid:/label/555941ec-6460-4b0a-bfac-a03cb1dafae0"
+                    }
+                ]
+            },
+            {
+                "key": "recorded at",
+                "values": [
+                    {
+                        "name": "Abbey Road Studios: Studio 3",
+                        "uri": "mbid:/place/2d9b9649-6f1d-4671-a859-f283192132b5"
+                    },
+                    {
+                        "name": "Abbey Road Studios: Studio 2",
+                        "uri": "mbid:/place/6f12a5d2-52e5-4dec-9fed-494b1f65bb94"
+                    },
+                    {
+                        "name": "Abbey Road Studios",
+                        "uri": "mbid:/place/bd55aeb7-19d1-4607-a500-14b8479d3fed"
+                    },
+                    {
+                        "name": "De Lane Lea Studios",
+                        "uri": "mbid:/place/82b624d7-29b0-4423-ad4a-56b1908be9fa"
+                    },
+                    {
+                        "name": "Olympic Sound Studios",
+                        "uri": "mbid:/place/e08e2925-c3df-4462-8f56-cd44c5b5f936"
+                    },
+                    {
+                        "name": "Abbey Road Studios: Studio 1",
+                        "uri": "mbid:/place/c56fdea4-e81e-439a-a183-a52eb1141409"
+                    }
+                ]
+            },
+            {
+                "key": "organ",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    }
+                ]
+            },
+            {
+                "key": "electric bass guitar",
+                "values": [
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    }
+                ]
+            },
+            {
+                "key": "glockenspiel",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "piano",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "George Martin",
+                        "uri": "mbid:/artist/26fa8b67-6c7f-406c-ad64-a1d070092df2"
+                    }
+                ]
+            },
+            {
+                "key": "trumpet",
+                "values": [
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    },
+                    {
+                        "name": "David Mason",
+                        "uri": "mbid:/artist/d7e98dcd-3b72-4ac0-a7e6-80ea7f16b2fd"
+                    },
+                    {
+                        "name": "Stanley Woods",
+                        "uri": "mbid:/artist/6309d337-6e24-4010-9c1e-3e2aa4dea6fe"
+                    }
+                ]
+            },
+            {
+                "key": "effects",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    }
+                ]
+            },
+            {
+                "key": "handclaps",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    },
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    },
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    }
+                ]
+            },
+            {
+                "key": "harmonica",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "ukulele",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "finger cymbals",
+                "values": [
+                    {
+                        "name": "Ringo Starr",
+                        "uri": "mbid:/artist/300c4c73-33ac-4255-9d57-4e32627f5e13"
+                    }
+                ]
+            },
+            {
+                "key": "electric guitar",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "Hammond organ",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    }
+                ]
+            },
+            {
+                "key": "bass clarinet",
+                "values": [
+                    {
+                        "name": "Paul Harvey",
+                        "uri": "mbid:/artist/39496129-8183-4f40-8594-85427c2134bd"
+                    }
+                ]
+            },
+            {
+                "key": "violin",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    },
+                    {
+                        "name": "Eric Bowie",
+                        "uri": "mbid:/artist/141a8083-5e8c-4516-9e38-019572db673c"
+                    },
+                    {
+                        "name": "Patrick Halling",
+                        "uri": "mbid:/artist/78e64d6e-b3f7-43d3-bf4d-91cf91abdc95"
+                    },
+                    {
+                        "name": "Sidney Sax",
+                        "uri": "mbid:/artist/f8b6b5e9-28e2-4582-86ad-1a7c15174651"
+                    }
+                ]
+            },
+            {
+                "key": "harpsichord",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "double bass",
+                "values": [
+                    {
+                        "name": "Paul McCartney",
+                        "uri": "mbid:/artist/ba550d0e-adac-4864-b88b-407cab5e76af"
+                    }
+                ]
+            },
+            {
+                "key": "banjo",
+                "values": [
+                    {
+                        "name": "John Lennon",
+                        "uri": "mbid:/artist/4d5447d7-c61c-4120-ba1b-d7f471d385b9"
+                    }
+                ]
+            },
+            {
+                "key": "accordion",
+                "values": [
+                    {
+                        "name": "Jack Emblow",
+                        "uri": "mbid:/artist/ca5f9eb5-1da0-4cd5-8313-2f5aad8245d3"
+                    }
+                ]
+            },
+            {
+                "key": "guitar",
+                "values": [
+                    {
+                        "name": "George Harrison",
+                        "uri": "mbid:/artist/42a8f507-8412-4611-854f-926571049fa0"
+                    }
+                ]
+            },
+            {
+                "key": "tenor saxophone",
+                "values": [
+                    {
+                        "name": "Don Honeywill",
+                        "uri": "mbid:/artist/bacb9797-a1d0-4fa3-a47f-b0838b214352"
+                    },
+                    {
+                        "name": "Rex Morris",
+                        "uri": "mbid:/artist/a64d63f0-87f3-4a3a-b551-6e5051064436"
+                    }
+                ]
+            },
+            {
+                "key": "piccolo trumpet",
+                "values": [
+                    {
+                        "name": "David Mason",
+                        "uri": "mbid:/artist/d7e98dcd-3b72-4ac0-a7e6-80ea7f16b2fd"
+                    }
+                ]
+            },
+            {
+                "key": "trombone",
+                "values": [
+                    {
+                        "name": "Harold Spain",
+                        "uri": "mbid:/artist/3f252449-739d-44d7-80c3-4ef18a76d7fe"
+                    },
+                    {
+                        "name": "Evan Watkins",
+                        "uri": "mbid:/artist/3cd2a963-3e1f-4694-91e5-efb52c61255a"
+                    }
+                ]
+            }
+        ]
+    }
+}
 ```
 
 ### Artist Story
 
 ```bash
 volumito story artist "The Beatles"
+{
+    "data": {
+        "value": "The Beatles were an English rock band formed in Liverpool in 1960. The band comprised John Lennon, Paul McCartney, George Harrison and Ringo Starr. They are regarded as the most influential band in popular music and were integral to the development of 1960s counterculture and the recognition of popular music as an art form. Rooted in skiffle, beat and 1950s rock 'n' roll, their sound incorporated elements of classical music and traditional pop in innovative ways. They also explored styles ranging from folk and Indian music to psychedelia and hard rock. As pioneers in recording, songwriting and artistic presentation, the Beatles revolutionised many aspects of the music industry and were often publicised as leaders of the era's youth and sociocultural movements.\nLed by primary songwriters Lennon and McCartney, the Beatles evolved from Lennon's previous group, the Quarrymen, and built their reputation by playing clubs in Liverpool and in Hamburg, West Germany, starting in 1960. Lennon, McCartney and Harrison, together since 1958, went through a succession of drummers before Starr joined in 1962. Manager Brian Epstein moulded them into a professional act, and producer George Martin developed their recordings, greatly expanding their domestic success after they signed with EMI and achieved their first hit, \"Love Me Do\", in late 1962. As their popularity grew into the fan frenzy dubbed \"Beatlemania\", the band acquired the nickname \"the Fab Four\". By early 1964, the Beatles were international stars and had achieved unprecedented levels of critical and commercial success. They became a leading force in Britain's cultural resurgence, ushering in the British Invasion of the United States pop market. They made their film debut with A Hard Day's Night (1964).\nA growing desire to refine their studio efforts, coupled with the challenging nature of their concert tours, led to the Beatles' retirement from live performances in 1966. During this time, they produced albums of greater sophistication, including Rubber Soul (1965), Revolver (1966) and Sgt. Pepper's Lonely Hearts Club Band (1967). They enjoyed further commercial success with The Beatles (also known as \"the White Album\", 1968) and Abbey Road (1969). The success of these records heralded the album era, increased public interest in psychedelic drugs and Eastern spirituality, and furthered advancements in electronic music, album art and music videos. In 1968, the Beatles founded Apple Corps, a multi-armed multimedia corporation that continues to oversee projects related to their legacy. After the Beatles' break-up in 1970, all former members enjoyed success as solo artists. While some partial reunions occurred over the next decade, the members never fully reunited. Lennon was murdered in 1980 and Harrison died of lung cancer in 2001; McCartney and Starr remain musically active.\nThe Beatles are the best-selling music act of all time, with estimated sales of over 600 million units worldwide. They are the most successful act in the history of the US Billboard charts, with the most number-one singles on the Billboard Hot 100 (20) and most number-one albums on the Billboard 200 (19). They hold the record for most singles sold in the UK (21.9 million), and held the record for most number-one albums on the UK Albums Chart (15) until Robbie Williams surpassed them in 2026. The Beatles' accolades include nine Grammy Awards, four Brit Awards, an Academy Award (for Best Original Song Score for the 1970 documentary film Let It Be) and fifteen Ivor Novello Awards. They were inducted into the Rock and Roll Hall of Fame in their first year of eligibility, 1988, and each principal member was individually inducted between 1994 and 2015. In 2004 and 2011, the Beatles topped Rolling Stone's lists of the greatest artists in history. Time named them among the 20th century's 100 most important people."
+    }
+}
 ```
 
 ### Label Story
 
 ```bash
 volumito story label "EMI"
+{
+    "data": {
+        "value": "EMI Records (formerly EMI Records Ltd.) is a British multinational record label owned by Universal Music Group. It was originally founded as a British flagship label by the music company EMI in 1972, and launched in January 1973 as the successor to its Columbia and Parlophone record labels. The label was later launched worldwide. It has a branch in India called EMI Records India, run by director Mohit Suri. In 2014, Universal Music Japan revived the label in Japan as the successor to EMI Records Japan. In June 2020, Universal revived the label as the successor to Virgin EMI, with Virgin Records now operating as an imprint of EMI Records. In February 2024, UMG Philippines relaunched EMI as a successor to the former EMI Philippines label after 22 years."
+    }
+}
 ```
 
 ### Place Story
 
 ```bash
-volumito story place "Abbey Road"
+volumito story place "Abbey Road Studios"
+{
+    "data": {
+        "value": "Abbey Road Studios (formerly EMI Recording Studios) is a music recording studio at 3 Abbey Road, St John's Wood, City of Westminster, London. It was established in November 1931 by the Gramophone Company, a predecessor of British music company EMI, which owned it until Universal Music Group (UMG) took control of part of it in 2013. It is ultimately owned by UMG's subsidiary Virgin Records.\nThe studio's most notable client was the Beatles, who used the studio – particularly its Studio Two room – as the venue for many of the innovative recording techniques that they adopted throughout the 1960s. In 1976, the studio was renamed from EMI to Abbey Road.\nIn 2009, Abbey Road came under threat of sale to property developers. In response, the British Government protected the site, granting it English Heritage Grade II listed status in 2010, thereby preserving the building from any major alterations."
+    }
+}
 ```
 
 

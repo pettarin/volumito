@@ -16,31 +16,31 @@ section of the Volumio REST API documentation for the details.
 
 ### Album Story
 
-```bash
+```bash lucio command=execute
 volumito story album "The Beatles" "Yellow Submarine"
 ```
 
 ### Album Credits
 
-```bash
+```bash lucio command=execute
 volumito story credits "The Beatles" "Yellow Submarine"
 ```
 
 ### Artist Story
 
-```bash
+```bash lucio command=execute
 volumito story artist "The Beatles"
 ```
 
 ### Label Story
 
-```bash
+```bash lucio command=execute
 volumito story label "EMI"
 ```
 
 ### Place Story
 
-```bash
-volumito story place "Abbey Road"
+```bash lucio command=execute
+volumito story place "Abbey Road Studios"
 ```
 
