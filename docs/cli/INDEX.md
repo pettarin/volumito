@@ -98,7 +98,7 @@ printing the version of the `volumito` tool itself:
 
 ```bash
 volumito version
-volumito, version 0.0.51
+volumito, version 0.0.52
 ```
 
 Check that you can connect to the Volumio host by issuing the `info` command:
@@ -2627,7 +2627,7 @@ file that looks like this:
 ```yaml
 # volumito CLI configuration file
 #
-# Generated with default values for version 0.0.51: edit as needed (and remove this comment)
+# Generated with default values for version 0.0.52: edit as needed (and remove this comment)
 
 aliases:
   # Aliases/shorthands for existing command paths (groups, commands, subcommands).
@@ -3853,7 +3853,7 @@ For the `volumito` (client) version, use the `version` command:
 
 ```bash
 volumito version
-volumito, version 0.0.51
+volumito, version 0.0.52
 ```
 
 #### System Execute
