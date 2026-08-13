@@ -45,6 +45,11 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
     - [SSH Connection Parameters](#ssh-connection-parameters)
     - [SCP Put](#scp-put)
     - [SCP Get](#scp-get)
+  - [System Utilities](#system-utilities)
+    - [System Info](#system-info)
+    - [System Ping](#system-ping)
+    - [System Version](#system-version)
+    - [System Execute](#system-execute)
 
 
 ```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
@@ -88,5 +93,8 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 ```
 
 ```markdown lucio command=include path="./SCP.md" style=literal
+```
+
+```markdown lucio command=include path="./SYSTEM.md" style=literal
 ```
 
