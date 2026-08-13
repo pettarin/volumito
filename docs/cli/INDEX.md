@@ -57,6 +57,9 @@ For using `volumito` as a Python library, see
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Volumito Commands](#volumito-commands)
+    - [List All The Commands](#list-all-the-commands)
+    - [List All The Aliases](#list-all-the-aliases)
   - [Volumito Configuration Files](#volumito-configuration-files)
     - [The Configuration File](#the-configuration-file)
     - [Naming Convention](#naming-convention)
@@ -2395,6 +2398,201 @@ volumito story place "Abbey Road"
 
 
 ## Miscellaneous Commands
+
+### Volumito Commands
+
+#### List All The Commands
+
+Issue `command list` to print a tree
+of all command groups and subcommands:
+
+```bash
+volumito command list
+volumito
+    collection (c)
+        browse (cb)
+        search (cs)
+        statistics
+    command (cmd)
+        alias (cmda)
+        list (cmdl)
+    configuration (conf)
+        check
+        create
+        search
+    info (i)
+    multiroom (mlt)
+        zones (mltz)
+    notification (not)
+        list (notl)
+        listen (notlis)
+        register (notr)
+        unregister (notu)
+    playback (p)
+        is_muted
+        is_paused
+        is_playing
+        is_stopped
+        mute (mute, pm)
+        next (next, pnext)
+        pause (pause, ppause)
+        play (play, pplay)
+        previous (pprev, prev)
+        seek (pseek, seek)
+        status (ps)
+        stop (pstop, stop)
+        toggle (pt, toggle)
+        unmute (pu, unmute)
+        volume (pv, vol)
+    playlist (pl)
+        download (pld)
+        list (pll)
+        play (plp)
+    queue (q)
+        clear (qc)
+        download (qd)
+        has_next
+        has_previous
+        list (ql)
+        randomize
+        repeat
+        replace (qr)
+        status (qs)
+    scp
+        get
+        put
+    story (s)
+        album (salb)
+        artist (sart)
+        credits (scre)
+        label (slab)
+        place (spla)
+    system (sys)
+        execute (exec, syse)
+        info (sysi)
+        ping (ping, sysp)
+        version (sysv)
+    track (t)
+        albumart (tc)
+        audio (ta)
+        info (ti)
+    version
+```
+
+The above output has been generated on a system
+whose `~/.volumito.yaml` enables aliases.
+They appear within parentheses next to the corresponding command,
+for instance `ti` for `track info`, so that
+
+```bash
+volumito track info
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "position": 4,
+    "samplerate": "44.1 kHz",
+    "title": "Va tutto bene",
+    "trackType": "qobuz"
+}
+```
+
+and
+
+```bash
+volumito ti
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "position": 4,
+    "samplerate": "44.1 kHz",
+    "title": "Va tutto bene",
+    "trackType": "qobuz"
+}
+```
+
+are equivalent.
+
+Options `--no-aliases` and `--no-tree` are available
+to prevent printing the aliases and to collapse the tree.
+
+#### List All The Aliases
+
+It is also possible to list all the aliases
+with `command alias`:
+
+```bash
+volumito command alias
+c : collection
+cb : collection browse
+cmd : command
+cmda : command alias
+cmdl : command list
+conf : configuration
+cs : collection search
+exec : system execute
+i : info
+mlt : multiroom
+mltz : multiroom zones
+mute : playback mute
+next : playback next
+not : notification
+notl : notification list
+notlis : notification listen
+notr : notification register
+notu : notification unregister
+p : playback
+pause : playback pause
+ping : system ping
+pl : playlist
+play : playback play
+pld : playlist download
+pll : playlist list
+plp : playlist play
+pm : playback mute
+pnext : playback next
+ppause : playback pause
+pplay : playback play
+pprev : playback previous
+prev : playback previous
+ps : playback status
+pseek : playback seek
+pstop : playback stop
+pt : playback toggle
+pu : playback unmute
+pv : playback volume
+q : queue
+qc : queue clear
+qd : queue download
+ql : queue list
+qr : queue replace
+qs : queue status
+s : story
+salb : story album
+sart : story artist
+scre : story credits
+seek : playback seek
+slab : story label
+spla : story place
+stop : playback stop
+sys : system
+syse : system execute
+sysi : system info
+sysp : system ping
+sysv : system version
+t : track
+ta : track audio
+tc : track albumart
+ti : track info
+toggle : playback toggle
+unmute : playback unmute
+vol : playback volume
+```
 
 ### Volumito Configuration Files
 

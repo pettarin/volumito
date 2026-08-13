@@ -55,6 +55,9 @@ For using `volumito` as a Python library, see
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Volumito Commands](#volumito-commands)
+    - [List All The Commands](#list-all-the-commands)
+    - [List All The Aliases](#list-all-the-aliases)
   - [Volumito Configuration Files](#volumito-configuration-files)
     - [The Configuration File](#the-configuration-file)
     - [Naming Convention](#naming-convention)
@@ -125,6 +128,9 @@ For using `volumito` as a Python library, see
 
 
 ## Miscellaneous Commands
+
+```markdown lucio command=include path="./COMMANDS.md" style=literal
+```
 
 ```markdown lucio command=include path="./CONFIGURATION_FILE.md" style=literal
 ```

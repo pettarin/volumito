@@ -1,0 +1,39 @@
+### Volumito Commands
+
+#### List All The Commands
+
+Issue `command list` to print a tree
+of all command groups and subcommands:
+
+```bash lucio command=execute
+volumito command list
+```
+
+The above output has been generated on a system
+whose `~/.volumito.yaml` enables aliases.
+They appear within parentheses next to the corresponding command,
+for instance `ti` for `track info`, so that
+
+```bash lucio command=execute
+volumito track info
+```
+
+and
+
+```bash lucio command=execute
+volumito ti
+```
+
+are equivalent.
+
+Options `--no-aliases` and `--no-tree` are available
+to prevent printing the aliases and to collapse the tree.
+
+#### List All The Aliases
+
+It is also possible to list all the aliases
+with `command alias`:
+
+```bash lucio command=execute
+volumito command alias
+```
