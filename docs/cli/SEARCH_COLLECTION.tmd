@@ -1,0 +1,92 @@
+## Search The Collection
+
+The `collection search` command
+allows searching for artists, albums, tracks, and playlists.
+
+For the sake of clarity, the following examples
+issue the `--limit 5` option to show only the top five results.
+Omit it if you want the full list.
+
+Moreover, the `--print-uri` option is present,
+so that the URI of the artist/album/track/playlist is printed,
+as it can be used to replace the current queue with it.
+
+### List Artists Matching A Query
+
+```bash lucio command=execute
+volumito collection search --print-uri --artist "The Beatles" --artists-only --limit 5
+```
+
+### List Albums Of An Artist
+
+```bash lucio command=execute
+volumito collection search --print-uri --artist "The Beatles" --albums-only --limit 5
+```
+
+### List Tracks Of An Artist
+
+```bash lucio command=execute
+volumito collection search --print-uri --artist "The Beatles" --tracks-only --limit 5
+```
+
+### List Qobuz Playlists Of An Artist
+
+You can filter by service provider, in this case `--service qobuz` for Qobuz.
+
+```bash lucio command=execute
+volumito collection search --print-uri --artist "The Beatles" --playlists-only --service qobuz --limit 5
+```
+
+### List Local Albums Of An Artist
+
+```bash lucio command=execute
+volumito collection search --print-uri --artist "Mango" --albums-only --service mpd --limit 5
+```
+
+Local files are identified by `--service mpd`.
+
+### List All Resources Of An Artist
+
+If you want to search across all services and all resources,
+just omit the `--*-only` and `--service` options.
+For example, for artist "Enrico Ruggeri",
+both local and Qobuz resources are available:
+
+```bash lucio command=execute
+volumito collection search --artist "Enrico Ruggeri" --print-uri --limit 5
+```
+
+### Replace The Current Queue
+
+You can use the URI of a result to replace
+the current queue with it, and start playing it right away.
+
+For example, to play the album "The Beatles 1962 – 1966 - The Beatles":
+
+```bash lucio command=execute
+volumito queue replace "qobuz://album/sixjslxc22vhb"
+```
+
+```bash lucio command=execute
+volumito queue list
+```
+
+To play just the song "Here Comes The Sun - The Beatles - Abbey Road":
+
+```bash lucio command=execute
+volumito queue replace "qobuz://song/64868961"
+```
+
+```bash lucio command=execute
+volumito queue list
+```
+
+Local files work as well:
+
+```bash lucio command=execute
+volumito queue replace "albums://Mango/Sirtaki"
+```
+
+```bash lucio command=execute
+volumito queue replace "artists://Enrico%20Ruggeri"
+```

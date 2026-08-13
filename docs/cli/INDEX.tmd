@@ -28,6 +28,14 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [List All Playlists](#list-all-playlists)
   - [Play A Playlist](#play-a-playlist)
   - [Playlist Help](#playlist-help)
+- [Search The Collection](#search-the-collection)
+  - [List Artists Matching A Query](#list-artists-matching-a-query)
+  - [List Albums Of An Artist](#list-albums-of-an-artist)
+  - [List Tracks Of An Artist](#list-tracks-of-an-artist)
+  - [List Qobuz Playlists Of An Artist](#list-qobuz-playlists-of-an-artist)
+  - [List Local Albums Of An Artist](#list-local-albums-of-an-artist)
+  - [List All Resources Of An Artist](#list-all-resources-of-an-artist)
+  - [Replace The Current Queue](#replace-the-current-queue)
 - [Download](#download)
   - [Download Track](#download-track)
     - [Download Track Albumart (Cover)](#download-track-albumart-cover)
@@ -86,8 +94,13 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 ```
 
 
+```markdown lucio command=include path="./SEARCH_COLLECTION.md" style=literal
+```
+
+
 ```markdown lucio command=include path="./DOWNLOAD.md" style=literal
 ```
+
 
 ```markdown lucio command=include path="./STORY.md" style=literal
 ```
