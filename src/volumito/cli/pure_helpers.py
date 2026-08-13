@@ -571,7 +571,8 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
 
     for track in tracks:
         position = track.get("position", "?")
-        title = track.get("title", "Unknown")
+        # The local files (the "mpd" service) report their title under "name"
+        title = track.get("title") or track.get("name") or "Unknown"
         artist = track.get("artist", "Unknown")
         album = track.get("album", "")
         tracknumber = track.get("tracknumber")

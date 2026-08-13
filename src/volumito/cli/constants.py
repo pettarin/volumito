@@ -172,6 +172,8 @@ SHORT_FORMAT_FIELDS_PLAYER_STATE = [
 SHORT_FORMAT_FIELDS_QUEUE_LIST = [
     "position",
     "title",
+    # The local files (the "mpd" service) report their title under "name"
+    "name",
     "artist",
     "album",
     "volumeNumber",
