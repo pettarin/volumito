@@ -297,9 +297,8 @@ Command 'playplaylist my awesome playlist' executed successfully
 ```
 
 The
-[CLI USAGE](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
-document
-describes all the commands, subcommands, and options
+[CLI Usage](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
+document describes all the commands, subcommands, and options
 of the CLI tool `volumito`.
 
 ### Library Usage
@@ -391,9 +390,8 @@ else:
 ```
 
 The
-[LIBRARY_USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
-document
-contains the API reference of the Python library `volumito`.
+[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
+document contains the API reference of the Python library `volumito`.
 
 
 ## Releases And Changelog
