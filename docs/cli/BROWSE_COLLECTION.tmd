@@ -8,6 +8,9 @@ issue the `--limit 5` option to show only the top five results.
 Omit it if you want the full list.
 
 Since `volumito` is a one-shot CLI,
+navigation of resources needs to happen
+through subsequent invocations,
+as demonstrated by the following examples.
 
 ### Browse Tracks Of A Qobuz Album By Artist
 

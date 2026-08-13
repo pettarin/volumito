@@ -10,6 +10,9 @@ issue the `--limit 5` option to show only the top five results.
 Omit it if you want the full list.
 
 Since `volumito` is a one-shot CLI,
+navigation of resources needs to happen
+through subsequent invocations,
+as demonstrated by the following examples.
 
 ### Browse Tracks Of A Qobuz Album By Artist
 
@@ -231,13 +234,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.314",
+    "seek": "00:00:01.253",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T09:01:12.314Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T13:54:29.058Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -253,13 +256,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.728",
+    "seek": "00:00:00.751",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T09:01:14.917Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T13:54:31.631Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -275,13 +278,13 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.001",
+    "seek": "00:00:02.894",
     "status": "play",
     "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T09:01:17.499Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T13:54:34.372Z] [INFO] Command 'replace' executed successfully
 ```
 
 ### Collection Statistics
