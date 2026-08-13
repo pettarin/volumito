@@ -1,0 +1,89 @@
+### System Utilities
+
+#### System Info
+
+The `system info` command (and its alias `info`)
+returns the response from the same-name endpoint
+of the Volumio REST API, containing a summary
+of the state of the Volumio host:
+
+```bash lucio command=execute
+volumito system info
+```
+
+#### System Ping
+
+To check if the Volumio host can be reached
+with the current parameters,
+the `system ping` command is available.
+
+An error is returned if the connection parameters are incorrect
+(or the Volumio host is not running or it is not ready yet):
+
+```bash lucio command=execute exit=1
+volumito -H bad.host.name.local system ping
+```
+
+while a `pong` reply is printed if the Volumio host is reachable:
+
+```bash lucio command=execute
+volumito -H volumio.local system ping
+```
+
+Use `-m / --machine-readable` if you need the output
+to be processed by a downstream application:
+
+```bash lucio command=execute
+volumito -m -H volumio.local system ping | jq
+```
+
+#### System Version
+
+Command `system version` prints some information
+about the Volumio host (server) hardware and OS:
+
+```bash lucio command=execute
+volumito system version
+```
+
+For the `volumito` (client) version, use the `version` command:
+
+```bash lucio command=execute
+volumito version
+```
+
+#### System Execute
+
+The `system execute` command lets you execute shell commands
+on the Volumio host via SSH.
+
+**IMPORTANT**: be careful when using this command.
+               You might damage your Volumio host
+               (e.g., by removing files on it!),
+               to the point a full reinstall will be needed.
+
+To run the `ls /tmp/` command on the Volumio host issue:
+
+```bash lucio command=execute exit=1
+volumito system execute "ls /tmp/"
+```
+
+Note the error: to make sure you know what you are doing,
+`volumito` refuses to execute the command
+unless you provide the `--yes` option:
+
+```bash lucio command=execute
+volumito system execute "ls /tmp/" --yes
+```
+
+Note that you might need to process the response
+to make sense of the stdout/stderr encoded in the JSON response:
+
+```bash lucio command=execute
+volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
+```
+
+The same remarks contained in Section
+[SSH Connection Parameters](#ssh-connection-parameters)
+apply here.
+

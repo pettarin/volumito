@@ -1,7 +1,8 @@
 # Library Usage
 
 This document describes how to use `volumito` as a Python library.
-For the command-line tool, see [CLI_USAGE.md](CLI_USAGE.md).
+For the command-line tool, see
+[CLI USAGE](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md).
 
 
 ## Contents
@@ -233,4 +234,5 @@ accept a `logger` argument, for callers who manage their own.
 
 ## Reference
 
-TODO: add link to the Sphinx-generated documentation for the `volumito` Python library.
+The Python reference documentation is published
+[here](https://www.albertopettarin.it/volumito/docs/).

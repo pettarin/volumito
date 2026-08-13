@@ -56,12 +56,14 @@ volumito, version 0.1.0
 ```
 volumito/
 ├── docs/
+│   ├── cli/
+│   │   └── INDEX.md                        # volumito CLI tool documentation
 │   ├── CHANGELOG.md                        # releases and their changes
-│   ├── CLI_USAGE.md                        # volumito CLI tool documentation
 │   ├── CODE_OF_CONDUCT.md                  # ground rules of the project spaces
 │   ├── CONTRIBUTING.md                     # how to report issues and contribute code
 │   ├── DEVELOPMENT.md                      # this file
 │   ├── LIBRARY_USAGE.md                    # Python library documentation
+│   ├── SECURITY.md                         # supported versions and how to report a vulnerability
 │   └── TODO.md                             # planned work, broken down by future milestone
 ├── res/
 │   └── copyright_header.txt                # header prepended to every source file
@@ -69,8 +71,10 @@ volumito/
 │   └── volumito/
 │       ├── __init__.py                     # public API re-exports and version
 │       ├── cli/
+│       │   ├── __init__.py                 # CLI entry point re-export
 │       │   ├── click_helpers.py            # Click-dependent helpers and shared options
 │       │   ├── configuration.py            # YAML configuration file loading
+│       │   ├── console.py                  # timestamped, colored console logging on stderr
 │       │   ├── constants.py                # module constants for the CLI
 │       │   ├── metadata.py                 # audio metadata and cover-art embedding (mutagen)
 │       │   ├── pure_helpers.py             # Click-independent formatting/parsing helpers
@@ -78,19 +82,32 @@ volumito/
 │       │   │   └── volumito.yaml.template  # configuration file template
 │       │   └── volumito.py                 # Click-based CLI
 │       └── clients/
+│           ├── __init__.py                 # clients package re-exports
+│           ├── base.py                     # base client holding the logger of the clients
 │           ├── entities.py                 # music entity references for the story queries
 │           ├── errors.py                   # VolumioError and its subclasses
 │           ├── host_configuration.py       # VolumioHostConfiguration helper data class
+│           ├── listener.py                 # receiver of the push notifications of a host
 │           ├── models.py                   # pydantic models of the Volumio API responses
-│           ├── mpd/client.py               # MPD client (track URI)
-│           └── rest/client.py              # REST API client
+│           ├── mpd/
+│           │   ├── __init__.py             # MPD client re-exports
+│           │   └── client.py               # MPD client (track URI)
+│           ├── remote.py                   # access to the files and to the shell of a host
+│           └── rest/
+│               ├── __init__.py             # REST API client re-exports
+│               └── client.py               # REST API client
 ├── tests/                                  # unit tests
+│   ├── __init__.py
+│   ├── test_base_client.py
 │   ├── test_cli.py
 │   ├── test_configuration.py
+│   ├── test_console.py
 │   ├── test_host_configuration.py
+│   ├── test_listener.py
 │   ├── test_metadata.py
 │   ├── test_models.py
 │   ├── test_mpd_client.py
+│   ├── test_remote.py
 │   └── test_rest_client.py
 ├── LICENSE                                 # full text of the license for this project
 ├── Makefile                                # make commands for the developer

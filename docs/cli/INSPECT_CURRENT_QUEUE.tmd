@@ -1,0 +1,38 @@
+## Inspect The Current Queue
+
+### Queue List
+
+Command `queue list` lets you query the contents
+of the current playback queue:
+
+```bash lucio command=execute
+volumito queue list
+```
+
+### Queue Status
+
+If you want to know the details of the item currently playing,
+use `queue status`:
+
+```bash lucio command=execute
+volumito queue status
+```
+
+### Queue Clear
+
+To clear the current playback queue, issue the `queue clear` command:
+
+```bash lucio command=execute
+volumito queue clear
+```
+
+### Queue Help
+
+These are all subcommands of the `queue` group:
+
+```bash lucio command=execute
+volumito queue --help
+```
+
+The `download` and `replace` subcommands are described
+in the Section [Download](#download) below.

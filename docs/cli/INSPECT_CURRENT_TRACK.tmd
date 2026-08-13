@@ -1,0 +1,36 @@
+## Inspect The Current Track
+
+### Track Info
+
+Command `track info` provides the details
+of the current track being played:
+
+```bash lucio command=execute
+volumito track info
+```
+
+The `--format`, `--fields`, `--machine-readable` options
+apply to this command as well:
+
+```bash lucio command=execute
+volumito track info --format table
+```
+
+```bash lucio command=execute
+volumito track info --fields ALL
+```
+
+```bash lucio command=execute
+volumito -m track info -F raw -L ALL
+```
+
+### Track Help
+
+These are all subcommands of the `track` group:
+
+```bash lucio command=execute
+volumito track --help
+```
+
+The `albumart` and `audio` subcommands are described
+in the Section [Download](#download) below.

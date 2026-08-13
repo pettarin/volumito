@@ -1,0 +1,102 @@
+## Browse The Collection
+
+The `collection browse` command allows browsing the music sources
+that are currently enabled in the Volumio host.
+
+For the sake of clarity, the following examples
+issue the `--limit 5` option to show only the top five results.
+Omit it if you want the full list.
+
+Since `volumito` is a one-shot CLI,
+navigation of resources needs to happen
+through subsequent invocations,
+as demonstrated by the following examples.
+
+### Browse Tracks Of A Qobuz Album By Artist
+
+Browse Qobuz -> My Artists -> "Enrico Ruggeri" (artist) -> "Polvere" (album):
+
+```bash lucio command=execute
+volumito collection browse --limit 5
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "qobuz://"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "qobuz://myartists"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "qobuz://artist/178398"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "qobuz://album/0090317058467"
+```
+
+### Browse Local Resources
+
+Browse local resources stored in `/mnt/INTERNAL/` -> "Mango" (artist) -> "Sirtaki" (album):
+
+```bash lucio command=execute
+volumito collection browse --limit 5
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "music-library"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "music-library/INTERNAL"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "music-library/INTERNAL/music"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "music-library/INTERNAL/music"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango"
+```
+
+```bash lucio command=execute
+volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango/Sirtaki"
+```
+
+### Replace The Current Queue (Browse)
+
+You can use the URI of a result to replace
+the current queue with it, and start playing it right away.
+
+For example, to play the album "Polvere" by "Enrico Ruggeri":
+
+```bash lucio command=execute
+volumito queue replace "qobuz://album/0090317058467"
+```
+
+To play just the track "Va tutto bene" from the same album:
+
+```bash lucio command=execute
+volumito queue replace "qobuz://song/2833718"
+```
+
+Local resources work as well:
+
+```bash lucio command=execute
+volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
+```
+
+### Collection Statistics
+
+The `collection statistics` command prints some statistics
+of the music collection:
+
+```bash lucio command=execute
+volumito collection statistics
+```
+

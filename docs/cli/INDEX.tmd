@@ -1,0 +1,149 @@
+# CLI Usage
+
+This document describes the `volumito` command-line tool.
+For using `volumito` as a Python library, see
+[LIBRARY USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md).
+
+
+## Table Of Contents
+
+- [Verify Your Installation](#verify-your-installation)
+- [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
+- [How To Get Help](#how-to-get-help)
+- [Control The Playback](#control-the-playback)
+  - [Playback Status](#playback-status)
+  - [Pause And Stop](#pause-and-stop)
+  - [Play Track At A Given Position](#play-track-at-a-given-position)
+  - [Seeking](#seeking)
+  - [Volume Control](#volume-control)
+  - [Playback Help](#playback-help)
+- [Inspect The Current Track](#inspect-the-current-track)
+  - [Track Info](#track-info)
+  - [Track Help](#track-help)
+- [Inspect The Current Queue](#inspect-the-current-queue)
+  - [Queue List](#queue-list)
+  - [Queue Status](#queue-status)
+  - [Queue Clear](#queue-clear)
+  - [Queue Help](#queue-help)
+- [Playlists](#playlists)
+  - [List All Playlists](#list-all-playlists)
+  - [Play A Playlist](#play-a-playlist)
+  - [Playlist Help](#playlist-help)
+- [Search The Collection](#search-the-collection)
+  - [List Artists Matching A Query](#list-artists-matching-a-query)
+  - [List Albums Of An Artist](#list-albums-of-an-artist)
+  - [List Tracks Of An Artist](#list-tracks-of-an-artist)
+  - [List Qobuz Playlists Of An Artist](#list-qobuz-playlists-of-an-artist)
+  - [List Local Albums Of An Artist](#list-local-albums-of-an-artist)
+  - [List All Resources Of An Artist](#list-all-resources-of-an-artist)
+  - [Replace The Current Queue](#replace-the-current-queue-search)
+- [Browse The Collection](#browse-the-collection)
+  - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
+  - [Browse Local Resources](#browse-local-resources)
+  - [Replace The Current Queue](#replace-the-current-queue-browse)
+  - [Collection Statistics](#collection-statistics)
+- [Download](#download)
+  - [Download Track](#download-track)
+    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
+    - [Download Track Audio](#download-track-audio)
+  - [Download Queue](#download-queue)
+  - [Download Playlist](#download-playlist)
+- [Stories](#stories)
+  - [Album Story](#album-story)
+  - [Album Credits](#album-credits)
+  - [Artist Story](#artist-story)
+  - [Label Story](#label-story)
+  - [Place Story](#place-story)
+- [Miscellaneous Commands](#miscellaneous-commands)
+  - [Command Discovery](#command-discovery)
+    - [List All The Commands](#list-all-the-commands)
+    - [List All The Aliases](#list-all-the-aliases)
+  - [Volumito Configuration Files](#volumito-configuration-files)
+    - [The Configuration File](#the-configuration-file)
+    - [Naming Convention](#naming-convention)
+    - [Probed Paths](#probed-paths)
+    - [Create A Configuration File](#create-a-configuration-file)
+    - [Check A Configuration File](#check-a-configuration-file)
+    - [Ignore All Configuration Files](#ignore-all-configuration-files)
+    - [Priority](#priority)
+  - [Multiroom Zones](#multiroom-zones)
+  - [Notifications](#notifications)
+    - [Notification List](#notification-list)
+    - [Notification Register](#notification-register)
+    - [Notification Unregister](#notification-unregister)
+    - [Notification Listen](#notification-listen)
+  - [Copying Files With SCP](#copying-files-with-scp)
+    - [SSH Connection Parameters](#ssh-connection-parameters)
+    - [SCP Put](#scp-put)
+    - [SCP Get](#scp-get)
+  - [System Utilities](#system-utilities)
+    - [System Info](#system-info)
+    - [System Ping](#system-ping)
+    - [System Version](#system-version)
+    - [System Execute](#system-execute)
+
+
+```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
+```
+
+
+```markdown lucio command=include path="./SETUP_CONFIGURATION_FILE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./GET_HELP.md" style=literal
+```
+
+
+```markdown lucio command=include path="./CONTROL_PLAYBACK.md" style=literal
+```
+
+
+```markdown lucio command=include path="./INSPECT_CURRENT_TRACK.md" style=literal
+```
+
+
+```markdown lucio command=include path="./INSPECT_CURRENT_QUEUE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./PLAYLISTS.md" style=literal
+```
+
+
+```markdown lucio command=include path="./SEARCH_COLLECTION.md" style=literal
+```
+
+
+```markdown lucio command=include path="./BROWSE_COLLECTION.md" style=literal
+```
+
+
+```markdown lucio command=include path="./DOWNLOAD.md" style=literal
+```
+
+
+```markdown lucio command=include path="./STORY.md" style=literal
+```
+
+
+## Miscellaneous Commands
+
+```markdown lucio command=include path="./COMMANDS.md" style=literal
+```
+
+```markdown lucio command=include path="./CONFIGURATION_FILE.md" style=literal
+```
+
+```markdown lucio command=include path="./MULTIROOM.md" style=literal
+```
+
+```markdown lucio command=include path="./NOTIFICATIONS.md" style=literal
+```
+
+```markdown lucio command=include path="./SCP.md" style=literal
+```
+
+```markdown lucio command=include path="./SYSTEM.md" style=literal
+```
+

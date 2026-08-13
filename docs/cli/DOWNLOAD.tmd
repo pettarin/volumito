@@ -1,0 +1,64 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure no files/directories used in the example below exist
+rm -rf /tmp/cover.jpg /tmp/cover.jpg.json
+rm -rf /tmp/audio.flac /tmp/audio.flac.json
+rm -rf /tmp/o/
+```
+
+## Download
+
+### Download Track
+
+#### Download Track Albumart (Cover)
+
+```bash lucio command=execute
+# use the template defined in the configuration file
+volumito track albumart
+```
+
+```bash lucio command=execute
+# override the configuration file, use an explicit output path
+volumito track albumart -o /tmp/cover.jpg
+```
+
+#### Download Track Audio
+
+```bash lucio command=execute
+# use the template defined in the configuration file
+volumito track audio
+```
+
+```bash lucio command=execute
+# override the configuration file, use an explicit output path
+volumito track audio -o /tmp/audio.flac
+```
+
+### Download Queue
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure no directory used in this section exist
+rm -rf /tmp/o/
+```
+
+```bash lucio command=execute
+volumito queue download
+```
+
+### Download Playlist
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure no directory used in this section exist
+rm -rf /tmp/o/
+```
+
+```bash lucio command=execute
+volumito playlist download "qobuz queue test"
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to cleanup the files/directories used in the example above
+rm -rf /tmp/cover.jpg /tmp/cover.jpg.json
+rm -rf /tmp/audio.flac /tmp/audio.flac.json
+rm -rf /tmp/o/
+```
+

@@ -1,0 +1,46 @@
+## Stories
+
+If you have a Volumio Premium (or better) account,
+you can get additional metadata (stories) about
+an artist, an album, a recording label or place.
+
+`volumito` provides the `story` command group to query those:
+
+```bash lucio command=execute
+volumito story --help
+```
+
+See the
+[Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
+section of the Volumio REST API documentation for the details.
+
+### Album Story
+
+```bash
+volumito story album "The Beatles" "Yellow Submarine"
+```
+
+### Album Credits
+
+```bash
+volumito story credits "The Beatles" "Yellow Submarine"
+```
+
+### Artist Story
+
+```bash
+volumito story artist "The Beatles"
+```
+
+### Label Story
+
+```bash
+volumito story label "EMI"
+```
+
+### Place Story
+
+```bash
+volumito story place "Abbey Road"
+```
+
