@@ -1,0 +1,13 @@
+### Multiroom Zones
+
+Volumio supports multiroom zones,
+and can discover Volumio hosts on your local network.
+Issue the `multiroom zones` command to see them:
+
+```bash lucio command=execute
+volumito multiroom zones
+```
+
+Note that the Volumio host with `isSelf: true` is the one
+you are connecting to.
+
