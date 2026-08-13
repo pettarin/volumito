@@ -535,7 +535,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:20:01.950Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T10:21:59.693Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -545,7 +545,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:20:02.394Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-08-13T10:22:00.131Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -560,7 +560,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-08-13T10:20:02.848Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-08-13T10:22:00.572Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -692,7 +692,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T10:20:03.303Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-08-13T10:22:01.021Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -763,7 +763,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T10:20:03.765Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-08-13T10:22:01.470Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -812,15 +812,15 @@ volumito -v playback status
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T10:20:04.661Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-08-13T10:20:04.661Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-08-13T10:20:04.661Z] [DEBU] Initializing the REST API client...
-[2026-08-13T10:20:04.662Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T10:20:04.662Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-08-13T10:20:04.673Z] [DEBU] Response status: 200
-[2026-08-13T10:20:04.673Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-08-13T10:20:04.676Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-08-13T10:20:04.676Z] [DEBU] Successfully retrieved state
+[2026-08-13T10:22:02.354Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-08-13T10:22:02.355Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-08-13T10:22:02.355Z] [DEBU] Initializing the REST API client...
+[2026-08-13T10:22:02.355Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T10:22:02.355Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-08-13T10:22:02.368Z] [DEBU] Response status: 200
+[2026-08-13T10:22:02.368Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-08-13T10:22:02.370Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-08-13T10:22:02.370Z] [DEBU] Successfully retrieved state
 ```
 
 ```bash
@@ -840,15 +840,15 @@ volumito -v -i -H volumio3b.local playback status
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T10:20:05.111Z] [DEBU] Ignoring configuration files
-[2026-08-13T10:20:05.111Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-08-13T10:20:05.111Z] [DEBU] Initializing the REST API client...
-[2026-08-13T10:20:05.111Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T10:20:05.111Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-08-13T10:20:05.124Z] [DEBU] Response status: 200
-[2026-08-13T10:20:05.124Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-08-13T10:20:05.126Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-08-13T10:20:05.126Z] [DEBU] Successfully retrieved state
+[2026-08-13T10:22:02.805Z] [DEBU] Ignoring configuration files
+[2026-08-13T10:22:02.806Z] [DEBU] Connecting to http://volumio3b.local:3000...
+[2026-08-13T10:22:02.806Z] [DEBU] Initializing the REST API client...
+[2026-08-13T10:22:02.806Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T10:22:02.806Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
+[2026-08-13T10:22:02.818Z] [DEBU] Response status: 200
+[2026-08-13T10:22:02.818Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
+[2026-08-13T10:22:02.821Z] [DEBU] Connecting to http://volumio3b.local:3000... done
+[2026-08-13T10:22:02.821Z] [DEBU] Successfully retrieved state
 ```
 
 #### Priority
@@ -867,7 +867,7 @@ has `volumio.host = anothervolumio.local`:
 # host will be "explicit.local" (explicit)
 volumito --host explicit.local info
 
-# host will be "anoithervolumio.local" (configuration file)
+# host will be "anothervolumio.local" (configuration file)
 volumito info
 
 # host will be "volumio.local" (hardcoded, ignoring the configuration file)

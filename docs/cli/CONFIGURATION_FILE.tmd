@@ -204,7 +204,7 @@ has `volumio.host = anothervolumio.local`:
 # host will be "explicit.local" (explicit)
 volumito --host explicit.local info
 
-# host will be "anoithervolumio.local" (configuration file)
+# host will be "anothervolumio.local" (configuration file)
 volumito info
 
 # host will be "volumio.local" (hardcoded, ignoring the configuration file)
