@@ -1,0 +1,196 @@
+### Volumito Configuration File
+
+The `volumito configuration` command group lets you manage
+the `volumito` configuration file(s):
+
+```bash lucio command=execute
+volumito configuration --help
+```
+
+#### The Configuration File
+
+A Volumito configuration file is a
+[YAML](https://yaml.org/)
+file that looks like this:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to setup ~/volumito.yaml
+rm -f ~/volumito.yaml
+volumito configuration create -o ~/volumito.yaml
+```
+
+```yaml lucio command=include path=~/volumito.yaml
+```
+
+The keys in the file correspond to many of the options
+offered by the CLI tool.
+For example, the `volumio.host` key:
+
+```yaml
+...
+
+volumio:
+    host: volumio.local
+...
+```
+
+correspond to the `--host` global option.
+
+Similarly, the `notification.listen.count` key:
+
+```yaml
+...
+
+notification:
+    ...
+
+    listen:
+        # Stop after receiving this number of notifications
+        count: null
+```
+
+corresponds to option `--count` of command `notification listen`.
+
+A value of `null` means that the configuration file does not set that option,
+thus not overriding the default value hardcoded in the CLI tool.
+
+Any other value will override the hardcoded value,
+if the configuration file is applied
+(either located at one of the probed paths, or
+explicitly specified with the `-c / --configuration-file` option).
+
+#### Naming Convention
+
+The `volumito` CLI tool automatically recognizes files named
+`volumito.yaml` or `.volumito.yaml`.
+
+You can call your configuration file with other names,
+for instance `myvolumito.yaml`, but in that case you would need
+to specify the `-c / --configuration-file` option each time you invoke `volumito`:
+
+```bash
+volumito -c /path/to/myvolumito.yaml ...
+```
+
+#### Probed Paths
+
+By default, the following directories are probed, looking for
+`volumito.yaml` or `.volumito.yaml` in them,
+in the following order of decreasing priority:
+
+- the current working directory;
+- the user home directory (`~`);
+- the `~/.volumito/` directory;
+- the `~/.config/volumito/` directory;
+- the `/etc/` directory (only on POSIX systems);
+- the `/etc/volumito/` directory (only on POSIX systems).
+
+The first configuration file found will be read and applied;
+additional configuration files found will be ignored.
+
+You can list all probed paths by running the `configuration search` command:
+
+```bash lucio command=execute
+pwd
+```
+
+```bash lucio command=execute
+volumito configuration search
+```
+
+#### Create A Configuration File
+
+Given the naming and search convention described above,
+it is advisable to store such a configuration file
+in the user home directory, as `~/volumito.yaml` or `~/.volumito.yaml`,
+so that it takes effect no matter the current directory
+from which `volumito` is run from,
+unless you prefer to have multiple per-directory configuration files
+for some reason.
+
+The `configuration create` command saves a good default template to file:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure no ~/volumito.yaml exists
+rm -f ~/volumito.yaml
+rm -f ~/volumito3.yaml
+```
+
+```bash lucio command=execute
+volumito configuration create -o ~/volumito.yaml
+```
+
+Without the `-o / --output-file` option, a `volumito.yaml` file
+will be created in the current working directory.
+
+Note that the command refuses to overwrite an existing file:
+
+```bash lucio command=execute exit=1
+volumito configuration create -o ~/volumito.yaml
+```
+
+After creating your configuration file,
+you might want to open it with your favorite text editor,
+and modify it to suit your preferences.
+In particular, you might want to check the connection parameters
+under the `volumio` section.
+
+If your Volumio host has a version < 4, add the
+`--volumio-version 3` option so that the values
+in the configuration file are created accordingly:
+
+```bash lucio command=execute
+volumito configuration create -o ~/volumito3.yaml --volumio-version 3
+```
+
+#### Check A Configuration File
+
+If you modify a configuration file, you might want to verify
+that it can be loaded correctly.
+To that end, use the `configuration check` command:
+
+```bash lucio command=execute
+volumito configuration check ~/.volumito.yaml
+```
+
+Any fatal issues will be reported as errors,
+while any non-fatal issues (ignored at runtime) will be reported as warnings.
+The command prints the list of all the keys defined in the configuration file,
+along with their values.
+
+The path can be omitted: in that case the configuration file
+being checked is the one found by the probe mechanism described
+in the previous section.
+
+```bash lucio command=execute
+volumito configuration check
+```
+
+#### Ignore All Configuration Files
+
+Sometimes it is useful to run `volumito` ignoring all configuration files
+at the probed paths, thus ensuring to run the CLI tool with the hardcoded defaults
+for all the commands and options.
+
+To achieve that, the `-i / --ignore-configuration-file` global option is available:
+
+```bash lucio command=execute
+volumito -i -H volumio3b.local playback status
+```
+
+The effect is clear with the `-v / --verbose` option specified:
+
+```bash lucio command=execute
+volumito -v playback status
+```
+
+```bash lucio command=execute
+volumito -v -i -H volumio3b.local playback status
+```
+
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to cleanup files created by the commands executed above
+rm -f ~/volumito.yaml
+rm -f ~/volumito3.yaml
+```

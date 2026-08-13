@@ -42,18 +42,14 @@ rm -f ~/volumito.yaml
 volumito configuration create -o ~/volumito.yaml
 ```
 
-The contents of the generated file are as follows:
-
-```yaml lucio command=include path=~/volumito.yaml
-```
-
 You might want to edit the configuration file according to your preferences,
 for example you might want to change the value of the `volumio.host` key,
 setting the IP or local name of the Volumio host you want to control via `volumito`.
+
+See Section [Volumito Configuration File](#volumito-configuration-file) for more details.
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to cleanup files created by the commands executed above
 rm -f ./volumito.yaml
 rm -f ~/volumito.yaml
 ```
-

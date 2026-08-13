@@ -54,6 +54,13 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Volumito Configuration File](#volumito-configuration-file)
+    - [The Configuration File](#the-configuration-file)
+    - [Naming Convention](#naming-convention)
+    - [Probed Paths](#probed-paths)
+    - [Create A Configuration File](#create-a-configuration-file)
+    - [Check A Configuration File](#check-a-configuration-file)
+    - [Ignore All Configuration Files](#ignore-all-configuration-files)
   - [Multiroom Zones](#multiroom-zones)
   - [Notifications](#notifications)
     - [Notification List](#notification-list)
@@ -116,6 +123,9 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 
 ## Miscellaneous Commands
+
+```markdown lucio command=include path="./CONFIGURATION_FILE.md" style=literal
+```
 
 ```markdown lucio command=include path="./MULTIROOM.md" style=literal
 ```
