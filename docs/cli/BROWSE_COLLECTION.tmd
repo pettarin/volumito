@@ -88,3 +88,12 @@ Local resources work as well:
 volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
 ```
 
+### Collection Statistics
+
+The `collection statistics` command prints some statistics
+of the music collection:
+
+```bash lucio command=execute
+volumito collection statistics
+```
+

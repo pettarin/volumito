@@ -42,6 +42,7 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracsk-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
+  - [Collection Statistics](#collection-statistics)
 - [Download](#download)
   - [Download Track](#download-track)
     - [Download Track Albumart (Cover)](#download-track-albumart-cover)
@@ -2538,13 +2539,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.000",
+    "seek": "00:00:01.314",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T08:46:46.227Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T09:01:12.314Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -2560,13 +2561,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.213",
+    "seek": "00:00:00.728",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T08:46:48.909Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T09:01:14.917Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -2582,13 +2583,28 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.772",
+    "seek": "00:00:02.001",
     "status": "play",
     "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T08:46:51.557Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T09:01:17.499Z] [INFO] Command 'replace' executed successfully
+```
+
+### Collection Statistics
+
+The `collection statistics` command prints some statistics
+of the music collection:
+
+```bash
+volumito collection statistics
+{
+    "albums": 8,
+    "artists": 6,
+    "playtime": "8:8:6",
+    "songs": 116
+}
 ```
 
 
