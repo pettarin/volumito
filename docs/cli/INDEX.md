@@ -43,6 +43,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
     - [Notification Register](#notification-register)
     - [Notification Unregister](#notification-unregister)
     - [Notification Listen](#notification-listen)
+  - [Copying Files With SCP](#copying-files-with-scp)
+    - [SSH Connection Parameters](#ssh-connection-parameters)
+    - [SCP Put](#scp-put)
+    - [SCP Get](#scp-get)
 
 
 ## Verify Your Installation
@@ -2159,4 +2163,98 @@ volumito notification listen --register-url --timeout 10.0
 [2026-08-13T06:14:52.319Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
 [2026-08-13T06:15:02.360Z] [INFO] Timed out after 10 seconds
 [2026-08-13T06:15:02.387Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+```
+
+### Copying Files With SCP
+
+`volumito` provides a command group `scp`
+with subcommands `scp get` and `scp put`
+to copy files and directories from and to
+the Volumio host.
+
+**IMPORTANT**: use these commands at your own peril!
+               You might risk overwriting files or directories
+               on the Volumio host and/or your local machine,
+               resulting in loss of data or even compromising
+               the functionality of the Volumio host.
+
+#### SSH Connection Parameters
+
+SCP uses SSH to securely connect to the Volumio host.
+There are three global options of `volumito` controlling
+the connection parameters:
+
+- `--ssh-password` (no default)
+- `--ssh-port` (default: `22`)
+- `--ssh-username` (default: `volumio`)
+
+in addition to the obvious `--host` (default: `volumio.local`).
+
+**IMPORTANT**: you can provide the SSH password on the command line
+               (`volumito --ssh-password volumio scp get /tmp/myfile`)
+               or in the `volumito` configuration file.
+               However doing so will result in the password
+               being in clear either in your shell history or
+               the configuration file on disk.
+               It is preferable to generate a pair of SSH private/public keys
+               on the machine running `volumito`, and add the public key
+               to the `~/.ssh/authorized_keys` file on the Volumio host.
+               By doing so, `volumito` will use the private key
+               when connecting over SSH, avoiding requiring the password.
+               The examples below use a registered SSH key,
+               therefore omitting the `--ssh-password` option.
+               If you are not familiar with SSH keys,
+               you can follow Step 1-3 of
+               [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server),
+               keeping in mind that in your case the `remote_host`
+               is your Volumio host.
+
+#### SCP Put
+
+To copy (recursively) the directory `/tmp/mydir`
+from the machine running `volumito` into the Volumio host `/tmp/`,
+use `scp put` with the `-r / --recursive` option
+(the latter is not needed if you copy a single file):
+
+```bash
+tree /tmp/mydir
+/tmp/mydir
+└── myfile
+
+1 directory, 1 file
+```
+
+```bash
+volumito scp put -r /tmp/mydir /tmp/
+[2026-08-13T06:49:24.311Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+```
+
+Note the error: to make sure you know what you are doing,
+`volumito` refuses to copy the file/directory
+unless provide the `--yes` option:
+
+```bash
+volumito scp put -r /tmp/mydir /tmp/ --yes
+[2026-08-13T06:49:25.811Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+```
+
+#### SCP Get
+
+Similarly, to copy the `/tmp/mydir` directory
+from the Volumio host into `/tmp/mydir2` on the machine running `volumito`,
+you can use `scp get` with the `-r / --recursive` option:
+
+```bash
+volumito scp get -r /tmp/mydir /tmp/mydir2
+[2026-08-13T06:49:26.922Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+```
+
+Note that when using `scp get` you do not have to add the `--yes` option.
+
+```bash
+tree /tmp/mydir2
+/tmp/mydir2
+└── myfile
+
+1 directory, 1 file
 ```

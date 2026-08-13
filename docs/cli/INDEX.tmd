@@ -41,6 +41,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
     - [Notification Register](#notification-register)
     - [Notification Unregister](#notification-unregister)
     - [Notification Listen](#notification-listen)
+  - [Copying Files With SCP](#copying-files-with-scp)
+    - [SSH Connection Parameters](#ssh-connection-parameters)
+    - [SCP Put](#scp-put)
+    - [SCP Get](#scp-get)
 
 
 ```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
@@ -81,5 +85,8 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 ```
 
 ```markdown lucio command=include path="./NOTIFICATIONS.md" style=literal
+```
+
+```markdown lucio command=include path="./SCP.md" style=literal
 ```
 
