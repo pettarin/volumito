@@ -57,7 +57,7 @@ For using `volumito` as a Python library, see
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
-  - [Volumito Commands](#volumito-commands)
+  - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
     - [List All The Aliases](#list-all-the-aliases)
   - [Volumito Configuration Files](#volumito-configuration-files)
@@ -2402,7 +2402,7 @@ volumito story place "Abbey Road"
 
 ## Miscellaneous Commands
 
-### Volumito Commands
+### Command Discovery
 
 #### List All The Commands
 
@@ -2490,15 +2490,15 @@ for instance `ti` for `track info`, so that
 ```bash
 volumito track info
 {
-    "album": "Polvere",
-    "artist": "Enrico Ruggeri",
+    "album": "Sirtaki",
+    "artist": "Mango",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
-    "position": 4,
+    "duration": "00:04:34",
+    "position": 2,
     "samplerate": "44.1 kHz",
-    "title": "Va tutto bene",
-    "trackType": "qobuz"
+    "title": "2 - I giochi del vento sul lago salato",
+    "trackType": "flac"
 }
 ```
 
@@ -2507,22 +2507,23 @@ and
 ```bash
 volumito ti
 {
-    "album": "Polvere",
-    "artist": "Enrico Ruggeri",
+    "album": "Sirtaki",
+    "artist": "Mango",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
-    "position": 4,
+    "duration": "00:04:34",
+    "position": 2,
     "samplerate": "44.1 kHz",
-    "title": "Va tutto bene",
-    "trackType": "qobuz"
+    "title": "2 - I giochi del vento sul lago salato",
+    "trackType": "flac"
 }
 ```
 
 are equivalent.
 
 Options `--no-aliases` and `--no-tree` are available
-to prevent printing the aliases and to collapse the tree.
+to prevent printing the aliases and
+to print the flat command paths instead of the tree.
 
 #### List All The Aliases
 

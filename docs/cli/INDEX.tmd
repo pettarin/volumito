@@ -55,7 +55,7 @@ For using `volumito` as a Python library, see
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
-  - [Volumito Commands](#volumito-commands)
+  - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
     - [List All The Aliases](#list-all-the-aliases)
   - [Volumito Configuration Files](#volumito-configuration-files)

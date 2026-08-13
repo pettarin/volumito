@@ -1,4 +1,4 @@
-### Volumito Commands
+### Command Discovery
 
 #### List All The Commands
 
@@ -27,7 +27,8 @@ volumito ti
 are equivalent.
 
 Options `--no-aliases` and `--no-tree` are available
-to prevent printing the aliases and to collapse the tree.
+to prevent printing the aliases and
+to print the flat command paths instead of the tree.
 
 #### List All The Aliases
 
