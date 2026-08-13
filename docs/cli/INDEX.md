@@ -36,6 +36,12 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
     - [Download Track Audio](#download-track-audio)
   - [Download Queue](#download-queue)
   - [Download Playlist](#download-playlist)
+- [Stories](#stories)
+  - [Album Story](#album-story)
+  - [Album Credits](#album-credits)
+  - [Artist Story](#artist-story)
+  - [Label Story](#label-story)
+  - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
   - [Multiroom Zones](#multiroom-zones)
   - [Notifications](#notifications)
@@ -1749,6 +1755,67 @@ volumito playlist download "qobuz queue test"
 [2026-08-12T19:16:20.682Z] [INFO] [10/11] downloaded: "/tmp/o/010___Contessa___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
 [2026-08-12T19:16:25.976Z] [INFO] [11/11] downloaded: "/tmp/o/011___La_Bandiera___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
 [2026-08-12T19:16:28.182Z] [INFO] Downloaded 11, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+```
+
+## Stories
+
+If you have a Volumio Premium (or better) account,
+you can get additional metadata (stories) about
+an artist, an album, a recording label or place.
+
+`volumito` provides the `story` command group to query those:
+
+```bash
+volumito story --help
+Usage: volumito story [OPTIONS] COMMAND [ARGS]...
+
+  Retrieve stories about albums, artists, labels, or places.
+
+  Requires a Premium (or better) subscription on the Volumio instance.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  album    Print the story of an album.
+  artist   Print the story of an artist.
+  credits  Print the credits of an album.
+  label    Print the story of a label.
+  place    Print the story of a place.
+```
+
+See the
+[Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
+section of the Volumio REST API documentation for the details.
+
+#### Album Story
+
+```bash
+volumito story album "The Beatles" "Yellow Submarine"
+```
+
+#### Album Credits
+
+```bash
+volumito story credits "The Beatles" "Yellow Submarine"
+```
+
+#### Artist Story
+
+```bash
+volumito story artist "The Beatles"
+```
+
+#### Label Story
+
+```bash
+volumito story label "EMI"
+```
+
+#### Place Story
+
+```bash
+volumito story label "Abbey Road"
 ```
 
 

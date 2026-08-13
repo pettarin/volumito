@@ -34,6 +34,12 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
     - [Download Track Audio](#download-track-audio)
   - [Download Queue](#download-queue)
   - [Download Playlist](#download-playlist)
+- [Stories](#stories)
+  - [Album Story](#album-story)
+  - [Album Credits](#album-credits)
+  - [Artist Story](#artist-story)
+  - [Label Story](#label-story)
+  - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
   - [Multiroom Zones](#multiroom-zones)
   - [Notifications](#notifications)
@@ -81,6 +87,9 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 
 ```markdown lucio command=include path="./DOWNLOAD.md" style=literal
+```
+
+```markdown lucio command=include path="./STORY.md" style=literal
 ```
 
 
