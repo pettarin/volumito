@@ -1,4 +1,4 @@
-## Getting Help
+## How To Get Help
 
 All global options, command groups, and subcommands of `volumito`
 honor the ``--help`` option:

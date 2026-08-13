@@ -10,7 +10,7 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
-- [Getting Help](#getting-help)
+- [How To Get Help](#how-to-get-help)
 - [Control The Playback](#control-the-playback)
   - [Playback Status](#playback-status)
   - [Pause And Stop](#pause-and-stop)
@@ -579,7 +579,7 @@ for example you might want to change the value of the `volumio.host` key,
 setting the IP or local name of the Volumio host you want to control via `volumito`.
 
 
-## Getting Help
+## How To Get Help
 
 All global options, command groups, and subcommands of `volumito`
 honor the ``--help`` option:

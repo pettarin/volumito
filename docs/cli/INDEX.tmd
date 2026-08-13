@@ -8,7 +8,7 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
-- [Getting Help](#getting-help)
+- [How To Get Help](#how-to-get-help)
 - [Control The Playback](#control-the-playback)
   - [Playback Status](#playback-status)
   - [Pause And Stop](#pause-and-stop)
@@ -60,7 +60,7 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 ```
 
 
-```markdown lucio command=include path="./GETTING_HELP.md" style=literal
+```markdown lucio command=include path="./GET_HELP.md" style=literal
 ```
 
 
