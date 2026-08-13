@@ -1,7 +1,7 @@
-### Volumito Configuration File
+### Volumito Configuration Files
 
 The `volumito configuration` command group lets you manage
-the `volumito` configuration file(s):
+the `volumito` configuration files:
 
 ```bash lucio command=execute
 volumito configuration --help
@@ -188,6 +188,28 @@ volumito -v playback status
 volumito -v -i -H volumio3b.local playback status
 ```
 
+#### Priority
+
+The value of an option is decided by, in order of descending priority:
+
+- the explicit command line option  (e.g., `--host volumioexplicit.local`);
+- the configuration file value (e.g., `volumio.host = anothervolumio.local`),
+  if present, and unless the `-i / --ignore-configuration-file` option is issued;
+- the value hardcoded in the implementation (e.g., `volumio.local`).
+
+Examples, assuming the configuration file `~/volumito.yaml`
+has `volumio.host = anothervolumio.local`:
+
+```bash
+# host will be "explicit.local" (explicit)
+volumito --host explicit.local info
+
+# host will be "anoithervolumio.local" (configuration file)
+volumito info
+
+# host will be "volumio.local" (hardcoded, ignoring the configuration file)
+volumito --ignore-configuration-file info
+```
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to cleanup files created by the commands executed above

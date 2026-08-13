@@ -37,7 +37,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-08-13T09:58:33.634Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-08-13T10:19:56.546Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -46,11 +46,13 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T09:58:34.076Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T10:19:56.995Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
 for example you might want to change the value of the `volumio.host` key,
 setting the IP or local name of the Volumio host you want to control via `volumito`.
 
-See Section [Volumito Configuration File](#volumito-configuration-file) for more details.
+See Section
+[Volumito Configuration Files](#volumito-configuration-files)
+for more details.

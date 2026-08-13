@@ -46,7 +46,9 @@ You might want to edit the configuration file according to your preferences,
 for example you might want to change the value of the `volumio.host` key,
 setting the IP or local name of the Volumio host you want to control via `volumito`.
 
-See Section [Volumito Configuration File](#volumito-configuration-file) for more details.
+See Section
+[Volumito Configuration Files](#volumito-configuration-files)
+for more details.
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to cleanup files created by the commands executed above

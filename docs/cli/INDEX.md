@@ -56,13 +56,14 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
-  - [Volumito Configuration File](#volumito-configuration-file)
+  - [Volumito Configuration Files](#volumito-configuration-files)
     - [The Configuration File](#the-configuration-file)
     - [Naming Convention](#naming-convention)
     - [Probed Paths](#probed-paths)
     - [Create A Configuration File](#create-a-configuration-file)
     - [Check A Configuration File](#check-a-configuration-file)
     - [Ignore All Configuration Files](#ignore-all-configuration-files)
+    - [Priority](#priority)
   - [Multiroom Zones](#multiroom-zones)
   - [Notifications](#notifications)
     - [Notification List](#notification-list)
@@ -181,7 +182,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-08-13T09:58:33.634Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-08-13T10:19:56.546Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -190,14 +191,16 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T09:58:34.076Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T10:19:56.995Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
 for example you might want to change the value of the `volumio.host` key,
 setting the IP or local name of the Volumio host you want to control via `volumito`.
 
-See Section [Volumito Configuration File](#volumito-configuration-file) for more details.
+See Section
+[Volumito Configuration Files](#volumito-configuration-files)
+for more details.
 
 
 ## How To Get Help
@@ -2372,10 +2375,10 @@ volumito story label "Abbey Road"
 
 ## Miscellaneous Commands
 
-## Volumito Configuration File
+### Volumito Configuration Files
 
 The `volumito configuration` command group lets you manage
-the `volumito` configuration file(s):
+the `volumito` configuration files:
 
 ```bash
 volumito configuration --help
@@ -2392,7 +2395,7 @@ Commands:
   search  List every probed configuration path, marking those found and...
 ```
 
-### The Configuration File
+#### The Configuration File
 
 A Volumito configuration file is a
 [YAML](https://yaml.org/)
@@ -2840,7 +2843,7 @@ if the configuration file is applied
 (either located at one of the probed paths, or
 explicitly specified with the `-c / --configuration-file` option).
 
-### Naming Convention
+#### Naming Convention
 
 The `volumito` CLI tool automatically recognizes files named
 `volumito.yaml` or `.volumito.yaml`.
@@ -2853,7 +2856,7 @@ to specify the `-c / --configuration-file` option each time you invoke `volumito
 volumito -c /path/to/myvolumito.yaml ...
 ```
 
-### Probed Paths
+#### Probed Paths
 
 By default, the following directories are probed, looking for
 `volumito.yaml` or `.volumito.yaml` in them,
@@ -2893,7 +2896,7 @@ Configuration file locations, in probing order, in decreasing order of priority:
   /etc/volumito/.volumito.yaml
 ```
 
-### Creating A Configuration File
+#### Create A Configuration File
 
 Given the naming and search convention described above,
 it is advisable to store such a configuration file
@@ -2907,7 +2910,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T09:51:26.822Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T10:20:01.950Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -2917,7 +2920,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T09:51:27.260Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-08-13T10:20:02.394Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -2932,10 +2935,10 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-08-13T09:51:27.699Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-08-13T10:20:02.848Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
-### Checking A Configuration File
+#### Check A Configuration File
 
 If you modify a configuration file, you might want to verify
 that it can be loaded correctly.
@@ -3064,7 +3067,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T09:51:28.149Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-08-13T10:20:03.303Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -3135,10 +3138,10 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T09:51:28.600Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-08-13T10:20:03.765Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
-### Ignoring A Configuration File
+#### Ignore All Configuration Files
 
 Sometimes it is useful to run `volumito` ignoring all configuration files
 at the probed paths, thus ensuring to run the CLI tool with the hardcoded defaults
@@ -3153,13 +3156,13 @@ volumito -i -H volumio3b.local playback status
     "artist": "Mango",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:22",
+    "duration": "00:06:59",
     "mute": false,
-    "position": 11,
+    "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:07.160",
-    "status": "play",
-    "title": "11 - Ma che musica c'è",
+    "seek": "00:00:00.750",
+    "status": "stop",
+    "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
@@ -3174,25 +3177,25 @@ volumito -v playback status
     "artist": "Mango",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:22",
+    "duration": "00:06:59",
     "mute": false,
-    "position": 11,
+    "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:07.661",
-    "status": "play",
-    "title": "11 - Ma che musica c'è",
+    "seek": "00:00:00.750",
+    "status": "stop",
+    "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T09:51:29.484Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-08-13T09:51:29.485Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-08-13T09:51:29.485Z] [DEBU] Initializing the REST API client...
-[2026-08-13T09:51:29.485Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T09:51:29.485Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-08-13T09:51:29.497Z] [DEBU] Response status: 200
-[2026-08-13T09:51:29.497Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-08-13T09:51:29.499Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-08-13T09:51:29.499Z] [DEBU] Successfully retrieved state
+[2026-08-13T10:20:04.661Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-08-13T10:20:04.661Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-08-13T10:20:04.661Z] [DEBU] Initializing the REST API client...
+[2026-08-13T10:20:04.662Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T10:20:04.662Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-08-13T10:20:04.673Z] [DEBU] Response status: 200
+[2026-08-13T10:20:04.673Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-08-13T10:20:04.676Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-08-13T10:20:04.676Z] [DEBU] Successfully retrieved state
 ```
 
 ```bash
@@ -3202,25 +3205,48 @@ volumito -v -i -H volumio3b.local playback status
     "artist": "Mango",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:22",
+    "duration": "00:06:59",
     "mute": false,
-    "position": 11,
+    "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:08.162",
-    "status": "play",
-    "title": "11 - Ma che musica c'è",
+    "seek": "00:00:00.750",
+    "status": "stop",
+    "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T09:51:29.936Z] [DEBU] Ignoring configuration files
-[2026-08-13T09:51:29.937Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-08-13T09:51:29.937Z] [DEBU] Initializing the REST API client...
-[2026-08-13T09:51:29.937Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T09:51:29.937Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-08-13T09:51:29.949Z] [DEBU] Response status: 200
-[2026-08-13T09:51:29.949Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-08-13T09:51:29.952Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-08-13T09:51:29.952Z] [DEBU] Successfully retrieved state
+[2026-08-13T10:20:05.111Z] [DEBU] Ignoring configuration files
+[2026-08-13T10:20:05.111Z] [DEBU] Connecting to http://volumio3b.local:3000...
+[2026-08-13T10:20:05.111Z] [DEBU] Initializing the REST API client...
+[2026-08-13T10:20:05.111Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T10:20:05.111Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
+[2026-08-13T10:20:05.124Z] [DEBU] Response status: 200
+[2026-08-13T10:20:05.124Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
+[2026-08-13T10:20:05.126Z] [DEBU] Connecting to http://volumio3b.local:3000... done
+[2026-08-13T10:20:05.126Z] [DEBU] Successfully retrieved state
+```
+
+#### Priority
+
+The value of an option is decided by, in order of descending priority:
+
+- the explicit command line option  (e.g., `--host volumioexplicit.local`);
+- the configuration file value (e.g., `volumio.host = anothervolumio.local`),
+  if present, and unless the `-i / --ignore-configuration-file` option is issued;
+- the value hardcoded in the implementation (e.g., `volumio.local`).
+
+Examples, assuming the configuration file `~/volumito.yaml`
+has `volumio.host = anothervolumio.local`:
+
+```bash
+# host will be "explicit.local" (explicit)
+volumito --host explicit.local info
+
+# host will be "anoithervolumio.local" (configuration file)
+volumito info
+
+# host will be "volumio.local" (hardcoded, ignoring the configuration file)
+volumito --ignore-configuration-file info
 ```
 
 ### Multiroom Zones
