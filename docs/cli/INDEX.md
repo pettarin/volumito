@@ -37,7 +37,11 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [List Qobuz Playlists Of An Artist](#list-qobuz-playlists-of-an-artist)
   - [List Local Albums Of An Artist](#list-local-albums-of-an-artist)
   - [List All Resources Of An Artist](#list-all-resources-of-an-artist)
-  - [Replace The Current Queue](#replace-the-current-queue)
+  - [Replace The Current Queue](#replace-the-current-queue-search)
+- [Browse The Collection](#browse-the-collection)
+  - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracsk-of-a-qobuz-album-by-artist)
+  - [Browse Local Resources](#browse-local-resources)
+  - [Replace The Current Queue](#replace-the-current-queue-browse)
 - [Download](#download)
   - [Download Track](#download-track)
     - [Download Track Albumart (Cover)](#download-track-albumart-cover)
@@ -1848,7 +1852,7 @@ QOBUZ Tracks
    qobuz://song/31439527
 ```
 
-### Replace The Current Queue
+### Replace The Current Queue (Search)
 
 You can use the URI of a result to replace
 the current queue with it, and start playing it right away.
@@ -1866,13 +1870,13 @@ volumito queue replace "qobuz://album/sixjslxc22vhb"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.893",
+    "seek": "00:00:01.000",
     "status": "play",
     "title": "Love Me Do",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T08:17:30.093Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:34.628Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2236,13 +2240,13 @@ volumito queue replace "qobuz://song/64868961"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.500",
+    "seek": "00:00:00.137",
     "status": "play",
     "title": "Here Comes The Sun",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T08:17:33.220Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:37.718Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2273,13 +2277,13 @@ volumito queue replace "albums://Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.623",
+    "seek": "00:00:01.935",
     "status": "play",
     "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T08:17:36.439Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:40.775Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2293,13 +2297,298 @@ volumito queue replace "artists://Enrico%20Ruggeri"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.908",
+    "seek": "00:00:02.849",
     "status": "play",
     "title": "1 - La Vie En Rouge",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T08:17:39.239Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:43.354Z] [INFO] Command 'replace' executed successfully
+```
+
+
+## Browse The Collection
+
+The `collection browse` command allows browsing the music sources
+that are currently enabled in the Volumio host.
+
+For the sake of clarity, the following examples
+issue the `--limit 5` option to show only the top five results.
+Omit it if you want the full list.
+
+Since `volumito` is a one-shot CLI,
+
+### Browse Tracks Of A Qobuz Album By Artist
+
+Browse Qobuz -> My Artists -> "Enrico Ruggeri" (artist) -> "Polvere" (album):
+
+```bash
+volumito collection browse --limit 5
+Volumio Browse Results
+==================================================
+
+1. Playlists
+   playlists
+2. Music Library
+   music-library
+3. Web Radio
+   radio
+4. QOBUZ
+   qobuz://
+```
+
+```bash
+volumito collection browse --limit 5 "qobuz://"
+Volumio Browse Results
+==================================================
+
+My Music
+1. My Albums
+   qobuz://myalbums
+2. My Tracks
+   qobuz://mytracks
+3. My Playlists
+   qobuz://myplaylists
+4. My Artists
+   qobuz://myartists
+5. My Purchases
+   qobuz://mypurchases
+
+Discover
+1. Playlists
+   qobuz://qobuz_playlists
+2. Press Awards
+   qobuz://pressawards
+3. Selected by QOBUZ
+   qobuz://selectedbyqobuz
+4. Selected by the Media
+   qobuz://selectedbythemedia
+5. New releases
+   qobuz://newreleases
+```
+
+```bash
+volumito collection browse --limit 5 "qobuz://myartists"
+Volumio Browse Results
+==================================================
+
+My Artists
+1. Enrico Ruggeri
+   qobuz://artist/178398
+2. Paul McCartney
+   qobuz://artist/35554
+3. The Future / The Human League
+   qobuz://artist/4116256
+4. Gipsy Kings
+   qobuz://artist/82308
+5. Norah Jones
+   qobuz://artist/34525
+```
+
+```bash
+volumito collection browse --limit 5 "qobuz://artist/178398"
+Volumio Browse Results
+==================================================
+Enrico Ruggeri - Enrico Ruggeri
+
+1. Playlist: Enrico Ruggeri - Enrico Ruggeri
+   qobuz://album/0190295961008
+2. La Caverna di Platone - Enrico Ruggeri
+   qobuz://album/pvaurilv3krpc
+3. Si può dare di più - Gianni Morandi
+   qobuz://album/vjclxs759k57b
+4. Polvere - Enrico Ruggeri
+   qobuz://album/0090317058467
+5. La giostra della memoria - Enrico Ruggeri
+   qobuz://album/0643443194464
+```
+
+```bash
+volumito collection browse --limit 5 "qobuz://album/0090317058467"
+Volumio Browse Results
+==================================================
+Enrico Ruggeri - Polvere
+
+1. Va tutto bene - Enrico Ruggeri - Polvere
+   qobuz://song/2833718
+2. Fuoco sui giocattoli - Enrico Ruggeri - Polvere
+   qobuz://song/2833719
+3. Polaroide - Enrico Ruggeri - Polvere
+   qobuz://song/2833720
+4. Il rock'n roll - Enrico Ruggeri - Polvere
+   qobuz://song/2833721
+5. Salviamo Milano - Enrico Ruggeri - Polvere
+   qobuz://song/2833722
+```
+
+### Browse Local Resources
+
+Browse local resources stored in `/mnt/INTERNAL/` -> "Mango" (artist) -> "Sirtaki" (album):
+
+```bash
+volumito collection browse --limit 5
+Volumio Browse Results
+==================================================
+
+1. Playlists
+   playlists
+2. Music Library
+   music-library
+3. Web Radio
+   radio
+4. QOBUZ
+   qobuz://
+```
+
+```bash
+volumito collection browse --limit 5 "music-library"
+Volumio Browse Results
+==================================================
+
+1. INTERNAL
+   music-library/INTERNAL
+```
+
+```bash
+volumito collection browse --limit 5 "music-library/INTERNAL"
+Volumio Browse Results
+==================================================
+
+1. music
+   music-library/INTERNAL/music
+```
+
+```bash
+volumito collection browse --limit 5 "music-library/INTERNAL/music"
+Volumio Browse Results
+==================================================
+
+1. Enrico_Ruggeri
+   music-library/INTERNAL/music/Enrico_Ruggeri
+2. Francesco_De_Gregori
+   music-library/INTERNAL/music/Francesco_De_Gregori
+3. Mango
+   music-library/INTERNAL/music/Mango
+4. Norah_Jones
+   music-library/INTERNAL/music/Norah_Jones
+5. Paolo_Conte
+   music-library/INTERNAL/music/Paolo_Conte
+```
+
+```bash
+volumito collection browse --limit 5 "music-library/INTERNAL/music"
+Volumio Browse Results
+==================================================
+
+1. Enrico_Ruggeri
+   music-library/INTERNAL/music/Enrico_Ruggeri
+2. Francesco_De_Gregori
+   music-library/INTERNAL/music/Francesco_De_Gregori
+3. Mango
+   music-library/INTERNAL/music/Mango
+4. Norah_Jones
+   music-library/INTERNAL/music/Norah_Jones
+5. Paolo_Conte
+   music-library/INTERNAL/music/Paolo_Conte
+```
+
+```bash
+volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango"
+Volumio Browse Results
+==================================================
+
+1. Disincanto
+   music-library/INTERNAL/music/Mango/Disincanto
+2. Sirtaki
+   music-library/INTERNAL/music/Mango/Sirtaki
+```
+
+```bash
+volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango/Sirtaki"
+Volumio Browse Results
+==================================================
+
+1. 1 - Nella mia città - Mango - Sirtaki
+   music-library/INTERNAL/music/Mango/Sirtaki/001___Nella_mia_città.flac
+2. 2 - I giochi del vento sul lago salato - Mango - Sirtaki
+   music-library/INTERNAL/music/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac
+3. 3 - Terra bianca - Mango - Sirtaki
+   music-library/INTERNAL/music/Mango/Sirtaki/003___Terra_bianca.flac
+4. 4 - Ma com'è rossa la ciliegia - Mango - Sirtaki
+   music-library/INTERNAL/music/Mango/Sirtaki/004___Ma_com'è_rossa_la_ciliegia.flac
+5. 5 - Tu... si - Mango - Sirtaki
+   music-library/INTERNAL/music/Mango/Sirtaki/005___Tu..._si.flac
+```
+
+### Replace The Current Queue (Browse)
+
+You can use the URI of a result to replace
+the current queue with it, and start playing it right away.
+
+For example, to play the album "Polvere" by "Enrico Ruggeri":
+
+```bash
+volumito queue replace "qobuz://album/0090317058467"
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.000",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
+}
+[2026-08-13T08:46:46.227Z] [INFO] Command 'replace' executed successfully
+```
+
+To play just the track "Va tutto bene" from the same album:
+
+```bash
+volumito queue replace "qobuz://song/2833718"
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.213",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
+}
+[2026-08-13T08:46:48.909Z] [INFO] Command 'replace' executed successfully
+```
+
+Local resources work as well:
+
+```bash
+volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
+{
+    "album": "Sirtaki",
+    "artist": "Mango",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:06:59",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.772",
+    "status": "play",
+    "title": "1 - Nella mia città",
+    "trackType": "flac",
+    "volume": 20
+}
+[2026-08-13T08:46:51.557Z] [INFO] Command 'replace' executed successfully
 ```
 
 

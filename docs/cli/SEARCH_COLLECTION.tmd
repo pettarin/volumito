@@ -56,7 +56,7 @@ both local and Qobuz resources are available:
 volumito collection search --artist "Enrico Ruggeri" --print-uri --limit 5
 ```
 
-### Replace The Current Queue
+### Replace The Current Queue (Search)
 
 You can use the URI of a result to replace
 the current queue with it, and start playing it right away.

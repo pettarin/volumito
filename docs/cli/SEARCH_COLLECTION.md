@@ -180,7 +180,7 @@ QOBUZ Tracks
    qobuz://song/31439527
 ```
 
-### Replace The Current Queue
+### Replace The Current Queue (Search)
 
 You can use the URI of a result to replace
 the current queue with it, and start playing it right away.
@@ -198,13 +198,13 @@ volumito queue replace "qobuz://album/sixjslxc22vhb"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.893",
+    "seek": "00:00:01.000",
     "status": "play",
     "title": "Love Me Do",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T08:17:30.093Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:34.628Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -568,13 +568,13 @@ volumito queue replace "qobuz://song/64868961"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.500",
+    "seek": "00:00:00.137",
     "status": "play",
     "title": "Here Comes The Sun",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T08:17:33.220Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:37.718Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -605,13 +605,13 @@ volumito queue replace "albums://Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.623",
+    "seek": "00:00:01.935",
     "status": "play",
     "title": "1 - Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T08:17:36.439Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:40.775Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -625,11 +625,11 @@ volumito queue replace "artists://Enrico%20Ruggeri"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.908",
+    "seek": "00:00:02.849",
     "status": "play",
     "title": "1 - La Vie En Rouge",
     "trackType": "flac",
     "volume": 20
 }
-[2026-08-13T08:17:39.239Z] [INFO] Command 'replace' executed successfully
+[2026-08-13T08:49:43.354Z] [INFO] Command 'replace' executed successfully
 ```
