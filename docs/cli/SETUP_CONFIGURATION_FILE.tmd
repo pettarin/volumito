@@ -3,7 +3,7 @@
 **NOTE**: `volumito` can be used without a configuration file;
           however creating a configuration file is strongly suggested,
           as it allows storing preferences that otherwise need
-          to specified at each invokation of the `volumito` CLI tool.
+          to be specified at each invokation of the `volumito` CLI tool.
           You can skip this section if you do not intend
           to use a configuration file for `volumito`.
 

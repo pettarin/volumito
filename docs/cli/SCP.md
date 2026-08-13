@@ -26,7 +26,7 @@ the connection parameters:
 in addition to the obvious `--host` (default: `volumio.local`).
 
 **IMPORTANT**: you can provide the SSH password on the command line
-               (`volumito --ssh-password volumio scp get /tmp/myfile`)
+               (`volumito --ssh-password "volumio" scp ...`)
                or in the `volumito` configuration file.
                However doing so will result in the password
                being in clear either in your shell history or
@@ -61,16 +61,16 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-08-13T06:49:24.311Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-08-13T13:24:53.529Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
 Note the error: to make sure you know what you are doing,
 `volumito` refuses to copy the file/directory
-unless provide the `--yes` option:
+unless you provide the `--yes` option:
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-08-13T06:49:25.811Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-08-13T13:24:54.679Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -81,7 +81,7 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-08-13T06:49:26.922Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-08-13T13:24:56.025Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
 Note that when using `scp get` you do not have to add the `--yes` option.

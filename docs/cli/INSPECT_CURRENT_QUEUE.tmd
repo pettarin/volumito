@@ -22,7 +22,7 @@ volumito queue status
 
 To clear the current playback queue, issue the `queue clear` command:
 
-```bash
+```bash lucio command=execute
 volumito queue clear
 ```
 

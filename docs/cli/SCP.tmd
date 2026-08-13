@@ -33,7 +33,7 @@ the connection parameters:
 in addition to the obvious `--host` (default: `volumio.local`).
 
 **IMPORTANT**: you can provide the SSH password on the command line
-               (`volumito --ssh-password volumio scp get /tmp/myfile`)
+               (`volumito --ssh-password "volumio" scp ...`)
                or in the `volumito` configuration file.
                However doing so will result in the password
                being in clear either in your shell history or
@@ -68,7 +68,7 @@ volumito scp put -r /tmp/mydir /tmp/
 
 Note the error: to make sure you know what you are doing,
 `volumito` refuses to copy the file/directory
-unless provide the `--yes` option:
+unless you provide the `--yes` option:
 
 ```bash lucio command=execute
 volumito scp put -r /tmp/mydir /tmp/ --yes

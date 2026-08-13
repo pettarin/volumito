@@ -30,9 +30,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito notification register http://192.168.1.2:4567/notif/volumio
 volumito notification register http://192.168.1.2:5678/anothercallbackurl
 volumito notification register http://192.168.1.2:5678/yetanother
-[2026-08-13T06:14:48.613Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-08-13T06:14:49.130Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-08-13T06:14:49.746Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-08-13T13:32:01.559Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-08-13T13:32:02.080Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-08-13T13:32:02.617Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -40,7 +40,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito notification register --autocompose-url
-[2026-08-13T06:14:50.278Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:03.151Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -63,16 +63,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-08-13T06:14:51.228Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-08-13T13:32:04.148Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
-You can unregister all notification URL with the `--all` option:
+You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito notification unregister --all
-[2026-08-13T06:14:51.815Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-08-13T06:14:51.815Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-08-13T06:14:51.815Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:04.624Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-08-13T13:32:04.625Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-08-13T13:32:04.625Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -81,8 +81,8 @@ Command `notification listen` starts a simple local server,
 listening for Volumio notifications, on the machine running `volumito`.
 
 You can connect it to an already registered port and endpoint
-or provide the `--register-url` (autocompose the URL)
-or `--register-url-full` (compose with `--endpoint` and `--port`) options.
+or provide the `--register-url` (compose the URL with `--endpoint` and `--port`)
+or `--register-url-full` (provide the full URL) options.
 
 Without other options, the server will wait for a CTRL+C event to quit;
 however you can have it quit after a certain number of events are received
@@ -106,234 +106,19 @@ volumito notification listen --register-url --timeout 10.0
         "disableVolumeControl": false,
         "duration": 196,
         "mute": false,
-        "position": 0,
+        "position": 3,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 116000,
+        "seek": 286114,
         "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 116000,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115000,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115000,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115249,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115249,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "consume": false,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 195,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 0,
-        "service": "qobuz",
-        "status": "stop",
-        "stream": "qobuz",
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": null,
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 1,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 0,
-        "service": "qobuz",
         "status": "play",
         "stream": false,
-        "title": "Fuoco sui giocattoli",
+        "title": "Va tutto bene",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833719",
+        "uri": "qobuz://song/2833718",
         "volatile": false,
         "volume": 20
     },
@@ -345,34 +130,34 @@ volumito notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": null,
+        "bitrate": "1 Kbps",
         "channels": 2,
         "consume": true,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 236,
+        "duration": 196,
         "mute": false,
-        "position": 1,
+        "position": 3,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 0,
-        "service": "qobuz",
-        "status": "play",
+        "seek": 289869,
+        "service": "mpd",
+        "status": "pause",
         "stream": false,
-        "title": "Fuoco sui giocattoli",
+        "title": "Va tutto bene",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833719",
+        "uri": "qobuz://song/2833718",
         "volatile": false,
         "volume": 20
     },
     "item": "state"
 }
-[2026-08-13T06:14:52.318Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-08-13T06:14:52.319Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-08-13T06:14:52.319Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-08-13T06:15:02.360Z] [INFO] Timed out after 10 seconds
-[2026-08-13T06:15:02.387Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:05.095Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:05.096Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:05.096Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-08-13T13:32:15.103Z] [INFO] Timed out after 10 seconds
+[2026-08-13T13:32:15.118Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```

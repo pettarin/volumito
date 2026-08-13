@@ -57,7 +57,7 @@ volumito version
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-**IMPORTANT**: be careful when using this commad.
+**IMPORTANT**: be careful when using this command.
                You might damage your Volumio host
                (e.g., by removing files on it!),
                to the point a full reinstall will be needed.
@@ -70,7 +70,7 @@ volumito system execute "ls /tmp/"
 
 Note the error: to make sure you know what you are doing,
 `volumito` refuses to execute the command
-unless provide the `--yes` option:
+unless you provide the `--yes` option:
 
 ```bash lucio command=execute
 volumito system execute "ls /tmp/" --yes

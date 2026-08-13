@@ -201,8 +201,8 @@ Examples, assuming the configuration file `~/volumito.yaml`
 has `volumio.host = anothervolumio.local`:
 
 ```bash
-# host will be "explicit.local" (explicit)
-volumito --host explicit.local info
+# host will be "volumioexplicit.local" (explicit)
+volumito --host volumioexplicit.local info
 
 # host will be "anothervolumio.local" (configuration file)
 volumito info

@@ -1,6 +1,10 @@
 ## Verify Your Installation
 
-Follow the directions in the main [README](../../README.md) to install `volumito`.
+Follow the
+[installation directions](https://github.com/pettarin/volumito/blob/main/README.md#installation)
+in the main
+[README](https://github.com/pettarin/volumito/blob/main/README.md)
+to install `volumito`.
 
 If the installation went well, you should be able to run the `version` command,
 printing the version of the `volumito` tool itself:

@@ -2,7 +2,11 @@
 
 ## Verify Your Installation
 
-Follow the directions in the main [README](../../README.md) to install `volumito`.
+Follow the
+[installation directions](https://github.com/pettarin/volumito/blob/main/README.md#installation)
+in the main
+[README](https://github.com/pettarin/volumito/blob/main/README.md)
+to install `volumito`.
 
 If the installation went well, you should be able to run the `version` command,
 printing the version of the `volumito` tool itself:
@@ -32,8 +36,8 @@ volumito --host volumio.local info
         "artist": "Enrico Ruggeri",
         "mute": false,
         "status": "play",
-        "track": "La Vie En Rouge",
-        "volume": 70
+        "track": "Rien Ne Va Plus",
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",

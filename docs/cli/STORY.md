@@ -31,32 +31,32 @@ See the
 [Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
 section of the Volumio REST API documentation for the details.
 
-#### Album Story
+### Album Story
 
 ```bash
 volumito story album "The Beatles" "Yellow Submarine"
 ```
 
-#### Album Credits
+### Album Credits
 
 ```bash
 volumito story credits "The Beatles" "Yellow Submarine"
 ```
 
-#### Artist Story
+### Artist Story
 
 ```bash
 volumito story artist "The Beatles"
 ```
 
-#### Label Story
+### Label Story
 
 ```bash
 volumito story label "EMI"
 ```
 
-#### Place Story
+### Place Story
 
 ```bash
-volumito story label "Abbey Road"
+volumito story place "Abbey Road"
 ```

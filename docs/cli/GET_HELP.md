@@ -268,5 +268,5 @@ vol : playback volume
 
 Note that the `configuration create` command
 produces a configuration file with suggested aliases,
-but all of them are not active,
+but none of them is active,
 as they are commented out in the generated YAML file.

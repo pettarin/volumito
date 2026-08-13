@@ -23,11 +23,11 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
         "artist": "Enrico Ruggeri",
         "mute": false,
-        "status": "stop",
-        "track": "Va tutto bene",
+        "status": "play",
+        "track": "La Vie En Rouge",
         "volume": 20
     },
     "systemversion": "4.119",
@@ -47,8 +47,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-08-13T07:12:32.824Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-08-13T07:12:32.824Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-13T13:25:25.766Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-13T13:25:25.766Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -94,7 +94,7 @@ volumito, version 0.0.51
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-**IMPORTANT**: be careful when using this commad.
+**IMPORTANT**: be careful when using this command.
                You might damage your Volumio host
                (e.g., by removing files on it!),
                to the point a full reinstall will be needed.
@@ -103,12 +103,12 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-08-13T07:12:35.096Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-08-13T13:25:28.259Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 Note the error: to make sure you know what you are doing,
 `volumito` refuses to execute the command
-unless provide the `--yes` option:
+unless you provide the `--yes` option:
 
 ```bash
 volumito system execute "ls /tmp/" --yes
@@ -116,7 +116,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsnapfifo\nsshtunnel.sh\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD\nupdater\nvolume\nwireless.log"
+    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\npayload.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsnapfifo\nsshtunnel.sh\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD\nupdater\nvolume\nwireless.log"
 }
 ```
 
@@ -129,6 +129,7 @@ getvolume
 hls
 multiroom
 myvolumio-remote.json
+payload.json
 qbz-connect.cfg
 qbz-connect.socket
 setvolume

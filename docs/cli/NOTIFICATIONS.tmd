@@ -52,7 +52,7 @@ simply pass it to the `notification unregister` command:
 volumito notification unregister http://192.168.1.2:4567/notif/volumio
 ```
 
-You can unregister all notification URL with the `--all` option:
+You can unregister all notification URLs with the `--all` option:
 
 ```bash lucio command=execute
 volumito notification unregister --all
@@ -64,8 +64,8 @@ Command `notification listen` starts a simple local server,
 listening for Volumio notifications, on the machine running `volumito`.
 
 You can connect it to an already registered port and endpoint
-or provide the `--register-url` (autocompose the URL)
-or `--register-url-full` (compose with `--endpoint` and `--port`) options.
+or provide the `--register-url` (compose the URL with `--endpoint` and `--port`)
+or `--register-url-full` (provide the full URL) options.
 
 Without other options, the server will wait for a CTRL+C event to quit;
 however you can have it quit after a certain number of events are received

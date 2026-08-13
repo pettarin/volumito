@@ -3,7 +3,8 @@
 # CLI Usage
 
 This document describes the `volumito` command-line tool.
-For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.md).
+For using `volumito` as a Python library, see
+[LIBRARY USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md).
 
 
 ## Table Of Contents
@@ -18,10 +19,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Seeking](#seeking)
   - [Volume Control](#volume-control)
   - [Playback Help](#playback-help)
-- [Inspect The Current Track](#inspecting-the-current-track)
+- [Inspect The Current Track](#inspect-the-current-track)
   - [Track Info](#track-info)
   - [Track Help](#track-help)
-- [Inspect The Current Queue](#inspecting-the-current-queue)
+- [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
   - [Queue Clear](#queue-clear)
@@ -39,7 +40,7 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [List All Resources Of An Artist](#list-all-resources-of-an-artist)
   - [Replace The Current Queue](#replace-the-current-queue-search)
 - [Browse The Collection](#browse-the-collection)
-  - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracsk-of-a-qobuz-album-by-artist)
+  - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
   - [Collection Statistics](#collection-statistics)
@@ -83,7 +84,11 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
 
 ## Verify Your Installation
 
-Follow the directions in the main [README](../../README.md) to install `volumito`.
+Follow the
+[installation directions](https://github.com/pettarin/volumito/blob/main/README.md#installation)
+in the main
+[README](https://github.com/pettarin/volumito/blob/main/README.md)
+to install `volumito`.
 
 If the installation went well, you should be able to run the `version` command,
 printing the version of the `volumito` tool itself:
@@ -113,8 +118,8 @@ volumito --host volumio.local info
         "artist": "Enrico Ruggeri",
         "mute": false,
         "status": "play",
-        "track": "La Vie En Rouge",
-        "volume": 70
+        "track": "Rien Ne Va Plus",
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
@@ -150,7 +155,7 @@ volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 **NOTE**: `volumito` can be used without a configuration file;
           however creating a configuration file is strongly suggested,
           as it allows storing preferences that otherwise need
-          to specified at each invokation of the `volumito` CLI tool.
+          to be specified at each invokation of the `volumito` CLI tool.
           You can skip this section if you do not intend
           to use a configuration file for `volumito`.
 
@@ -182,7 +187,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-08-13T10:19:56.546Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-08-13T13:21:46.028Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -191,7 +196,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:19:56.995Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T13:21:46.487Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
@@ -471,7 +476,7 @@ vol : playback volume
 
 Note that the `configuration create` command
 produces a configuration file with suggested aliases,
-but all of them are not active,
+but none of them is active,
 as they are commented out in the generated YAML file.
 
 
@@ -1064,7 +1069,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:08",
+        "duration": "00:04:07",
         "position": 3,
         "title": "La Vie En Rouge",
         "tracknumber": 1,
@@ -1073,7 +1078,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:56",
+        "duration": "00:04:55",
         "position": 4,
         "title": "Rien Ne Va Plus",
         "tracknumber": 2,
@@ -1082,7 +1087,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:00",
+        "duration": "00:03:59",
         "position": 5,
         "title": "Certe Donne",
         "tracknumber": 3,
@@ -1109,7 +1114,7 @@ volumito queue list
     {
         "album": "Sirtaki",
         "artist": "Mango",
-        "duration": "00:04:42",
+        "duration": "00:04:41",
         "position": 8,
         "title": "Come Monna Lisa",
         "tracknumber": 7,
@@ -1127,7 +1132,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:07",
+        "duration": "00:04:06",
         "position": 10,
         "title": "Contessa",
         "tracknumber": 12,
@@ -1136,7 +1141,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:50",
+        "duration": "00:04:49",
         "position": 11,
         "title": "La Bandiera",
         "tracknumber": 3,
@@ -1154,18 +1159,18 @@ use `queue status`:
 volumito queue status
 {
     "has_next": true,
-    "has_previous": true,
+    "has_previous": false,
     "length": 11,
-    "position": 3,
+    "position": 1,
     "track": {
-        "album": "La Vie En Rouge",
+        "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
         "channels": 2,
-        "duration": "00:04:08",
-        "position": 3,
-        "samplerate": "44 KHz",
-        "title": "La Vie En Rouge",
+        "duration": "00:03:16",
+        "position": 1,
+        "samplerate": "44.1 kHz",
+        "title": "Va tutto bene",
         "trackType": "qobuz"
     }
 }
@@ -1177,6 +1182,22 @@ To clear the current playback queue, issue the `queue clear` command:
 
 ```bash
 volumito queue clear
+{
+    "album": "",
+    "artist": "",
+    "bitdepth": "",
+    "channels": "",
+    "duration": "00:00:00",
+    "mute": false,
+    "position": 1,
+    "samplerate": "",
+    "seek": "00:00:00.000",
+    "status": "stop",
+    "title": "",
+    "volume": 20
+}
+[2026-08-13T13:15:35.585Z] [INFO] Command 'clear' executed successfully
+[2026-08-13T13:15:37.604Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
@@ -2342,34 +2363,34 @@ See the
 [Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
 section of the Volumio REST API documentation for the details.
 
-#### Album Story
+### Album Story
 
 ```bash
 volumito story album "The Beatles" "Yellow Submarine"
 ```
 
-#### Album Credits
+### Album Credits
 
 ```bash
 volumito story credits "The Beatles" "Yellow Submarine"
 ```
 
-#### Artist Story
+### Artist Story
 
 ```bash
 volumito story artist "The Beatles"
 ```
 
-#### Label Story
+### Label Story
 
 ```bash
 volumito story label "EMI"
 ```
 
-#### Place Story
+### Place Story
 
 ```bash
-volumito story label "Abbey Road"
+volumito story place "Abbey Road"
 ```
 
 
@@ -2910,7 +2931,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:21:59.693Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T13:26:57.325Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -2920,7 +2941,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:22:00.131Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-08-13T13:26:57.771Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -2935,7 +2956,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-08-13T10:22:00.572Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-08-13T13:26:58.218Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -3067,7 +3088,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T10:22:01.021Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-08-13T13:26:58.674Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -3138,7 +3159,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T10:22:01.470Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-08-13T13:26:59.127Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -3152,18 +3173,18 @@ To achieve that, the `-i / --ignore-configuration-file` global option is availab
 ```bash
 volumito -i -H volumio3b.local playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.750",
-    "status": "stop",
-    "title": "1 - Nella mia città",
-    "trackType": "flac",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:03:49.563",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
 ```
@@ -3173,57 +3194,57 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.750",
-    "status": "stop",
-    "title": "1 - Nella mia città",
-    "trackType": "flac",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:03:50.065",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T10:22:02.354Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-08-13T10:22:02.355Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-08-13T10:22:02.355Z] [DEBU] Initializing the REST API client...
-[2026-08-13T10:22:02.355Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T10:22:02.355Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-08-13T10:22:02.368Z] [DEBU] Response status: 200
-[2026-08-13T10:22:02.368Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-08-13T10:22:02.370Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-08-13T10:22:02.370Z] [DEBU] Successfully retrieved state
+[2026-08-13T13:27:00.032Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-08-13T13:27:00.032Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-08-13T13:27:00.033Z] [DEBU] Initializing the REST API client...
+[2026-08-13T13:27:00.033Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T13:27:00.033Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-08-13T13:27:00.047Z] [DEBU] Response status: 200
+[2026-08-13T13:27:00.047Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-08-13T13:27:00.050Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-08-13T13:27:00.050Z] [DEBU] Successfully retrieved state
 ```
 
 ```bash
 volumito -v -i -H volumio3b.local playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.750",
-    "status": "stop",
-    "title": "1 - Nella mia città",
-    "trackType": "flac",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:03:50.564",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T10:22:02.805Z] [DEBU] Ignoring configuration files
-[2026-08-13T10:22:02.806Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-08-13T10:22:02.806Z] [DEBU] Initializing the REST API client...
-[2026-08-13T10:22:02.806Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T10:22:02.806Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-08-13T10:22:02.818Z] [DEBU] Response status: 200
-[2026-08-13T10:22:02.818Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-08-13T10:22:02.821Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-08-13T10:22:02.821Z] [DEBU] Successfully retrieved state
+[2026-08-13T13:27:00.492Z] [DEBU] Ignoring configuration files
+[2026-08-13T13:27:00.492Z] [DEBU] Connecting to http://volumio3b.local:3000...
+[2026-08-13T13:27:00.493Z] [DEBU] Initializing the REST API client...
+[2026-08-13T13:27:00.493Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T13:27:00.493Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
+[2026-08-13T13:27:00.507Z] [DEBU] Response status: 200
+[2026-08-13T13:27:00.507Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
+[2026-08-13T13:27:00.509Z] [DEBU] Connecting to http://volumio3b.local:3000... done
+[2026-08-13T13:27:00.509Z] [DEBU] Successfully retrieved state
 ```
 
 #### Priority
@@ -3239,8 +3260,8 @@ Examples, assuming the configuration file `~/volumito.yaml`
 has `volumio.host = anothervolumio.local`:
 
 ```bash
-# host will be "explicit.local" (explicit)
-volumito --host explicit.local info
+# host will be "volumioexplicit.local" (explicit)
+volumito --host volumioexplicit.local info
 
 # host will be "anothervolumio.local" (configuration file)
 volumito info
@@ -3318,9 +3339,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito notification register http://192.168.1.2:4567/notif/volumio
 volumito notification register http://192.168.1.2:5678/anothercallbackurl
 volumito notification register http://192.168.1.2:5678/yetanother
-[2026-08-13T06:14:48.613Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-08-13T06:14:49.130Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-08-13T06:14:49.746Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-08-13T13:32:01.559Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-08-13T13:32:02.080Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-08-13T13:32:02.617Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -3328,7 +3349,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito notification register --autocompose-url
-[2026-08-13T06:14:50.278Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:03.151Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -3351,16 +3372,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-08-13T06:14:51.228Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-08-13T13:32:04.148Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
-You can unregister all notification URL with the `--all` option:
+You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito notification unregister --all
-[2026-08-13T06:14:51.815Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-08-13T06:14:51.815Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-08-13T06:14:51.815Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:04.624Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-08-13T13:32:04.625Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-08-13T13:32:04.625Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -3369,8 +3390,8 @@ Command `notification listen` starts a simple local server,
 listening for Volumio notifications, on the machine running `volumito`.
 
 You can connect it to an already registered port and endpoint
-or provide the `--register-url` (autocompose the URL)
-or `--register-url-full` (compose with `--endpoint` and `--port`) options.
+or provide the `--register-url` (compose the URL with `--endpoint` and `--port`)
+or `--register-url-full` (provide the full URL) options.
 
 Without other options, the server will wait for a CTRL+C event to quit;
 however you can have it quit after a certain number of events are received
@@ -3394,234 +3415,19 @@ volumito notification listen --register-url --timeout 10.0
         "disableVolumeControl": false,
         "duration": 196,
         "mute": false,
-        "position": 0,
+        "position": 3,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 116000,
+        "seek": 286114,
         "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 116000,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115000,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115000,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115249,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 196,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 115249,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "consume": false,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 195,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 0,
-        "service": "qobuz",
-        "status": "stop",
-        "stream": "qobuz",
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": null,
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 1,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 0,
-        "service": "qobuz",
         "status": "play",
         "stream": false,
-        "title": "Fuoco sui giocattoli",
+        "title": "Va tutto bene",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833719",
+        "uri": "qobuz://song/2833718",
         "volatile": false,
         "volume": 20
     },
@@ -3633,36 +3439,36 @@ volumito notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": null,
+        "bitrate": "1 Kbps",
         "channels": 2,
         "consume": true,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 236,
+        "duration": 196,
         "mute": false,
-        "position": 1,
+        "position": 3,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 0,
-        "service": "qobuz",
-        "status": "play",
+        "seek": 289869,
+        "service": "mpd",
+        "status": "pause",
         "stream": false,
-        "title": "Fuoco sui giocattoli",
+        "title": "Va tutto bene",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833719",
+        "uri": "qobuz://song/2833718",
         "volatile": false,
         "volume": 20
     },
     "item": "state"
 }
-[2026-08-13T06:14:52.318Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-08-13T06:14:52.319Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-08-13T06:14:52.319Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-08-13T06:15:02.360Z] [INFO] Timed out after 10 seconds
-[2026-08-13T06:15:02.387Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:05.095Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:05.096Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-08-13T13:32:05.096Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-08-13T13:32:15.103Z] [INFO] Timed out after 10 seconds
+[2026-08-13T13:32:15.118Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 ### Copying Files With SCP
@@ -3691,7 +3497,7 @@ the connection parameters:
 in addition to the obvious `--host` (default: `volumio.local`).
 
 **IMPORTANT**: you can provide the SSH password on the command line
-               (`volumito --ssh-password volumio scp get /tmp/myfile`)
+               (`volumito --ssh-password "volumio" scp ...`)
                or in the `volumito` configuration file.
                However doing so will result in the password
                being in clear either in your shell history or
@@ -3726,16 +3532,16 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-08-13T06:49:24.311Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-08-13T13:24:53.529Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
 Note the error: to make sure you know what you are doing,
 `volumito` refuses to copy the file/directory
-unless provide the `--yes` option:
+unless you provide the `--yes` option:
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-08-13T06:49:25.811Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-08-13T13:24:54.679Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -3746,7 +3552,7 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-08-13T06:49:26.922Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-08-13T13:24:56.025Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
 Note that when using `scp get` you do not have to add the `--yes` option.
@@ -3782,11 +3588,11 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
         "artist": "Enrico Ruggeri",
         "mute": false,
-        "status": "stop",
-        "track": "Va tutto bene",
+        "status": "play",
+        "track": "La Vie En Rouge",
         "volume": 20
     },
     "systemversion": "4.119",
@@ -3806,8 +3612,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-08-13T07:12:32.824Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-08-13T07:12:32.824Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-13T13:25:25.766Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-13T13:25:25.766Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -3853,7 +3659,7 @@ volumito, version 0.0.51
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-**IMPORTANT**: be careful when using this commad.
+**IMPORTANT**: be careful when using this command.
                You might damage your Volumio host
                (e.g., by removing files on it!),
                to the point a full reinstall will be needed.
@@ -3862,12 +3668,12 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-08-13T07:12:35.096Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-08-13T13:25:28.259Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 Note the error: to make sure you know what you are doing,
 `volumito` refuses to execute the command
-unless provide the `--yes` option:
+unless you provide the `--yes` option:
 
 ```bash
 volumito system execute "ls /tmp/" --yes
@@ -3875,7 +3681,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsnapfifo\nsshtunnel.sh\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD\nupdater\nvolume\nwireless.log"
+    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\npayload.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsnapfifo\nsshtunnel.sh\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD\nupdater\nvolume\nwireless.log"
 }
 ```
 
@@ -3888,6 +3694,7 @@ getvolume
 hls
 multiroom
 myvolumio-remote.json
+payload.json
 qbz-connect.cfg
 qbz-connect.socket
 setvolume

@@ -1,7 +1,8 @@
 # CLI Usage
 
 This document describes the `volumito` command-line tool.
-For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.md).
+For using `volumito` as a Python library, see
+[LIBRARY USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md).
 
 
 ## Table Of Contents
@@ -16,10 +17,10 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [Seeking](#seeking)
   - [Volume Control](#volume-control)
   - [Playback Help](#playback-help)
-- [Inspect The Current Track](#inspecting-the-current-track)
+- [Inspect The Current Track](#inspect-the-current-track)
   - [Track Info](#track-info)
   - [Track Help](#track-help)
-- [Inspect The Current Queue](#inspecting-the-current-queue)
+- [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
   - [Queue Clear](#queue-clear)
@@ -37,7 +38,7 @@ For using `volumito` as a Python library, see [LIBRARY USAGE](../LIBRARY_USAGE.m
   - [List All Resources Of An Artist](#list-all-resources-of-an-artist)
   - [Replace The Current Queue](#replace-the-current-queue-search)
 - [Browse The Collection](#browse-the-collection)
-  - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracsk-of-a-qobuz-album-by-artist)
+  - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
   - [Collection Statistics](#collection-statistics)

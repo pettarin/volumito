@@ -535,7 +535,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:21:59.693Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-13T13:26:57.325Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -545,7 +545,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T10:22:00.131Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-08-13T13:26:57.771Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -560,7 +560,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-08-13T10:22:00.572Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-08-13T13:26:58.218Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -692,7 +692,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T10:22:01.021Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-08-13T13:26:58.674Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -763,7 +763,7 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T10:22:01.470Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-08-13T13:26:59.127Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -777,18 +777,18 @@ To achieve that, the `-i / --ignore-configuration-file` global option is availab
 ```bash
 volumito -i -H volumio3b.local playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.750",
-    "status": "stop",
-    "title": "1 - Nella mia città",
-    "trackType": "flac",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:03:49.563",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
 ```
@@ -798,57 +798,57 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.750",
-    "status": "stop",
-    "title": "1 - Nella mia città",
-    "trackType": "flac",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:03:50.065",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T10:22:02.354Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-08-13T10:22:02.355Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-08-13T10:22:02.355Z] [DEBU] Initializing the REST API client...
-[2026-08-13T10:22:02.355Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T10:22:02.355Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-08-13T10:22:02.368Z] [DEBU] Response status: 200
-[2026-08-13T10:22:02.368Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-08-13T10:22:02.370Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-08-13T10:22:02.370Z] [DEBU] Successfully retrieved state
+[2026-08-13T13:27:00.032Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-08-13T13:27:00.032Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-08-13T13:27:00.033Z] [DEBU] Initializing the REST API client...
+[2026-08-13T13:27:00.033Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T13:27:00.033Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-08-13T13:27:00.047Z] [DEBU] Response status: 200
+[2026-08-13T13:27:00.047Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-08-13T13:27:00.050Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-08-13T13:27:00.050Z] [DEBU] Successfully retrieved state
 ```
 
 ```bash
 volumito -v -i -H volumio3b.local playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.750",
-    "status": "stop",
-    "title": "1 - Nella mia città",
-    "trackType": "flac",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:03:50.564",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-13T10:22:02.805Z] [DEBU] Ignoring configuration files
-[2026-08-13T10:22:02.806Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-08-13T10:22:02.806Z] [DEBU] Initializing the REST API client...
-[2026-08-13T10:22:02.806Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T10:22:02.806Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-08-13T10:22:02.818Z] [DEBU] Response status: 200
-[2026-08-13T10:22:02.818Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-08-13T10:22:02.821Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-08-13T10:22:02.821Z] [DEBU] Successfully retrieved state
+[2026-08-13T13:27:00.492Z] [DEBU] Ignoring configuration files
+[2026-08-13T13:27:00.492Z] [DEBU] Connecting to http://volumio3b.local:3000...
+[2026-08-13T13:27:00.493Z] [DEBU] Initializing the REST API client...
+[2026-08-13T13:27:00.493Z] [DEBU] Initializing the REST API client... done
+[2026-08-13T13:27:00.493Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
+[2026-08-13T13:27:00.507Z] [DEBU] Response status: 200
+[2026-08-13T13:27:00.507Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
+[2026-08-13T13:27:00.509Z] [DEBU] Connecting to http://volumio3b.local:3000... done
+[2026-08-13T13:27:00.509Z] [DEBU] Successfully retrieved state
 ```
 
 #### Priority
@@ -864,8 +864,8 @@ Examples, assuming the configuration file `~/volumito.yaml`
 has `volumio.host = anothervolumio.local`:
 
 ```bash
-# host will be "explicit.local" (explicit)
-volumito --host explicit.local info
+# host will be "volumioexplicit.local" (explicit)
+volumito --host volumioexplicit.local info
 
 # host will be "anothervolumio.local" (configuration file)
 volumito info

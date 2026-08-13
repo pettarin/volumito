@@ -31,7 +31,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:08",
+        "duration": "00:04:07",
         "position": 3,
         "title": "La Vie En Rouge",
         "tracknumber": 1,
@@ -40,7 +40,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:56",
+        "duration": "00:04:55",
         "position": 4,
         "title": "Rien Ne Va Plus",
         "tracknumber": 2,
@@ -49,7 +49,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:00",
+        "duration": "00:03:59",
         "position": 5,
         "title": "Certe Donne",
         "tracknumber": 3,
@@ -76,7 +76,7 @@ volumito queue list
     {
         "album": "Sirtaki",
         "artist": "Mango",
-        "duration": "00:04:42",
+        "duration": "00:04:41",
         "position": 8,
         "title": "Come Monna Lisa",
         "tracknumber": 7,
@@ -94,7 +94,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:07",
+        "duration": "00:04:06",
         "position": 10,
         "title": "Contessa",
         "tracknumber": 12,
@@ -103,7 +103,7 @@ volumito queue list
     {
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
-        "duration": "00:04:50",
+        "duration": "00:04:49",
         "position": 11,
         "title": "La Bandiera",
         "tracknumber": 3,
@@ -121,18 +121,18 @@ use `queue status`:
 volumito queue status
 {
     "has_next": true,
-    "has_previous": true,
+    "has_previous": false,
     "length": 11,
-    "position": 3,
+    "position": 1,
     "track": {
-        "album": "La Vie En Rouge",
+        "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
         "channels": 2,
-        "duration": "00:04:08",
-        "position": 3,
-        "samplerate": "44 KHz",
-        "title": "La Vie En Rouge",
+        "duration": "00:03:16",
+        "position": 1,
+        "samplerate": "44.1 kHz",
+        "title": "Va tutto bene",
         "trackType": "qobuz"
     }
 }
@@ -144,6 +144,22 @@ To clear the current playback queue, issue the `queue clear` command:
 
 ```bash
 volumito queue clear
+{
+    "album": "",
+    "artist": "",
+    "bitdepth": "",
+    "channels": "",
+    "duration": "00:00:00",
+    "mute": false,
+    "position": 1,
+    "samplerate": "",
+    "seek": "00:00:00.000",
+    "status": "stop",
+    "title": "",
+    "volume": 20
+}
+[2026-08-13T13:15:35.585Z] [INFO] Command 'clear' executed successfully
+[2026-08-13T13:15:37.604Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
