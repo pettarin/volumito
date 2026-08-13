@@ -1587,14 +1587,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.52" in result.output
+        assert "volumito, version 0.0.53" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.52"'
+        assert result.output.strip() == '"0.0.53"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1603,7 +1603,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.52"'
+        assert result.output.strip() == '"0.0.53"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -4601,6 +4601,35 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert "Song 1" in result.output
         assert "Song 2" in result.output
+
+    @pytest.mark.parametrize("extra", [[], ["-F", "table"]])
+    def test_queue_list_of_local_files(
+        self, runner: CliRunner, mocker: MockerFixture, extra: list[str]
+    ):
+        """A local file reports its title under name, which the short fields keep."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "queue", return_value={
+            "queue": [
+                {
+                    "name": "1 - Belli capelli",
+                    "artist": "Francesco De Gregori",
+                    "album": "Titanic",
+                    "service": "mpd",
+                    "uri": "mnt/INTERNAL/music/001___Belli_capelli.flac",
+                },
+            ]
+        })
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+
+        result = runner.invoke(main, ["queue", "list", *extra])
+
+        assert result.exit_code == 0
+        assert "1 - Belli capelli" in result.output
+        # The keys the local files do not fill stay out of the short output
+        assert "uri" not in result.output.lower()
 
     def test_queue_list_with_custom_host(self, runner: CliRunner, mocker: MockerFixture):
         """Test queue list command with custom host."""
