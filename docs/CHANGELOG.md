@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Reviewed and updated the documentation
+- Require `click>=8.4.0` to ensure unit tests pass on any environment
 
 
 ## [0.0.53] - 2026-08-13

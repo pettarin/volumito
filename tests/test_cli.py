@@ -8338,7 +8338,9 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "label", "--current-track"])
 
         assert result.exit_code == 2
-        assert "No such option: --current-track" in result.output
+        # Click quotes the option name of this message since 8.4
+        assert "No such option" in result.output
+        assert "--current-track" in result.output
         mock_client.get_story.assert_not_called()
 
     def test_failure_envelope(self, runner: CliRunner, mocker: MockerFixture):
@@ -13114,7 +13116,9 @@ class TestConfigurationCommands:
         result = runner.invoke(main, ["configuration", "create", "-f", "y"])
 
         assert result.exit_code == 2
-        assert "No such option: -f" in result.output
+        # Click quotes the option name of this message since 8.4
+        assert "No such option" in result.output
+        assert "-f" in result.output
 
     def test_create_refuses_overwrite(self, runner: CliRunner, tmp_path):
         """Without --overwrite-existing-files, create refuses to clobber."""
