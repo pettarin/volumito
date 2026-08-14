@@ -1,9 +1,11 @@
 # CLI Usage
 
-This document describes the `volumito` command-line tool.
-For using `volumito` as a Python library, see
-[LIBRARY USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md).
+This document describes the `volumito` command-line (CLI) tool.
 
+> [!TIP]
+> For using `volumito` as a Python library, see the
+> [Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
+> documentation.
 
 ## Table Of Contents
 
