@@ -273,6 +273,6 @@ vol : playback volume
 > By default the `configuration create` command
 > produces a configuration file with suggested aliases,
 > but none of them is active, as they are all commented out.
->
 > If you would like to enable all or some of them,
-> uncomment the relevant lines under the `aliases:` section.
+> uncomment the relevant lines under the `aliases:` section
+> of your configuration file.
