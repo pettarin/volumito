@@ -3,6 +3,7 @@
 > [!IMPORTANT]
 > **Code contributions are not currently being accepted,
 > as the Python API is not stable yet (version < 1.0.0).**
+>
 > (This message will be removed as soon as version 1.0.0 is published.)
 
 > [!NOTE]
