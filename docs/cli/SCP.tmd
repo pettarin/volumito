@@ -13,6 +13,13 @@ the Volumio host.
 > resulting in loss of data or even compromising
 > the functionality of the Volumio host.
 
+> [!NOTE]
+> To use the `volumito scp` commands
+> you will need to install `volumito` with the `scp` extra:
+> `pip install volumito[scp]` instead of `pip install volumito`.
+> Since these are advanced (and potentially dangerous) commands,
+> the `scp` dependency is not installed by default.
+
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to setup the files and directories used in this example
 volumito system execute "rm -rf /tmp/mydir" --yes
