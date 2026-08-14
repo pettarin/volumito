@@ -4,7 +4,8 @@
 
 > [!NOTE]
 > In this section the word "playlist" refers to Volumio playlists
-> (which can aggregate tracks from different services).
+> which might aggregate tracks from different services
+> (e.g., tracks stored in local files and Qobuz tracks).
 >
 > Some services (e.g., Qobuz) might define their own concept of "playlist",
 > but those "playlists" are not managed directly
@@ -47,13 +48,13 @@ volumito playlist play "qobuz queue test"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.390",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-14T13:11:36.456Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
+[2026-08-14T13:14:43.498Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
 ```
 
 > [!TIP]
