@@ -124,8 +124,13 @@ by the CLI tool `volumito` in the virtual enviroment
 where it is installed:
 
 > [!NOTE]
-> The following examples omit the `(volumito_env) $` shell prompt
-> for the sake of brevity.
+> For the sake of brevity, in the following examples:
+> - the `(volumito_env) $` shell prompt is omitted;
+> - some commands are shown without their output or with truncated output;
+> - several commands and options are not illustrated.
+> Consult the
+> [CLI Usage](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
+> for a comprehensive guide of the CLI tool `volumito`.
 
 ```bash
 # print help/usage messages; it works globally and on commands and subcommands
@@ -134,7 +139,7 @@ volumito playback --help
 
 # create a configuration file (you might want to inspect/edit it later)
 volumito configuration create -o ~/volumito.yaml
-Created configuration file ~/volumito.yaml
+[2026-08-13T13:52:30.130Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 
 # print information about the Volumio host
 volumito system info
@@ -280,7 +285,7 @@ volumito playlist list
 
 # play the specified playlist, replacing the current queue
 volumito playlist play "my awesome playlist"
-Command 'playplaylist my awesome playlist' executed successfully
+[2026-08-12T20:14:05.213Z] [INFO] Command 'playplaylist "my awesome playlist"' executed successfully
 {
     "album": "Sirtaki",
     "artist": "Mango",
