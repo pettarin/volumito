@@ -13,7 +13,7 @@ printing the version of the `volumito` tool itself:
 
 ```bash
 volumito version
-volumito, version 0.0.52
+volumito, version 0.1.0
 ```
 
 Check that you can connect to the Volumio host by issuing the `info` command:

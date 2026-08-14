@@ -29,7 +29,7 @@ file that looks like this:
 ```yaml
 # volumito CLI configuration file
 #
-# Generated with default values for version 0.0.52: edit as needed (and remove this comment)
+# Generated with default values for version 0.1.0: edit as needed (and remove this comment)
 
 aliases:
   # Aliases/shorthands for existing command paths (groups, commands, subcommands).

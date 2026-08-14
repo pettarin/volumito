@@ -86,7 +86,7 @@ For the `volumito` (client) version, use the `version` command:
 
 ```bash
 volumito version
-volumito, version 0.0.52
+volumito, version 0.1.0
 ```
 
 #### System Execute
