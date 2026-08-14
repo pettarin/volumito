@@ -4467,7 +4467,7 @@ volumito system info
         "artist": "Enrico Ruggeri",
         "mute": false,
         "status": "play",
-        "track": "La Vie En Rouge",
+        "track": "Rien Ne Va Plus",
         "volume": 20
     },
     "systemversion": "4.119",
@@ -4487,8 +4487,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-08-13T13:25:25.766Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-08-13T13:25:25.766Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-14T13:45:29.055Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-14T13:45:29.056Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -4534,21 +4534,35 @@ volumito, version 0.1.0
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-**IMPORTANT**: be careful when using this command.
-               You might damage your Volumio host
-               (e.g., by removing files on it!),
-               to the point a full reinstall will be needed.
+> [!CAUTION]
+> **Use this command at your own peril!**
+>
+> You might damage your Volumio host
+> (e.g., by removing files on it!),
+> to the point a full reinstall will be needed.
+
+> [!NOTE]
+> To use the `volumito system execute` command
+> you will need to install `volumito` with the `scp` extra:
+> `pip install volumito[scp]` instead of `pip install volumito`.
+> Since this is an advanced (and potentially dangerous) command,
+> the `scp` dependency is not installed by default.
+
+The same important remarks contained in Section
+[SSH Connection Parameters](#ssh-connection-parameters)
+apply here.
 
 To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-08-13T13:25:28.259Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-08-14T13:45:31.340Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
-Note the error: to make sure you know what you are doing,
-`volumito` refuses to execute the command
-unless you provide the `--yes` option:
+> [!WARNING]
+> Mind the error: to make sure you know what you are doing,
+> `volumito` refuses to execute the command
+> unless you provide the `--yes` option:
 
 ```bash
 volumito system execute "ls /tmp/" --yes
@@ -4556,12 +4570,13 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\npayload.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsnapfifo\nsshtunnel.sh\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD\nupdater\nvolume\nwireless.log"
+    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsshtunnel.sh\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-bluealsa.service-xyhprP\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-haveged.service-K7qpRC\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-ntpsec.service-M6ONNZ\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-systemd-logind.service-niT43i\nupdater\nvolume\nwireless.log"
 }
 ```
 
-Note that you might need to process the response
-to make sense of the stdout/stderr encoded in the JSON response:
+> [!TIP]
+> You might need to process the response
+> to make sense of the stdout/stderr encoded in the JSON response:
 
 ```bash
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
@@ -4569,22 +4584,16 @@ getvolume
 hls
 multiroom
 myvolumio-remote.json
-payload.json
 qbz-connect.cfg
 qbz-connect.socket
 setvolume
 shairport-sync-metadata
-snapfifo
 sshtunnel.sh
-systemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA
-systemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE
-systemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9
-systemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-bluealsa.service-xyhprP
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-haveged.service-K7qpRC
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-ntpsec.service-M6ONNZ
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-systemd-logind.service-niT43i
 updater
 volume
 wireless.log
 ```
-
-The same remarks contained in Section
-[SSH Connection Parameters](#ssh-connection-parameters)
-apply here.
