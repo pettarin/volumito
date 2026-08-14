@@ -509,18 +509,19 @@ issue the `playback status` command:
 ```bash
 volumito playback status
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
-    "duration": "00:03:59",
+    "channels": null,
+    "duration": "00:04:18",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44 KHz",
-    "seek": "00:01:07.593",
+    "seek": "00:01:24.869",
     "status": "play",
-    "title": "Certe Donne",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
 ```
 
@@ -531,13 +532,13 @@ volumito playback status --format table
 Volumio Status
 ==================================================
 Status              : play
-Position            : 5
-Title               : Certe Donne
-Artist              : Enrico Ruggeri
-Album               : La Vie En Rouge
-Duration            : 00:03:59
-Seek                : 00:01:08.093
-Volume              : 70
+Position            : 9
+Title               : San Lorenzo
+Artist              : Francesco De Gregori
+Album               : Titanic
+Duration            : 00:04:18
+Seek                : 00:01:25.369
+Volume              : 20
 Mute                : False
 Tracktype           : qobuz
 Samplerate          : 44 KHz
@@ -550,43 +551,50 @@ from the REST API:
 ```bash
 volumito playback status --fields ALL
 {
-    "album": "La Vie En Rouge",
-    "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
+    "channels": null,
     "consume": false,
     "dbVolume": null,
     "disableVolumeControl": false,
-    "duration": "00:03:59",
+    "duration": "00:04:18",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "random": false,
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44 KHz",
-    "seek": "00:01:08.593",
+    "seek": "00:01:25.870",
     "service": "qobuz",
     "status": "play",
     "stream": "qobuz",
-    "title": "Certe Donne",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
     "updatedb": false,
-    "uri": "qobuz://song/167921",
+    "uri": "qobuz://song/332312",
     "volatile": false,
-    "volume": 70
+    "volume": 20
 }
 ```
 
-Note: the `-F / --format` and `-L / --fields` options
-apply to several other `volumito` commands.
+> [!TIP]
+> The `-F / --format` and `-L / --fields` options
+> apply to several other `volumito` commands.
+>
+> Mind that built-in constants like `ALL` or `SHORT`
+> are spelled uppercased: `-L all` selects the field `all`,
+> while `-L ALL` selects all fields.
 
-Note: if the `-m / --machine-readable` option is given,
-the `volumito` output is always produced as valid JSON
-that can be consumed by a downstream application.
+> [!TIP]
+> If the `-m / --machine-readable` option is given,
+> the `volumito` output is always produced as valid JSON
+> that can be consumed by a downstream application.
 
 ```bash
 volumito -m playback status -F raw -L ALL
-{"status": "play", "position": 4, "title": "Certe Donne", "artist": "Enrico Ruggeri", "album": "La Vie En Rouge", "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg", "uri": "qobuz://song/167921", "trackType": "qobuz", "seek": 68843, "duration": 239, "samplerate": "44 KHz", "bitdepth": "16 bit", "random": false, "repeat": false, "repeatSingle": false, "consume": false, "volume": 70, "dbVolume": null, "disableVolumeControl": false, "mute": false, "stream": "qobuz", "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 8, "title": "San Lorenzo", "artist": "Francesco De Gregori", "album": "Titanic", "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg", "uri": "qobuz://song/332312", "trackType": "qobuz", "seek": 86370, "duration": 258, "samplerate": "44 KHz", "bitdepth": "16 bit", "channels": null, "random": false, "repeat": false, "repeatSingle": false, "consume": false, "volume": 20, "dbVolume": null, "disableVolumeControl": false, "mute": false, "stream": "qobuz", "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Pause And Stop
@@ -596,21 +604,21 @@ To pause the playback, use `playback pause`:
 ```bash
 volumito playback pause
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:09.593",
+    "seek": "00:01:27.372",
     "status": "pause",
-    "title": "Rien Ne Va Plus",
+    "title": "Belli capelli",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:30.179Z] [INFO] Command 'pause' executed successfully
+[2026-08-14T13:09:15.963Z] [INFO] Command 'pause' executed successfully
 ```
 
 By default, the resulting status of the playback is printed.
@@ -622,21 +630,21 @@ To toggle between pause and play, use `playback toggle`:
 ```bash
 volumito playback toggle
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:11.595",
+    "seek": "00:01:29.374",
     "status": "play",
-    "title": "Rien Ne Va Plus",
+    "title": "Belli capelli",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:32.675Z] [INFO] Command 'toggle' executed successfully
+[2026-08-14T13:09:18.491Z] [INFO] Command 'toggle' executed successfully
 ```
 
 To stop the playback, use `playback stop`:
@@ -644,21 +652,21 @@ To stop the playback, use `playback stop`:
 ```bash
 volumito playback stop
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.251",
     "status": "play",
-    "title": "Rien Ne Va Plus",
+    "title": "Belli capelli",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:35.198Z] [INFO] Command 'stop' executed successfully
+[2026-08-14T13:09:21.042Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Play Track At A Given Position
@@ -668,21 +676,21 @@ The `playback play` command starts playing the current queue.
 ```bash
 volumito playback play
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:04:18",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.252",
+    "seek": "00:00:01.002",
     "status": "play",
-    "title": "Certe Donne",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:37.692Z] [INFO] Command 'play' executed successfully
+[2026-08-14T13:09:23.556Z] [INFO] Command 'play' executed successfully
 ```
 
 It accepts an optional positional argument
@@ -693,21 +701,21 @@ For example, to play the third track:
 ```bash
 volumito playback play 3
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:18",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.000",
+    "seek": "00:00:00.751",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:40.288Z] [INFO] Command 'play' executed successfully
+[2026-08-14T13:09:26.202Z] [INFO] Command 'play' executed successfully
 ```
 
 ### Seeking
@@ -717,7 +725,7 @@ can be queried with `playback seek`:
 
 ```bash
 volumito playback seek
-00:00:01.501
+00:00:01.251
 ```
 
 and it can be set by providing a new value,
@@ -726,21 +734,21 @@ either in seconds:
 ```bash
 volumito playback seek 42
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:44.002",
+    "seek": "00:00:43.999",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:43.321Z] [INFO] Command 'seek 42' executed successfully
+[2026-08-14T13:09:29.201Z] [INFO] Command 'seek 42' executed successfully
 ```
 
 or in `HH:MM:SS` format:
@@ -748,21 +756,21 @@ or in `HH:MM:SS` format:
 ```bash
 volumito playback seek 00:01:42
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:44.004",
+    "seek": "00:01:43.999",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:45.836Z] [INFO] Command 'seek 102' executed successfully
+[2026-08-14T13:09:31.722Z] [INFO] Command 'seek 102' executed successfully
 ```
 
 or `plus/increase/up/forward` and `minus/decrease/down/backward`:
@@ -770,41 +778,41 @@ or `plus/increase/up/forward` and `minus/decrease/down/backward`:
 ```bash
 volumito playback seek forward
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.477",
+    "seek": "00:01:56.501",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:48.334Z] [INFO] Command 'seek plus' executed successfully
+[2026-08-14T13:09:34.236Z] [INFO] Command 'seek plus' executed successfully
 ```
 
 ```bash
 volumito playback seek minus
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:48.980",
+    "seek": "00:01:49.002",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:50.839Z] [INFO] Command 'seek minus' executed successfully
+[2026-08-14T13:09:36.743Z] [INFO] Command 'seek minus' executed successfully
 ```
 
 ### Volume Control
@@ -815,7 +823,7 @@ can be queried with `playback volume`:
 
 ```bash
 volumito playback volume
-70
+20
 ```
 
 and it can be set by providing a new value, either numerical:
@@ -823,21 +831,21 @@ and it can be set by providing a new value, either numerical:
 ```bash
 volumito playback volume 20
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:51.844",
+    "seek": "00:01:52.002",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:55:53.801Z] [INFO] Command 'volume 20' executed successfully
+[2026-08-14T13:09:39.826Z] [INFO] Command 'volume 20' executed successfully
 ```
 
 or `plus/increase/up` and `minus/decrease/down`:
@@ -845,41 +853,41 @@ or `plus/increase/up` and `minus/decrease/down`:
 ```bash
 volumito playback volume plus
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:54.486",
+    "seek": "00:01:54.503",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 21
 }
-[2026-08-12T19:55:56.403Z] [INFO] Command 'volume plus' executed successfully
+[2026-08-14T13:09:42.397Z] [INFO] Command 'volume plus' executed successfully
 ```
 
 ```bash
 volumito playback volume down
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.987",
+    "seek": "00:01:57.197",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:55:58.904Z] [INFO] Command 'volume minus' executed successfully
+[2026-08-14T13:09:44.921Z] [INFO] Command 'volume minus' executed successfully
 ```
 
 The playback volume can be muted and unmuted with
@@ -888,46 +896,46 @@ The playback volume can be muted and unmuted with
 ```bash
 volumito playback mute
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": true,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:59.597",
+    "seek": "00:01:59.701",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:56:01.450Z] [INFO] Command 'volume mute' executed successfully
+[2026-08-14T13:09:47.433Z] [INFO] Command 'volume mute' executed successfully
 ```
 
 ```bash
 volumito playback unmute
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:02.101",
+    "seek": "00:02:02.226",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:56:03.955Z] [INFO] Command 'volume unmute' executed successfully
+[2026-08-14T13:09:49.952Z] [INFO] Command 'volume unmute' executed successfully
 ```
 
 ### Playback Help
 
-These are all subcommands of the `playback` group:
+These are all the subcommands of the `playback` group:
 
 ```bash
 volumito playback --help
@@ -1250,10 +1258,22 @@ in the Section [Download](#download) below.
 
 ## Playlists
 
+> [!NOTE]
+> In this section the word "playlist" refers to Volumio playlists
+> (which can aggregate tracks from different services).
+>
+> Some services (e.g., Qobuz) might define their own concept of "playlist",
+> but those "playlists" are not managed directly
+> by the `volumito playlist` command group.
+> Nevertheless, those "playlists" might still be discoverable and/or playable
+> using the `collection browse`, `collection search`,
+> and `queue replace` commands,
+> if they are endowed with their own URI.
+
 ### List All Playlists
 
 The `playlist list` command prints the identifiers
-of all the Volumio playlists:
+of all the available playlists:
 
 ```bash
 volumito playlist list
@@ -1268,10 +1288,9 @@ volumito playlist list
 
 ### Play A Playlist
 
-A Volumio playlist can be played,
-replacing the current playback queue with its contents.
-To do so, issue the `playlist play` command
-followed by the playlist identifier:
+To play a playlist (from its first track),
+replacing the current playback queue,
+issue the `playlist play` command followed by the playlist identifier:
 
 ```bash
 volumito playlist play "qobuz queue test"
@@ -1284,20 +1303,22 @@ volumito playlist play "qobuz queue test"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.511",
+    "seek": "00:00:00.250",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T20:14:05.213Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
+[2026-08-14T13:11:36.456Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
 ```
 
-Note: you might want to use double quotes if the identifier contains spaces.
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
 
 ### Playlist Help
 
-These are all subcommands of the `playlist` group:
+These are all the subcommands of the `playlist` group:
 
 ```bash
 volumito playlist --help

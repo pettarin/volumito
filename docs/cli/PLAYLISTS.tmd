@@ -1,9 +1,21 @@
 ## Playlists
 
+> [!NOTE]
+> In this section the word "playlist" refers to Volumio playlists
+> (which can aggregate tracks from different services).
+>
+> Some services (e.g., Qobuz) might define their own concept of "playlist",
+> but those "playlists" are not managed directly
+> by the `volumito playlist` command group.
+> Nevertheless, those "playlists" might still be discoverable and/or playable
+> using the `collection browse`, `collection search`,
+> and `queue replace` commands,
+> if they are endowed with their own URI.
+
 ### List All Playlists
 
 The `playlist list` command prints the identifiers
-of all the Volumio playlists:
+of all the available playlists:
 
 ```bash lucio command=execute
 volumito playlist list
@@ -11,20 +23,21 @@ volumito playlist list
 
 ### Play A Playlist
 
-A Volumio playlist can be played,
-replacing the current playback queue with its contents.
-To do so, issue the `playlist play` command
-followed by the playlist identifier:
+To play a playlist (from its first track),
+replacing the current playback queue,
+issue the `playlist play` command followed by the playlist identifier:
 
 ```bash lucio command=execute
 volumito playlist play "qobuz queue test"
 ```
 
-Note: you might want to use double quotes if the identifier contains spaces.
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
 
 ### Playlist Help
 
-These are all subcommands of the `playlist` group:
+These are all the subcommands of the `playlist` group:
 
 ```bash lucio command=execute
 volumito playlist --help
