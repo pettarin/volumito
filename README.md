@@ -58,7 +58,8 @@ $ micromamba activate volumito_env
 > Since those are advanced (and potentially dangerous) commands,
 > the `scp` dependency is not installed by default.
 
-You should be able to run:
+You should be able to run the `volumito` CLI tool,
+automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
@@ -75,7 +76,7 @@ $ micromamba activate volumito_env
 volumito, version 0.1.0
 ```
 
-To update `volumito`, use the `-U/--upgrade` option:
+To update `volumito`, use the `-U / --upgrade` option:
 
 ```bash
 $ micromamba activate volumito_env
@@ -100,6 +101,13 @@ $ micromamba activate volumito_env
 (volumito_env) $ # or
 (volumito_env) $ make install-e-this
 ```
+
+> [!NOTE]
+> To use the `volumito scp` and `volumito system execute` commands
+> you will need to install the `scp` extra:
+> `pip install -e .[scp]` or `make install-e-this-scp`.
+> Since those are advanced (and potentially dangerous) commands,
+> the `scp` dependency is not installed by default.
 
 You should be able to run the `volumito` CLI tool,
 automatically installed in the virtual environment:
