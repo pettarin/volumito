@@ -11,6 +11,14 @@ All notable changes to this project will be documented in this file.
 
 ## [0.1.0] - 2026-08-14
 
+### Added
+
+- Targets `install-e-this-scp` and `reinstall-e-this-scp` to the `Makefile`
+
+### Changed
+
+- Reviewed and updated the documentation
+
 
 ## [0.0.53] - 2026-08-13
 
