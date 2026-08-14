@@ -32,11 +32,11 @@ volumito --host volumio.local info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
-        "artist": "Enrico Ruggeri",
+        "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg",
+        "artist": "Francesco De Gregori",
         "mute": false,
         "status": "play",
-        "track": "Rien Ne Va Plus",
+        "track": "Belli capelli",
         "volume": 20
     },
     "systemversion": "4.119",
@@ -57,8 +57,8 @@ you might need to add:
 - `-P / --rest-api-port INTEGER` (default: `3000`)
 - `--scheme [http|https]` (default: `http`).
 
-**NOTE**: the MPD port is `6600` in Volumio >= 4,
-and `6599` in Volumio < 4.
+> [!NOTE]
+> The MPD port is `6600` in Volumio >= 4, and `6599` in Volumio < 4.
 
 For example, to connect to a Volumio 3 instance at local IP address `192.168.1.3`
 whose REST API is proxied to port 4567:
