@@ -2390,11 +2390,17 @@ volumito playlist download "qobuz queue test"
 
 ## Stories
 
-If you have a Volumio Premium (or better) account,
-you can get additional metadata (stories) about
-an artist, an album, a recording label or place.
+> [!WARNING]
+> The target Volumio host must run with a Volumio Premium (or better) account
+> for the additional metadata to be available.
+>
+> See the
+> [Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
+> section of the Volumio REST API documentation for the details.
 
-`volumito` provides the `story` command group to query those:
+`volumito` provides the `story` command group
+to query additional metadata (stories) about
+an artist, an album, a recording label or place.
 
 ```bash
 volumito story --help
@@ -2414,10 +2420,6 @@ Commands:
   label    Print the story of a label.
   place    Print the story of a place.
 ```
-
-See the
-[Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
-section of the Volumio REST API documentation for the details.
 
 ### Album Story
 
