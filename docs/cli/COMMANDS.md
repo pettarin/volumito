@@ -80,23 +80,33 @@ volumito
     version
 ```
 
-The above output has been generated on a system
-whose `~/.volumito.yaml` enables aliases.
-They appear within parentheses next to the corresponding command,
+> [!NOTE]
+> The above output has been generated on an installation
+> whose configuration file has aliases enabled.
+
+> [!TIP]
+> By default the `configuration create` command
+> produces a configuration file with suggested aliases,
+> but none of them is active, as they are all commented out.
+> If you would like to enable all or some of them,
+> uncomment the relevant lines under the `aliases:` section
+> of your configuration file.
+
+Aliases appear within parentheses next to the corresponding command,
 for instance `ti` for `track info`, so that
 
 ```bash
 volumito track info
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:34",
-    "position": 2,
-    "samplerate": "44.1 kHz",
-    "title": "2 - I giochi del vento sul lago salato",
-    "trackType": "flac"
+    "duration": "00:04:16",
+    "position": 5,
+    "samplerate": "44 KHz",
+    "title": "Titanic",
+    "trackType": "qobuz"
 }
 ```
 
@@ -105,15 +115,15 @@ and
 ```bash
 volumito ti
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:34",
-    "position": 2,
-    "samplerate": "44.1 kHz",
-    "title": "2 - I giochi del vento sul lago salato",
-    "trackType": "flac"
+    "duration": "00:04:16",
+    "position": 5,
+    "samplerate": "44 KHz",
+    "title": "Titanic",
+    "trackType": "qobuz"
 }
 ```
 

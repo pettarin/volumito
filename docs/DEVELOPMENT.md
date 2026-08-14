@@ -1,8 +1,9 @@
 # Development
 
-**IMPORTANT**: the examples in the documentation use `micromamba`
-               to manage virtual environments; feel free to replace it
-               with your favorite tool (`conda`, `uv`, etc.).
+> [!NOTE]
+> The examples in the documentation use `micromamba`
+> to manage virtual environments; feel free to replace it
+> with your favorite tool (`conda`, `uv`, etc.).
 
 ## Setup Development Environment
 
@@ -21,7 +22,14 @@ $ micromamba activate volumito_dev
 (volumito_dev) $ make install-e-this-dev
 ```
 
-You should be able to run:
+> [!NOTE]
+> The `dev` option installs all the extras
+> of the regular PyPI package `volumito`,
+> plus additional tools (e.g., `coverage`, `mypy`, `ruff`, etc.)
+> needed for development activities.
+
+You should be able to run the `volumito` CLI tool,
+automatically installed in the virtual environment:
 
 ```bash
 (volumito_dev) $ volumito version
@@ -40,7 +48,7 @@ volumito, version 0.1.0
 # Run unit tests only
 (volumito_dev) $ make test-unit
 
-# Run unit tests with coverage (HTML report in htmlcov/)
+# Run unit tests with coverage (HTML report produced in the `htmlcov/` directory)
 (volumito_dev) $ make coverage
 
 # Run linter
@@ -63,8 +71,8 @@ volumito/
 │   ├── CONTRIBUTING.md                     # how to report issues and contribute code
 │   ├── DEVELOPMENT.md                      # this file
 │   ├── LIBRARY_USAGE.md                    # Python library documentation
-│   ├── SECURITY.md                         # supported versions and how to report a vulnerability
-│   └── TODO.md                             # planned work, broken down by future milestone
+│   ├── ROADMAP.md                          # planned work, broken down by future milestone
+│   └── SECURITY.md                         # supported versions and how to report a vulnerability
 ├── res/
 │   └── copyright_header.txt                # header prepended to every source file
 ├── src/

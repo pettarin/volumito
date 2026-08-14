@@ -2,10 +2,16 @@
 
 # CLI Usage
 
-This document describes the `volumito` command-line tool.
-For using `volumito` as a Python library, see
-[LIBRARY USAGE](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md).
+This document describes the `volumito` command-line (CLI) tool.
 
+> [!TIP]
+> For using `volumito` as a Python library, see the
+> [Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
+> documentation.
+
+> [!NOTE]
+> For the sake of brevity, the `(volumito_env) $` shell prompt is omitted
+> in all the examples below.
 
 ## Table Of Contents
 
@@ -98,7 +104,7 @@ printing the version of the `volumito` tool itself:
 
 ```bash
 volumito version
-volumito, version 0.0.52
+volumito, version 0.1.0
 ```
 
 Check that you can connect to the Volumio host by issuing the `info` command:
@@ -117,11 +123,11 @@ volumito --host volumio.local info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
-        "artist": "Enrico Ruggeri",
+        "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg",
+        "artist": "Francesco De Gregori",
         "mute": false,
         "status": "play",
-        "track": "Rien Ne Va Plus",
+        "track": "Belli capelli",
         "volume": 20
     },
     "systemversion": "4.119",
@@ -142,8 +148,8 @@ you might need to add:
 - `-P / --rest-api-port INTEGER` (default: `3000`)
 - `--scheme [http|https]` (default: `http`).
 
-**NOTE**: the MPD port is `6600` in Volumio >= 4,
-and `6599` in Volumio < 4.
+> [!NOTE]
+> The MPD port is `6600` in Volumio >= 4, and `6599` in Volumio < 4.
 
 For example, to connect to a Volumio 3 instance at local IP address `192.168.1.3`
 whose REST API is proxied to port 4567:
@@ -155,12 +161,15 @@ volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 
 ## Check Your Volumito Configuration File
 
-**NOTE**: `volumito` can be used without a configuration file;
-          however creating a configuration file is strongly suggested,
-          as it allows storing preferences that otherwise need
-          to be specified at each invocation of the `volumito` CLI tool.
-          You can skip this section if you do not intend
-          to use a configuration file for `volumito`.
+> [!NOTE]
+> `volumito` can be used without a configuration file;
+> however creating a configuration file is strongly recommended,
+> as it allows storing preferences that otherwise need
+> to be specified as command line options
+> at each invocation of the `volumito` CLI tool.
+>
+> You can skip this section if you do not intend
+> to use a configuration file for `volumito`.
 
 You might want to run the `configuration search` command
 to check whether you already have a configuration file in your system:
@@ -190,7 +199,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-08-13T13:52:30.130Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-08-14T12:45:04.783Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -199,7 +208,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T13:52:30.573Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-14T12:45:05.230Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
@@ -477,10 +486,17 @@ unmute : playback unmute
 vol : playback volume
 ```
 
-Note that the `configuration create` command
-produces a configuration file with suggested aliases,
-but none of them is active,
-as they are commented out in the generated YAML file.
+> [!NOTE]
+> The above output has been generated on an installation
+> whose configuration file has aliases enabled.
+
+> [!TIP]
+> By default the `configuration create` command
+> produces a configuration file with suggested aliases,
+> but none of them is active, as they are all commented out.
+> If you would like to enable all or some of them,
+> uncomment the relevant lines under the `aliases:` section
+> of your configuration file.
 
 
 ## Control The Playback
@@ -493,18 +509,19 @@ issue the `playback status` command:
 ```bash
 volumito playback status
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
-    "duration": "00:03:59",
+    "channels": null,
+    "duration": "00:04:18",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44 KHz",
-    "seek": "00:01:07.593",
+    "seek": "00:01:24.869",
     "status": "play",
-    "title": "Certe Donne",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
 ```
 
@@ -515,13 +532,13 @@ volumito playback status --format table
 Volumio Status
 ==================================================
 Status              : play
-Position            : 5
-Title               : Certe Donne
-Artist              : Enrico Ruggeri
-Album               : La Vie En Rouge
-Duration            : 00:03:59
-Seek                : 00:01:08.093
-Volume              : 70
+Position            : 9
+Title               : San Lorenzo
+Artist              : Francesco De Gregori
+Album               : Titanic
+Duration            : 00:04:18
+Seek                : 00:01:25.369
+Volume              : 20
 Mute                : False
 Tracktype           : qobuz
 Samplerate          : 44 KHz
@@ -534,43 +551,50 @@ from the REST API:
 ```bash
 volumito playback status --fields ALL
 {
-    "album": "La Vie En Rouge",
-    "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
+    "channels": null,
     "consume": false,
     "dbVolume": null,
     "disableVolumeControl": false,
-    "duration": "00:03:59",
+    "duration": "00:04:18",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "random": false,
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44 KHz",
-    "seek": "00:01:08.593",
+    "seek": "00:01:25.870",
     "service": "qobuz",
     "status": "play",
     "stream": "qobuz",
-    "title": "Certe Donne",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
     "updatedb": false,
-    "uri": "qobuz://song/167921",
+    "uri": "qobuz://song/332312",
     "volatile": false,
-    "volume": 70
+    "volume": 20
 }
 ```
 
-Note: the `-F / --format` and `-L / --fields` options
-apply to several other `volumito` commands.
+> [!TIP]
+> The `-F / --format` and `-L / --fields` options
+> apply to several other `volumito` commands.
+>
+> Mind that built-in constants like `ALL` or `SHORT`
+> are spelled uppercased: `-L all` selects the field `all`,
+> while `-L ALL` selects all fields.
 
-Note: if the `-m / --machine-readable` option is given,
-the `volumito` output is always produced as valid JSON
-that can be consumed by a downstream application.
+> [!TIP]
+> If the `-m / --machine-readable` option is given,
+> the `volumito` output is always produced as valid JSON
+> that can be consumed by a downstream application.
 
 ```bash
 volumito -m playback status -F raw -L ALL
-{"status": "play", "position": 4, "title": "Certe Donne", "artist": "Enrico Ruggeri", "album": "La Vie En Rouge", "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg", "uri": "qobuz://song/167921", "trackType": "qobuz", "seek": 68843, "duration": 239, "samplerate": "44 KHz", "bitdepth": "16 bit", "random": false, "repeat": false, "repeatSingle": false, "consume": false, "volume": 70, "dbVolume": null, "disableVolumeControl": false, "mute": false, "stream": "qobuz", "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 8, "title": "San Lorenzo", "artist": "Francesco De Gregori", "album": "Titanic", "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg", "uri": "qobuz://song/332312", "trackType": "qobuz", "seek": 86370, "duration": 258, "samplerate": "44 KHz", "bitdepth": "16 bit", "channels": null, "random": false, "repeat": false, "repeatSingle": false, "consume": false, "volume": 20, "dbVolume": null, "disableVolumeControl": false, "mute": false, "stream": "qobuz", "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Pause And Stop
@@ -580,21 +604,21 @@ To pause the playback, use `playback pause`:
 ```bash
 volumito playback pause
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:09.593",
+    "seek": "00:01:27.372",
     "status": "pause",
-    "title": "Rien Ne Va Plus",
+    "title": "Belli capelli",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:30.179Z] [INFO] Command 'pause' executed successfully
+[2026-08-14T13:09:15.963Z] [INFO] Command 'pause' executed successfully
 ```
 
 By default, the resulting status of the playback is printed.
@@ -606,21 +630,21 @@ To toggle between pause and play, use `playback toggle`:
 ```bash
 volumito playback toggle
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:11.595",
+    "seek": "00:01:29.374",
     "status": "play",
-    "title": "Rien Ne Va Plus",
+    "title": "Belli capelli",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:32.675Z] [INFO] Command 'toggle' executed successfully
+[2026-08-14T13:09:18.491Z] [INFO] Command 'toggle' executed successfully
 ```
 
 To stop the playback, use `playback stop`:
@@ -628,21 +652,21 @@ To stop the playback, use `playback stop`:
 ```bash
 volumito playback stop
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.251",
     "status": "play",
-    "title": "Rien Ne Va Plus",
+    "title": "Belli capelli",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:35.198Z] [INFO] Command 'stop' executed successfully
+[2026-08-14T13:09:21.042Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Play Track At A Given Position
@@ -652,21 +676,21 @@ The `playback play` command starts playing the current queue.
 ```bash
 volumito playback play
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:00",
+    "duration": "00:04:18",
     "mute": false,
-    "position": 5,
+    "position": 9,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.252",
+    "seek": "00:00:01.002",
     "status": "play",
-    "title": "Certe Donne",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:37.692Z] [INFO] Command 'play' executed successfully
+[2026-08-14T13:09:23.556Z] [INFO] Command 'play' executed successfully
 ```
 
 It accepts an optional positional argument
@@ -677,21 +701,21 @@ For example, to play the third track:
 ```bash
 volumito playback play 3
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:18",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.000",
+    "seek": "00:00:00.751",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "San Lorenzo",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:40.288Z] [INFO] Command 'play' executed successfully
+[2026-08-14T13:09:26.202Z] [INFO] Command 'play' executed successfully
 ```
 
 ### Seeking
@@ -701,7 +725,7 @@ can be queried with `playback seek`:
 
 ```bash
 volumito playback seek
-00:00:01.501
+00:00:01.251
 ```
 
 and it can be set by providing a new value,
@@ -710,21 +734,21 @@ either in seconds:
 ```bash
 volumito playback seek 42
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:44.002",
+    "seek": "00:00:43.999",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:43.321Z] [INFO] Command 'seek 42' executed successfully
+[2026-08-14T13:09:29.201Z] [INFO] Command 'seek 42' executed successfully
 ```
 
 or in `HH:MM:SS` format:
@@ -732,21 +756,21 @@ or in `HH:MM:SS` format:
 ```bash
 volumito playback seek 00:01:42
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:44.004",
+    "seek": "00:01:43.999",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:45.836Z] [INFO] Command 'seek 102' executed successfully
+[2026-08-14T13:09:31.722Z] [INFO] Command 'seek 102' executed successfully
 ```
 
 or `plus/increase/up/forward` and `minus/decrease/down/backward`:
@@ -754,41 +778,41 @@ or `plus/increase/up/forward` and `minus/decrease/down/backward`:
 ```bash
 volumito playback seek forward
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.477",
+    "seek": "00:01:56.501",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:48.334Z] [INFO] Command 'seek plus' executed successfully
+[2026-08-14T13:09:34.236Z] [INFO] Command 'seek plus' executed successfully
 ```
 
 ```bash
 volumito playback seek minus
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:48.980",
+    "seek": "00:01:49.002",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
-    "volume": 70
+    "volume": 20
 }
-[2026-08-12T19:55:50.839Z] [INFO] Command 'seek minus' executed successfully
+[2026-08-14T13:09:36.743Z] [INFO] Command 'seek minus' executed successfully
 ```
 
 ### Volume Control
@@ -799,7 +823,7 @@ can be queried with `playback volume`:
 
 ```bash
 volumito playback volume
-70
+20
 ```
 
 and it can be set by providing a new value, either numerical:
@@ -807,21 +831,21 @@ and it can be set by providing a new value, either numerical:
 ```bash
 volumito playback volume 20
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:51.844",
+    "seek": "00:01:52.002",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:55:53.801Z] [INFO] Command 'volume 20' executed successfully
+[2026-08-14T13:09:39.826Z] [INFO] Command 'volume 20' executed successfully
 ```
 
 or `plus/increase/up` and `minus/decrease/down`:
@@ -829,41 +853,41 @@ or `plus/increase/up` and `minus/decrease/down`:
 ```bash
 volumito playback volume plus
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:54.486",
+    "seek": "00:01:54.503",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 21
 }
-[2026-08-12T19:55:56.403Z] [INFO] Command 'volume plus' executed successfully
+[2026-08-14T13:09:42.397Z] [INFO] Command 'volume plus' executed successfully
 ```
 
 ```bash
 volumito playback volume down
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.987",
+    "seek": "00:01:57.197",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:55:58.904Z] [INFO] Command 'volume minus' executed successfully
+[2026-08-14T13:09:44.921Z] [INFO] Command 'volume minus' executed successfully
 ```
 
 The playback volume can be muted and unmuted with
@@ -872,46 +896,46 @@ The playback volume can be muted and unmuted with
 ```bash
 volumito playback mute
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": true,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:59.597",
+    "seek": "00:01:59.701",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:56:01.450Z] [INFO] Command 'volume mute' executed successfully
+[2026-08-14T13:09:47.433Z] [INFO] Command 'volume mute' executed successfully
 ```
 
 ```bash
 volumito playback unmute
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:19",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:02.101",
+    "seek": "00:02:02.226",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "La leva calcistica della classe '68",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T19:56:03.955Z] [INFO] Command 'volume unmute' executed successfully
+[2026-08-14T13:09:49.952Z] [INFO] Command 'volume unmute' executed successfully
 ```
 
 ### Playback Help
 
-These are all subcommands of the `playback` group:
+These are all the subcommands of the `playback` group:
 
 ```bash
 volumito playback --help
@@ -951,14 +975,14 @@ of the current track being played:
 ```bash
 volumito track info
 {
-    "album": "La Vie En Rouge",
+    "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
-    "position": 3,
+    "duration": "00:03:16",
+    "position": 1,
     "samplerate": "44.1 kHz",
-    "title": "La Vie En Rouge",
+    "title": "Va tutto bene",
     "trackType": "qobuz"
 }
 ```
@@ -970,11 +994,11 @@ apply to this command as well:
 volumito track info --format table
 Track Info
 ==================================================
-Position            : 3
-Title               : La Vie En Rouge
+Position            : 1
+Title               : Va tutto bene
 Artist              : Enrico Ruggeri
-Album               : La Vie En Rouge
-Duration            : 00:04:08
+Album               : Polvere
+Duration            : 00:03:16
 Tracktype           : qobuz
 Samplerate          : 44.1 kHz
 Bitdepth            : 16 bit
@@ -984,30 +1008,30 @@ Channels            : 2
 ```bash
 volumito track info --fields ALL
 {
-    "album": "La Vie En Rouge",
-    "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
+    "album": "Polvere",
+    "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "bitrate": "930 Kbps",
+    "bitrate": "1 Kbps",
     "channels": 2,
     "consume": true,
     "dbVolume": null,
     "disableVolumeControl": false,
-    "duration": "00:04:08",
+    "duration": "00:03:16",
     "mute": false,
-    "position": 3,
+    "position": 1,
     "random": false,
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:03:19.762",
+    "seek": "00:01:16.044",
     "service": "qobuz",
     "status": "play",
     "stream": false,
-    "title": "La Vie En Rouge",
+    "title": "Va tutto bene",
     "trackType": "qobuz",
     "updatedb": false,
-    "uri": "qobuz://song/167919",
+    "uri": "qobuz://song/2833718",
     "volatile": false,
     "volume": 20
 }
@@ -1015,12 +1039,12 @@ volumito track info --fields ALL
 
 ```bash
 volumito -m track info -F raw -L ALL
-{"status": "play", "position": 2, "title": "La Vie En Rouge", "artist": "Enrico Ruggeri", "album": "La Vie En Rouge", "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg", "uri": "qobuz://song/167919", "trackType": "qobuz", "seek": 200151, "duration": 248, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "930 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 76546, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Track Help
 
-These are all subcommands of the `track` group:
+These are all the subcommands of the `track` group:
 
 ```bash
 volumito track --help
@@ -1055,6 +1079,7 @@ volumito queue list
         "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "duration": "00:03:15",
+        "name": "Va tutto bene",
         "position": 1,
         "title": "Va tutto bene",
         "tracknumber": 1,
@@ -1064,6 +1089,7 @@ volumito queue list
         "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "duration": "00:03:56",
+        "name": "Fuoco sui giocattoli",
         "position": 2,
         "title": "Fuoco sui giocattoli",
         "tracknumber": 2,
@@ -1073,6 +1099,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:07",
+        "name": "La Vie En Rouge",
         "position": 3,
         "title": "La Vie En Rouge",
         "tracknumber": 1,
@@ -1082,6 +1109,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:55",
+        "name": "Rien Ne Va Plus",
         "position": 4,
         "title": "Rien Ne Va Plus",
         "tracknumber": 2,
@@ -1091,6 +1119,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:03:59",
+        "name": "Certe Donne",
         "position": 5,
         "title": "Certe Donne",
         "tracknumber": 3,
@@ -1100,6 +1129,7 @@ volumito queue list
         "album": "Sirtaki",
         "artist": "Mango",
         "duration": "00:04:34",
+        "name": "I giochi del vento sul lago salato",
         "position": 6,
         "title": "I giochi del vento sul lago salato",
         "tracknumber": 2,
@@ -1109,6 +1139,7 @@ volumito queue list
         "album": "Sirtaki",
         "artist": "Mango",
         "duration": "00:04:14",
+        "name": "Sirtaki",
         "position": 7,
         "title": "Sirtaki",
         "tracknumber": 6,
@@ -1118,6 +1149,7 @@ volumito queue list
         "album": "Sirtaki",
         "artist": "Mango",
         "duration": "00:04:41",
+        "name": "Come Monna Lisa",
         "position": 8,
         "title": "Come Monna Lisa",
         "tracknumber": 7,
@@ -1127,6 +1159,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:39",
+        "name": "Il Mare D'Inverno",
         "position": 9,
         "title": "Il Mare D'Inverno",
         "tracknumber": 11,
@@ -1136,6 +1169,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:06",
+        "name": "Contessa",
         "position": 10,
         "title": "Contessa",
         "tracknumber": 12,
@@ -1145,6 +1179,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:49",
+        "name": "La Bandiera",
         "position": 11,
         "title": "La Bandiera",
         "tracknumber": 3,
@@ -1181,7 +1216,8 @@ volumito queue status
 
 ### Queue Clear
 
-To clear the current playback queue, issue the `queue clear` command:
+To clear the current playback queue,
+issue the `queue clear` command:
 
 ```bash
 volumito queue clear
@@ -1199,13 +1235,13 @@ volumito queue clear
     "title": "",
     "volume": 20
 }
-[2026-08-13T13:15:35.585Z] [INFO] Command 'clear' executed successfully
-[2026-08-13T13:15:37.604Z] [INFO] Command 'stop' executed successfully
+[2026-08-14T13:17:31.280Z] [INFO] Command 'clear' executed successfully
+[2026-08-14T13:17:33.299Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
 
-These are all subcommands of the `queue` group:
+These are all the subcommands of the `queue` group:
 
 ```bash
 volumito queue --help
@@ -1234,10 +1270,23 @@ in the Section [Download](#download) below.
 
 ## Playlists
 
+> [!NOTE]
+> In this section the word "playlist" refers to Volumio playlists
+> which might aggregate tracks from different services
+> (e.g., tracks stored in local files and Qobuz tracks).
+>
+> Some services (e.g., Qobuz) might define their own concept of "playlist",
+> but those "playlists" are not managed directly
+> by the `volumito playlist` command group.
+> Nevertheless, those "playlists" might still be discoverable and/or playable
+> using the `collection browse`, `collection search`,
+> and `queue replace` commands,
+> if they are endowed with their own URI.
+
 ### List All Playlists
 
 The `playlist list` command prints the identifiers
-of all the Volumio playlists:
+of all the available playlists:
 
 ```bash
 volumito playlist list
@@ -1252,10 +1301,9 @@ volumito playlist list
 
 ### Play A Playlist
 
-A Volumio playlist can be played,
-replacing the current playback queue with its contents.
-To do so, issue the `playlist play` command
-followed by the playlist identifier:
+To play a playlist (from its first track),
+replacing the current playback queue,
+issue the `playlist play` command followed by the playlist identifier:
 
 ```bash
 volumito playlist play "qobuz queue test"
@@ -1268,20 +1316,22 @@ volumito playlist play "qobuz queue test"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.511",
+    "seek": "00:00:00.390",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T20:14:05.213Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
+[2026-08-14T13:14:43.498Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
 ```
 
-Note: you might want to use double quotes if the identifier contains spaces.
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
 
 ### Playlist Help
 
-These are all subcommands of the `playlist` group:
+These are all the subcommands of the `playlist` group:
 
 ```bash
 volumito playlist --help
@@ -2340,11 +2390,24 @@ volumito playlist download "qobuz queue test"
 
 ## Stories
 
-If you have a Volumio Premium (or better) account,
-you can get additional metadata (stories) about
-an artist, an album, a recording label or place.
+> [!TIP]
+> The target Volumio host must run with a Volumio Premium (or better)
+> subscription for the additional metadata to be available;
+> otherwise an error will be returned.
+>
+> See the
+> [Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
+> section of the Volumio REST API documentation for the details.
 
-`volumito` provides the `story` command group to query those:
+> [!TIP]
+> The "Music Metadata Discovery" option in the "Sources" settings
+> of the target Volumio host must be enabled
+> for the additional metadata to be available;
+> otherwise an error will be returned.
+
+`volumito` provides the `story` command group
+to query additional metadata (stories) about
+an artist, an album, a recording label or place.
 
 ```bash
 volumito story --help
@@ -2364,10 +2427,6 @@ Commands:
   label    Print the story of a label.
   place    Print the story of a place.
 ```
-
-See the
-[Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
-section of the Volumio REST API documentation for the details.
 
 ### Album Story
 
@@ -3071,23 +3130,33 @@ volumito
     version
 ```
 
-The above output has been generated on a system
-whose `~/.volumito.yaml` enables aliases.
-They appear within parentheses next to the corresponding command,
+> [!NOTE]
+> The above output has been generated on an installation
+> whose configuration file has aliases enabled.
+
+> [!TIP]
+> By default the `configuration create` command
+> produces a configuration file with suggested aliases,
+> but none of them is active, as they are all commented out.
+> If you would like to enable all or some of them,
+> uncomment the relevant lines under the `aliases:` section
+> of your configuration file.
+
+Aliases appear within parentheses next to the corresponding command,
 for instance `ti` for `track info`, so that
 
 ```bash
 volumito track info
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:34",
-    "position": 2,
-    "samplerate": "44.1 kHz",
-    "title": "2 - I giochi del vento sul lago salato",
-    "trackType": "flac"
+    "duration": "00:04:16",
+    "position": 5,
+    "samplerate": "44 KHz",
+    "title": "Titanic",
+    "trackType": "qobuz"
 }
 ```
 
@@ -3096,15 +3165,15 @@ and
 ```bash
 volumito ti
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Titanic",
+    "artist": "Francesco De Gregori",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:34",
-    "position": 2,
-    "samplerate": "44.1 kHz",
-    "title": "2 - I giochi del vento sul lago salato",
-    "trackType": "flac"
+    "duration": "00:04:16",
+    "position": 5,
+    "samplerate": "44 KHz",
+    "title": "Titanic",
+    "trackType": "qobuz"
 }
 ```
 
@@ -3216,7 +3285,7 @@ file that looks like this:
 ```yaml
 # volumito CLI configuration file
 #
-# Generated with default values for version 0.0.52: edit as needed (and remove this comment)
+# Generated with default values for version 0.1.0: edit as needed (and remove this comment)
 
 aliases:
   # Aliases/shorthands for existing command paths (groups, commands, subcommands).
@@ -4097,8 +4166,9 @@ volumito multiroom zones
 ]
 ```
 
-Note that the Volumio host with `isSelf: true` is the one
-you are connecting to.
+> [!TIP]
+> The Volumio host with `isSelf: true` is the one
+> you are connecting to.
 
 ### Notifications
 
@@ -4269,11 +4339,20 @@ with subcommands `scp get` and `scp put`
 to copy files and directories from and to
 the Volumio host.
 
-**IMPORTANT**: use these commands at your own peril!
-               You might risk overwriting files or directories
-               on the Volumio host and/or your local machine,
-               resulting in loss of data or even compromising
-               the functionality of the Volumio host.
+> [!CAUTION]
+> **Use these commands at your own peril!**
+>
+> You might risk overwriting files or directories
+> on the Volumio host and/or your local machine,
+> resulting in loss of data or even compromising
+> the functionality of the Volumio host.
+
+> [!NOTE]
+> To use the `volumito scp` commands
+> you will need to install `volumito` with the `scp` extra:
+> `pip install volumito[scp]` instead of `pip install volumito`.
+> Since these are advanced (and potentially dangerous) commands,
+> the `scp` dependency is not installed by default.
 
 #### SSH Connection Parameters
 
@@ -4287,24 +4366,27 @@ the connection parameters:
 
 in addition to the obvious `--host` (default: `volumio.local`).
 
-**IMPORTANT**: you can provide the SSH password on the command line
-               (`volumito --ssh-password "volumio" scp ...`)
-               or in the `volumito` configuration file.
-               However doing so will result in the password
-               being in clear either in your shell history or
-               the configuration file on disk.
-               It is preferable to generate a pair of SSH private/public keys
-               on the machine running `volumito`, and add the public key
-               to the `~/.ssh/authorized_keys` file on the Volumio host.
-               By doing so, `volumito` will use the private key
-               when connecting over SSH, avoiding requiring the password.
-               The examples below use a registered SSH key,
-               therefore omitting the `--ssh-password` option.
-               If you are not familiar with SSH keys,
-               you can follow Step 1-3 of
-               [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server),
-               keeping in mind that in your case the `remote_host`
-               is your Volumio host.
+> [!WARNING]
+> You can provide the SSH password on the command line
+> (`volumito --ssh-password "volumio" scp ...`)
+> or in the `volumito` configuration file.
+> However doing so will result in the password
+> being in clear either in your shell history or
+> the configuration file on disk.
+>
+> It is preferable to generate a pair of SSH private/public keys
+> on the machine running `volumito`, and add the public key
+> to the `~/.ssh/authorized_keys` file on the Volumio host.
+> By doing so, `volumito` will use the private key
+> when connecting over SSH, avoiding requiring the password.
+> The examples below use a registered SSH key,
+> therefore omitting the `--ssh-password` option.
+>
+> If you are not familiar with SSH keys,
+> you can follow Step 1-3 of
+> [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server),
+> keeping in mind that in your case the `remote_host`
+> is your Volumio host.
 
 #### SCP Put
 
@@ -4323,16 +4405,17 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-08-13T13:24:53.529Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-08-14T13:41:10.380Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
-Note the error: to make sure you know what you are doing,
-`volumito` refuses to copy the file/directory
-unless you provide the `--yes` option:
+> [!WARNING]
+> Mind the error: to make sure you know what you are doing,
+> `volumito` refuses to copy the file/directory
+> unless you provide the `--yes` option:
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-08-13T13:24:54.679Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-08-14T13:41:11.561Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -4343,10 +4426,11 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-08-13T13:24:56.025Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-08-14T13:41:12.707Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
-Note that when using `scp get` you do not have to add the `--yes` option.
+> [!TIP]
+> When using `scp get` you do not have to add the `--yes` option.
 
 ```bash
 tree /tmp/mydir2
@@ -4383,7 +4467,7 @@ volumito system info
         "artist": "Enrico Ruggeri",
         "mute": false,
         "status": "play",
-        "track": "La Vie En Rouge",
+        "track": "Rien Ne Va Plus",
         "volume": 20
     },
     "systemversion": "4.119",
@@ -4403,8 +4487,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-08-13T13:25:25.766Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-08-13T13:25:25.766Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-14T13:45:29.055Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-08-14T13:45:29.056Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -4442,7 +4526,7 @@ For the `volumito` (client) version, use the `version` command:
 
 ```bash
 volumito version
-volumito, version 0.0.52
+volumito, version 0.1.0
 ```
 
 #### System Execute
@@ -4450,21 +4534,35 @@ volumito, version 0.0.52
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-**IMPORTANT**: be careful when using this command.
-               You might damage your Volumio host
-               (e.g., by removing files on it!),
-               to the point a full reinstall will be needed.
+> [!CAUTION]
+> **Use this command at your own peril!**
+>
+> You might damage your Volumio host
+> (e.g., by removing files on it!),
+> to the point a full reinstall will be needed.
+
+> [!NOTE]
+> To use the `volumito system execute` command
+> you will need to install `volumito` with the `scp` extra:
+> `pip install volumito[scp]` instead of `pip install volumito`.
+> Since this is an advanced (and potentially dangerous) command,
+> the `scp` dependency is not installed by default.
+
+The same important remarks contained in Section
+[SSH Connection Parameters](#ssh-connection-parameters)
+apply here.
 
 To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-08-13T13:25:28.259Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-08-14T13:45:31.340Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
-Note the error: to make sure you know what you are doing,
-`volumito` refuses to execute the command
-unless you provide the `--yes` option:
+> [!WARNING]
+> Mind the error: to make sure you know what you are doing,
+> `volumito` refuses to execute the command
+> unless you provide the `--yes` option:
 
 ```bash
 volumito system execute "ls /tmp/" --yes
@@ -4472,12 +4570,13 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\npayload.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsnapfifo\nsshtunnel.sh\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9\nsystemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD\nupdater\nvolume\nwireless.log"
+    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsshtunnel.sh\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-bluealsa.service-xyhprP\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-haveged.service-K7qpRC\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-ntpsec.service-M6ONNZ\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-systemd-logind.service-niT43i\nupdater\nvolume\nwireless.log"
 }
 ```
 
-Note that you might need to process the response
-to make sense of the stdout/stderr encoded in the JSON response:
+> [!TIP]
+> You might need to process the response
+> to make sense of the stdout/stderr encoded in the JSON response:
 
 ```bash
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
@@ -4485,22 +4584,16 @@ getvolume
 hls
 multiroom
 myvolumio-remote.json
-payload.json
 qbz-connect.cfg
 qbz-connect.socket
 setvolume
 shairport-sync-metadata
-snapfifo
 sshtunnel.sh
-systemd-private-5b2b55cf976743be89990cbfe35879fd-bluealsa.service-xYThXA
-systemd-private-5b2b55cf976743be89990cbfe35879fd-haveged.service-mUAQyE
-systemd-private-5b2b55cf976743be89990cbfe35879fd-ntpsec.service-g03kM9
-systemd-private-5b2b55cf976743be89990cbfe35879fd-systemd-logind.service-59GwoD
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-bluealsa.service-xyhprP
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-haveged.service-K7qpRC
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-ntpsec.service-M6ONNZ
+systemd-private-c3e0732438754ab492bd9f43dbb49f05-systemd-logind.service-niT43i
 updater
 volume
 wireless.log
 ```
-
-The same remarks contained in Section
-[SSH Connection Parameters](#ssh-connection-parameters)
-apply here.

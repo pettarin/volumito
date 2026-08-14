@@ -1,9 +1,11 @@
 # Library Usage
 
 This document describes how to use `volumito` as a Python library.
-For the command-line tool, see
-[CLI USAGE](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md).
 
+> [!TIP]
+> For the command-line tool `volumito`, see the
+> [CLI Usage](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
+> guide.
 
 ## Contents
 
@@ -177,6 +179,9 @@ except VolumioStoryError as e:
 
 ## Response Models
 
+> [!WARNING]
+> This section needs to be reviewed before version 1.0.0 is released.
+
 Every query returns a model instead of a raw dictionary:
 
 | Client member                                       | Model                               |
@@ -233,6 +238,10 @@ accept a `logger` argument, for callers who manage their own.
 
 
 ## Reference
+
+> [!WARNING]
+> The Python reference documentation is not available at the moment;
+> it will be published once version 1.0.0 is released.
 
 The Python reference documentation is published
 [here](https://www.albertopettarin.it/volumito/docs/).

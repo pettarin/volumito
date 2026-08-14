@@ -22,12 +22,18 @@ from the REST API:
 volumito playback status --fields ALL
 ```
 
-Note: the `-F / --format` and `-L / --fields` options
-apply to several other `volumito` commands.
+> [!TIP]
+> The `-F / --format` and `-L / --fields` options
+> apply to several other `volumito` commands.
+>
+> Mind that built-in constants like `ALL` or `SHORT`
+> are spelled uppercased: `-L all` selects the field `all`,
+> while `-L ALL` selects all fields.
 
-Note: if the `-m / --machine-readable` option is given,
-the `volumito` output is always produced as valid JSON
-that can be consumed by a downstream application.
+> [!TIP]
+> If the `-m / --machine-readable` option is given,
+> the `volumito` output is always produced as valid JSON
+> that can be consumed by a downstream application.
 
 ```bash lucio command=execute
 volumito -m playback status -F raw -L ALL
@@ -145,7 +151,7 @@ volumito playback unmute
 
 ### Playback Help
 
-These are all subcommands of the `playback` group:
+These are all the subcommands of the `playback` group:
 
 ```bash lucio command=execute
 volumito playback --help

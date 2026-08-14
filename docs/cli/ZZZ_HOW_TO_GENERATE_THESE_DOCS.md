@@ -1,4 +1,4 @@
-# Generating The CLI Usage Documentation
+# How To Generate The CLI Usage Documentation
 
 The CLI Usage documentation for `volumio`,
 specifically the `*.md` files in
@@ -6,11 +6,18 @@ specifically the `*.md` files in
 is generated from template files (`*.tmd`) by
 [`lucio`](https://github.com/pettarin/lucio).
 
-This requires a virtual environment (say, `volumito_docs`)
-where both `volumito[dev]` and `lucio` are installed,
-and a target Volumio host reachable at `volumio.local`.
+## Requirements
 
-The workflow is the following:
+To (re)generate these documents, we need:
+
+1. a virtual environment (named, say, `volumito_docs`)
+   where both `volumito[dev]` and `lucio` are `pip`-installed;
+2. the `~/.volumito.yaml` file with aliases enabled
+   being present on the machine running `lucio`;
+3. a target Volumio host reachable at `volumio.local`
+   with a playlist named "qobuz queue test" defined.
+
+## Workflow
 
 1. Modify the relevant `*.tmd` template file(s).
 2. Regenerate the `.md` file for each of the modified `*.tmd` template files.
@@ -69,6 +76,8 @@ The workflow is the following:
    [2026-08-13T15:16:52.576Z] [DEBU] INDEX.tmd:147: including "SYSTEM.md"
    [2026-08-13T15:16:52.578Z] [INFO] Rendering "INDEX.tmd" into "INDEX.md"... done
    ```
+
+## Limitations
 
 Currently the generation of the documentation is _almost_ automated,
 except for two aspects:

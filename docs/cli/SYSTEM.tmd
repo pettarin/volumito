@@ -57,10 +57,23 @@ volumito version
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-**IMPORTANT**: be careful when using this command.
-               You might damage your Volumio host
-               (e.g., by removing files on it!),
-               to the point a full reinstall will be needed.
+> [!CAUTION]
+> **Use this command at your own peril!**
+>
+> You might damage your Volumio host
+> (e.g., by removing files on it!),
+> to the point a full reinstall will be needed.
+
+> [!NOTE]
+> To use the `volumito system execute` command
+> you will need to install `volumito` with the `scp` extra:
+> `pip install volumito[scp]` instead of `pip install volumito`.
+> Since this is an advanced (and potentially dangerous) command,
+> the `scp` dependency is not installed by default.
+
+The same important remarks contained in Section
+[SSH Connection Parameters](#ssh-connection-parameters)
+apply here.
 
 To run the `ls /tmp/` command on the Volumio host issue:
 
@@ -68,22 +81,20 @@ To run the `ls /tmp/` command on the Volumio host issue:
 volumito system execute "ls /tmp/"
 ```
 
-Note the error: to make sure you know what you are doing,
-`volumito` refuses to execute the command
-unless you provide the `--yes` option:
+> [!WARNING]
+> Mind the error: to make sure you know what you are doing,
+> `volumito` refuses to execute the command
+> unless you provide the `--yes` option:
 
 ```bash lucio command=execute
 volumito system execute "ls /tmp/" --yes
 ```
 
-Note that you might need to process the response
-to make sense of the stdout/stderr encoded in the JSON response:
+> [!TIP]
+> You might need to process the response
+> to make sense of the stdout/stderr encoded in the JSON response:
 
 ```bash lucio command=execute
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
 ```
-
-The same remarks contained in Section
-[SSH Connection Parameters](#ssh-connection-parameters)
-apply here.
 

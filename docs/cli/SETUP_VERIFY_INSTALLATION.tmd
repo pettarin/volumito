@@ -31,8 +31,8 @@ you might need to add:
 - `-P / --rest-api-port INTEGER` (default: `3000`)
 - `--scheme [http|https]` (default: `http`).
 
-**NOTE**: the MPD port is `6600` in Volumio >= 4,
-and `6599` in Volumio < 4.
+> [!NOTE]
+> The MPD port is `6600` in Volumio >= 4, and `6599` in Volumio < 4.
 
 For example, to connect to a Volumio 3 instance at local IP address `192.168.1.3`
 whose REST API is proxied to port 4567:

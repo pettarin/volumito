@@ -1,6 +1,6 @@
 # volumito
 
-Python client library and CLI tool for Volumio.
+Python client library and CLI tool for [Volumio](https://volumio.com/).
 
 
 ## Overview
@@ -29,9 +29,10 @@ host.
 
 ## Installation
 
-**IMPORTANT**: the examples in the documentation use `micromamba`
-               to manage virtual environments; feel free to replace it
-               with your favorite tool (`conda`, `uv`, etc.).
+> [!NOTE]
+> The examples in the documentation use `micromamba`
+> to manage virtual environments; feel free to replace it
+> with your favorite tool (`conda`, `uv`, etc.).
 
 ### From PyPI (Recommended)
 
@@ -50,14 +51,15 @@ $ micromamba activate volumito_env
 (volumito_env) $ pip install volumito
 ```
 
-To download the tracks stored on the Volumio host, which are copied over SCP,
-install the `scp` extra as well:
+> [!NOTE]
+> To use the `volumito scp` and `volumito system execute` commands
+> you will need to install the `scp` extra:
+> `pip install volumito[scp]`.
+> Since those are advanced (and potentially dangerous) commands,
+> the `scp` dependency is not installed by default.
 
-```bash
-(volumito_env) $ pip install volumito[scp]
-```
-
-You should be able to run:
+You should be able to run the `volumito` CLI tool,
+automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
@@ -74,7 +76,7 @@ $ micromamba activate volumito_env
 volumito, version 0.1.0
 ```
 
-To update `volumito`, use the `-U/--upgrade` option:
+To update `volumito`, use the `-U / --upgrade` option:
 
 ```bash
 $ micromamba activate volumito_env
@@ -100,7 +102,15 @@ $ micromamba activate volumito_env
 (volumito_env) $ make install-e-this
 ```
 
-You should be able to run:
+> [!NOTE]
+> To use the `volumito scp` and `volumito system execute` commands
+> you will need to install the `scp` extra:
+> `pip install -e .[scp]` or `make install-e-this-scp`.
+> Since those are advanced (and potentially dangerous) commands,
+> the `scp` dependency is not installed by default.
+
+You should be able to run the `volumito` CLI tool,
+automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
@@ -112,21 +122,35 @@ volumito, version 0.1.0
 
 ### CLI Usage
 
+The
+[CLI Usage](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
+guide describes all the commands, subcommands, and most of the options
+of the CLI tool `volumito`.
+
 Some examples of the commands made available
 by the CLI tool `volumito` in the virtual enviroment
 where it is installed:
 
+> [!NOTE]
+> For the sake of brevity, in the following examples:
+> - the `(volumito_env) $` shell prompt is omitted;
+> - some commands are shown without their output or with truncated output;
+> - several commands and options are not illustrated.
+> Consult the
+> [CLI Usage](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
+> for a comprehensive guide of the CLI tool `volumito`.
+
 ```bash
-$ # print help/usage messages; it works globally and on commands and subcommands
-$ volumito --help
-$ volumito playback --help
+# print help/usage messages; it works globally and on commands and subcommands
+volumito --help
+volumito playback --help
 
-$ # create a configuration file (you might want to inspect/edit it later)
-$ volumito configuration create -o ~/volumito.yaml
-Created configuration file ~/volumito.yaml
+# create a configuration file (you might want to inspect/edit it later)
+volumito configuration create -o ~/volumito.yaml
+[2026-08-13T13:52:30.130Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 
-$ # print information about the Volumio host
-$ volumito system info
+# print information about the Volumio host
+volumito system info
 {
     "builddate": "Tue Mar 24 17:20:52 UTC 2026",
     "hardware": "pi",
@@ -151,8 +175,8 @@ $ volumito system info
     "variant": "volumio"
 }
 
-$ # print the playback status
-$ volumito playback status
+# print the playback status
+volumito playback status
 {
     "album": "Sirtaki",
     "artist": "Mango",
@@ -169,8 +193,8 @@ $ volumito playback status
     "volume": 20
 }
 
-$ # print the list of tracks currently in the reproduction queue
-$ volumito queue get
+# print the list of tracks currently in the reproduction queue
+volumito queue get
 [
     {
         "album": "Polvere",
@@ -190,15 +214,6 @@ $ volumito queue get
         "tracknumber": 2,
         "volumeNumber": 1
     },
-    {
-        "album": "La Vie En Rouge",
-        "artist": "Enrico Ruggeri",
-        "duration": "00:04:07",
-        "position": 3,
-        "title": "La Vie En Rouge",
-        "tracknumber": 1,
-        "volumeNumber": 1
-    },
     ...
     {
         "album": "La Vie En Rouge",
@@ -211,9 +226,9 @@ $ volumito queue get
     }
 ]
 
-$ # print information about the current track,
-$ # with a short format (a subset of all available fields)
-$ volumito track info
+# print information about the current track,
+# with a short format (a subset of all available fields)
+volumito track info
 {
     "album": "Sirtaki",
     "artist": "Mango",
@@ -226,9 +241,9 @@ $ volumito track info
     "trackType": "qobuz"
 }
 
-$ # print information about the current track,
-$ # with all the available fields
-$ volumito track info --fields all
+# print information about the current track,
+# with all the available fields
+volumito track info --fields ALL
 {
     "album": "Sirtaki",
     "albumart": "https://static.qobuz.com/images/covers/64/04/0639842660464_600.jpg",
@@ -257,28 +272,28 @@ $ volumito track info --fields all
     "volume": 20
 }
 
-$ # control the playback on the Volumio host
-$ volumito playback play
-$ volumito playback pause
-$ volumito playback stop
-$ volumito playback previous
-$ volumito playback next
-$ volumito playback seek 00:01:02
-$ volumito playback mute
-$ volumito playback unmute
-$ volumito playback volume 80
+# control the playback on the Volumio host
+volumito playback play
+volumito playback pause
+volumito playback stop
+volumito playback previous
+volumito playback next
+volumito playback seek 00:01:02
+volumito playback mute
+volumito playback unmute
+volumito playback volume 80
 
-$ # print the list of all available playlists
-$ volumito playlist list
+# print the list of all available playlists
+volumito playlist list
 [
     "another playlist",
     "my awesome playlist",
     "volumito test playlist"
 ]
 
-$ # play the specified playlist, replacing the current queue
-$ volumito playlist play "my awesome playlist"
-Command 'playplaylist my awesome playlist' executed successfully
+# play the specified playlist, replacing the current queue
+volumito playlist play "my awesome playlist"
+[2026-08-12T20:14:05.213Z] [INFO] Command 'playplaylist "my awesome playlist"' executed successfully
 {
     "album": "Sirtaki",
     "artist": "Mango",
@@ -296,14 +311,13 @@ Command 'playplaylist my awesome playlist' executed successfully
 }
 ```
 
-The
-[CLI Usage](https://github.com/pettarin/volumito/blob/main/docs/cli/INDEX.md)
-document describes all the commands, subcommands, and options
-of the CLI tool `volumito`.
-
 ### Library Usage
 
-A quick example:
+The
+[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
+document contains the API reference of the Python library `volumito`.
+
+The following is a short example:
 
 ```python
 from volumito import (
@@ -389,10 +403,6 @@ else:
     print(f"No such playlist: '{playlist_name}'")
 ```
 
-The
-[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
-document contains the API reference of the Python library `volumito`.
-
 
 ## Releases And Changelog
 
@@ -439,3 +449,4 @@ Please refer to the
 
 This project and its authors are not affiliated
 nor endorsed by Volumio SRL.
+

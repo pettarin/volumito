@@ -11,6 +11,7 @@
 	dist \
 	install-e-this \
 	install-e-this-dev \
+	install-e-this-scp \
 	lint \
 	micromamba-create \
 	micromamba-create-dev \
@@ -24,6 +25,7 @@
 	reinstall-e-this \
 	reinstall-e-this-dev \
 	reinstall-e-this-dev-test \
+	reinstall-e-this-scp \
 	test \
 	test-all \
 	test-unit \
@@ -44,10 +46,12 @@ help:
 	@echo "  dist                       - Create distribution packages (same as build)"
 	@echo "  install-e-this             - Install package in editable mode"
 	@echo "  install-e-this-dev         - Install package in editable mode with dev dependencies"
+	@echo "  install-e-this-dev         - Install package in editable mode with scp dependencies"
 	@echo "  lint                       - Run ruff linter"
 	@echo "  reinstall-e-this           - Install package in editable mode"
 	@echo "  reinstall-e-this-dev       - Install package in editable mode with dev dependencies"
 	@echo "  reinstall-e-this-dev-test  - Install package in editable mode with dev dependencies and run all tests"
+	@echo "  reinstall-e-this-scp       - Install package in editable mode with scp dependencies"
 	@echo "  test                       - Synonym of test-all"
 	@echo "  test-all                   - Run all checks (tests, linter, and type checker)"
 	@echo "  test-unit                  - Run tests"
@@ -58,6 +62,9 @@ install-e-this:
 
 install-e-this-dev:
 	pip install -e .[dev]
+
+install-e-this-scp:
+	pip install -e .[scp]
 
 uninstall-this:
 	pip uninstall volumito --yes
@@ -73,6 +80,10 @@ reinstall-e-this-dev: \
 reinstall-e-this-dev-test: \
 	reinstall-e-this-dev \
 	test
+
+reinstall-e-this-scp: \
+	uninstall-this \
+	install-e-this-scp
 
 test: \
 	test-all

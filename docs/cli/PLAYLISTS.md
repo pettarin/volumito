@@ -2,10 +2,23 @@
 
 ## Playlists
 
+> [!NOTE]
+> In this section the word "playlist" refers to Volumio playlists
+> which might aggregate tracks from different services
+> (e.g., tracks stored in local files and Qobuz tracks).
+>
+> Some services (e.g., Qobuz) might define their own concept of "playlist",
+> but those "playlists" are not managed directly
+> by the `volumito playlist` command group.
+> Nevertheless, those "playlists" might still be discoverable and/or playable
+> using the `collection browse`, `collection search`,
+> and `queue replace` commands,
+> if they are endowed with their own URI.
+
 ### List All Playlists
 
 The `playlist list` command prints the identifiers
-of all the Volumio playlists:
+of all the available playlists:
 
 ```bash
 volumito playlist list
@@ -20,10 +33,9 @@ volumito playlist list
 
 ### Play A Playlist
 
-A Volumio playlist can be played,
-replacing the current playback queue with its contents.
-To do so, issue the `playlist play` command
-followed by the playlist identifier:
+To play a playlist (from its first track),
+replacing the current playback queue,
+issue the `playlist play` command followed by the playlist identifier:
 
 ```bash
 volumito playlist play "qobuz queue test"
@@ -36,20 +48,22 @@ volumito playlist play "qobuz queue test"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.511",
+    "seek": "00:00:00.390",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-08-12T20:14:05.213Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
+[2026-08-14T13:14:43.498Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
 ```
 
-Note: you might want to use double quotes if the identifier contains spaces.
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
 
 ### Playlist Help
 
-These are all subcommands of the `playlist` group:
+These are all the subcommands of the `playlist` group:
 
 ```bash
 volumito playlist --help

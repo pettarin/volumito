@@ -20,7 +20,8 @@ volumito queue status
 
 ### Queue Clear
 
-To clear the current playback queue, issue the `queue clear` command:
+To clear the current playback queue,
+issue the `queue clear` command:
 
 ```bash lucio command=execute
 volumito queue clear
@@ -28,7 +29,7 @@ volumito queue clear
 
 ### Queue Help
 
-These are all subcommands of the `queue` group:
+These are all the subcommands of the `queue` group:
 
 ```bash lucio command=execute
 volumito queue --help

@@ -13,4 +13,4 @@ are currently being supported with security updates.
 ## Reporting a Vulnerability
 
 To report a vulnerability please send an email to
-[volumito@albertopettarin.it](mailto:volumito@albertopettarin.it) .
+[volumito@albertopettarin.it](mailto:volumito@albertopettarin.it).

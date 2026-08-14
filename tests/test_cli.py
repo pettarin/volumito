@@ -1587,14 +1587,14 @@ class TestCLICommands:
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.0.53" in result.output
+        assert "volumito, version 0.1.0" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.53"'
+        assert result.output.strip() == '"0.1.0"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1603,7 +1603,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.0.53"'
+        assert result.output.strip() == '"0.1.0"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -8338,7 +8338,9 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "label", "--current-track"])
 
         assert result.exit_code == 2
-        assert "No such option: --current-track" in result.output
+        # Click quotes the option name of this message since 8.4
+        assert "No such option" in result.output
+        assert "--current-track" in result.output
         mock_client.get_story.assert_not_called()
 
     def test_failure_envelope(self, runner: CliRunner, mocker: MockerFixture):
@@ -13114,7 +13116,9 @@ class TestConfigurationCommands:
         result = runner.invoke(main, ["configuration", "create", "-f", "y"])
 
         assert result.exit_code == 2
-        assert "No such option: -f" in result.output
+        # Click quotes the option name of this message since 8.4
+        assert "No such option" in result.output
+        assert "-f" in result.output
 
     def test_create_refuses_overwrite(self, runner: CliRunner, tmp_path):
         """Without --overwrite-existing-files, create refuses to clobber."""
