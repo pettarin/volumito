@@ -266,7 +266,13 @@ unmute : playback unmute
 vol : playback volume
 ```
 
-Note that the `configuration create` command
-produces a configuration file with suggested aliases,
-but none of them is active,
-as they are commented out in the generated YAML file.
+> [!NOTE]
+> The above output has been generated on an installation
+> whose configuration file has aliases enabled.
+>
+> By default the `configuration create` command
+> produces a configuration file with suggested aliases,
+> but none of them is active, as they are all commented out.
+>
+> If you would like to enable all or some of them,
+> uncomment the relevant lines under the `aliases:` section.
