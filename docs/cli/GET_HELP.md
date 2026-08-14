@@ -269,7 +269,8 @@ vol : playback volume
 > [!NOTE]
 > The above output has been generated on an installation
 > whose configuration file has aliases enabled.
->
+
+> [!TIP]
 > By default the `configuration create` command
 > produces a configuration file with suggested aliases,
 > but none of them is active, as they are all commented out.
