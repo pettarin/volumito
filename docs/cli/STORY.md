@@ -2,13 +2,20 @@
 
 ## Stories
 
-> [!WARNING]
-> The target Volumio host must run with a Volumio Premium (or better) account
-> for the additional metadata to be available.
+> [!TIP]
+> The target Volumio host must run with a Volumio Premium (or better)
+> subscription for the additional metadata to be available;
+> otherwise an empty response will be returned.
 >
 > See the
 > [Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
 > section of the Volumio REST API documentation for the details.
+
+> [!TIP]
+> The "Music Metadata Discovery" option in the "Sources" settings
+> of the target Volumio host must be enabled
+> for the additional metadata to be available;
+> otherwise an empty response will be returned.
 
 `volumito` provides the `story` command group
 to query additional metadata (stories) about
