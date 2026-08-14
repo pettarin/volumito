@@ -1,6 +1,6 @@
 # volumito
 
-Python client library and CLI tool for Volumio.
+Python client library and CLI tool for [Volumio](https://volumio.com/).
 
 
 ## Overview
@@ -29,9 +29,10 @@ host.
 
 ## Installation
 
-**IMPORTANT**: the examples in the documentation use `micromamba`
-               to manage virtual environments; feel free to replace it
-               with your favorite tool (`conda`, `uv`, etc.).
+> [!NOTE]
+> The examples in the documentation use `micromamba`
+> to manage virtual environments; feel free to replace it
+> with your favorite tool (`conda`, `uv`, etc.).
 
 ### From PyPI (Recommended)
 

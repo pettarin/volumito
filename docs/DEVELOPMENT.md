@@ -1,8 +1,9 @@
 # Development
 
-**IMPORTANT**: the examples in the documentation use `micromamba`
-               to manage virtual environments; feel free to replace it
-               with your favorite tool (`conda`, `uv`, etc.).
+> [!NOTE]
+> The examples in the documentation use `micromamba`
+> to manage virtual environments; feel free to replace it
+> with your favorite tool (`conda`, `uv`, etc.).
 
 ## Setup Development Environment
 
@@ -63,8 +64,8 @@ volumito/
 │   ├── CONTRIBUTING.md                     # how to report issues and contribute code
 │   ├── DEVELOPMENT.md                      # this file
 │   ├── LIBRARY_USAGE.md                    # Python library documentation
-│   ├── SECURITY.md                         # supported versions and how to report a vulnerability
-│   └── TODO.md                             # planned work, broken down by future milestone
+│   ├── ROADMAP.md                          # planned work, broken down by future milestone
+│   └── SECURITY.md                         # supported versions and how to report a vulnerability
 ├── res/
 │   └── copyright_header.txt                # header prepended to every source file
 ├── src/

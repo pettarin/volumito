@@ -1,11 +1,13 @@
 # Contributing
 
-**Code contributions are not currently being accepted,
-as the Python API is not stable yet (version < 1.0.0).**
-(This message will be removed as soon as version 1.0.0 is published.)
+> [!IMPORTANT]
+> **Code contributions are not currently being accepted,
+> as the Python API is not stable yet (version < 1.0.0).**
+> (This message will be removed as soon as version 1.0.0 is published.)
 
-All the spaces of the project are governed by the
-[Code of Conduct](https://github.com/pettarin/volumito/blob/main/docs/CODE_OF_CONDUCT.md).
+> [!NOTE]
+> All the spaces of the project are governed by the
+> [Code of Conduct](https://github.com/pettarin/volumito/blob/main/docs/CODE_OF_CONDUCT.md).
 
 
 ## GitHub Issues

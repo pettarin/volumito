@@ -234,5 +234,9 @@ accept a `logger` argument, for callers who manage their own.
 
 ## Reference
 
+> [!WARNING]
+> The Python reference documentation is not available at the moment;
+> it will be published once v1.0.0 is released.
+
 The Python reference documentation is published
 [here](https://www.albertopettarin.it/volumito/docs/).
