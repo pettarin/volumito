@@ -36,5 +36,6 @@ volumito multiroom zones
 ]
 ```
 
-Note that the Volumio host with `isSelf: true` is the one
-you are connecting to.
+> [!TIP]
+> The Volumio host with `isSelf: true` is the one
+> you are connecting to.
