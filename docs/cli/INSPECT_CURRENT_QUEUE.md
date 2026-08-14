@@ -14,6 +14,7 @@ volumito queue list
         "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "duration": "00:03:15",
+        "name": "Va tutto bene",
         "position": 1,
         "title": "Va tutto bene",
         "tracknumber": 1,
@@ -23,6 +24,7 @@ volumito queue list
         "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "duration": "00:03:56",
+        "name": "Fuoco sui giocattoli",
         "position": 2,
         "title": "Fuoco sui giocattoli",
         "tracknumber": 2,
@@ -32,6 +34,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:07",
+        "name": "La Vie En Rouge",
         "position": 3,
         "title": "La Vie En Rouge",
         "tracknumber": 1,
@@ -41,6 +44,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:55",
+        "name": "Rien Ne Va Plus",
         "position": 4,
         "title": "Rien Ne Va Plus",
         "tracknumber": 2,
@@ -50,6 +54,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:03:59",
+        "name": "Certe Donne",
         "position": 5,
         "title": "Certe Donne",
         "tracknumber": 3,
@@ -59,6 +64,7 @@ volumito queue list
         "album": "Sirtaki",
         "artist": "Mango",
         "duration": "00:04:34",
+        "name": "I giochi del vento sul lago salato",
         "position": 6,
         "title": "I giochi del vento sul lago salato",
         "tracknumber": 2,
@@ -68,6 +74,7 @@ volumito queue list
         "album": "Sirtaki",
         "artist": "Mango",
         "duration": "00:04:14",
+        "name": "Sirtaki",
         "position": 7,
         "title": "Sirtaki",
         "tracknumber": 6,
@@ -77,6 +84,7 @@ volumito queue list
         "album": "Sirtaki",
         "artist": "Mango",
         "duration": "00:04:41",
+        "name": "Come Monna Lisa",
         "position": 8,
         "title": "Come Monna Lisa",
         "tracknumber": 7,
@@ -86,6 +94,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:39",
+        "name": "Il Mare D'Inverno",
         "position": 9,
         "title": "Il Mare D'Inverno",
         "tracknumber": 11,
@@ -95,6 +104,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:06",
+        "name": "Contessa",
         "position": 10,
         "title": "Contessa",
         "tracknumber": 12,
@@ -104,6 +114,7 @@ volumito queue list
         "album": "La Vie En Rouge",
         "artist": "Enrico Ruggeri",
         "duration": "00:04:49",
+        "name": "La Bandiera",
         "position": 11,
         "title": "La Bandiera",
         "tracknumber": 3,
@@ -140,7 +151,8 @@ volumito queue status
 
 ### Queue Clear
 
-To clear the current playback queue, issue the `queue clear` command:
+To clear the current playback queue,
+issue the `queue clear` command:
 
 ```bash
 volumito queue clear
@@ -158,13 +170,13 @@ volumito queue clear
     "title": "",
     "volume": 20
 }
-[2026-08-13T13:15:35.585Z] [INFO] Command 'clear' executed successfully
-[2026-08-13T13:15:37.604Z] [INFO] Command 'stop' executed successfully
+[2026-08-14T13:17:31.280Z] [INFO] Command 'clear' executed successfully
+[2026-08-14T13:17:33.299Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
 
-These are all subcommands of the `queue` group:
+These are all the subcommands of the `queue` group:
 
 ```bash
 volumito queue --help
