@@ -22,7 +22,14 @@ $ micromamba activate volumito_dev
 (volumito_dev) $ make install-e-this-dev
 ```
 
-You should be able to run:
+> [!NOTE]
+> The `dev` option installs all the extras
+> of the regular PyPI package `volumito`,
+> plus additional tools (e.g., `coverage`, `mypy`, `ruff`, etc.)
+> needed for development activities.
+
+You should be able to run the `volumito` CLI tool,
+automatically installed in the virtual environment:
 
 ```bash
 (volumito_dev) $ volumito version
@@ -41,7 +48,7 @@ volumito, version 0.1.0
 # Run unit tests only
 (volumito_dev) $ make test-unit
 
-# Run unit tests with coverage (HTML report in htmlcov/)
+# Run unit tests with coverage (HTML report produced in the `htmlcov/` directory)
 (volumito_dev) $ make coverage
 
 # Run linter
