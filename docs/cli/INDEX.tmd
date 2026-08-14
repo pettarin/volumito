@@ -7,6 +7,10 @@ This document describes the `volumito` command-line (CLI) tool.
 > [Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
 > documentation.
 
+> [!NOTE]
+> For the sake of brevity, the `(volumito_env) $` shell prompt is omitted
+> in all the examples below.
+
 ## Table Of Contents
 
 - [Verify Your Installation](#verify-your-installation)

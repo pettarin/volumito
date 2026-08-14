@@ -9,6 +9,10 @@ This document describes the `volumito` command-line (CLI) tool.
 > [Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
 > documentation.
 
+> [!NOTE]
+> For the sake of brevity, the `(volumito_env) $` shell prompt is omitted
+> in all the examples below.
+
 ## Table Of Contents
 
 - [Verify Your Installation](#verify-your-installation)
@@ -157,12 +161,15 @@ volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 
 ## Check Your Volumito Configuration File
 
-**NOTE**: `volumito` can be used without a configuration file;
-          however creating a configuration file is strongly suggested,
-          as it allows storing preferences that otherwise need
-          to be specified at each invocation of the `volumito` CLI tool.
-          You can skip this section if you do not intend
-          to use a configuration file for `volumito`.
+> [!NOTE]
+> `volumito` can be used without a configuration file;
+> however creating a configuration file is strongly recommended,
+> as it allows storing preferences that otherwise need
+> to be specified as command line options
+> at each invocation of the `volumito` CLI tool.
+>
+> You can skip this section if you do not intend
+> to use a configuration file for `volumito`.
 
 You might want to run the `configuration search` command
 to check whether you already have a configuration file in your system:
@@ -192,7 +199,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-08-13T13:52:30.130Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-08-14T12:45:04.783Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -201,7 +208,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T13:52:30.573Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-08-14T12:45:05.230Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,

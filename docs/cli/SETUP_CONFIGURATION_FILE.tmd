@@ -1,11 +1,14 @@
 ## Check Your Volumito Configuration File
 
-**NOTE**: `volumito` can be used without a configuration file;
-          however creating a configuration file is strongly suggested,
-          as it allows storing preferences that otherwise need
-          to be specified at each invocation of the `volumito` CLI tool.
-          You can skip this section if you do not intend
-          to use a configuration file for `volumito`.
+> [!NOTE]
+> `volumito` can be used without a configuration file;
+> however creating a configuration file is strongly recommended,
+> as it allows storing preferences that otherwise need
+> to be specified as command line options
+> at each invocation of the `volumito` CLI tool.
+>
+> You can skip this section if you do not intend
+> to use a configuration file for `volumito`.
 
 You might want to run the `configuration search` command
 to check whether you already have a configuration file in your system:
