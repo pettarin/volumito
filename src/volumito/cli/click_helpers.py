@@ -48,6 +48,7 @@ from volumito.cli.constants import (
 )
 from volumito.cli.metadata import (
     UnsupportedAudioFormatError,
+    detect_audio_extension,
     embed_metadata_and_cover,
 )
 from volumito.cli.pure_helpers import (
@@ -587,6 +588,39 @@ def command_nodes_flattened(
     return flat
 
 
+def correct_audio_extension(destination: str, overwrite: bool) -> str:
+    """Rename a downloaded audio file to the extension its own content calls for.
+
+    The file name is rendered before the download, so the extension can only be the
+    one the URI carries or the default of the command (e.g., a Qobuz stream URI has
+    no extension, and an MP3 track of it is named ".flac"). The format is therefore
+    sniffed from the downloaded file itself: a file whose extension already matches,
+    or whose format is not recognized, is left alone, and so is one whose corrected
+    name is taken by another file, unless ``overwrite`` is true.
+
+    Args:
+        destination: The path the audio file was downloaded to
+        overwrite: Whether an existing file at the corrected path can be replaced
+
+    Returns:
+        The path of the file, renamed or not
+    """
+    extension = detect_audio_extension(destination)
+    stem, current = os.path.splitext(destination)
+    if extension is None or extension == current.lower():
+        return destination
+    corrected = f"{stem}{extension}"
+    if not overwrite and os.path.exists(corrected):
+        warning(
+            f'Cannot rename "{destination}" to "{corrected}": the file already exists '
+            "(use --overwrite-existing-files to overwrite)"
+        )
+        return destination
+    os.replace(destination, corrected)
+    info(f'Renamed "{destination}" to "{corrected}", matching the format of its content')
+    return corrected
+
+
 def create_client(
     host_configuration: VolumioHostConfiguration,
     timeout: float,
@@ -727,7 +761,7 @@ def download_queue_track(
     host_configuration: VolumioHostConfiguration,
     add_cover_and_metadata: bool,
     extra_state: dict[str, Any] | None = None,
-) -> tuple[str, str | None]:
+) -> tuple[str, str | None, str]:
     """Download one queue track to ``destination``, reporting the outcome.
 
     Unlike :func:`download_uri_to`, this never exits: the caller (the ``queue
@@ -746,25 +780,29 @@ def download_queue_track(
         add_cover_and_metadata: Recorded in the manifest
 
     Returns:
-        A ``(status, error)`` pair: ``("skipped", None)`` if the destination exists
-        and ``overwrite`` is false, ``("downloaded", None)`` on success, or
-        ``("error", message)`` on a download or write failure
+        A ``(status, error, path)`` triple: ``("skipped", None, path)`` if the
+        destination exists and ``overwrite`` is false, ``("downloaded", None, path)``
+        on success, or ``("error", message, path)`` on a download or write failure.
+        The path is ``destination``, unless the downloaded file was renamed to match
+        the audio format of its content (see ``correct_audio_extension``)
     """
     if not overwrite and os.path.exists(destination):
-        return "skipped", None
+        return "skipped", None, destination
     try:
         parent = os.path.dirname(destination)
         if parent:
             os.makedirs(parent, exist_ok=True)
         fetch_uri_to_file(uri, destination, timeout, host_configuration)
+        if not is_local_file_uri(uri):
+            destination = correct_audio_extension(destination, overwrite)
         if create_manifest:
             write_download_manifest(
                 destination, uri, state, host_configuration, "track", "audio",
                 add_cover_and_metadata, extra_state,
             )
     except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
-        return "error", str(e)
-    return "downloaded", None
+        return "error", str(e), destination
+    return "downloaded", None, destination
 
 
 def download_uri_to(
@@ -860,6 +898,13 @@ def download_uri_to(
         fetch_uri_to_file(uri, destination, timeout, host_configuration)
 
         info(f'Downloading {label} to "{destination}"... done')
+
+        # The name of a download into a directory comes from the template, so it can
+        # carry an extension the content of the file disagrees with; an explicit
+        # --output-file path is the one asked for, and is left alone
+        if kind == "audio" and output_directory is not None and not is_local_file_uri(uri):
+            destination = correct_audio_extension(destination, overwrite)
+
         info(f'{label.capitalize()} successfully downloaded to "{destination}"')
 
         if create_manifest:
@@ -1883,7 +1928,9 @@ def render_output_filename(
     ``trackType``, ``duration`` (HH:MM:SS), ``bitdepth``, ``samplerate``,
     ``channels`` (int), and ``extension``. The ``extension`` is
     taken from the URI file name, falling back to ``default_extension`` when the
-    URI file has none.
+    URI file has none; it is the extension the name is rendered with, which an audio
+    download then corrects to the format of the file it received, when they disagree
+    (see ``correct_audio_extension``).
 
     The name is rendered defensively, since the metadata values and the URI are
     untrusted: template fields must be exactly the supported keys (no attribute or

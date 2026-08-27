@@ -6,7 +6,11 @@ import pytest
 from mutagen.id3 import ID3NoHeaderError
 from pytest_mock import MockerFixture
 
-from volumito.cli.metadata import UnsupportedAudioFormatError, embed_metadata_and_cover
+from volumito.cli.metadata import (
+    UnsupportedAudioFormatError,
+    detect_audio_extension,
+    embed_metadata_and_cover,
+)
 
 _JPEG = b"\xff\xd8\xff\xe0" + b"jpegbody"
 _PNG = b"\x89PNG\r\n\x1a\n" + b"pngbody"
@@ -211,3 +215,68 @@ class TestDispatch:
         )
 
         flac.assert_called_once_with("SONG.FLAC")
+
+
+class TestDetectAudioExtension:
+    def test_flac_content(self, tmp_path):
+        path = tmp_path / "track.bin"
+        path.write_bytes(b"fLaC\x00\x00\x00\x22still flac")
+
+        assert detect_audio_extension(str(path)) == ".flac"
+
+    def test_mp3_content_opening_with_an_id3_tag(self, tmp_path):
+        path = tmp_path / "track.bin"
+        path.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x23tag")
+
+        assert detect_audio_extension(str(path)) == ".mp3"
+
+    def test_mp3_content_opening_with_a_frame_sync(self, tmp_path):
+        path = tmp_path / "track.bin"
+        path.write_bytes(b"\xff\xfb\x90\x64frame data")
+
+        assert detect_audio_extension(str(path)) == ".mp3"
+
+    def test_mp4_content(self, tmp_path):
+        path = tmp_path / "track.bin"
+        path.write_bytes(b"\x00\x00\x00\x20ftypM4A \x00\x00")
+
+        assert detect_audio_extension(str(path)) == ".m4a"
+
+    def test_unrecognized_content(self, tmp_path):
+        path = tmp_path / "track.bin"
+        path.write_bytes(b"not audio at all")
+
+        assert detect_audio_extension(str(path)) is None
+
+    def test_empty_file(self, tmp_path):
+        path = tmp_path / "track.bin"
+        path.write_bytes(b"")
+
+        assert detect_audio_extension(str(path)) is None
+
+    def test_missing_file(self, tmp_path):
+        assert detect_audio_extension(str(tmp_path / "nope.flac")) is None
+
+
+class TestEmbedByContent:
+    def test_content_wins_over_the_extension(self, tmp_path, mocker: MockerFixture):
+        """An MP3 file named ".flac" is tagged with the MP3 machinery."""
+        path = tmp_path / "song.flac"
+        path.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x23tag")
+        tags = mocker.MagicMock()
+        mocker.patch("volumito.cli.metadata.ID3", return_value=tags)
+        mocker.patch("volumito.cli.metadata.TIT2")
+        flac = mocker.patch("volumito.cli.metadata.FLAC")
+
+        embed_metadata_and_cover(
+            str(path),
+            title="T",
+            artist=None,
+            album=None,
+            albumartist=None,
+            track_number=None,
+            cover=None,
+        )
+
+        flac.assert_not_called()
+        tags.save.assert_called_once_with(str(path))
