@@ -1,0 +1,91 @@
+name: Suggest a documentation change
+description: File a report suggesting a change to the documentation.
+title: "[Docs]: "
+labels: ["documentation", "docs", "triage"]
+projects: []
+assignees: []
+type: documentation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a change to the documentation!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the change to the documentation you would like to suggest.
+      placeholder: I would like to have this bit of information described in place X and/or file Y.
+      value: I would like to have this bit of information described in place X and/or file Y.
+    validations:
+      required: true
+  - type: dropdown
+    id: locations
+    attributes:
+      label: Where should the documentation change be located? Select one or more options.
+      multiple: true
+      options:
+        - Agents
+        - CLI Usage
+        - Code Of Conduct
+        - Contributing
+        - Changelog
+        - Library Usage/Code Docstring(s)
+        - Main README
+        - Roadmap
+        - Security
+        - (other)
+        - (I do not know)
+      default: 10
+    validations:
+      required: true
+  - type: dropdown
+    id: usages
+    attributes:
+      label: Is the documentation change specific to CLI or library usage of volumito? Select one or more options.
+      multiple: true
+      options:
+        - CLI
+        - Library
+        - (any)
+        - (other)
+      default: 2
+    validations:
+      required: true
+  - type: dropdown
+    id: roles
+    attributes:
+      label: Is the documentation change specific to certain roles of volumito? Select one or more options.
+      multiple: true
+      options:
+        - Maintainers
+        - Users
+        - Perspective Users
+        - (any)
+        - (other)
+      default: 3
+    validations:
+      required: true
+  - type: dropdown
+    id: oses
+    attributes:
+      label: Is the documentation change specific to certain operating systems? Select one or more options.
+      multiple: true
+      options:
+        - Linux
+        - MacOS
+        - Windows
+        - (any)
+        - (other)
+      default: 3
+    validations:
+      required: true
+  - type: checkboxes
+    id: agreetococ
+    attributes:
+      label: Code Of Conduct
+      description: By submitting this report, you agree to follow the [Code of Conduct of volumito](https://github.com/pettarin/volumito?tab=coc-ov-file).
+      options:
+        - label: I agree to follow the Code of Conduct of volumito
+          required: true
+
