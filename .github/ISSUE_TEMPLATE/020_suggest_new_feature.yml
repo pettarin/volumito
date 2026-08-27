@@ -1,0 +1,87 @@
+name: Suggest a new feature or enhancement
+description: File a report suggesting a new feature or enhancement.
+title: "[NewFeature]: "
+labels: ["enhancement", "feature", "idea", "triage"]
+projects: []
+assignees: []
+type: enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a new feature or enhancement!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the new feature or enhancement you would like to suggest.
+      placeholder: I would like to be able to do this and that.
+      value: I would like to be able to do this and that.
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale
+      description: Describe why you think the new feature or enhancement should be implemented.
+      placeholder: This new feature would help me with this and that.
+      value: This new feature would help me with this and that.
+    validations:
+      required: true
+  - type: dropdown
+    id: usages
+    attributes:
+      label: Is the new feature or enhancement specific to CLI or library usage of volumito? Select one or more options.
+      multiple: true
+      options:
+        - CLI
+        - Library
+        - (any)
+        - (other)
+      default: 2
+    validations:
+      required: true
+  - type: dropdown
+    id: roles
+    attributes:
+      label: Is the new feature or enhancement specific to certain roles of volumito? Select one or more options.
+      multiple: true
+      options:
+        - Maintainers
+        - Users
+        - Perspective Users
+        - (any)
+        - (other)
+      default: 3
+    validations:
+      required: true
+  - type: dropdown
+    id: oses
+    attributes:
+      label: Is the new feature or enhancement specific to certain operating systems? Select one or more options.
+      multiple: true
+      options:
+        - Linux
+        - MacOS
+        - Windows
+        - (any)
+        - (other)
+      default: 3
+    validations:
+      required: true
+  - type: checkboxes
+    id: agreetococ
+    attributes:
+      label: Code Of Conduct
+      description: By submitting this report, you agree to follow the [Code of Conduct of volumito](https://github.com/pettarin/volumito?tab=coc-ov-file).
+      options:
+        - label: I agree to follow the Code of Conduct of volumito
+          required: true
+  - type: upload
+    id: screenshotsorvideos
+    attributes:
+      label: Upload Screenshots/Videos
+      description: If relevant, please upload screenshots and/or videos to help explain the new feature or enhancement.
+    validations:
+      required: false
+
