@@ -13,7 +13,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- Issue #1: download a track whose HTTP response has more than 100 headers
+- [Issue #1](https://github.com/pettarin/volumito/issues/1): download a track whose
+  HTTP response has more than 100 headers
 
 
 ## [0.1.0] - 2026-08-14
