@@ -192,7 +192,6 @@ pip install volumito[async]
 
 > [!TIP]
 > The `all` extra installs the `async` extra too.
-```
 
 The client owns the HTTP session it sends its requests through,
 opening it on the first request:
