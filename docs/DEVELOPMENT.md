@@ -104,7 +104,7 @@ volumito/
 │           └── rest/
 │               ├── __init__.py             # REST API client re-exports
 │               ├── asyncclient.py          # async REST API client (aiohttp)
-│               ├── client.py               # REST API client
+│               ├── client.py               # sync REST API client (requests)
 │               └── common.py               # logic shared by the REST API clients
 ├── tests/                                  # unit tests
 │   ├── __init__.py

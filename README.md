@@ -14,7 +14,7 @@ host.
 ## Features
 
 - Clean Python API to query the state of a Volumio host and to control it
-- Synchronous and asynchronous (`asyncio`) REST API clients
+- Synchronous and asynchronous clients for the Volumio REST API
 - Extensive and configurable CLI tool
 - AI-generated, Human-reviewed code
 - Type-safe implementation with type hints
