@@ -1,0 +1,102 @@
+name: Report a defect (bug)
+description: File a report for a defect.
+title: "[Defect]: "
+labels: ["bug", "defect", "triage"]
+projects: []
+assignees: []
+type: bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this defect report!
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Symptoms
+      description: Describe what went wrong, along with the steps to reproduce it.
+      placeholder: I did this and that, and this problem happened.
+      value: I did this and that, and this problem happened.
+    validations:
+      required: true
+  - type: textarea
+    id: expectations
+    attributes:
+      label: Expected Behavior
+      description: Describe what you expected to happen instead.
+      placeholder: I expected this to happen instead.
+      value: I expected this to happen instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: Version
+      description: What version of volumito are you using?
+      options:
+        - 0.1.1 (latest release)
+        - 0.1.0
+        - main
+        - devel
+        - (other)
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: usages
+    attributes:
+      label: Does the problem affect the CLI or library usage of volumito, or both? Select one or more options.
+      multiple: true
+      options:
+        - CLI
+        - Library
+        - (any)
+        - (other)
+      default: 2
+    validations:
+      required: true
+  - type: dropdown
+    id: oses
+    attributes:
+      label: What operating systems are you seeing the problem on? Select one or more options.
+      multiple: true
+      options:
+        - Linux
+        - MacOS
+        - Windows
+        - (any)
+        - (other)
+      default: 3
+    validations:
+      required: true
+  - type: dropdown
+    id: pythonversions
+    attributes:
+      label: What version of Python are you seeing the problem on? Select one or more options.
+      multiple: true
+      options:
+        - Python 3.16 (main)
+        - Python 3.15 (prerelease)
+        - Python 3.14 (latest release)
+        - Python 3.13
+        - (any)
+        - (other)
+      default: 3
+    validations:
+      required: true
+  - type: checkboxes
+    id: agreetococ
+    attributes:
+      label: Code Of Conduct
+      description: By submitting this report, you agree to follow the [Code of Conduct of volumito](https://github.com/pettarin/volumito?tab=coc-ov-file).
+      options:
+        - label: I agree to follow the Code of Conduct of volumito
+          required: true
+  - type: upload
+    id: screenshotsorvideos
+    attributes:
+      label: Upload Screenshots/Videos
+      description: If possible, please upload screenshots and/or videos to help explain the problem.
+    validations:
+      required: false
+
