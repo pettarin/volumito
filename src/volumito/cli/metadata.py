@@ -13,6 +13,9 @@ from mutagen.mp4 import MP4, MP4Cover
 # Picture type for a front cover, per the ID3v2 / FLAC picture-type enumeration.
 _FRONT_COVER_TYPE = 3
 
+# Bytes read from the beginning of a file to recognize its audio format.
+_MAGIC_BYTES_LENGTH = 12
+
 # Audio file extensions into which metadata and cover art can be embedded.
 SUPPORTED_AUDIO_EXTENSIONS = (".flac", ".m4a", ".mp3", ".mp4")
 
@@ -28,6 +31,37 @@ def _cover_mime(cover: bytes) -> str:
     return "image/jpeg"
 
 
+def detect_audio_extension(path: str) -> str | None:
+    """Return the file extension matching the audio format of ``path``, or None.
+
+    The format is sniffed from the magic bytes opening the file, so a file whose
+    name does not match its content (e.g., an MP3 stream saved as ".flac") is still
+    recognized. Only the formats metadata can be embedded into are detected: an
+    unrecognized content, an unreadable file, and a missing one all give None.
+
+    Args:
+        path: The audio file to sniff
+
+    Returns:
+        The extension of the detected format, leading dot included, or None
+    """
+    try:
+        with open(path, "rb") as f:
+            header = f.read(_MAGIC_BYTES_LENGTH)
+    except OSError:
+        return None
+    if header.startswith(b"fLaC"):
+        return ".flac"
+    # An MP3 file opens with an ID3v2 tag, or directly with an MPEG frame sync
+    if header.startswith(b"ID3") or (
+        len(header) >= 2 and header[0] == 0xFF and header[1] & 0xE0 == 0xE0
+    ):
+        return ".mp3"
+    if header[4:8] == b"ftyp":
+        return ".m4a"
+    return None
+
+
 def embed_metadata_and_cover(
     path: str,
     *,
@@ -40,9 +74,10 @@ def embed_metadata_and_cover(
 ) -> None:
     """Embed the given track metadata and cover art into the audio file at ``path``.
 
-    The file format is selected from the (lowercased) extension of ``path``: FLAC, MP3,
-    and MP4/M4A are supported. Text fields that are ``None`` are left untouched, and the
-    cover art is written only when ``cover`` is not ``None``.
+    The file format is sniffed from the content of ``path``, falling back to its
+    (lowercased) extension when the content is not recognized: FLAC, MP3, and MP4/M4A
+    are supported. Text fields that are ``None`` are left untouched, and the cover art
+    is written only when ``cover`` is not ``None``.
 
     Args:
         path: The audio file to tag, modified in place
@@ -54,9 +89,9 @@ def embed_metadata_and_cover(
         cover: The cover image bytes (JPEG or PNG), or None to skip it
 
     Raises:
-        UnsupportedAudioFormatError: If the file extension is not supported
+        UnsupportedAudioFormatError: If the audio format is not supported
     """
-    extension = os.path.splitext(path)[1].lower()
+    extension = detect_audio_extension(path) or os.path.splitext(path)[1].lower()
     if extension == ".flac":
         _embed_flac(path, title, artist, album, albumartist, track_number, cover)
     elif extension == ".mp3":

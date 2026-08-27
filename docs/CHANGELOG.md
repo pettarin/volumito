@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 
 - [Issue #1](https://github.com/pettarin/volumito/issues/1): download a track whose
   HTTP response has more than 100 headers
+- [Issue #2](https://github.com/pettarin/volumito/issues/2): a downloaded track is named
+  after the audio format of its content, and tagged accordingly
 
 
 ## [0.1.0] - 2026-08-14

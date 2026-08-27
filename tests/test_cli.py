@@ -24,6 +24,7 @@ from volumito.cli.click_helpers import (
     SchemeParamType,
     SeekParamType,
     VolumeParamType,
+    correct_audio_extension,
     create_client,
     render_output_filename,
     resolve_command_path,
@@ -239,6 +240,9 @@ def _attach_property(mock_client: Mock, name: str, **kwargs: object) -> Property
     setattr(mock_client, f"{name}_property", prop)
     return prop
 
+
+_MP3_CONTENT = b"ID3\x04\x00\x00\x00\x00\x00\x23tag"
+"""An MP3 file opening with an ID3v2 tag, as the format sniffing recognizes it."""
 
 class TestFilterFields:
     """Test cases for the filter_fields function."""
@@ -1511,6 +1515,59 @@ class TestSchemeParamType:
     def test_metavar_lists_the_schemes(self):
         """The --help metavar lists the accepted schemes."""
         assert SchemeParamType().get_metavar(None, None) == "[http|https]"
+
+
+class TestCorrectAudioExtension:
+    """Test cases for the correct_audio_extension helper."""
+
+    _MP3 = b"ID3\x04\x00\x00\x00\x00\x00\x23tag"
+
+    def test_renames_to_the_format_of_the_content(self, tmp_path):
+        """A downloaded MP3 named ".flac" is renamed to ".mp3"."""
+        path = tmp_path / "track.flac"
+        path.write_bytes(self._MP3)
+
+        assert correct_audio_extension(str(path), False) == str(tmp_path / "track.mp3")
+        assert (tmp_path / "track.mp3").read_bytes() == self._MP3
+        assert not path.exists()
+
+    def test_keeps_a_name_already_matching(self, tmp_path):
+        """A file whose extension matches its content is left alone."""
+        path = tmp_path / "track.MP3"
+        path.write_bytes(self._MP3)
+
+        assert correct_audio_extension(str(path), False) == str(path)
+        assert path.exists()
+
+    def test_keeps_an_unrecognized_content(self, tmp_path):
+        """A file whose format is not recognized is left alone."""
+        path = tmp_path / "track.flac"
+        path.write_bytes(b"not audio at all")
+
+        assert correct_audio_extension(str(path), False) == str(path)
+        assert path.exists()
+
+    def test_keeps_the_name_when_the_corrected_one_is_taken(self, tmp_path):
+        """Without --overwrite-existing-files, an existing corrected name is kept."""
+        path = tmp_path / "track.flac"
+        path.write_bytes(self._MP3)
+        taken = tmp_path / "track.mp3"
+        taken.write_bytes(b"another file")
+
+        assert correct_audio_extension(str(path), False) == str(path)
+        assert taken.read_bytes() == b"another file"
+        assert path.exists()
+
+    def test_overwrites_the_corrected_name_when_asked(self, tmp_path):
+        """With --overwrite-existing-files, the corrected name is replaced."""
+        path = tmp_path / "track.flac"
+        path.write_bytes(self._MP3)
+        taken = tmp_path / "track.mp3"
+        taken.write_bytes(b"another file")
+
+        assert correct_audio_extension(str(path), True) == str(taken)
+        assert taken.read_bytes() == self._MP3
+        assert not path.exists()
 
 
 class TestCreateClient:
@@ -3194,7 +3251,7 @@ class TestCLICommands:
         mock_get = mocker.patch(
             "volumito.cli.click_helpers.requests.get", return_value=mock_response
         )
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mock_open = mocker.patch("builtins.open", mocker.mock_open(read_data=b"fake audio data"))
         mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
@@ -3213,7 +3270,7 @@ class TestCLICommands:
         assert "successfully downloaded" in result.output
         mock_get.assert_called_once()
         # Filename derived from the URI basename
-        mock_open.assert_called_once_with(os.path.join("/tmp/music", "test.flac"), "wb")
+        mock_open.assert_any_call(os.path.join("/tmp/music", "test.flac"), "wb")
 
     def test_audio_output_directory_with_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio -d with a -f/--file-name-template."""
@@ -3229,7 +3286,7 @@ class TestCLICommands:
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mock_open = mocker.patch("builtins.open", mocker.mock_open(read_data=b"fake audio data"))
         mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
@@ -3247,7 +3304,7 @@ class TestCLICommands:
         )
 
         assert result.exit_code == 0
-        mock_open.assert_called_once_with(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
+        mock_open.assert_any_call(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
 
     def test_audio_output_directory_bad_template(self, runner: CliRunner, mocker: MockerFixture):
         """Test audio -d with an invalid -f template errors out."""
@@ -3490,6 +3547,59 @@ class TestCLICommands:
         assert result.exit_code == 0
         assert (tmp_path / "Test_Song.flac").exists()
         embed.assert_called_once()
+
+    def test_audio_renamed_after_the_format_of_its_content(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A track served as MP3 under a ".flac" name is saved, tagged, as ".mp3"."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [_MP3_CONTENT]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
+
+        result = runner.invoke(
+            main, ["track", "audio", "-d", str(tmp_path), "-f", "{title}.{extension}"]
+        )
+
+        assert result.exit_code == 0
+        assert (tmp_path / "Test_Song.mp3").read_bytes() == _MP3_CONTENT
+        assert not (tmp_path / "Test_Song.flac").exists()
+        assert (tmp_path / "Test_Song.mp3.json").exists()
+        assert f'successfully downloaded to "{tmp_path / "Test_Song.mp3"}"' in result.output
+        assert embed.call_args.args[0] == str(tmp_path / "Test_Song.mp3")
+
+    def test_audio_output_file_keeps_the_name_asked_for(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An explicit -o path is kept, whatever the format of the content."""
+        mock_client = mocker.Mock()
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [_MP3_CONTENT]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+        mocker.patch("volumito.cli.volumito.embed_track_tags")
+        destination = tmp_path / "song.flac"
+
+        result = runner.invoke(
+            main,
+            ["track", "audio", "-o", str(destination), "--no-create-download-manifest"],
+        )
+
+        assert result.exit_code == 0
+        assert destination.read_bytes() == _MP3_CONTENT
+        assert not (tmp_path / "song.mp3").exists()
 
     def test_audio_of_a_file_of_the_host_library_failing(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -8744,6 +8854,31 @@ class TestQueueDownload:
         assert f'Creating manifest file "{log_path}"' in result.output
         assert str(log_path) in result.output
 
+    def test_download_renamed_after_the_format_of_the_content(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A track served as MP3 lands as ".mp3", and the manifest records that path."""
+        self._mock_services(
+            mocker,
+            [{"title": "Song A", "artist": "Artist", "album": "Album", "tracknumber": 1}],
+            ["http://h/a.flac"],
+            states=[{"title": "Song A", "artist": "Artist", "album": "Album", "position": 0}],
+        )
+        mock_response = mocker.Mock()
+        mock_response.iter_content.return_value = [_MP3_CONTENT]
+        mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
+
+        result = runner.invoke(
+            main, [*self._BASE, "-d", str(tmp_path), "-f", "{title}.{extension}"]
+        )
+
+        assert result.exit_code == 0
+        assert (tmp_path / "Song_A.mp3").read_bytes() == _MP3_CONTENT
+        assert not (tmp_path / "Song_A.flac").exists()
+        _, log = self._read_log(tmp_path)
+        assert log["tracks"][0]["output_file_path"] == str(tmp_path / "Song_A.mp3")
+        assert str(tmp_path / "Song_A.mp3") in result.output
+
     def test_download_subdirectories(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """Template separators create subdirectories; metadata separators are sanitized."""
         self._mock_services(
@@ -12000,7 +12135,7 @@ class TestPositionIndexing:
         mock_response = mocker.Mock()
         mock_response.iter_content.return_value = [b"data"]
         mocker.patch("volumito.cli.click_helpers.requests.get", return_value=mock_response)
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mock_open = mocker.patch("builtins.open", mocker.mock_open(read_data=b"fake audio data"))
         mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
@@ -12019,7 +12154,7 @@ class TestPositionIndexing:
         )
 
         assert result.exit_code == 0
-        mock_open.assert_called_once_with(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
+        mock_open.assert_any_call(os.path.join("/tmp/music", "001_La_rondine.flac"), "wb")
 
     def test_albumart_template(self, runner: CliRunner, mocker: MockerFixture):
         """The {position} template key follows the indexing base for album art too."""

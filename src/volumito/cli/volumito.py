@@ -1530,7 +1530,7 @@ def queue_download(
                                     f"{audio_file_name_template!r}: "
                                     f"the file name {filename!r} escapes the output directory"
                                 )
-                            status, detail = download_queue_track(
+                            status, detail, destination = download_queue_track(
                                 uri,
                                 destination,
                                 overwrite_existing_files,
