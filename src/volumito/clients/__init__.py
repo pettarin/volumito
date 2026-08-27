@@ -8,6 +8,7 @@ from volumito.clients.base import VolumioBaseClient
 from volumito.clients.entities import Album, Artist, Label, Place
 from volumito.clients.errors import (
     VolumioAPIError,
+    VolumioAsyncError,
     VolumioConnectionError,
     VolumioError,
     VolumioSCPError,
@@ -52,7 +53,7 @@ from volumito.clients.remote import (
     is_local_file_uri,
     remote_music_path,
 )
-from volumito.clients.rest import VolumioRESTAPIClient
+from volumito.clients.rest import VolumioAsyncRESTAPIClient, VolumioRESTAPIClient
 
 __all__ = [
     "Album",
@@ -95,11 +96,13 @@ __all__ = [
     "remote_music_path",
     "VolumioBaseClient",
     "VolumioHostConfiguration",
+    "VolumioAsyncRESTAPIClient",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",
     "VolumioConnectionError",
     "VolumioAPIError",
+    "VolumioAsyncError",
     "VolumioSCPError",
     "VolumioSSHError",
     "VolumioStoryError",

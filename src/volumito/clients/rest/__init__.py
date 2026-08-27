@@ -6,14 +6,18 @@
 
 from volumito.clients.errors import (
     VolumioAPIError,
+    VolumioAsyncError,
     VolumioConnectionError,
     VolumioError,
 )
+from volumito.clients.rest.asyncclient import VolumioAsyncRESTAPIClient
 from volumito.clients.rest.client import VolumioRESTAPIClient
 
 __all__ = [
+    "VolumioAsyncRESTAPIClient",
     "VolumioRESTAPIClient",
     "VolumioError",
     "VolumioConnectionError",
     "VolumioAPIError",
+    "VolumioAsyncError",
 ]

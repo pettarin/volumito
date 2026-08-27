@@ -23,6 +23,10 @@ class VolumioAPIError(VolumioError):
     pass
 
 
+class VolumioAsyncError(VolumioError):
+    """Raised when the Volumio host cannot be reached asynchronously."""
+
+
 class VolumioSSHError(VolumioError):
     """Raised when an SSH connection to the Volumio host fails."""
 

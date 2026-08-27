@@ -14,6 +14,7 @@ host.
 ## Features
 
 - Clean Python API to query the state of a Volumio host and to control it
+- Synchronous and asynchronous (`asyncio`) REST API clients
 - Extensive and configurable CLI tool
 - AI-generated, Human-reviewed code
 - Type-safe implementation with type hints
@@ -57,6 +58,13 @@ $ micromamba activate volumito_env
 > `pip install volumito[scp]`.
 > Since those are advanced (and potentially dangerous) commands,
 > the `scp` dependency is not installed by default.
+
+> [!NOTE]
+> To use the asynchronous client `VolumioAsyncRESTAPIClient`
+> you will need to install the `async` extra:
+> `pip install volumito[async]`.
+> The CLI tool does not need it, so the `aiohttp` dependency
+> is not installed by default.
 
 You should be able to run the `volumito` CLI tool,
 automatically installed in the virtual environment:
@@ -108,6 +116,13 @@ $ micromamba activate volumito_env
 > `pip install -e .[scp]` or `make install-e-this-scp`.
 > Since those are advanced (and potentially dangerous) commands,
 > the `scp` dependency is not installed by default.
+
+> [!NOTE]
+> To use the asynchronous client `VolumioAsyncRESTAPIClient`
+> you will need to install the `async` extra:
+> `pip install -e .[async]` or `make install-e-this-async`.
+> The CLI tool does not need it, so the `aiohttp` dependency
+> is not installed by default.
 
 You should be able to run the `volumito` CLI tool,
 automatically installed in the virtual environment:
@@ -402,6 +417,47 @@ if playlist_name in client.playlists:
 else:
     print(f"No such playlist: '{playlist_name}'")
 ```
+
+The same API is available asynchronously, with the `async` extra installed
+(`pip install volumito[async]`):
+
+```python
+import asyncio
+
+from volumito import (
+    VolumioAsyncRESTAPIClient,
+    VolumioHostConfiguration,
+)
+
+# replace with your Volumio host
+host = VolumioHostConfiguration(host="volumio.local")
+
+
+async def main():
+    async with VolumioAsyncRESTAPIClient(host) as client:
+        state = await client.get_state()
+        print(state.title, "---", state.artist)
+        # Recitando --- Paolo Conte
+
+        await client.pause()
+        await client.set_volume(50)
+
+        # independent queries can travel together
+        info, queue = await asyncio.gather(
+            client.get_system_info(),
+            client.get_queue(),
+        )
+        print(info.name, len(queue))
+        # volumio 12
+
+
+asyncio.run(main())
+```
+
+The members the synchronous client exposes as properties are coroutine methods on the
+asynchronous one, since a property cannot be awaited: see
+[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md#async-client)
+for the full mapping.
 
 
 ## Releases And Changelog

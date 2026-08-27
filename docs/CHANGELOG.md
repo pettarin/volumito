@@ -9,6 +9,15 @@ All notable changes to this project will be documented in this file.
 > [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.2.0] - 2026-08-27
+
+### Added
+
+- [Issue #5](https://github.com/pettarin/volumito/issues/5): async REST API client
+  `VolumioAsyncRESTAPIClient` and related classes and constants;
+  to use it, install the `async` extra
+
+
 ## [0.1.1] - 2026-08-27
 
 ### Fixed

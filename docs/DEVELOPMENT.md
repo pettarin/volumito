@@ -103,7 +103,9 @@ volumito/
 │           ├── remote.py                   # access to the files and to the shell of a host
 │           └── rest/
 │               ├── __init__.py             # REST API client re-exports
-│               └── client.py               # REST API client
+│               ├── asyncclient.py          # async REST API client (aiohttp)
+│               ├── client.py               # REST API client
+│               └── common.py               # logic shared by the REST API clients
 ├── tests/                                  # unit tests
 │   ├── __init__.py
 │   ├── test_base_client.py
@@ -116,6 +118,7 @@ volumito/
 │   ├── test_models.py
 │   ├── test_mpd_client.py
 │   ├── test_remote.py
+│   ├── test_rest_asyncclient.py
 │   └── test_rest_client.py
 ├── LICENSE                                 # full text of the license for this project
 ├── Makefile                                # make commands for the developer

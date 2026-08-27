@@ -36,6 +36,8 @@ from volumito.clients import (
     SystemInfo,
     SystemVersion,
     VolumioAPIError,
+    VolumioAsyncError,
+    VolumioAsyncRESTAPIClient,
     VolumioBaseClient,
     VolumioConnectionError,
     VolumioError,
@@ -60,7 +62,7 @@ from volumito.clients import (
 # CLI installs its own), the records go nowhere, silently
 logging.getLogger("volumito").addHandler(logging.NullHandler())
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
@@ -104,11 +106,13 @@ __all__ = [
     "remote_music_path",
     "VolumioHostConfiguration",
     "VolumioBaseClient",
+    "VolumioAsyncRESTAPIClient",
     "VolumioRESTAPIClient",
     "VolumioMPDClient",
     "VolumioError",
     "VolumioConnectionError",
     "VolumioAPIError",
+    "VolumioAsyncError",
     "VolumioSCPError",
     "VolumioSSHError",
     "VolumioStoryError",

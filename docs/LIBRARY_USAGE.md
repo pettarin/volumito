@@ -10,6 +10,7 @@ This document describes how to use `volumito` as a Python library.
 ## Contents
 
 - [Quick Start](#quick-start)
+- [Async Client](#async-client)
 - [Response Models](#response-models)
 - [Reference](#reference)
 
@@ -177,6 +178,123 @@ except VolumioStoryError as e:
 ```
 
 
+## Async Client
+
+`VolumioAsyncRESTAPIClient` is the [aiohttp](https://docs.aiohttp.org/) twin of
+`VolumioRESTAPIClient`. It needs the `async` extra:
+
+```bash
+pip install volumito[async]
+```
+
+The client owns the HTTP session it sends its requests through, opening it on the
+first request: use it as an async context manager, so the session is closed when the
+block is left.
+
+```python
+import asyncio
+
+from volumito import (
+    Artist,
+    VolumioAsyncRESTAPIClient,
+    VolumioHostConfiguration,
+)
+
+# replace with your Volumio host
+host = VolumioHostConfiguration(host="volumio.local")
+
+
+async def main():
+    async with VolumioAsyncRESTAPIClient(host) as client:
+        # check that the host is reachable
+        print(await client.ping())
+        # pong
+
+        # read what is playing, and control the playback
+        state = await client.get_state()
+        print(state.title, state.artist, state.status)
+        # So What Miles Davis play
+        await client.pause()
+        await client.set_volume(50)
+
+        # the queries that take arguments keep their names
+        results = await client.search("miles davis")
+        story = await client.get_story(artist=Artist("Miles Davis"))
+        print(story.value)
+
+
+asyncio.run(main())
+```
+
+Without an `async with` block, close the client yourself, otherwise `aiohttp` reports
+an unclosed session once the client is garbage collected:
+
+```python
+client = VolumioAsyncRESTAPIClient(host)
+try:
+    await client.get_state()
+finally:
+    await client.close()
+```
+
+Closing is idempotent and leaves the client usable: a later request opens a fresh
+session.
+
+### Sync and async, member by member
+
+The two clients expose the same members and return the same models. Since a property
+cannot be awaited, the members the synchronous client exposes as properties are
+coroutine methods here: the nouns take a `get_` prefix, the predicates keep their
+names, and the two assignable properties become `set_seek` and `set_volume`.
+
+| Synchronous                     | Asynchronous                            |
+| ------------------------------- | --------------------------------------- |
+| `client.state`                  | `await client.get_state()`              |
+| `client.queue`                  | `await client.get_queue()`              |
+| `client.queue_status`           | `await client.get_queue_status()`       |
+| `client.playlists`              | `await client.get_playlists()`          |
+| `client.notifications`          | `await client.get_notifications()`      |
+| `client.system_info`            | `await client.get_system_info()`        |
+| `client.system_version`         | `await client.get_system_version()`     |
+| `client.collection_statistics`  | `await client.get_collection_statistics()` |
+| `client.zones`                  | `await client.get_zones()`              |
+| `client.volume`                 | `await client.get_volume()`             |
+| `client.volume = 50`            | `await client.set_volume(50)`           |
+| `client.seek`                   | `await client.get_seek()`               |
+| `client.seek = 102`             | `await client.set_seek(102)`            |
+| `client.is_playing`             | `await client.is_playing()`             |
+| `client.has_next`               | `await client.has_next()`               |
+| `client.browse(uri)`            | `await client.browse(uri)`              |
+
+> [!WARNING]
+> `client.volume = 50` on the async client silently replaces the method with the
+> number instead of setting the volume: use `await client.set_volume(50)`. A type
+> checker rejects the assignment, the interpreter does not.
+
+Unlike their synchronous counterparts, `set_seek` and `set_volume` return the
+`CommandResponse` the Volumio host answered with.
+
+### Running queries concurrently
+
+The members reading two endpoints (`get_queue_status`, `has_next`, `has_previous`)
+await them one after the other, so a failure surfaces as the same exception the
+synchronous client raises. To let independent queries travel together, gather them
+yourself:
+
+```python
+state, queue, info = await asyncio.gather(
+    client.get_state(),
+    client.get_queue(),
+    client.get_system_info(),
+)
+```
+
+A client whose requests all fail is reported the same way as the synchronous one:
+`VolumioConnectionError` for an unreachable or slow host, `VolumioAPIError` for an
+answer the host refused or malformed. `VolumioAsyncError` is raised instead when the
+`aiohttp` package is not installed.
+
+
 ## Response Models
 
 > [!WARNING]
@@ -235,6 +353,10 @@ The library logs under the standard `volumito` logger, which carries a
 `logging.NullHandler` by default: attach your own handler
 (`logging.getLogger("volumito").addHandler(...)`) to see its records. The clients also
 accept a `logger` argument, for callers who manage their own.
+
+The table above names the members of the synchronous client; the asynchronous client
+returns the same models from the members named in
+[Sync and async, member by member](#sync-and-async-member-by-member).
 
 
 ## Reference
