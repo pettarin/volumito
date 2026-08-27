@@ -426,7 +426,8 @@ else:
     print(f"No such playlist: '{playlist_name}'")
 ```
 
-The same API is available asynchronously, with the `async` extra installed
+The same API is available asynchronously,
+provided the `async` extra is installed
 (`pip install volumito[async]`):
 
 ```python
@@ -461,11 +462,6 @@ async def main():
 
 asyncio.run(main())
 ```
-
-The members the synchronous client exposes as properties are coroutine methods on the
-asynchronous one, since a property cannot be awaited: see
-[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md#async-client)
-for the full mapping.
 
 
 ## Releases And Changelog
