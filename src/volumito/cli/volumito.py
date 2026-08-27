@@ -4,6 +4,7 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import http.client
 import json
 import os
 import sys
@@ -115,6 +116,7 @@ from volumito.cli.console import LOGGER, debug, error, info, setup_console, warn
 from volumito.cli.constants import (
     BROWSE_KINDS_ERROR,
     DEFAULT_VOLUMIO_VERSION,
+    MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
@@ -373,6 +375,9 @@ def main(
 ) -> None:
     """volumito - CLI tool for Volumio."""
     setup_console(verbose=verbose, machine_readable=machine_readable, color=color)
+    # Some hosts send more headers than the http.client default limit (100),
+    # aborting the connection: to avoid that, raise the limit to 10000
+    http.client._MAXHEADERS = MAX_HTTP_HEADERS  # type: ignore[attr-defined]
     # Store common options in context for subcommands to access
     ctx.ensure_object(dict)
     ctx.obj["host_configuration"] = VolumioHostConfiguration(

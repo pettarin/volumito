@@ -31,6 +31,9 @@ DEFAULT_VOLUMIO_VERSION = "4"
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
 
+MAX_HTTP_HEADERS = 10000
+"""Maximum number of headers accepted in an HTTP response (the Python default is 100)."""
+
 MPD_PORT_VOLUMIO_3 = 6599
 """MPD port used by Volumio 3 (major version below 4)."""
 
