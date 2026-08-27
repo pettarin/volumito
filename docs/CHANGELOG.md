@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - [Issue #5](https://github.com/pettarin/volumito/issues/5): async REST API client
   `VolumioAsyncRESTAPIClient` and related classes and constants;
   to use it, install the `async` extra
+- Extra `all`, installing both the `async` and the `scp` extras
 
 
 ## [0.1.1] - 2026-08-27

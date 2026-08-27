@@ -66,6 +66,10 @@ $ micromamba activate volumito_env
 > The CLI tool does not need it, so the `aiohttp` dependency
 > is not installed by default.
 
+> [!TIP]
+> The `all` extra installs both:
+> `pip install volumito[all]`.
+
 You should be able to run the `volumito` CLI tool,
 automatically installed in the virtual environment:
 
@@ -123,6 +127,10 @@ $ micromamba activate volumito_env
 > `pip install -e .[async]` or `make install-e-this-async`.
 > The CLI tool does not need it, so the `aiohttp` dependency
 > is not installed by default.
+
+> [!TIP]
+> The `all` extra installs both:
+> `pip install -e .[all]` or `make install-e-this-all`.
 
 You should be able to run the `volumito` CLI tool,
 automatically installed in the virtual environment:

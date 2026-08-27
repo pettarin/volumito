@@ -10,6 +10,7 @@
 	coverage-html \
 	dist \
 	install-e-this \
+	install-e-this-all \
 	install-e-this-async \
 	install-e-this-dev \
 	install-e-this-scp \
@@ -24,6 +25,7 @@
 	micromamba-remove \
 	micromamba-remove-dev \
 	reinstall-e-this \
+	reinstall-e-this-all \
 	reinstall-e-this-async \
 	reinstall-e-this-dev \
 	reinstall-e-this-dev-test \
@@ -47,11 +49,13 @@ help:
 	@echo "  coverage-html              - Run tests with coverage report in HTML format"
 	@echo "  dist                       - Create distribution packages (same as build)"
 	@echo "  install-e-this             - Install package in editable mode"
+	@echo "  install-e-this-all         - Install package in editable mode with all optional dependencies"
 	@echo "  install-e-this-async       - Install package in editable mode with async dependencies"
 	@echo "  install-e-this-dev         - Install package in editable mode with dev dependencies"
 	@echo "  install-e-this-scp         - Install package in editable mode with scp dependencies"
 	@echo "  lint                       - Run ruff linter"
 	@echo "  reinstall-e-this           - Install package in editable mode"
+	@echo "  reinstall-e-this-all       - Install package in editable mode with all optional dependencies"
 	@echo "  reinstall-e-this-async     - Install package in editable mode with async dependencies"
 	@echo "  reinstall-e-this-dev       - Install package in editable mode with dev dependencies"
 	@echo "  reinstall-e-this-dev-test  - Install package in editable mode with dev dependencies and run all tests"
@@ -63,6 +67,9 @@ help:
 
 install-e-this:
 	pip install -e .
+
+install-e-this-all:
+	pip install -e .[all]
 
 install-e-this-async:
 	pip install -e .[async]
@@ -79,6 +86,10 @@ uninstall-this:
 reinstall-e-this: \
 	uninstall-this \
 	install-e-this
+
+reinstall-e-this-all: \
+	uninstall-this \
+	install-e-this-all
 
 reinstall-e-this-async: \
 	uninstall-this \

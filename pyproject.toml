@@ -39,6 +39,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+all = [
+    "volumito[async]",
+    "volumito[scp]",
+]
 async = [
     "aiohttp>=3.11.0",
 ]
@@ -46,8 +50,7 @@ scp = [
     "scp>=0.14.0",
 ]
 dev = [
-    "volumito[async]",
-    "volumito[scp]",
+    "volumito[all]",
     "build>=1.3.0",
     "coverage>=7.0.0",
     "mypy>=1.13.0",
