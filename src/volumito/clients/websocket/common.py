@@ -17,11 +17,12 @@ This module knows nothing about how a client talks to the host: it imports neith
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+from datetime import timedelta
 from typing import Any, NoReturn
 
 from volumito.clients.common import VolumioCommon
 from volumito.clients.errors import VolumioConnectionError
-from volumito.clients.models import Playlist, QueueTrack
+from volumito.clients.models import Alarm, Playlist, QueueTrack
 
 EVENT_ADD_PLAY = "addPlay"
 """The event appending items to the queue and playing them."""
@@ -62,6 +63,9 @@ EVENT_DELETE_PLAYLIST = "deletePlaylist"
 EVENT_ENQUEUE = "enqueue"
 """The event appending a saved playlist to the queue."""
 
+EVENT_GET_ALARMS = "getAlarms"
+"""The event asking for the alarms set on the host."""
+
 EVENT_GET_BROWSE_SOURCES = "getBrowseSources"
 """The event asking for the sources the host can browse."""
 
@@ -82,6 +86,9 @@ EVENT_GET_PLAYLIST_CONTENT = "getPlaylistContent"
 
 EVENT_GET_QUEUE = "getQueue"
 """The event asking for the playback queue."""
+
+EVENT_GET_SLEEP = "getSleep"
+"""The event asking for the sleep timer of the host."""
 
 EVENT_GET_STATE = "getState"
 """The event asking for the playback state."""
@@ -146,6 +153,9 @@ EVENT_PUSH_ADD_TO_RADIO_FAVOURITES = "pushAddToRadioFavourites"
 EVENT_PUSH_ADD_WEB_RADIO = "pushAddWebRadio"
 """The event confirming a web radio was saved."""
 
+EVENT_PUSH_ALARM = "pushAlarm"
+"""The event carrying the alarms set on the host."""
+
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
 
@@ -191,6 +201,9 @@ EVENT_PUSH_SAVE_QUEUE_TO_PLAYLIST = "pushSaveQueueToPlaylist"
 EVENT_PUSH_SET_CONSUME = "pushSetConsume"
 """The event carrying the consume mode."""
 
+EVENT_PUSH_SLEEP = "pushSleep"
+"""The event carrying the sleep timer of the host."""
+
 EVENT_PUSH_STATE = "pushState"
 """The event carrying the playback state, broadcast on every change of it."""
 
@@ -224,6 +237,9 @@ EVENT_REPLACE_AND_PLAY = "replaceAndPlay"
 EVENT_REPLACE_AND_PLAY_CUE = "replaceAndPlayCue"
 """The event replacing the queue with a track of a cue sheet."""
 
+EVENT_SAVE_ALARM = "saveAlarm"
+"""The event replacing the whole set of alarms."""
+
 EVENT_SAVE_QUEUE_TO_PLAYLIST = "saveQueueToPlaylist"
 """The event saving the queue as a saved playlist."""
 
@@ -241,6 +257,9 @@ EVENT_SET_RANDOM = "setRandom"
 
 EVENT_SET_REPEAT = "setRepeat"
 """The event setting the repeat playback mode."""
+
+EVENT_SET_SLEEP = "setSleep"
+"""The event arming or disarming the sleep timer."""
 
 EVENT_STOP = "stop"
 """The event stopping the playback."""
@@ -265,6 +284,7 @@ EVENT_VOLUME = "volume"
 
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
     EVENT_GET_BROWSE_SOURCES: EVENT_PUSH_BROWSE_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
@@ -272,6 +292,7 @@ RESPONSE_EVENTS = {
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
     EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
+    EVENT_GET_SLEEP: EVENT_PUSH_SLEEP,
     EVENT_GET_STATE: EVENT_PUSH_STATE,
     EVENT_GET_SYSTEM_INFO: EVENT_PUSH_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION: EVENT_PUSH_SYSTEM_VERSION,
@@ -303,6 +324,17 @@ class VolumioWebSocketCommon(VolumioCommon):
 
     _CLIENT_DESCRIPTION: str = "WebSocket API client"
     """The name a client logs itself under while initializing."""
+
+    def _alarms_payload(self, alarms: list[Alarm]) -> list[dict[str, Any]]:
+        """Build the payload replacing the whole set of alarms.
+
+        Args:
+            alarms: The alarms to keep
+
+        Returns:
+            The payload the alarm event carries
+        """
+        return [alarm.model_dump(by_alias=True, exclude_none=True) for alarm in alarms]
 
     def _browse_payload(self, uri: str | None) -> dict[str, str]:
         """Build the payload browsing a URI.
@@ -589,6 +621,29 @@ class VolumioWebSocketCommon(VolumioCommon):
             The payload the seek event carries
         """
         return value
+
+    def _sleep_payload(self, delay: timedelta | None) -> dict[str, Any]:
+        """Build the payload arming or disarming the sleep timer.
+
+        A Volumio host reads the time of a sleep timer as a delay from now, not as a
+        clock time, so a duration is rendered to the ``"H:MM"`` it expects.
+
+        Args:
+            delay: How long from now the host should stop, or None to disarm the timer
+
+        Returns:
+            The payload the sleep event carries
+
+        Raises:
+            ValueError: If the delay is negative
+        """
+        if delay is None:
+            return {"enabled": False, "time": "0:00"}
+        if delay < timedelta(0):
+            self._log_warning(f"Refusing the negative sleep delay {delay}")
+            raise ValueError(f"The sleep delay must not be negative, got {delay}")
+        minutes = int(delay.total_seconds() // 60)
+        return {"enabled": True, "time": f"{minutes // 60}:{minutes % 60:02d}"}
 
     def _volume_payload(self, value: int) -> int:
         """Build the payload setting the volume to an absolute level.

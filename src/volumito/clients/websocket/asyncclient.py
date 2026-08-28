@@ -13,11 +13,14 @@ import inspect
 import logging
 import uuid
 from collections.abc import Callable
+from datetime import timedelta
 from types import TracebackType
 from typing import Any, Self
 
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
+    Alarm,
+    Alarms,
     BrowseResults,
     BrowseSources,
     CollectionStatistics,
@@ -29,6 +32,7 @@ from volumito.clients.models import (
     Queue,
     QueueTrack,
     SearchResults,
+    SleepTimer,
     SystemInfo,
     SystemVersion,
     Zones,
@@ -48,6 +52,7 @@ from volumito.clients.websocket.common import (
     EVENT_CREATE_PLAYLIST,
     EVENT_DELETE_PLAYLIST,
     EVENT_ENQUEUE,
+    EVENT_GET_ALARMS,
     EVENT_GET_BROWSE_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS,
@@ -55,6 +60,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE,
+    EVENT_GET_SLEEP,
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
@@ -81,12 +87,14 @@ from volumito.clients.websocket.common import (
     EVENT_REMOVE_WEB_RADIO,
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
+    EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
     EVENT_SEARCH,
     EVENT_SEEK,
     EVENT_SET_CONSUME,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
+    EVENT_SET_SLEEP,
     EVENT_STOP,
     EVENT_SUPER_SEARCH,
     EVENT_TOGGLE,
@@ -591,6 +599,21 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_ENQUEUE, self._playlist_payload(name))
 
+    async def get_alarms(self) -> Alarms:
+        """Get the alarms set on the Volumio instance.
+
+        The alarms come from the ``alarm-clock`` plugin: a host without it never
+        answers, and the read times out.
+
+        Returns:
+            The alarms set on the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        return Alarms.from_raw({"alarms": await self._read_array(EVENT_GET_ALARMS)})
+
     async def get_browse_sources(self) -> BrowseSources:
         """Get the sources the Volumio instance can browse.
 
@@ -718,6 +741,21 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the state carries no integer seek position
         """
         return self._state_seek(await self.get_state())
+
+    async def get_sleep_timer(self) -> SleepTimer:
+        """Get the sleep timer of the Volumio instance.
+
+        Read the remaining delay off :attr:`SleepTimer.delay`, which parses it as the
+        duration it is.
+
+        Returns:
+            The sleep timer of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return SleepTimer.from_raw(await self._read_object(EVENT_GET_SLEEP))
 
     async def get_state(self) -> PlayerState:
         """Get the current playback state of the Volumio instance.
@@ -1324,6 +1362,21 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         current = await self.get_seek()
         await self._emit(EVENT_SEEK, self._seek_payload(current + SEEK_STEP_SECONDS))
 
+    async def set_alarms(self, alarms: list[Alarm]) -> None:
+        """Replace the whole set of alarms of the Volumio instance.
+
+        The Volumio API takes the alarms as a set rather than one at a time, so this
+        replaces every alarm the host holds: read :meth:`get_alarms` first and send back
+        the list you want to keep.
+
+        Args:
+            alarms: The alarms to keep
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SAVE_ALARM, self._alarms_payload(alarms))
+
     async def set_seek(self, value: int) -> None:
         """Seek to an absolute position in the track currently playing.
 
@@ -1334,6 +1387,24 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_SEEK, self._seek_payload(value))
+
+    async def set_sleep_timer(self, delay: timedelta | None) -> None:
+        """Arm or disarm the sleep timer of the Volumio instance.
+
+        The Volumio API reads the time of a sleep timer as a delay from now, not as a
+        clock time, so ``timedelta(minutes=30)`` stops the host in half an hour.
+
+        The timer comes from the ``alarm-clock`` plugin, and so does
+        :meth:`get_sleep_timer`.
+
+        Args:
+            delay: How long from now the host should stop, or None to disarm the timer
+
+        Raises:
+            ValueError: If the delay is negative
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
 
     async def set_volume(self, value: int) -> None:
         """Set the playback volume to an absolute level.

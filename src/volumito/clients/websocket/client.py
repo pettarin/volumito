@@ -14,12 +14,15 @@ import logging
 import threading
 import uuid
 from collections.abc import Callable
+from datetime import timedelta
 from types import ModuleType, TracebackType
 from typing import Any, Self, cast
 
 from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
+    Alarm,
+    Alarms,
     BrowseResults,
     BrowseSources,
     CollectionStatistics,
@@ -31,6 +34,7 @@ from volumito.clients.models import (
     Queue,
     QueueTrack,
     SearchResults,
+    SleepTimer,
     SystemInfo,
     SystemVersion,
     Zones,
@@ -49,6 +53,7 @@ from volumito.clients.websocket.common import (
     EVENT_CREATE_PLAYLIST,
     EVENT_DELETE_PLAYLIST,
     EVENT_ENQUEUE,
+    EVENT_GET_ALARMS,
     EVENT_GET_BROWSE_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS,
@@ -56,6 +61,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE,
+    EVENT_GET_SLEEP,
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
@@ -82,12 +88,14 @@ from volumito.clients.websocket.common import (
     EVENT_REMOVE_WEB_RADIO,
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
+    EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
     EVENT_SEARCH,
     EVENT_SEEK,
     EVENT_SET_CONSUME,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
+    EVENT_SET_SLEEP,
     EVENT_STOP,
     EVENT_SUPER_SEARCH,
     EVENT_TOGGLE,
@@ -458,6 +466,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_ADD_WEB_RADIO, self._web_radio_payload(name, uri))
+
+    @property
+    def alarms(self) -> Alarms:
+        """The alarms set on the Volumio instance.
+
+        Each access emits a fresh event. The alarms come from the ``alarm-clock``
+        plugin: a host without it never answers, and the read times out.
+
+        Returns:
+            The alarms set on the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        return Alarms.from_raw({"alarms": self._read_array(EVENT_GET_ALARMS)})
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -1336,6 +1360,54 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the state carries no integer seek position
         """
         self._emit(EVENT_SEEK, self._seek_payload(self.seek + SEEK_STEP_SECONDS))
+
+    def set_alarms(self, alarms: list[Alarm]) -> None:
+        """Replace the whole set of alarms of the Volumio instance.
+
+        The Volumio API takes the alarms as a set rather than one at a time, so this
+        replaces every alarm the host holds: read :attr:`alarms` first and send back the
+        list you want to keep.
+
+        Args:
+            alarms: The alarms to keep
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SAVE_ALARM, self._alarms_payload(alarms))
+
+    def set_sleep_timer(self, delay: timedelta | None) -> None:
+        """Arm or disarm the sleep timer of the Volumio instance.
+
+        The Volumio API reads the time of a sleep timer as a delay from now, not as a
+        clock time, so ``timedelta(minutes=30)`` stops the host in half an hour.
+
+        The timer comes from the ``alarm-clock`` plugin, and so does :attr:`sleep_timer`.
+
+        Args:
+            delay: How long from now the host should stop, or None to disarm the timer
+
+        Raises:
+            ValueError: If the delay is negative
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
+
+    @property
+    def sleep_timer(self) -> SleepTimer:
+        """The sleep timer of the Volumio instance.
+
+        Each access emits a fresh event. Read the remaining delay off
+        :attr:`SleepTimer.delay`, which parses it as the duration it is.
+
+        Returns:
+            The sleep timer of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return SleepTimer.from_raw(self._read_object(EVENT_GET_SLEEP))
 
     @property
     def state(self) -> PlayerState:

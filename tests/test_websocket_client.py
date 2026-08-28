@@ -7,6 +7,7 @@
 import logging
 import sys
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any
 from unittest.mock import Mock
 
@@ -23,7 +24,7 @@ from volumito.clients.errors import (  # noqa: E402
     VolumioWebSocketError,
 )
 from volumito.clients.host_configuration import VolumioHostConfiguration  # noqa: E402
-from volumito.clients.models import Playlist, QueueTrack  # noqa: E402
+from volumito.clients.models import Alarm, Playlist, QueueTrack  # noqa: E402
 from volumito.clients.websocket.client import (  # noqa: E402
     VolumioWebSocketClient,
     _load_socketio,
@@ -397,20 +398,20 @@ class TestVolumioWebSocketClientTransport:
 
     def test_request_takes_an_explicit_answer_event(self, mocker: MockerFixture):
         """An event the map does not know can still be read, given its answer."""
-        fake = _FakeSocketIOClient(answers={"getSleep": ("pushSleep", {"enabled": False})})
+        fake = _FakeSocketIOClient(answers={"noSuchEvent": ("pushNothing", {"answered": True})})
         client, _ = _client(mocker, fake)
 
-        answer = client.request("getSleep", "pushSleep")
+        answer = client.request("noSuchEvent", "pushNothing")
 
-        assert answer == {"enabled": False}
+        assert answer == {"answered": True}
 
     def test_request_refuses_an_event_with_no_known_answer(self, mocker: MockerFixture):
         """Reading an event the host does not answer warns once and refuses."""
         logger = Mock()
         client, fake = _client(mocker, logger=logger)
 
-        with pytest.raises(ValueError, match="answers no 'getSleep' event"):
-            client.request("getSleep")
+        with pytest.raises(ValueError, match="answers no 'noSuchEvent' event"):
+            client.request("noSuchEvent")
 
         assert fake.calls == []
         logger.warning.assert_called_once()
@@ -1522,3 +1523,106 @@ class TestVolumioWebSocketClientBrowseSources:
         client.regenerate_thumbnails()
 
         assert fake.calls == [_Call("regenerateThumbnails", None)]
+
+
+class TestVolumioWebSocketClientSleepAndAlarms:
+    """The sleep timer and the alarms, both served by the alarm-clock plugin."""
+
+    def test_sleep_timer(self, mocker: MockerFixture):
+        """The timer is read, and its time parsed as the delay it is."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getSleep": (
+                    "pushSleep",
+                    {"enabled": True, "time": "0:30", "action": {"val": "stop"}},
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        timer = client.sleep_timer
+
+        assert timer.enabled is True
+        assert timer.delay == timedelta(minutes=30)
+
+    @pytest.mark.parametrize(
+        ("delay", "expected"),
+        [
+            (timedelta(minutes=30), {"enabled": True, "time": "0:30"}),
+            (timedelta(hours=1, minutes=5), {"enabled": True, "time": "1:05"}),
+            (timedelta(hours=2), {"enabled": True, "time": "2:00"}),
+            (timedelta(seconds=90), {"enabled": True, "time": "0:01"}),
+            (None, {"enabled": False, "time": "0:00"}),
+        ],
+    )
+    def test_set_sleep_timer(self, mocker: MockerFixture, delay, expected):
+        """A duration is rendered to the "H:MM" a Volumio host reads as a delay."""
+        client, fake = _client(mocker)
+
+        client.set_sleep_timer(delay)
+
+        assert fake.calls == [_Call("setSleep", expected)]
+
+    def test_set_sleep_timer_refuses_a_negative_delay(self, mocker: MockerFixture):
+        """A negative delay is refused before anything is sent."""
+        logger = Mock()
+        client, fake = _client(mocker, logger=logger)
+
+        with pytest.raises(ValueError, match="must not be negative"):
+            client.set_sleep_timer(timedelta(minutes=-5))
+
+        assert fake.calls == []
+        logger.warning.assert_called_once()
+
+    def test_alarms(self, mocker: MockerFixture):
+        """The alarms are answered as a bare array, which the model wraps."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getAlarms": (
+                    "pushAlarm",
+                    [{"id": 1, "name": "Weekday", "enabled": True, "time": "07:30",
+                      "playlist": "jazz"}],
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        alarms = client.alarms
+
+        assert len(alarms) == 1
+        assert alarms[0].playlist == "jazz"
+
+    def test_a_host_with_no_alarm(self, mocker: MockerFixture):
+        """A host reporting no alarm is an empty collection."""
+        fake = _FakeSocketIOClient(answers={"getAlarms": ("pushAlarm", [])})
+        client, _ = _client(mocker, fake)
+
+        assert len(client.alarms) == 0
+
+    def test_set_alarms_replaces_the_whole_set(self, mocker: MockerFixture):
+        """The alarms are sent as the list the Volumio API replaces its set with."""
+        client, fake = _client(mocker)
+        alarms = [
+            Alarm.from_raw({"id": 1, "enabled": True, "time": "07:30", "playlist": "jazz"}),
+            Alarm.from_raw({"id": 2, "enabled": False, "time": "09:00", "playlist": "rock"}),
+        ]
+
+        client.set_alarms(alarms)
+
+        assert fake.calls == [
+            _Call(
+                "saveAlarm",
+                [
+                    {"enabled": True, "id": 1, "playlist": "jazz", "time": "07:30"},
+                    {"enabled": False, "id": 2, "playlist": "rock", "time": "09:00"},
+                ],
+            )
+        ]
+
+    def test_set_alarms_with_an_empty_set(self, mocker: MockerFixture):
+        """Sending no alarm clears them all."""
+        client, fake = _client(mocker)
+
+        client.set_alarms([])
+
+        assert fake.calls == [_Call("saveAlarm", [])]
