@@ -431,6 +431,11 @@ The next subsections lists the properties and methods
 corresponding to the events that exist only in the WebSocket API,
 grouped by functionality.
 
+> [!CAUTION]
+> Be careful when calling methods that alter the state of the Volumio host,
+> since there is no confirmation mechanism implemented in the library itself.
+> For instance, calling `shutdown()` might make a Volumio host unreachable!
+
 #### Alarms And Sleep Timer
 
 - `alarms`
@@ -584,10 +589,6 @@ system administration, and user interface preferences.
 - `reboot()`
 - `shutdown()`
 - `standby()`
-
-> [!CAUTION]
-> `reboot()`, `shutdown()` and `standby()` do exactly what their names imply,
-> without asking for confirmation.
 
 > [!CAUTION]
 > `delete_user_data()`, `factory_reset()`, and `install_to_disk()`
