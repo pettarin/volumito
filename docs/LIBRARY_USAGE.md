@@ -424,7 +424,7 @@ The REST API of Volumio offers about thirty endpoints,
 and it is considered "legacy";
 the main API is the WebSocket API,
 which listens for more than **170 events**,
-of which about **125** are managed by the clients
+of which about **140** are managed by the clients
 implemented in the `volumito` package.
 
 The next subsections lists the properties and methods
@@ -577,6 +577,21 @@ system administration, and user interface preferences.
 - `import_service_playlists()`
 - `remove_from_playlist(name, uri)`
 
+#### Queue
+
+- `add_and_play(uri)`
+- `add_cue_track(uri, number)`
+- `add_uids_to_queue(uids)`
+- `consume(value)`
+- `goto(kind, value)`
+- `move_in_queue(source, target)`
+- `play_items(items, index)`
+- `play_next(uri)`
+- `play_volatile(position)`
+- `remove_from_queue(position)`
+- `replace_queue_with_cue_track(uri, number)`
+- `save_queue_as_playlist(name)`
+
 #### System
 
 - `delete_user_data()` (NOT implemented)
@@ -596,25 +611,10 @@ system administration, and user interface preferences.
 > in an unrecoverable fashion.
 > Calling them results in a `NotImplementedError` being raised.
 
-#### Queue
-
-- `add_and_play(uri)`
-- `add_cue_track(uri, number)`
-- `add_uids_to_queue(uids)`
-- `consume(value)`
-- `goto(kind, value)`
-- `move_in_queue(source, target)`
-- `play_items(items, index)`
-- `play_next(uri)`
-- `play_volatile(position)`
-- `remove_from_queue(position)`
-- `replace_queue_with_cue_track(uri, number)`
-- `save_queue_as_playlist(name)`
-
 #### Web Radio
 
 - `add_web_radio(name, uri)`
-- `remove_web_radio(name)`.
+- `remove_web_radio(name)`
 
 > [!NOTE]
 > Several of these surfaces are implemented as Volumio plugins
@@ -628,27 +628,32 @@ system administration, and user interface preferences.
 
 ### Generic Emit And Request
 
-> [!WARNING]
-> This section needs to be reviewed as the Python interface of
-> the WebSocket clients is expanded to cover the functionalities
-> not reachable via the REST API.
-
 A Volumio host listens for far more events than the REST API has endpoints.
 `emit` sends one without waiting,
 and `request` sends one and returns the answer the host pushes back:
 
 ```python
 with VolumioWebSocketClient(host) as client:
-    client.emit("setSleep", {"enabled": True, "time": "23:30"})
-    print(client.request("getSleep", "pushSleep"))
-    # {'enabled': True, 'time': '23:30', ...}
+    # an event with no dedicated member: name the answer yourself
+    print(client.request("getAvailablePlugins", "openModal"))
+
+    # an event a dedicated member already reads: the answer is known
+    print(client.request("getSleep"))
+    # {'enabled': False, 'time': '0:0', ...}
+
+    # an event that answers nothing at all
+    client.emit("importServicePlaylists")
 ```
 
 The second argument of `request` names the event carrying the answer.
-It can be left out for the events the client already knows the answer of
-(`getState`, `getQueue`, `listPlaylist`, `browseLibrary`, `search`,
-`getSystemInfo`, `getSystemVersion`, `getMyCollectionStats`,
-`getMultiRoomDevices`, and `pinger`).
+It can be left out for every event one of the members above reads,
+since the clients already know which event answers it;
+it is required for any other event.
+
+> [!NOTE]
+> Some events are answered by the events that drive the Volumio user interface
+> (e.g., `openModal`, `closeModals`, `updateProgress`) rather than by data,
+> which is why the clients expose no member for them.
 
 ### Differences From The REST API Clients
 
@@ -669,7 +674,7 @@ except where the WebSocket API cannot match the REST one:
 > `search` and `browseLibrary` share their answer event,
 > so two of them in flight at once could take each other's result.
 
-Three members of the REST clients are absent, having no WebSocket equivalent:
+Five members of the REST clients are absent, having no WebSocket equivalent:
 `get_story` and `get_album_credits` (the metavolumio plugin is REST-only), and
 `notifications` / `register_notification` / `unregister_notification`
 (the HTTP push channel this client supersedes).
@@ -750,6 +755,7 @@ than the REST API clients, and thus in turn additional models:
 | `alarms`                                       | `Alarms` (of `Alarm`)                     |
 | `audio_outputs`                                | `AudioOutputs` (of `AudioOutput`)         |
 | `automatic_update_enabled`                     | `bool`                                    |
+| `available_timezones`                          | `Timezones`                               |
 | `backgrounds`                                  | `Backgrounds` (of `Background`)           |
 | `backup`, `discover_network_shares`            | `dict`                                    |
 | `browse_sources`                               | `BrowseSources` (of `BrowseSource`)       |
@@ -773,7 +779,6 @@ than the REST API clients, and thus in turn additional models:
 | `shares`, `get_share`                          | `Shares` (of `Share`)                     |
 | `sleep_timer`                                  | `SleepTimer`                              |
 | `super_search`                                 | `SearchResults`                           |
-| `available_timezones`                          | `Timezones`                               |
 | `ui_settings`                                  | `UiSettings`                              |
 | `updater_channel`                              | `UpdaterChannel`                          |
 | `usb_drives`                                   | `UsbDrives` (of `UsbDrive`)               |
