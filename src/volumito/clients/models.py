@@ -5,6 +5,7 @@
 """
 
 from collections.abc import Callable, Collection, Iterator
+from datetime import timedelta
 from enum import StrEnum
 from typing import Any, Self
 
@@ -171,6 +172,138 @@ class VolumioModel(BaseModel):
             raise VolumioAPIError(f"Unexpected response from the Volumio API: {e}") from e
 
 
+class Alarm(VolumioModel):
+    """An alarm set on a Volumio instance."""
+
+    enabled: bool | None = None
+    """Whether the alarm is armed."""
+
+    id: int | None = None
+    """The identifier of the alarm."""
+
+    name: str | None = None
+    """The name of the alarm."""
+
+    playlist: str | None = None
+    """The name of the playlist the alarm plays."""
+
+    time: str | None = None
+    """The time the alarm goes off, as ``"HH:MM"``."""
+
+
+class Alarms(VolumioModel):
+    """The alarms set on a Volumio instance.
+
+    The collection is a sequence of its alarms: it can be iterated, indexed, and
+    measured with ``len()``.
+    """
+
+    alarms: list[Alarm] = Field(default_factory=list)
+    """The alarms, in the order reported by the Volumio instance."""
+
+    def __getitem__(self, index: int) -> Alarm:
+        """Return the alarm at the given position."""
+        return self.alarms[index]
+
+    def __iter__(self) -> Iterator[Alarm]:  # type: ignore[override]
+        """Iterate over the alarms."""
+        return iter(self.alarms)
+
+    def __len__(self) -> int:
+        """Return the number of alarms."""
+        return len(self.alarms)
+
+
+class AudioOutput(VolumioModel):
+    """An audio output a Volumio instance can play to.
+
+    The shape comes from the ``outputs`` plugin of the host, so a field that plugin does
+    not report stays None; whatever it did report is readable through ``raw``.
+    """
+
+    enabled: bool | None = None
+    """Whether the output is enabled."""
+
+    id: str | None = None
+    """The identifier of the output."""
+
+    name: str | None = None
+    """The name of the output."""
+
+    type: str | None = None
+    """The type of the output."""
+
+    volume: int | None = None
+    """The volume level of the output."""
+
+
+class AudioOutputs(VolumioModel):
+    """The audio outputs a Volumio instance can play to.
+
+    The collection is a sequence of its outputs: it can be iterated, indexed, and
+    measured with ``len()``.
+    """
+
+    available_outputs: list[AudioOutput] = Field(
+        default_factory=list, alias="availableOutputs"
+    )
+    """The available outputs, in the order reported by the Volumio instance."""
+
+    def __getitem__(self, index: int) -> AudioOutput:
+        """Return the output at the given position."""
+        return self.available_outputs[index]
+
+    def __iter__(self) -> Iterator[AudioOutput]:  # type: ignore[override]
+        """Iterate over the available outputs."""
+        return iter(self.available_outputs)
+
+    def __len__(self) -> int:
+        """Return the number of available outputs."""
+        return len(self.available_outputs)
+
+
+class BrowseSource(VolumioModel):
+    """A source a Volumio instance can browse."""
+
+    albumart: str | None = None
+    """The URL of the icon of the source, relative to the host."""
+
+    name: str | None = None
+    """The name of the source."""
+
+    plugin_name: str | None = None
+    """The name of the plugin serving the source."""
+
+    plugin_type: str | None = None
+    """The type of the plugin serving the source (e.g., ``"music_service"``)."""
+
+    uri: str | None = None
+    """The URI the source is browsed at."""
+
+
+class BrowseSources(VolumioModel):
+    """The sources a Volumio instance can browse.
+
+    The collection is a sequence of its sources: it can be iterated, indexed, and
+    measured with ``len()``.
+    """
+
+    sources: list[BrowseSource] = Field(default_factory=list)
+    """The browsable sources, in the order reported by the Volumio instance."""
+
+    def __getitem__(self, index: int) -> BrowseSource:
+        """Return the source at the given position."""
+        return self.sources[index]
+
+    def __iter__(self) -> Iterator[BrowseSource]:  # type: ignore[override]
+        """Iterate over the browsable sources."""
+        return iter(self.sources)
+
+    def __len__(self) -> int:
+        """Return the number of browsable sources."""
+        return len(self.sources)
+
+
 class CollectionStatistics(VolumioModel):
     """The statistics of the music collection of a Volumio instance."""
 
@@ -197,6 +330,16 @@ class CommandResponse(VolumioModel):
     """The time the command was served, as a Unix timestamp in milliseconds."""
 
 
+class DeviceInfo(VolumioModel):
+    """The identity of a Volumio instance."""
+
+    name: str | None = None
+    """The name of the device."""
+
+    uuid: str | None = None
+    """The hardware identifier of the device."""
+
+
 class DeviceState(VolumioModel):
     """The reduced playback state a Volumio instance reports for a device.
 
@@ -221,6 +364,99 @@ class DeviceState(VolumioModel):
 
     volume: int | None = None
     """The volume level, between 0 and 100."""
+
+
+class InputSources(VolumioModel):
+    """The input sources a Volumio instance exposes.
+
+    A Volumio host reports these as a mapping whose keys depend on the plugins it runs,
+    and answers an empty one where there is no input source at all. The payload is
+    readable through ``raw``.
+    """
+
+
+class MenuItem(VolumioModel):
+    """An entry of the menu a Volumio instance offers its user interface."""
+
+    id: str | None = None
+    """The identifier of the entry."""
+
+    name: str | None = None
+    """The name of the entry."""
+
+    params: dict[str, Any] | None = None
+    """The parameters the entry carries, when it names a plugin page."""
+
+    state: str | None = None
+    """The user interface state the entry leads to."""
+
+
+class MenuItems(VolumioModel):
+    """The menu a Volumio instance offers its user interface.
+
+    The collection is a sequence of its entries: it can be iterated, indexed, and
+    measured with ``len()``.
+    """
+
+    items: list[MenuItem] = Field(default_factory=list)
+    """The menu entries, in the order reported by the Volumio instance."""
+
+    def __getitem__(self, index: int) -> MenuItem:
+        """Return the entry at the given position."""
+        return self.items[index]
+
+    def __iter__(self) -> Iterator[MenuItem]:  # type: ignore[override]
+        """Iterate over the menu entries."""
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        """Return the number of menu entries."""
+        return len(self.items)
+
+
+class MusicSource(VolumioModel):
+    """A music source plugin of a Volumio instance."""
+
+    active: bool | None = None
+    """Whether the source is currently active."""
+
+    category: str | None = None
+    """The plugin category the source belongs to (e.g., ``"music_service"``)."""
+
+    enabled: bool | None = None
+    """Whether the source is enabled."""
+
+    has_configuration: bool | None = Field(default=None, alias="hasConfiguration")
+    """Whether the source offers a configuration page."""
+
+    name: str | None = None
+    """The name of the source, as the plugin is identified."""
+
+    pretty_name: str | None = Field(default=None, alias="prettyName")
+    """The name of the source, as it is displayed."""
+
+
+class MusicSources(VolumioModel):
+    """The music source plugins of a Volumio instance.
+
+    The collection is a sequence of its sources: it can be iterated, indexed, and
+    measured with ``len()``.
+    """
+
+    plugins: list[MusicSource] = Field(default_factory=list)
+    """The music sources, in the order reported by the Volumio instance."""
+
+    def __getitem__(self, index: int) -> MusicSource:
+        """Return the source at the given position."""
+        return self.plugins[index]
+
+    def __iter__(self) -> Iterator[MusicSource]:  # type: ignore[override]
+        """Iterate over the music sources."""
+        return iter(self.plugins)
+
+    def __len__(self) -> int:
+        """Return the number of music sources."""
+        return len(self.plugins)
 
 
 class Notification(VolumioModel):
@@ -292,6 +528,68 @@ class Notifications(VolumioModel):
     def __len__(self) -> int:
         """Return the number of registered notifications."""
         return len(self.notifications)
+
+
+class OutputDevice(VolumioModel):
+    """An output device a Volumio instance can play through."""
+
+    id: str | None = None
+    """The identifier of the device."""
+
+    name: str | None = None
+    """The name of the device."""
+
+
+class OutputDevices(VolumioModel):
+    """The output devices a Volumio instance can play through.
+
+    The collection is a sequence of the available devices: it can be iterated, indexed,
+    and measured with ``len()``; the one in use is :attr:`active`.
+    """
+
+    active: OutputDevice | None = None
+    """The device currently in use."""
+
+    available: list[OutputDevice] = Field(default_factory=list)
+    """The devices that can be selected, in the order reported by the instance."""
+
+    i2s: bool | None = None
+    """Whether an I2S DAC is configured on the host."""
+
+    @classmethod
+    def from_envelope(cls, payload: dict[str, Any]) -> Self:
+        """Build the devices from the envelope a Volumio instance answers with.
+
+        The instance nests the devices under a ``devices`` key, beside the I2S flag.
+
+        Args:
+            payload: The answer of the Volumio instance
+
+        Returns:
+            The output devices
+
+        Raises:
+            VolumioAPIError: If the answer carries no ``devices`` object
+        """
+        devices = payload.get("devices")
+        if not isinstance(devices, dict):
+            raise VolumioAPIError(
+                f"Expected a devices object from the Volumio API, "
+                f"got {type(devices).__name__}"
+            )
+        return cls.model_validate({**devices, "i2s": payload.get("i2s"), "raw": payload})
+
+    def __getitem__(self, index: int) -> OutputDevice:
+        """Return the available device at the given position."""
+        return self.available[index]
+
+    def __iter__(self) -> Iterator[OutputDevice]:  # type: ignore[override]
+        """Iterate over the available devices."""
+        return iter(self.available)
+
+    def __len__(self) -> int:
+        """Return the number of available devices."""
+        return len(self.available)
 
 
 class PlayerState(VolumioModel):
@@ -464,6 +762,16 @@ class Playlists(VolumioModel):
         return len(self.playlists)
 
 
+class PowerModes(VolumioModel):
+    """The ways a Volumio instance can be powered down."""
+
+    has_power_off_mode: bool | None = Field(default=None, alias="hasPowerOffMode")
+    """Whether the host can be shut down."""
+
+    has_standby_mode: bool | None = Field(default=None, alias="hasStandbyMode")
+    """Whether the host can be put on standby."""
+
+
 class PushNotification(VolumioModel):
     """A notification a Volumio instance pushes to a registered URL."""
 
@@ -574,6 +882,60 @@ class Queue(VolumioModel):
 
     def __len__(self) -> int:
         """Return the number of tracks in the queue."""
+        return len(self.tracks)
+
+
+class PlaylistContent(VolumioModel):
+    """The tracks of a playlist saved on a Volumio instance.
+
+    The collection is a sequence of its tracks: it can be iterated, indexed, and
+    measured with ``len()``.
+
+    The class is defined here, out of alphabetical order, because it holds
+    :class:`QueueTrack`.
+    """
+
+    name: str | None = None
+    """The name of the playlist."""
+
+    tracks: list[QueueTrack] = Field(default_factory=list)
+    """The tracks of the playlist, in playlist order."""
+
+    @classmethod
+    def from_envelope(cls, payload: dict[str, Any]) -> Self:
+        """Build the content from the envelope a Volumio instance answers with.
+
+        The instance groups the tracks in one list per source, so the lists are flattened
+        into a single sequence.
+
+        Args:
+            payload: The answer of the Volumio instance
+
+        Returns:
+            The content of the playlist
+        """
+        lists = payload.get("lists")
+        tracks: list[Any] = []
+        if isinstance(lists, list):
+            for entry in lists:
+                if isinstance(entry, list):
+                    tracks.extend(track for track in entry if isinstance(track, dict))
+                elif isinstance(entry, dict):
+                    tracks.append(entry)
+        return cls.model_validate(
+            {"name": payload.get("name"), "tracks": tracks, "raw": payload}
+        )
+
+    def __getitem__(self, index: int) -> QueueTrack:
+        """Return the track at the given position of the playlist."""
+        return self.tracks[index]
+
+    def __iter__(self) -> Iterator[QueueTrack]:  # type: ignore[override]
+        """Iterate over the tracks of the playlist."""
+        return iter(self.tracks)
+
+    def __len__(self) -> int:
+        """Return the number of tracks in the playlist."""
         return len(self.tracks)
 
 
@@ -1010,6 +1372,34 @@ class BrowseResults(VolumioModel):
         return self.model_copy(update={"lists": _lists_with_first_items(self.lists, count)})
 
 
+class SleepTimer(VolumioModel):
+    """The sleep timer of a Volumio instance.
+
+    The Volumio API reports the timer as a delay from now, not as a clock time, which is
+    what :attr:`delay` reads it as.
+    """
+
+    action: dict[str, Any] | None = None
+    """What the host does when the timer expires."""
+
+    enabled: bool | None = None
+    """Whether the timer is armed."""
+
+    time: str | None = None
+    """The delay before the timer expires, as ``"H:MM"``."""
+
+    @property
+    def delay(self) -> timedelta | None:
+        """The delay before the timer expires, None when it carries no readable one."""
+        if self.time is None:
+            return None
+        hours, _, minutes = self.time.partition(":")
+        try:
+            return timedelta(hours=int(hours), minutes=int(minutes))
+        except ValueError:
+            return None
+
+
 class SuccessResponse(VolumioModel):
     """The outcome a Volumio instance reports as a success flag."""
 
@@ -1093,6 +1483,19 @@ class SystemVersion(VolumioModel):
 
     variant: str | None = None
     """The variant of the Volumio system (e.g., ``"volumio"``)."""
+
+
+class UiSettings(VolumioModel):
+    """The user interface settings of a Volumio instance."""
+
+    color: str | None = None
+    """The accent color of the interface."""
+
+    language: str | None = None
+    """The language code of the interface (e.g., ``"en"``)."""
+
+    theme: str | None = None
+    """The name of the theme of the interface."""
 
 
 class Zone(VolumioModel):

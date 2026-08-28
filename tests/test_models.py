@@ -5,20 +5,31 @@
 """
 
 import json
+from datetime import timedelta
 
 import pytest
 
 from volumito.clients.errors import VolumioAPIError, VolumioStoryError
 from volumito.clients.models import (
+    Alarms,
+    AudioOutputs,
     BrowseResults,
+    BrowseSources,
     CollectionStatistics,
     CommandResponse,
+    DeviceInfo,
     DeviceState,
+    InputSources,
+    MenuItems,
+    MusicSources,
     Notification,
     Notifications,
+    OutputDevices,
     PlayerState,
     Playlist,
+    PlaylistContent,
     Playlists,
+    PowerModes,
     PushNotification,
     Queue,
     QueueTrack,
@@ -26,10 +37,12 @@ from volumito.clients.models import (
     SearchResultItemKind,
     SearchResultList,
     SearchResults,
+    SleepTimer,
     Story,
     SuccessResponse,
     SystemInfo,
     SystemVersion,
+    UiSettings,
     Zone,
     Zones,
 )
@@ -1203,3 +1216,298 @@ class TestZones:
 
         assert zone.name == "Kitchen"
         assert zone.is_self is False
+
+
+class TestAlarms:
+    """Test cases for the Alarms and Alarm models."""
+
+    _PAYLOAD = {
+        "alarms": [
+            {"id": 1, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"},
+            {"id": 2, "enabled": False},
+        ]
+    }
+
+    def test_parses_the_alarms(self):
+        """The alarms are parsed, and a missing field stays None."""
+        alarms = Alarms.from_raw(self._PAYLOAD)
+
+        assert alarms[0].id == 1
+        assert alarms[0].name == "Weekday"
+        assert alarms[0].time == "07:30"
+        assert alarms[0].playlist == "jazz"
+        assert alarms[1].enabled is False
+        assert alarms[1].playlist is None
+
+    def test_is_a_sequence_of_its_alarms(self):
+        """The collection can be measured, indexed, and iterated."""
+        alarms = Alarms.from_raw(self._PAYLOAD)
+
+        assert len(alarms) == 2
+        assert [alarm.id for alarm in alarms] == [1, 2]
+
+    def test_a_host_with_no_alarm(self):
+        """A host reporting no alarm is an empty collection."""
+        assert len(Alarms.from_raw({"alarms": []})) == 0
+
+
+class TestAudioOutputs:
+    """Test cases for the AudioOutputs and AudioOutput models."""
+
+    _PAYLOAD = {
+        "availableOutputs": [
+            {"id": "0", "name": "Living room", "type": "alsa", "enabled": True, "volume": 40}
+        ]
+    }
+
+    def test_parses_the_outputs(self):
+        """The outputs are parsed from the aliased key."""
+        outputs = AudioOutputs.from_raw(self._PAYLOAD)
+
+        assert len(outputs) == 1
+        assert outputs[0].name == "Living room"
+        assert outputs[0].volume == 40
+        assert [output.id for output in outputs] == ["0"]
+
+    def test_a_host_with_no_audio_output(self):
+        """A host with no output plugin answers an empty collection."""
+        assert len(AudioOutputs.from_raw({"availableOutputs": []})) == 0
+
+
+class TestBrowseSources:
+    """Test cases for the BrowseSources and BrowseSource models."""
+
+    _PAYLOAD = {
+        "sources": [
+            {
+                "albumart": "/albumart?sourceicon=x.png",
+                "name": "Playlists",
+                "uri": "playlists",
+                "plugin_type": "music_service",
+                "plugin_name": "mpd",
+            }
+        ]
+    }
+
+    def test_parses_the_sources(self):
+        """The sources are parsed; the plugin keys are snake_case on the wire already."""
+        sources = BrowseSources.from_raw(self._PAYLOAD)
+
+        assert len(sources) == 1
+        assert sources[0].name == "Playlists"
+        assert sources[0].uri == "playlists"
+        assert sources[0].plugin_type == "music_service"
+        assert sources[0].plugin_name == "mpd"
+        assert [source.uri for source in sources] == ["playlists"]
+
+
+class TestDeviceInfo:
+    """Test cases for the DeviceInfo model."""
+
+    def test_parses_the_identity(self):
+        """The name and the hardware identifier are parsed."""
+        info = DeviceInfo.from_raw({"uuid": "5dc4ca49-7678", "name": "kitchen"})
+
+        assert info.uuid == "5dc4ca49-7678"
+        assert info.name == "kitchen"
+
+
+class TestInputSources:
+    """Test cases for the InputSources model."""
+
+    def test_a_host_with_no_input_source(self):
+        """A host with none answers an empty mapping, kept in raw."""
+        sources = InputSources.from_raw({})
+
+        assert sources.raw == {}
+
+    def test_keeps_whatever_the_host_reported(self):
+        """The payload stays readable through raw, whatever its keys."""
+        sources = InputSources.from_raw({"spdif": {"enabled": True}})
+
+        assert sources.raw == {"spdif": {"enabled": True}}
+
+
+class TestMenuItems:
+    """Test cases for the MenuItems and MenuItem models."""
+
+    _PAYLOAD = {
+        "items": [
+            {"id": "my-volumio"},
+            {
+                "id": "mymusic",
+                "name": "Sources",
+                "state": "volumio.plugin",
+                "params": {"pluginName": "miscellanea/my_music"},
+            },
+        ]
+    }
+
+    def test_parses_the_entries(self):
+        """The entries are parsed, parameters included."""
+        items = MenuItems.from_raw(self._PAYLOAD)
+
+        assert len(items) == 2
+        assert items[0].id == "my-volumio"
+        assert items[0].name is None
+        assert items[1].state == "volumio.plugin"
+        assert items[1].params == {"pluginName": "miscellanea/my_music"}
+        assert [item.id for item in items] == ["my-volumio", "mymusic"]
+
+
+class TestMusicSources:
+    """Test cases for the MusicSources and MusicSource models."""
+
+    _PAYLOAD = {
+        "plugins": [
+            {
+                "prettyName": "UPNP Renderer",
+                "name": "upnp",
+                "category": "audio_interface",
+                "hasConfiguration": False,
+                "active": False,
+                "enabled": True,
+            }
+        ]
+    }
+
+    def test_parses_the_sources(self):
+        """The sources are parsed, aliases included."""
+        sources = MusicSources.from_raw(self._PAYLOAD)
+
+        assert len(sources) == 1
+        assert sources[0].pretty_name == "UPNP Renderer"
+        assert sources[0].has_configuration is False
+        assert sources[0].enabled is True
+        assert [source.name for source in sources] == ["upnp"]
+
+
+class TestOutputDevices:
+    """Test cases for the OutputDevices and OutputDevice models."""
+
+    _ENVELOPE = {
+        "devices": {
+            "active": {"name": "HDMI Out", "id": "0"},
+            "available": [{"id": "0", "name": "HDMI Out"}, {"id": "1", "name": "Headphones"}],
+        },
+        "i2s": False,
+    }
+
+    def test_unwraps_the_devices_envelope(self):
+        """The devices are read out of the envelope, beside the I2S flag."""
+        devices = OutputDevices.from_envelope(self._ENVELOPE)
+
+        assert devices.active is not None
+        assert devices.active.name == "HDMI Out"
+        assert devices.i2s is False
+        assert len(devices) == 2
+        assert devices[1].name == "Headphones"
+        assert [device.name for device in devices] == ["HDMI Out", "Headphones"]
+        assert devices.raw == self._ENVELOPE
+
+    def test_an_envelope_without_devices(self):
+        """An answer carrying no devices object is refused."""
+        with pytest.raises(VolumioAPIError) as exc_info:
+            OutputDevices.from_envelope({"i2s": True})
+
+        assert "Expected a devices object" in str(exc_info.value)
+
+
+class TestPlaylistContent:
+    """Test cases for the PlaylistContent model."""
+
+    _ENVELOPE = {
+        "name": "qobuz fdg",
+        "lists": [
+            [
+                {"title": "So What", "artist": "Miles Davis", "uri": "qobuz://1"},
+                {"title": "Blue in Green", "uri": "qobuz://2"},
+            ]
+        ],
+    }
+
+    def test_flattens_the_lists(self):
+        """The tracks are read out of the one list per source the host groups them in."""
+        content = PlaylistContent.from_envelope(self._ENVELOPE)
+
+        assert content.name == "qobuz fdg"
+        assert len(content) == 2
+        assert content[0].title == "So What"
+        assert [track.uri for track in content] == ["qobuz://1", "qobuz://2"]
+        assert content.raw == self._ENVELOPE
+
+    def test_flattens_several_lists(self):
+        """Tracks from every list end up in one sequence, in order."""
+        content = PlaylistContent.from_envelope(
+            {"name": "mixed", "lists": [[{"title": "a"}], [{"title": "b"}]]}
+        )
+
+        assert [track.title for track in content] == ["a", "b"]
+
+    def test_accepts_a_flat_list(self):
+        """A host answering the tracks unnested is read the same way."""
+        content = PlaylistContent.from_envelope({"name": "flat", "lists": [{"title": "a"}]})
+
+        assert [track.title for track in content] == ["a"]
+
+    def test_an_empty_playlist(self):
+        """A playlist with no track, or no lists at all, is empty."""
+        assert len(PlaylistContent.from_envelope({"name": "empty", "lists": []})) == 0
+        assert len(PlaylistContent.from_envelope({"name": "none"})) == 0
+
+
+class TestPowerModes:
+    """Test cases for the PowerModes model."""
+
+    def test_parses_the_modes(self):
+        """Both flags are parsed from their aliases."""
+        modes = PowerModes.from_raw({"hasPowerOffMode": True, "hasStandbyMode": False})
+
+        assert modes.has_power_off_mode is True
+        assert modes.has_standby_mode is False
+
+
+class TestSleepTimer:
+    """Test cases for the SleepTimer model."""
+
+    def test_parses_the_timer(self):
+        """The timer is parsed, the action included."""
+        timer = SleepTimer.from_raw(
+            {"enabled": False, "time": "0:0", "action": {"val": "stop", "text": "Stop Music"}}
+        )
+
+        assert timer.enabled is False
+        assert timer.time == "0:0"
+        assert timer.action == {"val": "stop", "text": "Stop Music"}
+
+    @pytest.mark.parametrize(
+        ("time", "expected"),
+        [
+            ("0:0", timedelta(0)),
+            ("0:30", timedelta(minutes=30)),
+            ("1:30", timedelta(hours=1, minutes=30)),
+            ("12:05", timedelta(hours=12, minutes=5)),
+        ],
+    )
+    def test_the_delay_is_read_as_a_duration(self, time, expected):
+        """The Volumio API reports a delay from now, not a clock time."""
+        assert SleepTimer.from_raw({"enabled": True, "time": time}).delay == expected
+
+    @pytest.mark.parametrize("time", [None, "", "nope", "1:2:3", "a:b"])
+    def test_a_delay_that_cannot_be_read(self, time):
+        """A missing or unreadable delay is None rather than an error."""
+        payload = {"enabled": True} if time is None else {"enabled": True, "time": time}
+
+        assert SleepTimer.from_raw(payload).delay is None
+
+
+class TestUiSettings:
+    """Test cases for the UiSettings model."""
+
+    def test_parses_the_settings(self):
+        """The interface settings are parsed."""
+        settings = UiSettings.from_raw({"color": "#000", "language": "en", "theme": "default"})
+
+        assert settings.color == "#000"
+        assert settings.language == "en"
+        assert settings.theme == "default"
