@@ -9,16 +9,13 @@ All notable changes to this project will be documented in this file.
 > [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [0.3.0] - unreleased
+## [0.3.0] - 2026-08-28
 
 ### Added
 
 - [Issue #6](https://github.com/pettarin/volumito/issues/6): WebSocket API clients
   `VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` and related classes and
   constants; to use them, install the `websocket` extra
-- Queue and playlist editing, favourites, web radios, browse sources, sleep timer,
-  alarms, audio outputs, library scans, power, and administration on the WebSocket API
-  clients, with their response models
 - Host configuration option `websocket_port`
 
 
