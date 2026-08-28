@@ -2303,11 +2303,12 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
 
         Args:
             advanced: True for the full set of options, False for the simplified one
+                (the host stores the flag itself, and reports it back wrapped in its label)
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        await self._emit(EVENT_SET_EXPERIENCE_ADVANCED_SETTINGS, {"status": advanced})
+        await self._emit(EVENT_SET_EXPERIENCE_ADVANCED_SETTINGS, advanced)
 
     async def set_infinity_playback(self, enabled: bool) -> None:
         """Turn infinity playback on or off.

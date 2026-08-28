@@ -2243,7 +2243,10 @@ class TestVolumioWebSocketClientUiPreferences:
             answers={
                 "getExperienceAdvancedSettings": (
                     "pushExperienceAdvancedSettings",
-                    {"options": [{"id": True, "label": "Full"}], "status": False},
+                    {
+                        "options": [{"id": True, "label": "Full"}],
+                        "status": {"id": False, "label": "Simplified"},
+                    },
                 )
             }
         )
@@ -2252,8 +2255,8 @@ class TestVolumioWebSocketClientUiPreferences:
         settings = client.experience_settings
         client.set_experience_settings(True)
 
-        assert settings.status is False
-        assert fake.calls[-1] == _Call("setExperienceAdvancedSettings", {"status": True})
+        assert settings.advanced is False
+        assert fake.calls[-1] == _Call("setExperienceAdvancedSettings", True)
 
 
 class TestVolumioWebSocketClientSystemAdministration:

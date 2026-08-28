@@ -1606,13 +1606,25 @@ class TestTierCModels:
         assert playback.enabled is False
 
     def test_experience_settings(self):
-        """The options are kept as the host reported them."""
+        """The setting in use is reported as the whole option, label included."""
         settings = ExperienceSettings.from_raw(
-            {"options": [{"id": False, "label": "Simplified"}], "status": True}
+            {
+                "options": [
+                    {"id": False, "label": "Simplified"},
+                    {"id": True, "label": "Full"},
+                ],
+                "status": {"id": True, "label": "Full"},
+            }
         )
 
-        assert settings.status is True
-        assert settings.options[0]["label"] == "Simplified"
+        assert settings.status is not None
+        assert settings.status.label == "Full"
+        assert settings.advanced is True
+        assert settings.options[0].label == "Simplified"
+
+    def test_experience_settings_without_a_status(self):
+        """A host reporting no setting in use reads as None rather than failing."""
+        assert ExperienceSettings.from_raw({"options": []}).advanced is None
 
     def test_ui_config(self):
         """The page and its sections are parsed."""

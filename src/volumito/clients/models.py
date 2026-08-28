@@ -369,14 +369,33 @@ class CommandResponse(VolumioModel):
     """The time the command was served, as a Unix timestamp in milliseconds."""
 
 
+class ExperienceOption(VolumioModel):
+    """One of the ways the user interface of a Volumio instance can be shown."""
+
+    id: bool | None = None
+    """True for the full set of options, False for the simplified one."""
+
+    label: str | None = None
+    """The setting as it is displayed."""
+
+
 class ExperienceSettings(VolumioModel):
-    """How many options the user interface of a Volumio instance offers."""
+    """How many options the user interface of a Volumio instance offers.
 
-    options: list[dict[str, Any]] = Field(default_factory=list)
-    """The settings that can be chosen, each with its label."""
+    The Volumio API reports the setting in use as the whole option, label included;
+    :attr:`advanced` reads the flag out of it.
+    """
 
-    status: bool | None = None
-    """Whether the full set of options is in use."""
+    options: list[ExperienceOption] = Field(default_factory=list)
+    """The settings that can be chosen."""
+
+    status: ExperienceOption | None = None
+    """The setting in use."""
+
+    @property
+    def advanced(self) -> bool | None:
+        """Whether the full set of options is in use, None when unreported."""
+        return self.status.id if self.status is not None else None
 
 
 class DeviceInfo(VolumioModel):
