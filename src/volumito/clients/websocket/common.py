@@ -17,7 +17,7 @@ This module knows nothing about how a client talks to the host: it imports neith
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
-from typing import Any, NoReturn
+from typing import NoReturn
 
 from volumito.clients.common import VolumioCommon
 from volumito.clients.errors import VolumioConnectionError
@@ -273,17 +273,6 @@ class VolumioWebSocketCommon(VolumioCommon):
             ValueError: If the given playlist has no name
         """
         return {"name": self._playlist_name(name)}
-
-    def _queue_payload(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Build the payload queueing a list of browsed items.
-
-        Args:
-            items: The items, as the Volumio instance listed them
-
-        Returns:
-            The items reduced to the keys queueing reads
-        """
-        return [self._slim_queue_item(item) for item in items]
 
     def _response_event(self, event: str) -> str:
         """Return the event a read waits for after emitting one.

@@ -18,20 +18,33 @@ from pytest_mock import MockerFixture
 socketio = pytest.importorskip("socketio")
 
 from volumito.clients.errors import (  # noqa: E402
+    VolumioAPIError,
     VolumioConnectionError,
     VolumioWebSocketError,
 )
 from volumito.clients.host_configuration import VolumioHostConfiguration  # noqa: E402
+from volumito.clients.models import Playlist, QueueTrack  # noqa: E402
 from volumito.clients.websocket.client import (  # noqa: E402
     VolumioWebSocketClient,
     _load_socketio,
 )
 from volumito.clients.websocket.common import (  # noqa: E402
+    EVENT_BROWSE_LIBRARY,
+    EVENT_GET_MULTI_ROOM_DEVICES,
+    EVENT_GET_MY_COLLECTION_STATS,
+    EVENT_GET_QUEUE,
     EVENT_GET_STATE,
+    EVENT_GET_SYSTEM_INFO,
+    EVENT_GET_SYSTEM_VERSION,
+    EVENT_LIST_PLAYLIST,
     EVENT_PINGER,
+    EVENT_PLAY,
     EVENT_PONGER,
+    EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_PUSH_LIST_PLAYLIST,
     EVENT_PUSH_QUEUE,
     EVENT_PUSH_STATE,
+    EVENT_SEARCH,
     RESPONSE_EVENTS,
 )
 
@@ -120,6 +133,50 @@ def _client(
     if connect:
         client.connect()
     return client, fake
+
+
+NAVIGATION_PAYLOAD = {
+    "navigation": {
+        "lists": [
+            {
+                "title": "Playlists",
+                "items": [
+                    {
+                        "service": "mpd",
+                        "type": "song",
+                        "title": "jazz",
+                        "uri": "mpd://a",
+                        "albumart": "/albumart",
+                    }
+                ],
+            }
+        ]
+    }
+}
+"""A browse listing of the shape a Volumio host pushes."""
+
+EMPTY_NAVIGATION = {"navigation": {"lists": [{"title": "Nothing", "items": []}]}}
+"""A browse listing holding no item at all."""
+
+
+def _browse_client(
+    mocker: MockerFixture, logger: logging.Logger | None = None
+) -> tuple[VolumioWebSocketClient, _FakeSocketIOClient]:
+    """Build a connected client whose host answers a browse with one item."""
+    fake = _FakeSocketIOClient(
+        answers={EVENT_BROWSE_LIBRARY: (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)}
+    )
+    return _client(mocker, fake, logger=logger)
+
+
+def _state_and_queue_fake() -> _FakeSocketIOClient:
+    """Build a fake answering a state at position 1 and a queue of two tracks."""
+    return _FakeSocketIOClient(
+        answers={
+            EVENT_GET_STATE: (EVENT_PUSH_STATE, STATE_PAYLOAD),
+            EVENT_GET_QUEUE: (EVENT_PUSH_QUEUE, QUEUE_PAYLOAD * 2),
+        }
+    )
 
 
 def _state_client(
@@ -571,3 +628,484 @@ class TestVolumioWebSocketClientPing:
 
         with pytest.raises(VolumioConnectionError):
             client.ping()
+
+class TestVolumioWebSocketClientReads:
+    """The reads answered by a pushed event, and the models they build."""
+
+    def test_state(self, mocker: MockerFixture):
+        """The playback state is read from the state the host pushes back."""
+        client, fake = _state_client(mocker)
+
+        state = client.state
+
+        assert state.status == "play"
+        assert state.volume == 50
+        assert fake.calls == [_Call(EVENT_GET_STATE, None)]
+
+    def test_queue(self, mocker: MockerFixture):
+        """The queue is answered as its tracks, which the model wraps."""
+        fake = _FakeSocketIOClient(answers={EVENT_GET_QUEUE: (EVENT_PUSH_QUEUE, QUEUE_PAYLOAD)})
+        client, _ = _client(mocker, fake)
+
+        queue = client.queue
+
+        assert len(queue) == 1
+        assert queue[0].title == "So What"
+        assert queue[0].position == 0
+
+    def test_playlists(self, mocker: MockerFixture):
+        """The playlists are answered as an array of names."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_LIST_PLAYLIST: (EVENT_PUSH_LIST_PLAYLIST, ["jazz", "rock"])}
+        )
+        client, _ = _client(mocker, fake)
+
+        playlists = client.playlists
+
+        assert [playlist.name for playlist in playlists] == ["jazz", "rock"]
+
+    def test_system_info(self, mocker: MockerFixture):
+        """The system information is read from the object the host pushes back."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_GET_SYSTEM_INFO: ("pushSystemInfo", {"name": "volumio", "id": "1"})}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert client.system_info.name == "volumio"
+
+    def test_system_version(self, mocker: MockerFixture):
+        """The version is read from the object the host pushes back."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_GET_SYSTEM_VERSION: ("pushSystemVersion", {"systemversion": "4.119"})}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert client.system_version.system_version == "4.119"
+
+    def test_collection_statistics(self, mocker: MockerFixture):
+        """The collection statistics are read from the object the host pushes back."""
+        fake = _FakeSocketIOClient(
+            answers={
+                EVENT_GET_MY_COLLECTION_STATS: (
+                    "pushMyCollectionStats",
+                    {"artists": 6, "albums": 8, "songs": 116},
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        assert client.collection_statistics.songs == 116
+
+    def test_zones(self, mocker: MockerFixture):
+        """The devices the host answers under "list" are read as the zones."""
+        fake = _FakeSocketIOClient(
+            answers={
+                EVENT_GET_MULTI_ROOM_DEVICES: (
+                    "pushMultiRoomDevices",
+                    {"misc": {"debug": True}, "list": [{"id": "1", "name": "Kitchen"}]},
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        zones = client.zones
+
+        assert len(zones) == 1
+        assert zones[0].name == "Kitchen"
+
+    def test_zones_without_a_list(self, mocker: MockerFixture):
+        """A host answering no devices is read as no zones."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_GET_MULTI_ROOM_DEVICES: ("pushMultiRoomDevices", {"misc": {}})}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert len(client.zones) == 0
+
+    def test_browse(self, mocker: MockerFixture):
+        """Browsing sends the URI and reads the navigation envelope back."""
+        client, fake = _browse_client(mocker)
+
+        results = client.browse("playlists")
+
+        assert [item.title for item in results.items] == ["jazz"]
+        assert fake.calls == [_Call(EVENT_BROWSE_LIBRARY, {"uri": "playlists"})]
+
+    def test_browse_the_root(self, mocker: MockerFixture):
+        """Browsing without a URI asks for the root."""
+        client, fake = _browse_client(mocker)
+
+        client.browse()
+
+        assert fake.calls == [_Call(EVENT_BROWSE_LIBRARY, {"uri": "/"})]
+
+    def test_search(self, mocker: MockerFixture):
+        """Searching sends the query and reads the navigation envelope back."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_SEARCH: (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)}
+        )
+        client, _ = _client(mocker, fake)
+
+        results = client.search("miles")
+
+        assert [item.title for item in results.items] == ["jazz"]
+
+    def test_a_read_answered_with_the_wrong_shape(self, mocker: MockerFixture):
+        """An answer that is not the expected JSON shape warns once and raises."""
+        logger = Mock()
+        fake = _FakeSocketIOClient(answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, ["not", "it"])})
+        client, _ = _client(mocker, fake, logger=logger)
+
+        with pytest.raises(VolumioAPIError):
+            _ = client.state
+
+        logger.warning.assert_called_once()
+
+    def test_an_array_read_answered_with_the_wrong_shape(self, mocker: MockerFixture):
+        """An array read answered with an object warns once and raises."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_LIST_PLAYLIST: (EVENT_PUSH_LIST_PLAYLIST, {"not": "an array"})}
+        )
+        client, _ = _client(mocker, fake)
+
+        with pytest.raises(VolumioAPIError):
+            _ = client.playlists
+
+    def test_queue_status(self, mocker: MockerFixture):
+        """The navigation state reads the playback state and the queue."""
+        client, _ = _client(mocker, _state_and_queue_fake())
+
+        status = client.queue_status
+
+        assert status == {
+            "has_next": False,
+            "has_previous": True,
+            "length": 2,
+            "position": 1,
+            "track": STATE_PAYLOAD,
+        }
+
+    def test_has_next_and_has_previous(self, mocker: MockerFixture):
+        """The neighbors of the current track are read off the navigation state."""
+        client, _ = _client(mocker, _state_and_queue_fake())
+
+        assert client.has_next is False
+        assert client.has_previous is True
+
+    @pytest.mark.parametrize(
+        ("status", "playing", "paused", "stopped"),
+        [
+            ("play", True, False, False),
+            ("pause", False, True, False),
+            ("stop", False, False, True),
+        ],
+    )
+    def test_the_playback_predicates(
+        self, mocker: MockerFixture, status, playing, paused, stopped
+    ):
+        """Each predicate reads the status string of the playback state."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, {**STATE_PAYLOAD, "status": status})}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert client.is_playing is playing
+        assert client.is_paused is paused
+        assert client.is_stopped is stopped
+
+    def test_is_muted(self, mocker: MockerFixture):
+        """The mute flag is read off the playback state."""
+        client, _ = _state_client(mocker)
+
+        assert client.is_muted is False
+
+    def test_seek_and_volume_are_read_off_the_state(self, mocker: MockerFixture):
+        """Both properties read the playback state, seek in whole seconds."""
+        client, _ = _state_client(mocker)
+
+        assert client.seek == 42
+        assert client.volume == 50
+
+
+class TestVolumioWebSocketClientCommands:
+    """The events the client emits without waiting for an answer."""
+
+    @pytest.mark.parametrize(
+        ("method", "event"),
+        [
+            ("clear", "clearQueue"),
+            ("mute", "mute"),
+            ("next", "next"),
+            ("pause", "pause"),
+            ("previous", "prev"),
+            ("stop", "stop"),
+            ("toggle", "toggle"),
+            ("unmute", "unmute"),
+        ],
+    )
+    def test_a_bare_command(self, mocker: MockerFixture, method, event):
+        """Each bare command emits its event, carrying nothing, and answers nothing."""
+        client, fake = _client(mocker)
+
+        assert getattr(client, method)() is None
+        assert fake.calls == [_Call(event, None)]
+
+    def test_play(self, mocker: MockerFixture):
+        """Playing without a position carries nothing."""
+        client, fake = _client(mocker)
+
+        client.play()
+
+        assert fake.calls == [_Call(EVENT_PLAY, None)]
+
+    def test_play_at_a_position(self, mocker: MockerFixture):
+        """Playing at a position carries it."""
+        client, fake = _client(mocker)
+
+        client.play(3)
+
+        assert fake.calls == [_Call(EVENT_PLAY, {"value": 3})]
+
+    def test_play_a_queue_track(self, mocker: MockerFixture):
+        """A track of a queue is played at the position it knows."""
+        fake = _FakeSocketIOClient(answers={EVENT_GET_QUEUE: (EVENT_PUSH_QUEUE, QUEUE_PAYLOAD)})
+        client, _ = _client(mocker, fake)
+        track = client.queue[0]
+        fake.calls.clear()
+
+        client.play(track)
+
+        assert fake.calls == [_Call(EVENT_PLAY, {"value": 0})]
+
+    def test_play_a_track_of_no_queue(self, mocker: MockerFixture):
+        """A track that knows no position is refused before anything is sent."""
+        logger = Mock()
+        client, fake = _client(mocker, logger=logger)
+
+        with pytest.raises(ValueError, match="does not belong to a queue"):
+            client.play(QueueTrack.from_raw({"title": "So What"}))
+
+        assert fake.calls == []
+        logger.warning.assert_called_once()
+
+    def test_play_playlist(self, mocker: MockerFixture):
+        """A playlist is played by name."""
+        client, fake = _client(mocker)
+
+        client.play_playlist("jazz")
+
+        assert fake.calls == [_Call("playPlaylist", {"name": "jazz"})]
+
+    def test_play_playlist_as_a_model(self, mocker: MockerFixture):
+        """A playlist model is played by the name it carries."""
+        client, fake = _client(mocker)
+
+        client.play_playlist(Playlist.from_name("jazz"))
+
+        assert fake.calls == [_Call("playPlaylist", {"name": "jazz"})]
+
+    def test_play_playlist_without_a_name(self, mocker: MockerFixture):
+        """A playlist with no name is refused before anything is sent."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(ValueError, match="playlist has no name"):
+            client.play_playlist(Playlist.from_raw({}))
+
+        assert fake.calls == []
+
+    def test_the_volume_setter(self, mocker: MockerFixture):
+        """Setting the volume carries the level itself, not an object holding it."""
+        client, fake = _client(mocker)
+
+        client.volume = 42
+
+        assert fake.calls == [_Call("volume", 42)]
+
+    @pytest.mark.parametrize("level", [-1, 101])
+    def test_an_out_of_range_volume(self, mocker: MockerFixture, level):
+        """A level outside 0..100 is refused before anything is sent."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(ValueError, match="between 0 and 100"):
+            client.volume = level
+
+        assert fake.calls == []
+
+    def test_the_volume_steps(self, mocker: MockerFixture):
+        """The relative changes carry the increments a Volumio host understands."""
+        client, fake = _client(mocker)
+
+        client.increase_volume()
+        client.decrease_volume()
+
+        assert fake.calls == [_Call("volume", "+"), _Call("volume", "-")]
+
+    def test_the_seek_setter(self, mocker: MockerFixture):
+        """Seeking carries the number of seconds itself."""
+        client, fake = _client(mocker)
+
+        client.seek = 90
+
+        assert fake.calls == [_Call("seek", 90)]
+
+    def test_seek_forward(self, mocker: MockerFixture):
+        """Seeking forward reads the position first and sends an absolute one."""
+        client, fake = _state_client(mocker)
+
+        client.seek_forward()
+
+        assert fake.calls[-1] == _Call("seek", 52)
+
+    def test_seek_backward(self, mocker: MockerFixture):
+        """Seeking backward reads the position first and sends an absolute one."""
+        client, fake = _state_client(mocker)
+
+        client.seek_backward()
+
+        assert fake.calls[-1] == _Call("seek", 32)
+
+    def test_seek_backward_stops_at_the_start(self, mocker: MockerFixture):
+        """Seeking backward never goes before the start of the track."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, {**STATE_PAYLOAD, "seek": 3000})}
+        )
+        client, _ = _client(mocker, fake)
+
+        client.seek_backward()
+
+        assert fake.calls[-1] == _Call("seek", 0)
+
+    @pytest.mark.parametrize(
+        ("method", "event"), [("randomize", "setRandom"), ("repeat", "setRepeat")]
+    )
+    def test_a_mode_is_set(self, mocker: MockerFixture, method, event):
+        """Setting a mode carries the value, without reading the state first."""
+        client, fake = _client(mocker)
+
+        getattr(client, method)(True)
+
+        assert fake.calls == [_Call(event, {"value": True})]
+
+    @pytest.mark.parametrize(
+        ("method", "event", "key"),
+        [("randomize", "setRandom", "random"), ("repeat", "setRepeat", "repeat")],
+    )
+    def test_a_mode_is_toggled(self, mocker: MockerFixture, method, event, key):
+        """Toggling a mode reads the state first and sends the opposite."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, {**STATE_PAYLOAD, key: True})}
+        )
+        client, _ = _client(mocker, fake)
+
+        getattr(client, method)()
+
+        assert fake.calls[-1] == _Call(event, {"value": False})
+
+
+class TestVolumioWebSocketClientQueueing:
+    """Adding to the queue and replacing it, which browse a container first."""
+
+    def test_add_a_local_uri_as_itself(self, mocker: MockerFixture):
+        """A URI of the local library is queued as itself, without a browse."""
+        client, fake = _client(mocker)
+
+        client.add_to_queue("mpd://NAS/track.flac")
+
+        assert fake.calls == [
+            _Call("addToQueue", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
+        ]
+
+    def test_add_a_container_of_another_source(self, mocker: MockerFixture):
+        """A container of another source is browsed and queued as its items."""
+        client, fake = _browse_client(mocker)
+
+        client.add_to_queue("qobuz://album/1")
+
+        assert fake.calls[-1] == _Call(
+            "addToQueue", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
+        )
+
+    def test_add_a_container_listing_nothing(self, mocker: MockerFixture):
+        """A URI of another source that lists nothing is queued as itself."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_BROWSE_LIBRARY: (EVENT_PUSH_BROWSE_LIBRARY, EMPTY_NAVIGATION)}
+        )
+        client, _ = _client(mocker, fake)
+
+        client.add_to_queue("qobuz://track/1")
+
+        assert fake.calls[-1] == _Call("addToQueue", {"service": "qobuz", "uri": "qobuz://track/1"})
+
+    def test_replace_with_a_local_uri(self, mocker: MockerFixture):
+        """A URI of the local library replaces the queue as a single item."""
+        client, fake = _client(mocker)
+
+        client.replace_queue_and_play("mpd://NAS/album")
+
+        assert fake.calls == [
+            _Call("replaceAndPlay", {"item": {"service": "mpd", "uri": "mpd://NAS/album"}})
+        ]
+
+    def test_replace_with_a_browsed_container(self, mocker: MockerFixture):
+        """A container of another source is browsed and sent as its items."""
+        client, fake = _browse_client(mocker)
+
+        client.replace_queue_and_play("qobuz://album/1")
+
+        assert fake.calls[-1] == _Call(
+            "replaceAndPlay",
+            {
+                "list": [
+                    {"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}
+                ],
+                "index": 0,
+            },
+        )
+
+    def test_replace_at_an_index(self, mocker: MockerFixture):
+        """An index browses the URI and sends the listing along with it."""
+        client, fake = _browse_client(mocker)
+
+        client.replace_queue_and_play("qobuz://album/1", 0)
+
+        assert fake.calls[-1] == _Call(
+            "replaceAndPlay",
+            {
+                "list": [
+                    {"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}
+                ],
+                "index": 0,
+            },
+        )
+
+    def test_replace_at_an_index_the_listing_is_too_short_for(self, mocker: MockerFixture):
+        """An index beyond the listing warns once and raises."""
+        logger = Mock()
+        client, _ = _browse_client(mocker, logger=logger)
+
+        with pytest.raises(VolumioAPIError, match="not enough to play the one at index 5"):
+            client.replace_queue_and_play("qobuz://album/1", 5)
+
+        logger.warning.assert_called_once()
+
+    def test_replace_at_an_index_of_a_uri_listing_nothing(self, mocker: MockerFixture):
+        """Index 0 of a URI listing nothing falls back to the URI as a single item."""
+        fake = _FakeSocketIOClient(
+            answers={EVENT_BROWSE_LIBRARY: (EVENT_PUSH_BROWSE_LIBRARY, EMPTY_NAVIGATION)}
+        )
+        client, _ = _client(mocker, fake)
+
+        client.replace_queue_and_play("qobuz://track/1", 0)
+
+        assert fake.calls[-1] == _Call(
+            "replaceAndPlay", {"item": {"service": "qobuz", "uri": "qobuz://track/1"}}
+        )
+
+    def test_replace_at_a_negative_index(self, mocker: MockerFixture):
+        """A negative index is refused before anything is sent."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(ValueError, match="0 or greater"):
+            client.replace_queue_and_play("mpd://NAS/album", -1)
+
+        assert fake.calls == []

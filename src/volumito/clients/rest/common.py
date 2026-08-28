@@ -237,22 +237,6 @@ class VolumioRESTAPICommon(VolumioCommon):
             f"{self.host_configuration.rest_base_url} failed: {error}"
         ) from error
 
-    def _fail_short_listing(self, count: int, index: int) -> NoReturn:
-        """Report that a URI does not list enough items to play the asked one.
-
-        Args:
-            count: The number of items the URI lists
-            index: The position of the item to play first (0-based)
-
-        Raises:
-            VolumioAPIError: Always
-        """
-        self._log_warning(f"The URI lists {count} items, not enough for index {index}")
-        raise VolumioAPIError(
-            f"The URI lists {count} items, not enough to play the one "
-            f"at index {index}"
-        )
-
     def _mode_command(self, mode: str, value: bool | None) -> str:
         """Build the command setting or toggling a playback mode.
 

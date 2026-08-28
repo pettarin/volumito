@@ -150,6 +150,22 @@ class VolumioCommon(VolumioBaseClient):
             f"Failed to connect to Volumio instance at {self._endpoint_description}: {error}"
         ) from error
 
+    def _fail_short_listing(self, count: int, index: int) -> NoReturn:
+        """Report that a URI does not list enough items to play the asked one.
+
+        Args:
+            count: The number of items the URI lists
+            index: The position of the item to play first (0-based)
+
+        Raises:
+            VolumioAPIError: Always
+        """
+        self._log_warning(f"The URI lists {count} items, not enough for index {index}")
+        raise VolumioAPIError(
+            f"The URI lists {count} items, not enough to play the one "
+            f"at index {index}"
+        )
+
     def _fail_timeout(self, error: Exception, waited: float) -> NoReturn:
         """Report that the Volumio instance did not answer in time.
 
