@@ -31,6 +31,7 @@ from volumito.clients.models import (
     InputSources,
     MenuItems,
     MusicSources,
+    NetworkInfo,
     OutputDevices,
     PlayerState,
     Playlist,
@@ -41,16 +42,21 @@ from volumito.clients.models import (
     Queue,
     QueueTrack,
     SearchResults,
+    Share,
+    Shares,
     SleepTimer,
     SystemInfo,
     SystemVersion,
     UiConfig,
+    UsbDrives,
+    WirelessNetworks,
     Zones,
 )
 from volumito.clients.websocket.common import (
     EVENT_ADD_PLAY,
     EVENT_ADD_PLAY_CUE,
     EVENT_ADD_QUEUE_UIDS,
+    EVENT_ADD_SHARE,
     EVENT_ADD_TO_FAVOURITES,
     EVENT_ADD_TO_PLAYLIST,
     EVENT_ADD_TO_QUEUE,
@@ -62,9 +68,12 @@ from volumito.clients.websocket.common import (
     EVENT_CALL_METHOD,
     EVENT_CLEAR_QUEUE,
     EVENT_CREATE_PLAYLIST,
+    EVENT_DELETE_FOLDER,
     EVENT_DELETE_PLAYLIST,
+    EVENT_DELETE_SHARE,
     EVENT_DISABLE_AUDIO_OUTPUT,
     EVENT_DISABLE_PLUGIN,
+    EVENT_EDIT_SHARE,
     EVENT_ENABLE_AUDIO_OUTPUT,
     EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN,
     EVENT_ENABLE_PLUGIN,
@@ -77,13 +86,17 @@ from volumito.clients.websocket.common import (
     EVENT_GET_DEVICE_NAME,
     EVENT_GET_DSP_UI_CONFIG,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES,
+    EVENT_GET_INFO_NETWORK,
+    EVENT_GET_INFO_SHARE,
     EVENT_GET_INPUT_SOURCES,
     EVENT_GET_INSTALLED_PLUGINS,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY,
+    EVENT_GET_LIST_SHARES,
     EVENT_GET_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_MY_MUSIC_PLUGINS,
+    EVENT_GET_NETWORK_SHARES_DISCOVERY,
     EVENT_GET_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE,
@@ -93,10 +106,13 @@ from volumito.clients.websocket.common import (
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
     EVENT_GET_UI_CONFIG,
+    EVENT_GET_WIRELESS_NETWORKS,
+    EVENT_GET_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO,
     EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_INSTALL_PLUGIN,
     EVENT_LIST_PLAYLIST,
+    EVENT_LIST_USB_DRIVES,
     EVENT_MODIFY_PLUGIN_STATUS,
     EVENT_MOVE_QUEUE,
     EVENT_MUTE,
@@ -121,8 +137,10 @@ from volumito.clients.websocket.common import (
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
     EVENT_RESCAN_DB,
+    EVENT_SAFE_REMOVE_DRIVE,
     EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
+    EVENT_SAVE_WIRELESS_NETWORK_SETTINGS,
     EVENT_SEARCH,
     EVENT_SEEK,
     EVENT_SERVICE_UPDATE_TRACKLIST,
@@ -446,6 +464,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_ADD_TO_RADIO_FAVOURITES, {"uri": uri})
 
+    def add_share(self, name: str, path: str, fstype: str, **options: str) -> None:
+        """Mount a network share on the Volumio instance.
+
+        Args:
+            name: The name to mount the share under
+            path: The path of the share on its host (e.g., ``"192.168.1.2/Music"``)
+            fstype: The kind of the share (e.g., ``"cifs"``, ``"nfs"``)
+            **options: The remaining fields the share needs (``username``, ``password``,
+                ``options``)
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload: dict[str, Any] = {"name": name, "path": path, "fstype": fstype, **options}
+        self._emit(EVENT_ADD_SHARE, payload)
+
     def add_to_favourites(
         self,
         uri: str,
@@ -724,6 +758,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_VOLUME, VOLUME_DOWN)
 
+    def delete_folder(self, path: str) -> None:
+        """Delete a folder of the collection of the Volumio instance.
+
+        Args:
+            path: The path of the folder to delete
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_DELETE_FOLDER, {"item": {"path": path}})
+
     def delete_playlist(self, name: str | Playlist) -> None:
         """Delete a saved playlist.
 
@@ -735,6 +780,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_DELETE_PLAYLIST, self._playlist_payload(name))
+
+    def delete_share(self, share_id: str) -> None:
+        """Unmount a network share of the Volumio instance.
+
+        Args:
+            share_id: The identifier of the share, from :attr:`shares`
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_DELETE_SHARE, {"id": share_id})
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -828,6 +884,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
                 self._registered = set()
             self._log_debug("Disconnecting from the Volumio WebSocket API... done")
 
+    def discover_network_shares(self) -> dict[str, Any]:
+        """Discover the network shares reachable from the Volumio instance.
+
+        Returns:
+            The shares the host found, as it reported them
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return self._read_object(EVENT_GET_NETWORK_SHARES_DISCOVERY)
+
     @property
     def dsp_config(self) -> UiConfig:
         """The configuration page of the DSP of the Volumio instance.
@@ -842,6 +910,20 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not an object
         """
         return UiConfig.from_raw(self._read_object(EVENT_GET_DSP_UI_CONFIG))
+
+    def edit_share(self, share_id: str, **fields: str) -> None:
+        """Change a network share mounted by the Volumio instance.
+
+        Args:
+            share_id: The identifier of the share, from :attr:`shares`
+            **fields: The fields to change (``name``, ``path``, ``fstype``, ``username``,
+                ``password``, ``options``)
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload: dict[str, Any] = {"id": share_id, **fields}
+        self._emit(EVENT_EDIT_SHARE, payload)
 
     def emit(self, event: str, payload: object = None) -> None:
         """Send an event to the Volumio instance, without waiting for anything.
@@ -940,6 +1022,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not an object
         """
         return UiConfig.from_raw(self._read_object(EVENT_GET_UI_CONFIG, {"page": page}))
+
+    def get_share(self, share_id: str) -> Share:
+        """Read the details of one network share of the Volumio instance.
+
+        Args:
+            share_id: The identifier of the share, from :attr:`shares`
+
+        Returns:
+            The details of the share
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return Share.from_raw(self._read_object(EVENT_GET_INFO_SHARE, {"id": share_id}))
 
     def goto(self, kind: str, value: str) -> BrowseResults:
         """Browse to the artist or the album of the track currently playing.
@@ -1219,6 +1316,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_MUTE)
+
+    @property
+    def network_info(self) -> NetworkInfo:
+        """The network interfaces of the Volumio instance.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The network interfaces of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        interfaces = self._read_array(EVENT_GET_INFO_NETWORK)
+        return NetworkInfo.from_raw({"interfaces": interfaces})
 
     def next(self) -> None:
         """Skip to the next track in the queue.
@@ -1682,6 +1795,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_RESCAN_DB)
 
+    def safe_remove_drive(self, name: str) -> None:
+        """Unmount a USB drive of the Volumio instance before it is unplugged.
+
+        Args:
+            name: The name of the drive, from :attr:`usb_drives`
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SAFE_REMOVE_DRIVE, {"name": name})
+
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         """Save the current queue as a saved playlist.
 
@@ -1693,6 +1817,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_SAVE_QUEUE_TO_PLAYLIST, self._playlist_payload(name))
+
+    def save_wireless_settings(self, ssid: str, password: str = "") -> None:
+        """Join a wireless network with the Volumio instance.
+
+        Args:
+            ssid: The name of the network
+            password: The password of the network, empty for an open one
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = {"ssid": ssid, "password": password}
+        self._emit(EVENT_SAVE_WIRELESS_NETWORK_SETTINGS, payload)
 
     def search(self, query: str) -> SearchResults:
         """Search the sources of the Volumio instance.
@@ -1835,6 +1972,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
+
+    @property
+    def shares(self) -> Shares:
+        """The network shares mounted by the Volumio instance.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The mounted shares
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        return Shares.from_raw({"shares": self._read_array(EVENT_GET_LIST_SHARES)})
 
     def shutdown(self) -> None:
         """Power the Volumio host off.
@@ -2023,6 +2175,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._emit(EVENT_SERVICE_UPDATE_TRACKLIST, service)
 
     @property
+    def usb_drives(self) -> UsbDrives:
+        """The USB drives attached to the Volumio instance.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The attached drives
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        return UsbDrives.from_raw({"drives": self._read_array(EVENT_LIST_USB_DRIVES)})
+
+    @property
     def volume(self) -> int:
         """The playback volume level of the Volumio instance.
 
@@ -2055,6 +2222,39 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._log_debug("Waiting for the connection to drop...")
         self._client.wait()
         self._log_debug("Waiting for the connection to drop... done")
+
+    @property
+    def wireless_networks(self) -> WirelessNetworks:
+        """The wireless networks the Volumio instance can see, scanning for them.
+
+        Each access emits a fresh event, and a scan takes a moment: a host with no
+        wireless interface never answers, and the read times out. See
+        :attr:`wireless_networks_cache` for the networks it saw last.
+
+        Returns:
+            The wireless networks the host can see
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return WirelessNetworks.from_raw(self._read_object(EVENT_GET_WIRELESS_NETWORKS))
+
+    @property
+    def wireless_networks_cache(self) -> WirelessNetworks:
+        """The wireless networks the Volumio instance saw last, without scanning again.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The wireless networks the host saw last
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        answer = self._read_object(EVENT_GET_WIRELESS_NETWORKS_CACHE)
+        return WirelessNetworks.from_raw(answer)
 
     @property
     def zones(self) -> Zones:

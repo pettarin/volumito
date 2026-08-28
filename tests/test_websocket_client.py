@@ -1995,3 +1995,125 @@ class TestVolumioWebSocketClientPlugins:
             _Call("callMethod", {"endpoint": "miscellanea/alarm", "method": "setSleep",
                                  "data": {"time": "0:30"}}),
         ]
+
+
+class TestVolumioWebSocketClientNetworkAndShares:
+    """The network interfaces, the wireless networks, the shares, and the USB drives."""
+
+    def test_network_info(self, mocker: MockerFixture):
+        """The interfaces are answered as a bare array, which the model wraps."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getInfoNetwork": (
+                    "pushInfoNetwork",
+                    [{"type": "Wired", "ip": "192.168.1.122", "status": "connected"}],
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        info = client.network_info
+
+        assert len(info) == 1
+        assert info[0].ip == "192.168.1.122"
+
+    def test_shares(self, mocker: MockerFixture):
+        """The shares are answered as a bare array, which the model wraps."""
+        fake = _FakeSocketIOClient(
+            answers={"getListShares": ("pushListShares", [{"id": "a", "name": "NAS"}])}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert [share.name for share in client.shares] == ["NAS"]
+
+    def test_get_share(self, mocker: MockerFixture):
+        """One share is read by identifier."""
+        fake = _FakeSocketIOClient(
+            answers={"getInfoShare": ("pushInfoShare", {"id": "a", "name": "NAS",
+                                                        "fstype": "cifs"})}
+        )
+        client, fake = _client(mocker, fake)
+
+        share = client.get_share("a")
+
+        assert share.fstype == "cifs"
+        assert fake.calls == [_Call("getInfoShare", {"id": "a"})]
+
+    def test_add_edit_and_delete_a_share(self, mocker: MockerFixture):
+        """A share is mounted with its options, changed, and unmounted."""
+        client, fake = _client(mocker)
+
+        client.add_share("NAS", "192.168.1.2/Music", "cifs", username="guest")
+        client.edit_share("a", name="NAS2")
+        client.delete_share("a")
+
+        assert fake.calls == [
+            _Call(
+                "addShare",
+                {"name": "NAS", "path": "192.168.1.2/Music", "fstype": "cifs",
+                 "username": "guest"},
+            ),
+            _Call("editShare", {"id": "a", "name": "NAS2"}),
+            _Call("deleteShare", {"id": "a"}),
+        ]
+
+    def test_discover_network_shares(self, mocker: MockerFixture):
+        """The discovery answers with whatever the host found."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getNetworkSharesDiscovery": (
+                    "pushNetworkSharesDiscovery",
+                    {"nas": [{"name": "NAS"}]},
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        assert client.discover_network_shares() == {"nas": [{"name": "NAS"}]}
+
+    def test_usb_drives_and_safe_removal(self, mocker: MockerFixture):
+        """The drives are read, and one is unmounted by name."""
+        fake = _FakeSocketIOClient(
+            answers={"listUsbDrives": ("pushListUsbDrives", [{"name": "USB"}])}
+        )
+        client, fake = _client(mocker, fake)
+
+        drives = client.usb_drives
+        client.safe_remove_drive("USB")
+
+        assert [drive.name for drive in drives] == ["USB"]
+        assert fake.calls[-1] == _Call("safeRemoveDrive", {"name": "USB"})
+
+    def test_delete_folder(self, mocker: MockerFixture):
+        """A folder is deleted by the path the host nests under "item"."""
+        client, fake = _client(mocker)
+
+        client.delete_folder("mpd://NAS/Old")
+
+        assert fake.calls == [_Call("deleteFolder", {"item": {"path": "mpd://NAS/Old"}})]
+
+    def test_the_wireless_networks(self, mocker: MockerFixture):
+        """Both the scan and the cache answer with the networks the host can see."""
+        networks = {"available": [{"ssid": "home", "signal": 70}]}
+        fake = _FakeSocketIOClient(
+            answers={
+                "getWirelessNetworks": ("pushWirelessNetworks", networks),
+                "getWirelessNetworksCache": ("pushWirelessNetworksCache", networks),
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        assert [n.ssid for n in client.wireless_networks] == ["home"]
+        assert [n.ssid for n in client.wireless_networks_cache] == ["home"]
+
+    def test_save_wireless_settings(self, mocker: MockerFixture):
+        """Joining a network carries the name and the password, empty when open."""
+        client, fake = _client(mocker)
+
+        client.save_wireless_settings("home", "hunter2")
+        client.save_wireless_settings("open")
+
+        assert fake.calls == [
+            _Call("saveWirelessNetworkSettings", {"ssid": "home", "password": "hunter2"}),
+            _Call("saveWirelessNetworkSettings", {"ssid": "open", "password": ""}),
+        ]

@@ -33,6 +33,9 @@ EVENT_ADD_PLAY_CUE = "addPlayCue"
 EVENT_ADD_QUEUE_UIDS = "addQueueUids"
 """The event appending library items to the queue by identifier."""
 
+EVENT_ADD_SHARE = "addShare"
+"""The event mounting a network share."""
+
 EVENT_ADD_TO_FAVOURITES = "addToFavourites"
 """The event adding an item to the favourites."""
 
@@ -66,14 +69,23 @@ EVENT_CLEAR_QUEUE = "clearQueue"
 EVENT_CREATE_PLAYLIST = "createPlaylist"
 """The event creating an empty saved playlist."""
 
+EVENT_DELETE_FOLDER = "deleteFolder"
+"""The event deleting a folder of the collection."""
+
 EVENT_DELETE_PLAYLIST = "deletePlaylist"
 """The event deleting a saved playlist."""
+
+EVENT_DELETE_SHARE = "deleteShare"
+"""The event unmounting a network share."""
 
 EVENT_DISABLE_AUDIO_OUTPUT = "disableAudioOutput"
 """The event disabling one audio output."""
 
 EVENT_DISABLE_PLUGIN = "disablePlugin"
 """The event disabling an installed plugin."""
+
+EVENT_EDIT_SHARE = "editShare"
+"""The event changing a mounted network share."""
 
 EVENT_ENABLE_AUDIO_OUTPUT = "enableAudioOutput"
 """The event enabling one audio output."""
@@ -111,6 +123,12 @@ EVENT_GET_DSP_UI_CONFIG = "getDSPUiConfig"
 EVENT_GET_EXTENDED_OUTPUT_DEVICES = "getExtendedOutputDevices"
 """The event asking for the output devices, with their details."""
 
+EVENT_GET_INFO_NETWORK = "getInfoNetwork"
+"""The event asking for the network interfaces of the host."""
+
+EVENT_GET_INFO_SHARE = "getInfoShare"
+"""The event asking for the details of one network share."""
+
 EVENT_GET_INPUT_SOURCES = "getInputSources"
 """The event asking for the input sources of the host."""
 
@@ -119,6 +137,9 @@ EVENT_GET_INSTALLED_PLUGINS = "getInstalledPlugins"
 
 EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY = "getLastPushedBrowseLibrary"
 """The event asking for the listing the host pushed last."""
+
+EVENT_GET_LIST_SHARES = "getListShares"
+"""The event asking for the network shares mounted by the host."""
 
 EVENT_GET_MENU_ITEMS = "getMenuItems"
 """The event asking for the menu the host offers its user interface."""
@@ -131,6 +152,9 @@ EVENT_GET_MY_COLLECTION_STATS = "getMyCollectionStats"
 
 EVENT_GET_MY_MUSIC_PLUGINS = "getMyMusicPlugins"
 """The event asking for the music sources of the host."""
+
+EVENT_GET_NETWORK_SHARES_DISCOVERY = "getNetworkSharesDiscovery"
+"""The event discovering the network shares reachable from the host."""
 
 EVENT_GET_OUTPUT_DEVICES = "getOutputDevices"
 """The event asking for the output devices of the host."""
@@ -159,6 +183,12 @@ EVENT_GET_SYSTEM_VERSION = "getSystemVersion"
 EVENT_GET_UI_CONFIG = "getUiConfig"
 """The event asking for the configuration page of a plugin."""
 
+EVENT_GET_WIRELESS_NETWORKS = "getWirelessNetworks"
+"""The event scanning for wireless networks."""
+
+EVENT_GET_WIRELESS_NETWORKS_CACHE = "getWirelessNetworksCache"
+"""The event asking for the wireless networks seen last."""
+
 EVENT_GO_TO = "goTo"
 """The event browsing to the artist or the album of what is playing."""
 
@@ -170,6 +200,9 @@ EVENT_INSTALL_PLUGIN = "installPlugin"
 
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
+
+EVENT_LIST_USB_DRIVES = "listUsbDrives"
+"""The event asking for the USB drives attached to the host."""
 
 EVENT_MODIFY_PLUGIN_STATUS = "modifyPluginStatus"
 """The event enabling or disabling a plugin in one call."""
@@ -255,6 +288,12 @@ EVENT_PUSH_ENQUEUE = "pushEnqueue"
 EVENT_PUSH_EXTENDED_OUTPUT_DEVICES = "pushExtendedOutputDevices"
 """The event carrying the output devices with their details."""
 
+EVENT_PUSH_INFO_NETWORK = "pushInfoNetwork"
+"""The event carrying the network interfaces of the host."""
+
+EVENT_PUSH_INFO_SHARE = "pushInfoShare"
+"""The event carrying the details of one network share."""
+
 EVENT_PUSH_INPUT_SOURCES = "pushInputSources"
 """The event carrying the input sources of the host."""
 
@@ -263,6 +302,12 @@ EVENT_PUSH_INSTALLED_PLUGINS = "pushInstalledPlugins"
 
 EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 """The event carrying the names of the saved playlists."""
+
+EVENT_PUSH_LIST_SHARES = "pushListShares"
+"""The event carrying the network shares mounted by the host."""
+
+EVENT_PUSH_LIST_USB_DRIVES = "pushListUsbDrives"
+"""The event carrying the USB drives attached to the host."""
 
 EVENT_PUSH_MENU_ITEMS = "pushMenuItems"
 """The event carrying the menu of the user interface."""
@@ -275,6 +320,9 @@ EVENT_PUSH_MY_COLLECTION_STATS = "pushMyCollectionStats"
 
 EVENT_PUSH_MY_MUSIC_PLUGINS = "pushMyMusicPlugins"
 """The event carrying the music sources of the host."""
+
+EVENT_PUSH_NETWORK_SHARES_DISCOVERY = "pushNetworkSharesDiscovery"
+"""The event carrying the network shares that were discovered."""
 
 EVENT_PUSH_OUTPUT_DEVICES = "pushOutputDevices"
 """The event carrying the output devices of the host."""
@@ -318,6 +366,12 @@ EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 EVENT_PUSH_UI_CONFIG = "pushUiConfig"
 """The event carrying the configuration page of a plugin."""
 
+EVENT_PUSH_WIRELESS_NETWORKS = "pushWirelessNetworks"
+"""The event carrying the wireless networks that were scanned for."""
+
+EVENT_PUSH_WIRELESS_NETWORKS_CACHE = "pushWirelessNetworksCache"
+"""The event carrying the wireless networks seen last."""
+
 EVENT_REBOOT = "reboot"
 """The event restarting the host."""
 
@@ -348,11 +402,17 @@ EVENT_REPLACE_AND_PLAY_CUE = "replaceAndPlayCue"
 EVENT_RESCAN_DB = "rescanDb"
 """The event rescanning the music collection from scratch."""
 
+EVENT_SAFE_REMOVE_DRIVE = "safeRemoveDrive"
+"""The event unmounting a USB drive before it is unplugged."""
+
 EVENT_SAVE_ALARM = "saveAlarm"
 """The event replacing the whole set of alarms."""
 
 EVENT_SAVE_QUEUE_TO_PLAYLIST = "saveQueueToPlaylist"
 """The event saving the queue as a saved playlist."""
+
+EVENT_SAVE_WIRELESS_NETWORK_SETTINGS = "saveWirelessNetworkSettings"
+"""The event joining a wireless network."""
 
 EVENT_SEARCH = "search"
 """The event searching the sources of the host."""
@@ -433,13 +493,17 @@ RESPONSE_EVENTS = {
     EVENT_GET_DEVICE_NAME: EVENT_PUSH_DEVICE_NAME,
     EVENT_GET_DSP_UI_CONFIG: EVENT_PUSH_DSP_UI_CONFIG,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES: EVENT_PUSH_EXTENDED_OUTPUT_DEVICES,
+    EVENT_GET_INFO_NETWORK: EVENT_PUSH_INFO_NETWORK,
+    EVENT_GET_INFO_SHARE: EVENT_PUSH_INFO_SHARE,
     EVENT_GET_INPUT_SOURCES: EVENT_PUSH_INPUT_SOURCES,
     EVENT_GET_INSTALLED_PLUGINS: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_GET_LIST_SHARES: EVENT_PUSH_LIST_SHARES,
     EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
     EVENT_GET_MY_MUSIC_PLUGINS: EVENT_PUSH_MY_MUSIC_PLUGINS,
+    EVENT_GET_NETWORK_SHARES_DISCOVERY: EVENT_PUSH_NETWORK_SHARES_DISCOVERY,
     EVENT_GET_OUTPUT_DEVICES: EVENT_PUSH_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
@@ -449,8 +513,11 @@ RESPONSE_EVENTS = {
     EVENT_GET_SYSTEM_INFO: EVENT_PUSH_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION: EVENT_PUSH_SYSTEM_VERSION,
     EVENT_GET_UI_CONFIG: EVENT_PUSH_UI_CONFIG,
+    EVENT_GET_WIRELESS_NETWORKS: EVENT_PUSH_WIRELESS_NETWORKS,
+    EVENT_GET_WIRELESS_NETWORKS_CACHE: EVENT_PUSH_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_LIST_PLAYLIST: EVENT_PUSH_LIST_PLAYLIST,
+    EVENT_LIST_USB_DRIVES: EVENT_PUSH_LIST_USB_DRIVES,
     EVENT_PINGER: EVENT_PONGER,
     EVENT_PLUGIN_MANAGER: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
