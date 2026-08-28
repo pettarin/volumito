@@ -15,6 +15,7 @@ This document describes how to use `volumito` as a Python library.
   - [Running Queries Concurrently](#running-queries-concurrently)
 - [WebSocket Clients](#websocket-clients)
   - [Listening To Events](#listening-to-events)
+  - [Beyond The REST API](#beyond-the-rest-api)
   - [Generic Emit And Request](#generic-emit-and-request)
   - [Differences From The REST API Clients](#differences-from-the-rest-api-clients)
 - [Response Models](#response-models)
@@ -416,6 +417,103 @@ On the asynchronous client a handler may also be a coroutine function.
 > That needs a routable local address and an open inbound port;
 > a WebSocket connection needs neither.
 
+### Beyond The REST API
+
+This is the reason to reach for these clients.
+Volumio's REST API answers about thirty endpoints;
+its WebSocket API listens for **177 events**,
+and the clients cover the **125** of them a library has any use for.
+Everything below exists **only** over WebSocket.
+
+**Queue editing.**
+`move_in_queue(source, target)`, `remove_from_queue(position)`,
+`play_next(uri)`, `add_and_play(uri)`, `save_queue_as_playlist(name)`,
+`consume(value)`, `play_items(items, index)`, `add_uids_to_queue(uids)`,
+`add_cue_track(uri, number)`, `replace_queue_with_cue_track(uri, number)`,
+`play_volatile(position)`, `goto(kind, value)`.
+
+**Playlists.**
+`create_playlist(name)`, `delete_playlist(name)`,
+`add_to_playlist(name, uri)`, `remove_from_playlist(name, uri)`,
+`get_playlist_content(name)`, `enqueue_playlist(name)`,
+`import_service_playlists()`.
+
+**Favourites and web radio.**
+`add_to_favourites(uri)`, `remove_from_favourites(uri)`, `play_favourites()`,
+`add_radio_favourite(uri)`, `remove_radio_favourite(uri)`, `play_radio_favourites()`,
+`add_web_radio(name, uri)`, `remove_web_radio(name)`.
+
+**Browse.**
+`browse_sources`, `menu_items`, `last_browse`, `super_search(query)`,
+`regenerate_thumbnails()`.
+
+**Sleep timer and alarms.**
+`sleep_timer`, `set_sleep_timer(delay)`, `alarms`, `set_alarms(alarms)`.
+
+**Audio outputs.**
+`output_devices`, `extended_output_devices`, `audio_outputs`, `input_sources`,
+`set_output_device(device_id)`, `enable_audio_output(output_id)`,
+`disable_audio_output(output_id)`, `set_audio_output_volume(output_id, volume)`,
+`audio_output_play(output_id)`, `audio_output_pause(output_id)`.
+
+**Library.**
+`music_sources`, `set_music_source_enabled(name, enabled)`,
+`rescan_library()`, `update_library(uri)`, `update_all_metadata()`,
+`update_service_tracklist(service)`.
+
+**Power and identity.**
+`device_info`, `device_name` (assignable), `device_uuid`, `power_modes`,
+`reboot()`, `shutdown()`, `standby()`.
+
+**Administration.**
+Plugins (`installed_plugins`, `install_plugin`, `enable_plugin`, `get_plugin_config`,
+`call_plugin_method`, ...), network and shares (`network_info`, `shares`, `add_share`,
+`wireless_networks`, `usb_drives`, ...), user interface preferences (`ui_settings`,
+`languages`, `set_language`, `timezone`, `backgrounds`, `privacy_settings`, ...), and
+system administration (`check_for_update`, `update`, `updater_channel`, `backup`,
+`multiroom`, ...).
+
+Two of the sleep and alarm shapes are worth knowing,
+because the wire format is misleading and the published API documentation is wrong
+about both:
+
+> [!WARNING]
+> **The sleep timer takes a delay, not a clock time.**
+> `set_sleep_timer(timedelta(minutes=30))` stops the host in half an hour;
+> `set_sleep_timer(None)` disarms it.
+> Read the remaining delay off `sleep_timer.delay`.
+
+> [!WARNING]
+> **`set_alarms` replaces the whole set.**
+> The Volumio API takes the alarms together, not one at a time,
+> so read `alarms` first and send back the list you want to keep.
+> The published API documentation names `addAlarm`, `setAlarm` and `removeAlarm`;
+> none of those events exists.
+
+```python
+from datetime import timedelta
+
+with VolumioWebSocketClient(host) as client:
+    # stop the music in half an hour
+    client.set_sleep_timer(timedelta(minutes=30))
+
+    # keep only the alarms that are armed
+    client.set_alarms([alarm for alarm in client.alarms if alarm.enabled])
+```
+
+> [!NOTE]
+> Several of these surfaces are plugins (the sleep timer and alarms, web radio,
+> multiroom, network shares, wireless networks).
+> A host that does not run one never answers,
+> so the read ends in `VolumioConnectionError` naming both events rather than in a
+> clearer error.
+
+> [!CAUTION]
+> `reboot()`, `shutdown()` and `standby()` do exactly what they say, without asking.
+> `factory_reset()` and `delete_user_data()` are deliberately **not implemented**:
+> they raise `NotImplementedError`, and their message names the `emit()` call to use
+> if you really mean it.
+
 ### Generic Emit And Request
 
 > [!WARNING]
@@ -526,6 +624,42 @@ Every query returns a model instead of a raw dictionary:
 The WebSocket clients return the same models, with two differences: their commands
 return `None` rather than a `CommandResponse`, since a Volumio host answers a command
 with nothing at all, and `emit` and `request` hand back what the host pushed, untouched.
+
+Their own members return these:
+
+| Client member                                        | Model                                    |
+| ---------------------------------------------------- | ---------------------------------------- |
+| `alarms`                                             | `Alarms` (of `Alarm`)                    |
+| `audio_outputs`                                      | `AudioOutputs` (of `AudioOutput`)        |
+| `automatic_update_enabled`                           | `bool`                                   |
+| `backgrounds`                                        | `Backgrounds` (of `Background`)          |
+| `backup`, `discover_network_shares`                  | `dict`                                   |
+| `browse_sources`                                     | `BrowseSources` (of `BrowseSource`)      |
+| `device_info`                                        | `DeviceInfo`                             |
+| `device_name`, `device_uuid`, `timezone`             | `str`                                    |
+| `dsp_config`, `get_plugin_config`                    | `UiConfig`                               |
+| `experience_settings`                                | `ExperienceSettings`                     |
+| `get_playlist_content`                               | `PlaylistContent` (of `QueueTrack`)      |
+| `goto`, `last_browse`                                | `BrowseResults`                          |
+| `infinity_playback`                                  | `InfinityPlayback`                       |
+| `input_sources`                                      | `InputSources`                           |
+| `installed_plugins`, `manage_plugin`                 | `Plugins` (of `Plugin`)                  |
+| `languages`                                          | `Languages` (of `Language`)              |
+| `menu_items`                                         | `MenuItems` (of `MenuItem`)              |
+| `multiroom`, `set_multiroom`                         | `Multiroom`                              |
+| `music_sources`                                      | `MusicSources` (of `MusicSource`)        |
+| `network_info`                                       | `NetworkInfo` (of `NetworkInterface`)    |
+| `output_devices`, `extended_output_devices`          | `OutputDevices` (of `OutputDevice`)      |
+| `power_modes`                                        | `PowerModes`                             |
+| `privacy_settings`                                   | `PrivacySettings`                        |
+| `shares`, `get_share`                                | `Shares` (of `Share`)                    |
+| `sleep_timer`                                        | `SleepTimer`                             |
+| `super_search`                                       | `SearchResults`                          |
+| `available_timezones`                                | `Timezones`                              |
+| `ui_settings`                                        | `UiSettings`                             |
+| `updater_channel`                                    | `UpdaterChannel`                         |
+| `usb_drives`                                         | `UsbDrives` (of `UsbDrive`)              |
+| `wireless_networks`, `wireless_networks_cache`       | `WirelessNetworks` (of `WirelessNetwork`)|
 
 The models are [pydantic](https://docs.pydantic.dev/) models, so their fields are
 typed and validated. A few things worth knowing:

@@ -497,6 +497,15 @@ with VolumioWebSocketClient(host) as client:
 
 An asynchronous counterpart `VolumioAsyncWebSocketClient` is also available.
 
+Beyond the members the REST clients also offer,
+the WebSocket clients reach the functionalities that the REST API of Volumio does not
+expose at all: editing the queue and the saved playlists, the favourites and the web
+radios, the sleep timer and the alarms, the audio outputs, the library scans, the power
+of the host, and its administration (plugins, network, shares, and preferences).
+See the
+[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md#beyond-the-rest-api)
+document for the whole list.
+
 
 ## Releases And Changelog
 
