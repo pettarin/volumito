@@ -11,6 +11,7 @@ This document describes how to use `volumito` as a Python library.
 
 - [Quick Start](#quick-start)
 - [Async Client](#async-client)
+- [WebSocket Client](#websocket-client)
 - [Response Models](#response-models)
 - [Reference](#reference)
 
@@ -315,6 +316,163 @@ as the synchronous one:
 `aiohttp` package is not installed.
 
 
+## WebSocket Client
+
+`VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` speak Volumio's
+[WebSocket API](https://developers.volumio.com/api/websocket-api),
+which the Volumio project considers its primary one.
+
+They need `volumito` to be installed with the `websocket` extra:
+
+```bash
+pip install volumito[websocket]
+```
+
+> [!TIP]
+> The `all` extra installs the `websocket` extra too.
+
+Unlike the REST clients, which open a connection per request,
+a WebSocket client holds one open connection:
+use it as a context manager,
+so the connection is closed when the block is left.
+
+```python
+from volumito import VolumioHostConfiguration, VolumioWebSocketClient
+
+# replace with your Volumio host
+host = VolumioHostConfiguration(host="volumio.local")
+
+with VolumioWebSocketClient(host) as client:
+    # check that the host is reachable
+    print(client.ping())
+    # pong
+
+    # read what is playing, and control the playback
+    print(client.state.title, client.state.artist, client.state.status)
+    # So What Miles Davis play
+    client.pause()
+    client.volume = 50
+
+    # the queries that take arguments keep their names
+    results = client.search("miles davis")
+    print(len(results.items))
+    # 215
+```
+
+Without a `with` block, connect and disconnect yourself:
+
+```python
+client = VolumioWebSocketClient(host)
+client.connect()
+try:
+    print(client.state.status)
+finally:
+    client.disconnect()
+```
+
+Disconnecting is idempotent and leaves the client usable:
+connecting again opens a fresh connection.
+
+### Listening To What The Host Pushes
+
+This is what the WebSocket API offers that the REST API does not.
+A Volumio host pushes an event whenever something changes --
+`pushState` on every change of the playback state above all --
+and `on` registers a handler for it:
+
+```python
+with VolumioWebSocketClient(host) as client:
+    client.on("pushState", lambda state: print(state["status"], state["title"]))
+    client.wait()  # block until the connection drops
+```
+
+`off(event, handler)` removes one handler,
+`off(event)` removes them all.
+Handlers may be registered before connecting.
+On the asynchronous client a handler may also be a coroutine function.
+
+> [!TIP]
+> The REST API offers the same updates through `NotificationListener`,
+> which runs a local HTTP server the host posts to.
+> That needs a routable local address and an open inbound port;
+> a WebSocket connection needs neither.
+
+### Reaching The Rest Of The API
+
+A Volumio host listens for far more events than the REST API has endpoints.
+`emit` sends one without waiting,
+and `request` sends one and returns the answer the host pushes back:
+
+```python
+with VolumioWebSocketClient(host) as client:
+    client.emit("setSleep", {"enabled": True, "time": "23:30"})
+    print(client.request("getSleep", "pushSleep"))
+    # {'enabled': True, 'time': '23:30', ...}
+```
+
+The second argument of `request` names the event carrying the answer.
+It can be left out for the events the client already knows the answer of
+(`getState`, `getQueue`, `listPlaylist`, `browseLibrary`, `search`,
+`getSystemInfo`, `getSystemVersion`, `getMyCollectionStats`,
+`getMultiRoomDevices`, and `pinger`).
+
+### Differences From The REST API Clients
+
+The two families expose the same members and return the same models,
+except where the WebSocket API cannot match the REST one:
+
+> [!WARNING]
+> **The commands return `None`.**
+> A Volumio host answers `play`, `pause`, `volume` and the rest with nothing at all,
+> so there is no `CommandResponse` to hand back.
+
+> [!WARNING]
+> **A read can be answered by a broadcast.**
+> The host broadcasts `pushState` on every change of the playback state,
+> so a `state` read may be answered by a broadcast it did not ask for --
+> which carries the current state all the same.
+> For the same reason the reads of one client are serialized:
+> `search` and `browseLibrary` share their answer event,
+> so two of them in flight at once could take each other's result.
+
+Three members of the REST clients are absent, having no WebSocket equivalent:
+`get_story` and `get_album_credits` (the metavolumio plugin is REST-only), and
+`notifications` / `register_notification` / `unregister_notification`
+(the HTTP push channel this client supersedes).
+
+Two more behave differently:
+`browse` takes no offset, since the WebSocket API answers the whole listing
+(`BrowseResults.offset` skips into it), and
+`seek_forward` / `seek_backward` read the current position first,
+since the WebSocket API seeks to absolute positions only.
+
+The asynchronous client follows the naming of `VolumioAsyncRESTAPIClient`:
+
+```python
+import asyncio
+
+from volumito import VolumioAsyncWebSocketClient, VolumioHostConfiguration
+
+host = VolumioHostConfiguration(host="volumio.local")
+
+
+async def main():
+    async with VolumioAsyncWebSocketClient(host) as client:
+        print(await client.ping())
+        state = await client.get_state()
+        print(state.title, state.status)
+        await client.set_volume(50)
+
+
+asyncio.run(main())
+```
+
+`VolumioConnectionError` is raised for a host that cannot be reached, for an event
+that cannot be sent, and for a read the host does not answer in time.
+`VolumioWebSocketError` is raised instead when the
+`python-socketio` package is not installed.
+
+
 ## Response Models
 
 > [!WARNING]
@@ -340,6 +498,10 @@ Every query returns a model instead of a raw dictionary:
 | `system_info`                                       | `SystemInfo`                        |
 | `system_version`                                    | `SystemVersion`                     |
 | `zones`                                             | `Zones` (of `Zone`)                 |
+
+The WebSocket clients return the same models, with two differences: their commands
+return `None` rather than a `CommandResponse`, since a Volumio host answers a command
+with nothing at all, and `emit` and `request` hand back what the host pushed, untouched.
 
 The models are [pydantic](https://docs.pydantic.dev/) models, so their fields are
 typed and validated. A few things worth knowing:
@@ -376,7 +538,7 @@ accept a `logger` argument, for callers who manage their own.
 
 The table above names the members of the synchronous client; the asynchronous client
 returns the same models from the members named in
-[Sync and async, member by member](#sync-and-async-member-by-member).
+[Differences Between Synchronous And Asynchronous Clients](#differences-between-synchronous-and-asynchronous-clients).
 
 
 ## Reference

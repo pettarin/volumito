@@ -13,7 +13,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- WebSocket API client
+- [Issue #6](https://github.com/pettarin/volumito/issues/6): WebSocket API clients
+  `VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` and related classes and
+  constants; to use them, install the `websocket` extra
+- Host configuration option `websocket_port`
+
+### Changed
+
+- The REST API and WebSocket API clients share their transport-independent logic
 
 
 ## [0.2.0] - 2026-08-28

@@ -14,7 +14,7 @@ host.
 ## Features
 
 - Clean Python API to query the state of a Volumio host and to control it
-- Synchronous and asynchronous clients for the Volumio REST API
+- Synchronous and asynchronous clients for the Volumio REST and WebSocket APIs
 - Extensive and configurable CLI tool
 - AI-generated, Human-reviewed code
 - Type-safe implementation with type hints
@@ -66,8 +66,16 @@ $ micromamba activate volumito_env
 > The CLI tool does not need it, so the `aiohttp` dependency
 > is not installed by default.
 
+> [!NOTE]
+> To use the WebSocket clients `VolumioWebSocketClient` and
+> `VolumioAsyncWebSocketClient`
+> you will need to install the `websocket` extra:
+> `pip install volumito[websocket]`.
+> The CLI tool does not need it, so the `python-socketio` dependency
+> is not installed by default.
+
 > [!TIP]
-> The `all` extra installs both:
+> The `all` extra installs all of them:
 > `pip install volumito[all]`.
 
 You should be able to run the `volumito` CLI tool,
@@ -128,8 +136,16 @@ $ micromamba activate volumito_env
 > The CLI tool does not need it, so the `aiohttp` dependency
 > is not installed by default.
 
+> [!NOTE]
+> To use the WebSocket clients `VolumioWebSocketClient` and
+> `VolumioAsyncWebSocketClient`
+> you will need to install the `websocket` extra:
+> `pip install -e .[websocket]` or `make install-e-this-websocket`.
+> The CLI tool does not need it, so the `python-socketio` dependency
+> is not installed by default.
+
 > [!TIP]
-> The `all` extra installs both:
+> The `all` extra installs all of them:
 > `pip install -e .[all]` or `make install-e-this-all`.
 
 You should be able to run the `volumito` CLI tool,
@@ -461,6 +477,33 @@ async def main():
 
 
 asyncio.run(main())
+```
+
+
+The same API is also available over Volumio's WebSocket API,
+provided the `websocket` extra is installed
+(`pip install volumito[websocket]`).
+Its clients hold one open connection, and can listen to what the host pushes:
+
+```python
+from volumito import (
+    VolumioHostConfiguration,
+    VolumioWebSocketClient,
+)
+
+# replace with your Volumio host
+host = VolumioHostConfiguration(host="volumio.local")
+
+with VolumioWebSocketClient(host) as client:
+    print(client.state.title, "---", client.state.artist)
+    # Recitando --- Paolo Conte
+
+    client.pause()
+    client.volume = 50
+
+    # react to what the host pushes, until the connection drops
+    client.on("pushState", lambda state: print(state["status"], state["title"]))
+    client.wait()
 ```
 
 
