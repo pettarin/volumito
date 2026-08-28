@@ -21,7 +21,10 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from volumito.clients.base import VolumioBaseClient
 from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
 from volumito.clients.host_configuration import VolumioHostConfiguration
-from volumito.clients.models import PlayerState
+from volumito.clients.models import PlayerState, Playlist, QueueTrack
+
+MPD_LIBRARY_SCHEMES = frozenset({"albums", "artists", "genres", "playlists"})
+"""The URI schemes the local library of a Volumio instance is browsed by."""
 
 QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
 """The keys of a browsed item a Volumio instance reads when queueing it: the others
@@ -107,6 +110,32 @@ class VolumioCommon(VolumioBaseClient):
 
         return data
 
+    def _check_play_index(self, index: int | None) -> None:
+        """Check that an index naming the item to play first is not negative.
+
+        Args:
+            index: The position of the item to play first (0-based), when given
+
+        Raises:
+            ValueError: If the index is negative
+        """
+        if index is not None and index < 0:
+            self._log_warning(f"Refusing the negative play index {index}")
+            raise ValueError(f"The index must be 0 or greater, got {index}")
+
+    def _check_volume_level(self, value: int) -> None:
+        """Check that a volume level is one a Volumio instance accepts.
+
+        Args:
+            value: The volume level, an integer between 0 and 100 (inclusive)
+
+        Raises:
+            ValueError: If the volume level is out of range
+        """
+        if not 0 <= value <= 100:
+            self._log_warning(f"Refusing the out-of-range volume level {value}")
+            raise ValueError(f"The volume level must be between 0 and 100, got {value}")
+
     def _fail_connection(self, error: Exception) -> NoReturn:
         """Report that the Volumio instance cannot be reached.
 
@@ -137,6 +166,76 @@ class VolumioCommon(VolumioBaseClient):
             f"{self._endpoint_description} "
             f"timed out after {waited} seconds: {error}"
         ) from error
+
+    def _play_position(self, position: int | QueueTrack | None) -> int | None:
+        """Return the queue position the playback should start at.
+
+        Args:
+            position: Optional position in the queue to play (0-indexed), or a track
+                of the queue
+
+        Returns:
+            The position to play, or None to start where the queue stands
+
+        Raises:
+            ValueError: If the given track does not know its position in the queue
+        """
+        if isinstance(position, QueueTrack):
+            if position.position is None:
+                self._log_warning("Refusing to play a track that does not belong to a queue")
+                raise ValueError("The track does not belong to a queue")
+            return position.position
+        return position
+
+    def _playlist_name(self, name: str | Playlist) -> str:
+        """Return the name of a playlist given as a string or as a model.
+
+        Args:
+            name: The name of the playlist, or the playlist itself
+
+        Returns:
+            The name of the playlist
+
+        Raises:
+            ValueError: If the given playlist has no name
+        """
+        if isinstance(name, Playlist):
+            if name.name is None:
+                self._log_warning("Refusing to play a playlist that has no name")
+                raise ValueError("The playlist has no name")
+            return name.name
+        return name
+
+    def _queue_status(self, state: PlayerState, count: int) -> dict[str, Any]:
+        """Build the navigation state of the queue from a playback state and a length.
+
+        Args:
+            state: The current playback state
+            count: The number of queued tracks
+
+        Returns:
+            The navigation state of the queue
+        """
+        position = state.position
+        self._log_debug(f"Current position: {position}, queue length: {count}")
+        return {
+            "has_next": position is not None and position < count - 1,
+            "has_previous": position is not None and count > 0 and position > 0,
+            "length": count,
+            "position": position,
+            "track": state.raw,
+        }
+
+    def _queue_uri_item(self, uri: str) -> dict[str, str]:
+        """Build the payload item queueing a URI as itself.
+
+        Args:
+            uri: The URI to be queued
+
+        Returns:
+            The item naming the URI and the service it belongs to
+        """
+        return {"service": self._uri_service(uri), "uri": uri}
 
     @staticmethod
     def _slim_queue_item(item: dict[str, Any]) -> dict[str, Any]:
@@ -233,3 +332,32 @@ class VolumioCommon(VolumioBaseClient):
                 f"got {type(state.raw.get('volume')).__name__}"
             )
         return state.volume
+
+    def _uri_service(self, uri: str) -> str:
+        """Return the name of the Volumio service a URI belongs to.
+
+        A Volumio instance routes a queued URI to the service named in its payload and,
+        when none is given, to ``mpd`` -- which silently adds nothing for the URI of
+        another source. The service is therefore always sent, read from the URI: the
+        scheme names it (``qobuz://...``), except for the schemes the local library is
+        browsed by and the scheme-less local paths (``mpd``), the web URLs
+        (``webradio``), and the ``spotify:`` URIs (``spop``).
+
+        Args:
+            uri: The URI to name the service of
+
+        Returns:
+            The name of the service (e.g., ``"mpd"``, ``"qobuz"``, ``"webradio"``)
+        """
+        if uri.startswith(("http://", "https://")):
+            service = "webradio"
+        elif uri.startswith("spotify:"):
+            service = "spop"
+        else:
+            scheme, separator, _ = uri.partition("://")
+            if separator and scheme not in MPD_LIBRARY_SCHEMES:
+                service = scheme
+            else:
+                service = "mpd"
+        self._log_debug(f'Service of "{uri}": {service}')
+        return service

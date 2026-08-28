@@ -69,6 +69,7 @@ from volumito.clients.rest import (
     VolumioAsyncRESTAPIClient,
     VolumioRESTAPIClient,
 )
+from volumito.clients.websocket import VolumioWebSocketClient
 
 __all__ = [
     "Album",
@@ -113,6 +114,7 @@ __all__ = [
     "VolumioSCPError",
     "VolumioSSHError",
     "VolumioStoryError",
+    "VolumioWebSocketClient",
     "VolumioWebSocketError",
     "Zone",
     "Zones",

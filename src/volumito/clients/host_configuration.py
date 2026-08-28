@@ -23,6 +23,8 @@ class VolumioHostConfiguration:
         host: The hostname or IP address of the Volumio instance
         rest_api_port: The REST API port (default: 3000)
         mpd_port: The MPD port (default: 6600)
+        websocket_port: The WebSocket API port (default: 3000, the REST API port:
+            a Volumio host serves both from the same server)
         ssh_password: The SSH password, when no key of the current user is authorized
             on the host (default: None, authenticating with the keys of the user)
         ssh_port: The SSH port, used to copy the files of the host (default: 22)
@@ -33,6 +35,7 @@ class VolumioHostConfiguration:
     host: str = "volumio.local"
     rest_api_port: int = 3000
     mpd_port: int = 6600
+    websocket_port: int = 3000
     ssh_password: str | None = None
     ssh_port: int = 22
     ssh_username: str = "volumio"
@@ -41,3 +44,12 @@ class VolumioHostConfiguration:
     def rest_base_url(self) -> str:
         """Return the base URL for the REST API, e.g. http://volumio.local:3000."""
         return f"{self.scheme}://{self.host}:{self.rest_api_port}"
+
+    @property
+    def websocket_base_url(self) -> str:
+        """Return the base URL for the WebSocket API, e.g. http://volumio.local:3000.
+
+        The scheme is the HTTP one: a Socket.IO client is given the URL of the server
+        it connects to, and negotiates the WebSocket scheme itself.
+        """
+        return f"{self.scheme}://{self.host}:{self.websocket_port}"
