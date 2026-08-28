@@ -39,6 +39,7 @@ from volumito.clients.websocket.common import (  # noqa: E402
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
+    EVENT_INSTALL_TO_DISK,
     EVENT_LIST_PLAYLIST,
     EVENT_PINGER,
     EVENT_PLAY,
@@ -2331,13 +2332,16 @@ class TestVolumioWebSocketClientSystemAdministration:
             _Call("restoreConfig", None),
         ]
 
-    def test_install_to_disk(self, mocker: MockerFixture):
-        """Writing to the internal storage carries nothing."""
+    def test_install_to_disk_refuses_to_run(self, mocker: MockerFixture):
+        """Writing to the internal storage is deliberately not implemented."""
         client, fake = _client(mocker)
 
-        client.install_to_disk()
+        with pytest.raises(NotImplementedError) as exc_info:
+            client.install_to_disk()
 
-        assert fake.calls == [_Call("installToDisk", None)]
+        assert "deliberately not implemented" in str(exc_info.value)
+        assert 'client.emit("installToDisk")' in str(exc_info.value)
+        assert fake.calls == []
 
     def test_multiroom(self, mocker: MockerFixture):
         """The configuration is read, changed, and the role chosen."""
@@ -2388,10 +2392,15 @@ class TestVolumioWebSocketClientSystemAdministration:
         assert fake.calls == []
 
     def test_the_disabled_events_are_still_named(self, mocker: MockerFixture):
-        """Both events keep their constant, so emit() remains the way to mean it."""
+        """Each event keeps its constant, so emit() remains the way to mean it."""
         client, fake = _client(mocker)
 
         client.emit(EVENT_FACTORY_RESET)
         client.emit(EVENT_DELETE_USER_DATA)
+        client.emit(EVENT_INSTALL_TO_DISK)
 
-        assert fake.calls == [_Call("factoryReset", None), _Call("deleteUserData", None)]
+        assert fake.calls == [
+            _Call("factoryReset", None),
+            _Call("deleteUserData", None),
+            _Call("installToDisk", None),
+        ]

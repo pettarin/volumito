@@ -133,7 +133,6 @@ from volumito.clients.websocket.common import (
     EVENT_GO_TO,
     EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_INSTALL_PLUGIN,
-    EVENT_INSTALL_TO_DISK,
     EVENT_LIST_PLAYLIST,
     EVENT_LIST_USB_DRIVES,
     EVENT_MANAGE_BACKUP,
@@ -1350,12 +1349,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def install_to_disk(self) -> None:
         """Write Volumio to the internal storage of the host.
 
-        This overwrites whatever the internal storage holds.
+        The implementation is deliberately disabled: this overwrites whatever the
+        internal storage of the host holds, with no undo and no confirmation from
+        Volumio itself. Emit the event yourself if you mean it.
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            NotImplementedError: Always
         """
-        self._emit(EVENT_INSTALL_TO_DISK)
+        # self._emit(EVENT_INSTALL_TO_DISK)
+        raise NotImplementedError(
+            "install_to_disk() is deliberately not implemented: it overwrites the "
+            "internal storage of the Volumio host. Emit the event yourself if you "
+            'mean it: client.emit("installToDisk")'
+        )
 
     @property
     def installed_plugins(self) -> Plugins:

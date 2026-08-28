@@ -427,8 +427,8 @@ which listens for more than **170 events**,
 of which about **125** are managed by the clients
 implemented in the `volumito` package.
 
-The next subsections lists those events
-that exist only in the WebSocket API,
+The next subsections lists the properties and methods
+corresponding to the events that exist only in the WebSocket API,
 grouped by functionality.
 
 #### Alarms And Sleep Timer
@@ -510,7 +510,57 @@ The following miscellaneous events are related to
 multiroom zones, network and shares, plugins,
 system administration, and user interface preferences.
 
-TODO: add the actual list here.
+- `add_share(name, path, fstype, ...)`
+- `automatic_update_enabled`
+- `available_timezones`
+- `backgrounds`
+- `backup()`
+- `call_plugin_method(endpoint, method, data)`
+- `check_for_update()`
+- `check_update_cache()`
+- `delete_background(name)`
+- `delete_folder(path)`
+- `delete_share(share_id)`
+- `disable_plugin(category, name)`
+- `discover_network_shares()`
+- `dsp_config`
+- `edit_share(share_id, ...)`
+- `enable_plugin(category, name)`
+- `experience_settings`
+- `get_plugin_config(page)`
+- `get_share(share_id)`
+- `infinity_playback`
+- `install_plugin(url)`
+- `installed_plugins`
+- `languages`
+- `manage_plugin(action, category, name)`
+- `modify_plugin_status(category, name, enabled)`
+- `multiroom`
+- `network_info`
+- `privacy_settings`
+- `restore_backup(backup)`
+- `restore_config()`
+- `safe_remove_drive(name)`
+- `save_wireless_settings(ssid, password)`
+- `set_as_multiroom_client(server)`
+- `set_as_multiroom_server()`
+- `set_as_multiroom_single()`
+- `set_background(name)`
+- `set_experience_settings(advanced)`
+- `set_infinity_playback(enabled)`
+- `set_language(code)`
+- `set_multiroom(settings)`
+- `shares`
+- `timezone` (assignable)
+- `ui_settings`
+- `uninstall_plugin(category, name)`
+- `update()`
+- `update_plugin(category, name)`
+- `updater_channel` (assignable)
+- `usb_drives`
+- `wireless_networks`
+- `wireless_networks_cache`
+- `write_multiroom(settings)`
 
 #### Playlists
 
@@ -524,19 +574,26 @@ TODO: add the actual list here.
 
 #### System
 
+- `delete_user_data()` (NOT implemented)
 - `device_info`
 - `device_name` (assignable)
 - `device_uuid`
+- `factory_reset()` (NOT implemented)
+- `install_to_disk()` (NOT implemented)
 - `power_modes`
 - `reboot()`
 - `shutdown()`
 - `standby()`
 
 > [!CAUTION]
-> `reboot()`, `shutdown()` and `standby()` do exactly what they say, without asking.
-> `factory_reset()` and `delete_user_data()` are deliberately **not implemented**:
-> they raise `NotImplementedError`, and their message names the `emit()` call to use
-> if you really mean it.
+> `reboot()`, `shutdown()` and `standby()` do exactly what their names imply,
+> without asking for confirmation.
+
+> [!CAUTION]
+> `delete_user_data()`, `factory_reset()`, and `install_to_disk()`
+> are deliberately **not implemented** since they alter the Volumio host
+> in an unrecoverable fashion.
+> Calling them results in a `NotImplementedError` being raised.
 
 #### Queue
 
@@ -559,12 +616,14 @@ TODO: add the actual list here.
 - `remove_web_radio(name)`.
 
 > [!NOTE]
-> Several of these surfaces are plugins
+> Several of these surfaces are implemented as Volumio plugins
 > (e.g., the sleep timer and alarms, web radio,
 > multiroom, network shares, wireless networks).
-> A host that does not run one never answers,
-> so the read ends in `VolumioConnectionError` naming both events
-> rather than in a clearer error.
+>
+> A host never answers a request made to one such event
+> if the required plugin is not present and enabled,
+> resulting in the read to produce a `VolumioConnectionError`,
+> which might result in a non-specific error message.
 
 ### Generic Emit And Request
 

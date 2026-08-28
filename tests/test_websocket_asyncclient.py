@@ -35,6 +35,7 @@ from volumito.clients.websocket.common import (  # noqa: E402
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
+    EVENT_INSTALL_TO_DISK,
     EVENT_LIST_PLAYLIST,
     EVENT_PINGER,
     EVENT_PLAY,
@@ -2112,13 +2113,16 @@ class TestVolumioAsyncWebSocketClientSystemAdministration:
             _Call("restoreConfig", None),
         ]
 
-    async def test_install_to_disk(self, mocker: MockerFixture):
-        """Writing to the internal storage carries nothing."""
+    async def test_install_to_disk_refuses_to_run(self, mocker: MockerFixture):
+        """Writing to the internal storage is deliberately not implemented."""
         client, fake = await _client(mocker)
 
-        await client.install_to_disk()
+        with pytest.raises(NotImplementedError) as exc_info:
+            await client.install_to_disk()
 
-        assert fake.calls == [_Call("installToDisk", None)]
+        assert "deliberately not implemented" in str(exc_info.value)
+        assert 'await client.emit("installToDisk")' in str(exc_info.value)
+        assert fake.calls == []
 
     async def test_multiroom(self, mocker: MockerFixture):
         """The configuration is read, changed, and the role chosen."""
@@ -2169,10 +2173,15 @@ class TestVolumioAsyncWebSocketClientSystemAdministration:
         assert fake.calls == []
 
     async def test_the_disabled_events_are_still_named(self, mocker: MockerFixture):
-        """Both events keep their constant, so emit() remains the way to mean it."""
+        """Each event keeps its constant, so emit() remains the way to mean it."""
         client, fake = await _client(mocker)
 
         await client.emit(EVENT_FACTORY_RESET)
         await client.emit(EVENT_DELETE_USER_DATA)
+        await client.emit(EVENT_INSTALL_TO_DISK)
 
-        assert fake.calls == [_Call("factoryReset", None), _Call("deleteUserData", None)]
+        assert fake.calls == [
+            _Call("factoryReset", None),
+            _Call("deleteUserData", None),
+            _Call("installToDisk", None),
+        ]
