@@ -1649,3 +1649,130 @@ class TestVolumioAsyncWebSocketClientPower:
 
         assert await getattr(client, method)() is None
         assert fake.calls == [_Call(event, None)]
+
+
+class TestVolumioAsyncWebSocketClientPlugins:
+    """The plugins installed on the host, and their configuration pages."""
+
+    async def test_installed_plugins(self, mocker: MockerFixture):
+        """The plugins are answered as a bare array, which the model wraps."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getInstalledPlugins": (
+                    "pushInstalledPlugins",
+                    [{"name": "spop", "prettyName": "Spotify", "enabled": True}],
+                )
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        plugins = (await client.get_installed_plugins())
+
+        assert [plugin.name for plugin in plugins] == ["spop"]
+        assert plugins[0].pretty_name == "Spotify"
+
+    async def test_a_host_with_no_plugin(self, mocker: MockerFixture):
+        """A host reporting no plugin is an empty collection."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getInstalledPlugins": ("pushInstalledPlugins", [])}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert len(await client.get_installed_plugins()) == 0
+
+    async def test_get_plugin_config(self, mocker: MockerFixture):
+        """The configuration page is asked for by "category/name"."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getUiConfig": (
+                    "pushUiConfig",
+                    {"page": {"label": "System Settings"}, "sections": [{"id": "language"}]},
+                )
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        config = await client.get_plugin_config("system_controller/system")
+
+        assert config.page == {"label": "System Settings"}
+        assert fake.calls == [_Call("getUiConfig", {"page": "system_controller/system"})]
+
+    async def test_dsp_config(self, mocker: MockerFixture):
+        """The DSP page comes back through its own event."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getDSPUiConfig": ("pushDSPUiConfig", {"page": {"label": "DSP"}})}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert (await client.get_dsp_config()).page == {"label": "DSP"}
+
+    async def test_manage_plugin(self, mocker: MockerFixture):
+        """The plugin manager answers with the plugins as they stand after the action."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"pluginManager": ("pushInstalledPlugins", [{"name": "spop"}])}
+        )
+        client, fake = await _client(mocker, fake)
+
+        plugins = await client.manage_plugin("enable", "music_service", "spop")
+
+        assert [plugin.name for plugin in plugins] == ["spop"]
+        assert fake.calls == [
+            _Call(
+                "pluginManager",
+                {"category": "music_service", "name": "spop", "action": "enable"},
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        ("method", "event"),
+        [
+            ("disable_plugin", "disablePlugin"),
+            ("enable_plugin", "enablePlugin"),
+            ("uninstall_plugin", "unInstallPlugin"),
+            ("update_plugin", "updatePlugin"),
+        ],
+    )
+    async def test_the_plugin_commands(self, mocker: MockerFixture, method, event):
+        """Each command names the plugin by category and name."""
+        client, fake = await _client(mocker)
+
+        await getattr(client, method)("music_service", "spop")
+
+        assert fake.calls == [_Call(event, {"category": "music_service", "name": "spop"})]
+
+    async def test_modify_plugin_status(self, mocker: MockerFixture):
+        """Enabling in one call carries the flag beside the plugin."""
+        client, fake = await _client(mocker)
+
+        await client.modify_plugin_status("music_service", "spop", True)
+
+        assert fake.calls == [
+            _Call(
+                "modifyPluginStatus",
+                {"category": "music_service", "name": "spop", "enabled": True},
+            )
+        ]
+
+    async def test_install_plugin(self, mocker: MockerFixture):
+        """Installing carries the URL and the confirmation the host expects."""
+        client, fake = await _client(mocker)
+
+        await client.install_plugin("http://plugins/spop.zip")
+
+        assert fake.calls == [
+            _Call("installPlugin", {"url": "http://plugins/spop.zip", "confirm": True})
+        ]
+
+    async def test_call_plugin_method(self, mocker: MockerFixture):
+        """The generic call carries the endpoint, the method, and its arguments."""
+        client, fake = await _client(mocker)
+
+        await client.call_plugin_method("music_service/mpd", "rescanDb")
+        await client.call_plugin_method("miscellanea/alarm", "setSleep", {"time": "0:30"})
+
+        assert fake.calls == [
+            _Call("callMethod", {"endpoint": "music_service/mpd", "method": "rescanDb",
+                                 "data": {}}),
+            _Call("callMethod", {"endpoint": "miscellanea/alarm", "method": "setSleep",
+                                 "data": {"time": "0:30"}}),
+        ]

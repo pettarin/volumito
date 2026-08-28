@@ -57,6 +57,9 @@ EVENT_AUDIO_OUTPUT_PLAY = "audioOutputPlay"
 EVENT_BROWSE_LIBRARY = "browseLibrary"
 """The event listing the content of a URI."""
 
+EVENT_CALL_METHOD = "callMethod"
+"""The event calling a method of a plugin directly."""
+
 EVENT_CLEAR_QUEUE = "clearQueue"
 """The event emptying the playback queue."""
 
@@ -69,11 +72,17 @@ EVENT_DELETE_PLAYLIST = "deletePlaylist"
 EVENT_DISABLE_AUDIO_OUTPUT = "disableAudioOutput"
 """The event disabling one audio output."""
 
+EVENT_DISABLE_PLUGIN = "disablePlugin"
+"""The event disabling an installed plugin."""
+
 EVENT_ENABLE_AUDIO_OUTPUT = "enableAudioOutput"
 """The event enabling one audio output."""
 
 EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN = "enableDisableMyMusicPlugin"
 """The event enabling or disabling a music source."""
+
+EVENT_ENABLE_PLUGIN = "enablePlugin"
+"""The event enabling an installed plugin."""
 
 EVENT_ENQUEUE = "enqueue"
 """The event appending a saved playlist to the queue."""
@@ -96,11 +105,17 @@ EVENT_GET_DEVICE_INFO = "getDeviceInfo"
 EVENT_GET_DEVICE_NAME = "getDeviceName"
 """The event asking for the name of the host."""
 
+EVENT_GET_DSP_UI_CONFIG = "getDSPUiConfig"
+"""The event asking for the configuration page of the DSP."""
+
 EVENT_GET_EXTENDED_OUTPUT_DEVICES = "getExtendedOutputDevices"
 """The event asking for the output devices, with their details."""
 
 EVENT_GET_INPUT_SOURCES = "getInputSources"
 """The event asking for the input sources of the host."""
+
+EVENT_GET_INSTALLED_PLUGINS = "getInstalledPlugins"
+"""The event asking for the plugins installed on the host."""
 
 EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY = "getLastPushedBrowseLibrary"
 """The event asking for the listing the host pushed last."""
@@ -141,14 +156,23 @@ EVENT_GET_SYSTEM_INFO = "getSystemInfo"
 EVENT_GET_SYSTEM_VERSION = "getSystemVersion"
 """The event asking for the Volumio version the host runs."""
 
+EVENT_GET_UI_CONFIG = "getUiConfig"
+"""The event asking for the configuration page of a plugin."""
+
 EVENT_GO_TO = "goTo"
 """The event browsing to the artist or the album of what is playing."""
 
 EVENT_IMPORT_SERVICE_PLAYLISTS = "importServicePlaylists"
 """The event importing the playlists of the music services."""
 
+EVENT_INSTALL_PLUGIN = "installPlugin"
+"""The event installing a plugin from a URL."""
+
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
+
+EVENT_MODIFY_PLUGIN_STATUS = "modifyPluginStatus"
+"""The event enabling or disabling a plugin in one call."""
 
 EVENT_MOVE_QUEUE = "moveQueue"
 """The event moving a track to another position of the queue."""
@@ -182,6 +206,9 @@ EVENT_PLAY_PLAYLIST = "playPlaylist"
 
 EVENT_PLAY_RADIO_FAVOURITES = "playRadioFavourites"
 """The event playing the radio favourites."""
+
+EVENT_PLUGIN_MANAGER = "pluginManager"
+"""The event asking the plugin manager to act on a plugin."""
 
 EVENT_PONGER = "ponger"
 """The event echoing back what ``pinger`` carried."""
@@ -219,6 +246,9 @@ EVENT_PUSH_DEVICE_INFO = "pushDeviceInfo"
 EVENT_PUSH_DEVICE_NAME = "pushDeviceName"
 """The event carrying the name of the host."""
 
+EVENT_PUSH_DSP_UI_CONFIG = "pushDSPUiConfig"
+"""The event carrying the configuration page of the DSP."""
+
 EVENT_PUSH_ENQUEUE = "pushEnqueue"
 """The event carrying the queue a playlist was appended to."""
 
@@ -227,6 +257,9 @@ EVENT_PUSH_EXTENDED_OUTPUT_DEVICES = "pushExtendedOutputDevices"
 
 EVENT_PUSH_INPUT_SOURCES = "pushInputSources"
 """The event carrying the input sources of the host."""
+
+EVENT_PUSH_INSTALLED_PLUGINS = "pushInstalledPlugins"
+"""The event carrying the plugins installed on the host."""
 
 EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 """The event carrying the names of the saved playlists."""
@@ -281,6 +314,9 @@ EVENT_PUSH_SYSTEM_INFO = "pushSystemInfo"
 
 EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 """The event carrying the Volumio version the host runs."""
+
+EVENT_PUSH_UI_CONFIG = "pushUiConfig"
+"""The event carrying the configuration page of a plugin."""
 
 EVENT_REBOOT = "reboot"
 """The event restarting the host."""
@@ -363,6 +399,9 @@ EVENT_SUPER_SEARCH = "superSearch"
 EVENT_TOGGLE = "toggle"
 """The event toggling between playing and paused."""
 
+EVENT_UNINSTALL_PLUGIN = "unInstallPlugin"
+"""The event removing an installed plugin."""
+
 EVENT_UNMUTE = "unmute"
 """The event unmuting the volume."""
 
@@ -371,6 +410,9 @@ EVENT_UPDATE_ALL_METADATA = "updateAllMetadata"
 
 EVENT_UPDATE_DB = "updateDb"
 """The event updating the music collection."""
+
+EVENT_UPDATE_PLUGIN = "updatePlugin"
+"""The event updating an installed plugin."""
 
 EVENT_URI_FAVOURITES = "urifavourites"
 """The event carrying the favourite status of a URI."""
@@ -389,8 +431,10 @@ RESPONSE_EVENTS = {
     EVENT_GET_DEVICE_HW_UUID: EVENT_PUSH_DEVICE_HW_UUID,
     EVENT_GET_DEVICE_INFO: EVENT_PUSH_DEVICE_INFO,
     EVENT_GET_DEVICE_NAME: EVENT_PUSH_DEVICE_NAME,
+    EVENT_GET_DSP_UI_CONFIG: EVENT_PUSH_DSP_UI_CONFIG,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES: EVENT_PUSH_EXTENDED_OUTPUT_DEVICES,
     EVENT_GET_INPUT_SOURCES: EVENT_PUSH_INPUT_SOURCES,
+    EVENT_GET_INSTALLED_PLUGINS: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
@@ -404,9 +448,11 @@ RESPONSE_EVENTS = {
     EVENT_GET_STATE: EVENT_PUSH_STATE,
     EVENT_GET_SYSTEM_INFO: EVENT_PUSH_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION: EVENT_PUSH_SYSTEM_VERSION,
+    EVENT_GET_UI_CONFIG: EVENT_PUSH_UI_CONFIG,
     EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_LIST_PLAYLIST: EVENT_PUSH_LIST_PLAYLIST,
     EVENT_PINGER: EVENT_PONGER,
+    EVENT_PLUGIN_MANAGER: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_SUPER_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
 }
@@ -719,6 +765,18 @@ class VolumioWebSocketCommon(VolumioCommon):
             ValueError: If the given playlist has no name
         """
         return {"name": self._playlist_name(name)}
+
+    def _plugin_payload(self, category: str, name: str) -> dict[str, str]:
+        """Build the payload naming a plugin of the host.
+
+        Args:
+            category: The category the plugin belongs to (e.g., ``"music_service"``)
+            name: The name of the plugin
+
+        Returns:
+            The payload the plugin events carry
+        """
+        return {"category": category, "name": name}
 
     def _response_event(self, event: str) -> str:
         """Return the event a read waits for after emitting one.
