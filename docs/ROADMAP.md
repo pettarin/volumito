@@ -23,7 +23,8 @@ Rough plan, broken down by milestone:
 
 ## v0.3.0
 
-- Library: add WebSocket client
+- Released
+  - Library: add WebSocket client
 
 ## v0.4.0
 

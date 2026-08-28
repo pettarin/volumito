@@ -14,7 +14,7 @@ host.
 ## Features
 
 - Clean Python API to query the state of a Volumio host and to control it
-- Synchronous and asynchronous clients for the Volumio REST API
+- Synchronous and asynchronous clients for the Volumio REST and WebSocket APIs
 - Extensive and configurable CLI tool
 - AI-generated, Human-reviewed code
 - Type-safe implementation with type hints
@@ -53,21 +53,19 @@ $ micromamba activate volumito_env
 ```
 
 > [!NOTE]
-> To use the `volumito scp` and `volumito system execute` commands
-> you will need to install the `scp` extra:
-> `pip install volumito[scp]`.
-> Since those are advanced (and potentially dangerous) commands,
-> the `scp` dependency is not installed by default.
-
-> [!NOTE]
-> To use the asynchronous client `VolumioAsyncRESTAPIClient`
-> you will need to install the `async` extra:
-> `pip install volumito[async]`.
-> The CLI tool does not need it, so the `aiohttp` dependency
-> is not installed by default.
+> To use certain additional functionalities, not included by default,
+> you will need to install `volumito` with `pip install volumito[<EXTRA>]`,
+> where `<EXTRA>` is:
+> - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
+>   for the REST API of Volumio;
+> - `scp`: required by the `volumito scp` and `volumito system execute`
+>   (advanced and potentially dangerous) commands;
+> - `websocket`: required by both the synchronous `VolumioWebSocketClient`
+>   and asynchronous `VolumioAsyncWebSocketClient` clients
+>   of the WebSocket API of Volumio.
 
 > [!TIP]
-> The `all` extra installs both:
+> The `all` extra installs all of them:
 > `pip install volumito[all]`.
 
 You should be able to run the `volumito` CLI tool,
@@ -115,21 +113,20 @@ $ micromamba activate volumito_env
 ```
 
 > [!NOTE]
-> To use the `volumito scp` and `volumito system execute` commands
-> you will need to install the `scp` extra:
-> `pip install -e .[scp]` or `make install-e-this-scp`.
-> Since those are advanced (and potentially dangerous) commands,
-> the `scp` dependency is not installed by default.
-
-> [!NOTE]
-> To use the asynchronous client `VolumioAsyncRESTAPIClient`
-> you will need to install the `async` extra:
-> `pip install -e .[async]` or `make install-e-this-async`.
-> The CLI tool does not need it, so the `aiohttp` dependency
-> is not installed by default.
+> To use certain additional functionalities, not included by default,
+> you will need to install `volumito` with `pip install -e .[<EXTRA>]`
+> or `make install-e-this-<EXTRA>`,
+> where `<EXTRA>` is:
+> - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
+>   for the REST API of Volumio;
+> - `scp`: required by the `volumito scp` and `volumito system execute`
+>   (advanced and potentially dangerous) commands;
+> - `websocket`: required by both the synchronous `VolumioWebSocketClient`
+>   and asynchronous `VolumioAsyncWebSocketClient` clients
+>   of the WebSocket API of Volumio.
 
 > [!TIP]
-> The `all` extra installs both:
+> The `all` extra installs all of them:
 > `pip install -e .[all]` or `make install-e-this-all`.
 
 You should be able to run the `volumito` CLI tool,
@@ -340,7 +337,16 @@ The
 [Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md)
 document contains the API reference of the Python library `volumito`.
 
-The following is a short example:
+There are five major clients available for the APIs of Volumio:
+
+- `VolumioAsyncRESTAPIClient`: asynchronous client for the REST API;
+- `VolumioAsyncWebSocketClient`: asynchronous client for the WebSocket API;
+- `VolumioMPDClient`: synchronous client for the MPD API;
+- `VolumioRESTAPIClient`: synchronous client for the REST API;
+- `VolumioWebSocketClient`: synchronous client for the WebSocket API.
+
+The following is a short example
+of the synchronous client for the REST API of Volumio:
 
 ```python
 from volumito import (
@@ -462,6 +468,43 @@ async def main():
 
 asyncio.run(main())
 ```
+
+The same API is also available over Volumio's WebSocket API,
+provided the `websocket` extra is installed
+(`pip install volumito[websocket]`).
+Its clients hold one open connection, and can listen to what the host pushes:
+
+```python
+from volumito import (
+    VolumioHostConfiguration,
+    VolumioWebSocketClient,
+)
+
+# replace with your Volumio host
+host = VolumioHostConfiguration(host="volumio.local")
+
+with VolumioWebSocketClient(host) as client:
+    print(client.state.title, "---", client.state.artist)
+    # Recitando --- Paolo Conte
+
+    client.pause()
+    client.volume = 50
+
+    # react to what the host pushes, until the connection drops
+    client.on("pushState", lambda state: print(state["status"], state["title"]))
+    client.wait()
+```
+
+An asynchronous counterpart `VolumioAsyncWebSocketClient` is also available.
+
+Beyond the members the REST clients also offer,
+the WebSocket clients reach the functionalities that the REST API of Volumio does not
+expose at all: editing the queue and the saved playlists, the favourites and the web
+radios, the sleep timer and the alarms, the audio outputs, the library scans, the power
+of the host, and its administration (plugins, network, shares, and preferences).
+See the
+[Library Usage](https://github.com/pettarin/volumito/blob/main/docs/LIBRARY_USAGE.md#beyond-the-rest-api)
+document for the whole list.
 
 
 ## Releases And Changelog

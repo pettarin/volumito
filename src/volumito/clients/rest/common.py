@@ -5,6 +5,10 @@ everything else -- the endpoint paths, the payloads they build, the values they 
 out of a playback state, the shape checks on a parsed response, and the messages they
 log and raise -- lives here, so the two cannot drift apart.
 
+What the REST clients share with the WebSocket clients -- the shape checks, the playback
+state readers, and the two transport failures -- lives one level down, in
+``volumito.clients.common``.
+
 This module knows nothing about how a request travels: it imports neither ``requests``
 nor ``aiohttp``.
 
@@ -17,7 +21,7 @@ import logging
 from typing import Any, NoReturn
 from urllib.parse import quote
 
-from volumito.clients.base import VolumioBaseClient
+from volumito.clients.common import VolumioCommon
 from volumito.clients.entities import (
     Album,
     Artist,
@@ -29,7 +33,6 @@ from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
     Notification,
-    PlayerState,
     Playlist,
     QueueTrack,
 )
@@ -37,9 +40,6 @@ from volumito.clients.models import (
 MAX_POST_BODY_BYTES = 100 * 1024
 """The JSON body size a Volumio instance accepts, the default limit of its Express
 body parser: a larger body is not answered by the API but by the album art server."""
-
-MPD_LIBRARY_SCHEMES = frozenset({"albums", "artists", "genres", "playlists"})
-"""The URI schemes the local library of a Volumio instance is browsed by."""
 
 PATH_ADD_TO_QUEUE = "/api/v1/addToQueue"
 """The endpoint appending items to the playback queue."""
@@ -86,12 +86,7 @@ PATH_REPLACE_AND_PLAY = "/api/v1/replaceAndPlay"
 PATH_SEARCH = "/api/v1/search"
 """The endpoint searching the sources of the instance."""
 
-QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
-"""The keys of a browsed item a Volumio instance reads when queueing it: the others
-(the album art URL above all) only grow the payload toward the body size limit."""
-
-
-class VolumioRESTAPICommon(VolumioBaseClient):
+class VolumioRESTAPICommon(VolumioCommon):
     """The transport-independent half of a REST API client for Volumio.
 
     The clients inherit from this class rather than instantiating it: it builds the
@@ -119,12 +114,15 @@ class VolumioRESTAPICommon(VolumioBaseClient):
             logger: The logger the client writes to; without one, the client logs
                 under its own name in the ``volumito`` hierarchy
         """
-        super().__init__(logger)
+        super().__init__(host_configuration, timeout, logger)
         self._log_debug(f"Initializing the {self._CLIENT_DESCRIPTION}...")
-        self.host_configuration = host_configuration
-        self.timeout = timeout
         self.timeout_slow_endpoints = timeout_slow_endpoints
         self._log_debug(f"Initializing the {self._CLIENT_DESCRIPTION}... done")
+
+    @property
+    def _endpoint_description(self) -> str:
+        """The base URL a failing request names as unreachable."""
+        return self.host_configuration.rest_base_url
 
     def _album_credits_payload(self, artist: Artist | None, album: Album) -> dict[str, str]:
         """Build the metavolumio data payload for an album credits query.
@@ -140,46 +138,6 @@ class VolumioRESTAPICommon(VolumioBaseClient):
             ValueError: If the artist/album combination is invalid
         """
         return {"mode": "creditsAlbum", **self._story_album_payload(artist, album)}
-
-    def _as_json_array(self, data: object) -> list[Any]:
-        """Check that a parsed response body is a JSON array.
-
-        Args:
-            data: The parsed response body
-
-        Returns:
-            The JSON array
-
-        Raises:
-            VolumioAPIError: If the body is not an array
-        """
-        if not isinstance(data, list):
-            self._log_warning(f"The response is not a JSON array: {type(data).__name__}")
-            raise VolumioAPIError(
-                f"Expected JSON array from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
-
-    def _as_json_object(self, data: object) -> dict[str, Any]:
-        """Check that a parsed response body is a JSON object.
-
-        Args:
-            data: The parsed response body
-
-        Returns:
-            The JSON object
-
-        Raises:
-            VolumioAPIError: If the body is not an object
-        """
-        if not isinstance(data, dict):
-            self._log_warning(f"The response is not a JSON object: {type(data).__name__}")
-            raise VolumioAPIError(
-                f"Expected JSON object from Volumio API, got {type(data).__name__}"
-            )
-
-        return data
 
     def _browse_request(self, uri: str | None, offset: int | None) -> tuple[str, str]:
         """Build the path browsing a URI, and the label naming it in the logs.
@@ -206,19 +164,6 @@ class VolumioRESTAPICommon(VolumioBaseClient):
         skipped = f"&offset={offset}" if offset else ""
         label = f"{browsed}{skipped}"
         return f"{PATH_BROWSE}?uri={label}", label
-
-    def _check_play_index(self, index: int | None) -> None:
-        """Check that an index naming the item to play first is not negative.
-
-        Args:
-            index: The position of the item to play first (0-based), when given
-
-        Raises:
-            ValueError: If the index is negative
-        """
-        if index is not None and index < 0:
-            self._log_warning(f"Refusing the negative play index {index}")
-            raise ValueError(f"The index must be 0 or greater, got {index}")
 
     def _check_post_body(self, payload: dict[str, Any] | list[dict[str, Any]]) -> None:
         """Check that a JSON body is not larger than the Volumio instance accepts.
@@ -247,21 +192,6 @@ class VolumioRESTAPICommon(VolumioBaseClient):
             The path to request
         """
         return f"{PATH_COMMANDS}?cmd={cmd}"
-
-    def _fail_connection(self, error: Exception) -> NoReturn:
-        """Report that the Volumio instance cannot be reached.
-
-        Args:
-            error: The transport failure being translated
-
-        Raises:
-            VolumioConnectionError: Always
-        """
-        self._log_warning(f"Cannot connect to the Volumio API: {error}")
-        raise VolumioConnectionError(
-            f"Failed to connect to Volumio instance at "
-            f"{self.host_configuration.rest_base_url}: {error}"
-        ) from error
 
     def _fail_http(self, error: Exception, status: int) -> NoReturn:
         """Report that the Volumio API answered an HTTP error.
@@ -305,39 +235,6 @@ class VolumioRESTAPICommon(VolumioBaseClient):
         raise VolumioConnectionError(
             f"Request to Volumio instance at "
             f"{self.host_configuration.rest_base_url} failed: {error}"
-        ) from error
-
-    def _fail_short_listing(self, count: int, index: int) -> NoReturn:
-        """Report that a URI does not list enough items to play the asked one.
-
-        Args:
-            count: The number of items the URI lists
-            index: The position of the item to play first (0-based)
-
-        Raises:
-            VolumioAPIError: Always
-        """
-        self._log_warning(f"The URI lists {count} items, not enough for index {index}")
-        raise VolumioAPIError(
-            f"The URI lists {count} items, not enough to play the one "
-            f"at index {index}"
-        )
-
-    def _fail_timeout(self, error: Exception, waited: float) -> NoReturn:
-        """Report that the Volumio instance did not answer in time.
-
-        Args:
-            error: The transport failure being translated
-            waited: The number of seconds the request waited
-
-        Raises:
-            VolumioConnectionError: Always
-        """
-        self._log_warning(f"The Volumio API did not answer within {waited} seconds: {error}")
-        raise VolumioConnectionError(
-            f"Connection to Volumio instance at "
-            f"{self.host_configuration.rest_base_url} "
-            f"timed out after {waited} seconds: {error}"
         ) from error
 
     def _mode_command(self, mode: str, value: bool | None) -> str:
@@ -387,13 +284,9 @@ class VolumioRESTAPICommon(VolumioBaseClient):
         Raises:
             ValueError: If the given track does not know its position in the queue
         """
-        if isinstance(position, QueueTrack):
-            if position.position is None:
-                self._log_warning("Refusing to play a track that does not belong to a queue")
-                raise ValueError("The track does not belong to a queue")
-            return f"play&N={position.position}"
-        if position is not None:
-            return f"play&N={position}"
+        played = self._play_position(position)
+        if played is not None:
+            return f"play&N={played}"
         return "play"
 
     def _playlist_command(self, name: str | Playlist) -> str:
@@ -408,43 +301,8 @@ class VolumioRESTAPICommon(VolumioBaseClient):
         Raises:
             ValueError: If the given playlist has no name
         """
-        if isinstance(name, Playlist):
-            if name.name is None:
-                self._log_warning("Refusing to play a playlist that has no name")
-                raise ValueError("The playlist has no name")
-            name = name.name
-        return f"playplaylist&name={quote(name, safe='')}"
-
-    def _queue_status(self, state: PlayerState, count: int) -> dict[str, Any]:
-        """Build the navigation state of the queue from a playback state and a length.
-
-        Args:
-            state: The current playback state
-            count: The number of queued tracks
-
-        Returns:
-            The navigation state of the queue
-        """
-        position = state.position
-        self._log_debug(f"Current position: {position}, queue length: {count}")
-        return {
-            "has_next": position is not None and position < count - 1,
-            "has_previous": position is not None and count > 0 and position > 0,
-            "length": count,
-            "position": position,
-            "track": state.raw,
-        }
-
-    def _queue_uri_item(self, uri: str) -> dict[str, str]:
-        """Build the payload item queueing a URI as itself.
-
-        Args:
-            uri: The URI to be queued
-
-        Returns:
-            The item naming the URI and the service it belongs to
-        """
-        return {"service": self._uri_service(uri), "uri": uri}
+        played = self._playlist_name(name)
+        return f"playplaylist&name={quote(played, safe='')}"
 
     def _search_path(self, query: str) -> str:
         """Build the path searching the sources of the Volumio instance.
@@ -467,102 +325,6 @@ class VolumioRESTAPICommon(VolumioBaseClient):
             The command to send
         """
         return f"seek&position={value}"
-
-    @staticmethod
-    def _slim_queue_item(item: dict[str, Any]) -> dict[str, Any]:
-        """Return the keys of a browsed item that queueing it needs.
-
-        A Volumio instance queues a listed item by exploding its URI through its
-        service, so the other keys of the item are dead weight; dropping them keeps
-        the payload of a long listing within the body size the instance accepts.
-
-        Args:
-            item: The item, as the Volumio instance listed it
-
-        Returns:
-            The item reduced to the keys queueing reads
-        """
-        return {key: item[key] for key in QUEUE_ITEM_KEYS if key in item}
-
-    def _state_mute(self, state: PlayerState) -> bool:
-        """Read the mute flag out of a playback state.
-
-        Args:
-            state: The playback state to read
-
-        Returns:
-            True if the volume is muted, False otherwise
-
-        Raises:
-            VolumioAPIError: If the state does not contain a boolean mute flag
-        """
-        if state.mute is None:
-            self._log_warning("The playback state carries no boolean mute flag")
-            raise VolumioAPIError(
-                f"Expected a boolean mute flag in the Volumio state, "
-                f"got {type(state.raw.get('mute')).__name__}"
-            )
-        return state.mute
-
-    def _state_seek(self, state: PlayerState) -> int:
-        """Read the seek position, in seconds, out of a playback state.
-
-        Args:
-            state: The playback state to read
-
-        Returns:
-            The current seek position, in seconds
-
-        Raises:
-            VolumioAPIError: If the state does not contain an integer seek position
-        """
-        if state.seek is None:
-            self._log_warning("The playback state carries no integer seek position")
-            raise VolumioAPIError(
-                f"Expected an integer seek position in the Volumio state, "
-                f"got {type(state.raw.get('seek')).__name__}"
-            )
-        return state.seek // 1000
-
-    def _state_status(self, state: PlayerState) -> str:
-        """Read the playback status string out of a playback state.
-
-        Args:
-            state: The playback state to read
-
-        Returns:
-            The playback status (e.g., "play", "pause", "stop")
-
-        Raises:
-            VolumioAPIError: If the state does not contain a string status
-        """
-        if state.status is None:
-            self._log_warning("The playback state carries no string status")
-            raise VolumioAPIError(
-                f"Expected a string status in the Volumio state, "
-                f"got {type(state.raw.get('status')).__name__}"
-            )
-        return state.status
-
-    def _state_volume(self, state: PlayerState) -> int:
-        """Read the volume level out of a playback state.
-
-        Args:
-            state: The playback state to read
-
-        Returns:
-            The volume level, an integer between 0 and 100 (inclusive)
-
-        Raises:
-            VolumioAPIError: If the state does not contain an integer volume level
-        """
-        if state.volume is None:
-            self._log_warning("The playback state carries no integer volume level")
-            raise VolumioAPIError(
-                f"Expected an integer volume level in the Volumio state, "
-                f"got {type(state.raw.get('volume')).__name__}"
-            )
-        return state.volume
 
     def _story_album_payload(self, artist: Artist | None, album: Album) -> dict[str, str]:
         """Build the metavolumio data payload (without the mode key) for an album query.
@@ -649,35 +411,6 @@ class VolumioRESTAPICommon(VolumioBaseClient):
         self._log_warning("Refusing a story query naming no entity")
         raise ValueError("One of album, artist, label, or place is required")
 
-    def _uri_service(self, uri: str) -> str:
-        """Return the name of the Volumio service a URI belongs to.
-
-        A Volumio instance routes a queued URI to the service named in its payload and,
-        when none is given, to ``mpd`` -- which silently adds nothing for the URI of
-        another source. The service is therefore always sent, read from the URI: the
-        scheme names it (``qobuz://...``), except for the schemes the local library is
-        browsed by and the scheme-less local paths (``mpd``), the web URLs
-        (``webradio``), and the ``spotify:`` URIs (``spop``).
-
-        Args:
-            uri: The URI to name the service of
-
-        Returns:
-            The name of the service (e.g., ``"mpd"``, ``"qobuz"``, ``"webradio"``)
-        """
-        if uri.startswith(("http://", "https://")):
-            service = "webradio"
-        elif uri.startswith("spotify:"):
-            service = "spop"
-        else:
-            scheme, separator, _ = uri.partition("://")
-            if separator and scheme not in MPD_LIBRARY_SCHEMES:
-                service = scheme
-            else:
-                service = "mpd"
-        self._log_debug(f'Service of "{uri}": {service}')
-        return service
-
     def _volume_command(self, value: int) -> str:
         """Build the command setting the volume to an absolute level.
 
@@ -690,7 +423,5 @@ class VolumioRESTAPICommon(VolumioBaseClient):
         Raises:
             ValueError: If the volume level is out of range
         """
-        if not 0 <= value <= 100:
-            self._log_warning(f"Refusing the out-of-range volume level {value}")
-            raise ValueError(f"The volume level must be between 0 and 100, got {value}")
+        self._check_volume_level(value)
         return f"volume&volume={value}"

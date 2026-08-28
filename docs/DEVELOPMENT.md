@@ -92,6 +92,7 @@ volumito/
 │       └── clients/
 │           ├── __init__.py                 # clients package re-exports
 │           ├── base.py                     # base client holding the logger of the clients
+│           ├── common.py                   # logic shared by every client of a host
 │           ├── entities.py                 # music entity references for the story queries
 │           ├── errors.py                   # VolumioError and its subclasses
 │           ├── host_configuration.py       # VolumioHostConfiguration helper data class
@@ -101,11 +102,16 @@ volumito/
 │           │   ├── __init__.py             # MPD client re-exports
 │           │   └── client.py               # MPD client (track URI)
 │           ├── remote.py                   # access to the files and to the shell of a host
-│           └── rest/
-│               ├── __init__.py             # REST API client re-exports
-│               ├── asyncclient.py          # async REST API client (aiohttp)
-│               ├── client.py               # sync REST API client (requests)
-│               └── common.py               # logic shared by the REST API clients
+│           ├── rest/
+│           │   ├── __init__.py             # REST API client re-exports
+│           │   ├── asyncclient.py          # async REST API client (aiohttp)
+│           │   ├── client.py               # sync REST API client (requests)
+│           │   └── common.py               # logic shared by the REST API clients
+│           └── websocket/
+│               ├── __init__.py             # WebSocket API client re-exports
+│               ├── asyncclient.py          # async WebSocket API client (python-socketio)
+│               ├── client.py               # sync WebSocket API client (python-socketio)
+│               └── common.py               # logic shared by the WebSocket API clients
 ├── tests/                                  # unit tests
 │   ├── __init__.py
 │   ├── test_base_client.py
@@ -119,7 +125,9 @@ volumito/
 │   ├── test_mpd_client.py
 │   ├── test_remote.py
 │   ├── test_rest_asyncclient.py
-│   └── test_rest_client.py
+│   ├── test_rest_client.py
+│   ├── test_websocket_asyncclient.py
+│   └── test_websocket_client.py
 ├── LICENSE                                 # full text of the license for this project
 ├── Makefile                                # make commands for the developer
 ├── MANIFEST.in                             # include/exclude additional files in the PyPI package

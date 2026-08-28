@@ -22,6 +22,7 @@ class TestVolumioHostConfiguration:
         assert host_configuration.host == "volumio.local"
         assert host_configuration.rest_api_port == 3000
         assert host_configuration.mpd_port == 6600
+        assert host_configuration.websocket_port == 3000
         assert host_configuration.ssh_password is None
         assert host_configuration.ssh_port == 22
         assert host_configuration.ssh_username == "volumio"
@@ -67,6 +68,23 @@ class TestVolumioHostConfiguration:
         )
 
         assert host_configuration.rest_base_url == "https://192.168.1.100:8080"
+
+    def test_websocket_base_url_default(self):
+        """Test websocket_base_url with default values."""
+        host_configuration = VolumioHostConfiguration()
+
+        assert host_configuration.websocket_base_url == "http://volumio.local:3000"
+
+    def test_websocket_base_url_on_its_own_port(self):
+        """The WebSocket URL follows its own port, not the REST API one."""
+        host_configuration = VolumioHostConfiguration(
+            scheme="https",
+            host="192.168.1.100",
+            rest_api_port=8080,
+            websocket_port=9090,
+        )
+
+        assert host_configuration.websocket_base_url == "https://192.168.1.100:9090"
 
     def test_equality(self):
         """Test that two host configurations with the same values compare equal."""
