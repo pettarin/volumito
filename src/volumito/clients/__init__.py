@@ -19,6 +19,7 @@ from volumito.clients.errors import (
     VolumioSCPError,
     VolumioSSHError,
     VolumioStoryError,
+    VolumioWebSocketError,
 )
 from volumito.clients.host_configuration import (
     Scheme,
@@ -112,6 +113,7 @@ __all__ = [
     "VolumioSCPError",
     "VolumioSSHError",
     "VolumioStoryError",
+    "VolumioWebSocketError",
     "Zone",
     "Zones",
     "copy_from_host",

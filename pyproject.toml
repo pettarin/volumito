@@ -42,12 +42,16 @@ dependencies = [
 all = [
     "volumito[async]",
     "volumito[scp]",
+    "volumito[websocket]",
 ]
 async = [
     "aiohttp>=3.11.0",
 ]
 scp = [
     "scp>=0.14.0",
+]
+websocket = [
+    "python-socketio[asyncio_client,client]>=4.6,<5",
 ]
 dev = [
     "volumito[all]",

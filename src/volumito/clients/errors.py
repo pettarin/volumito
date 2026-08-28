@@ -27,6 +27,10 @@ class VolumioAsyncError(VolumioError):
     """Raised when the Volumio host cannot be reached asynchronously."""
 
 
+class VolumioWebSocketError(VolumioError):
+    """Raised when the Volumio host cannot be reached over its WebSocket API."""
+
+
 class VolumioSSHError(VolumioError):
     """Raised when an SSH connection to the Volumio host fails."""
 
