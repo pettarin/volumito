@@ -81,6 +81,9 @@ EVENT_DELETE_PLAYLIST = "deletePlaylist"
 EVENT_DELETE_SHARE = "deleteShare"
 """The event unmounting a network share."""
 
+EVENT_DELETE_USER_DATA = "deleteUserData"
+"""The event erasing the data of the user. Never emitted by the clients."""
+
 EVENT_DISABLE_AUDIO_OUTPUT = "disableAudioOutput"
 """The event disabling one audio output."""
 
@@ -102,11 +105,17 @@ EVENT_ENABLE_PLUGIN = "enablePlugin"
 EVENT_ENQUEUE = "enqueue"
 """The event appending a saved playlist to the queue."""
 
+EVENT_FACTORY_RESET = "factoryReset"
+"""The event resetting the host to its factory configuration. Never emitted by the clients."""
+
 EVENT_GET_ALARMS = "getAlarms"
 """The event asking for the alarms set on the host."""
 
 EVENT_GET_AUDIO_OUTPUTS = "getAudioOutputs"
 """The event asking for the audio outputs of the host."""
+
+EVENT_GET_AUTOMATIC_UPDATE_ENABLED = "getAutomaticUpdateEnabled"
+"""The event asking whether the host updates itself."""
 
 EVENT_GET_AVAILABLE_LANGUAGES = "getAvailableLanguages"
 """The event asking for the languages of the user interface."""
@@ -116,6 +125,9 @@ EVENT_GET_AVAILABLE_TIMEZONES = "getAvailableTimezones"
 
 EVENT_GET_BACKGROUNDS = "getBackgrounds"
 """The event asking for the background images of the user interface."""
+
+EVENT_GET_BACKUP = "getBackup"
+"""The event asking for a backup of the configuration of the host."""
 
 EVENT_GET_BROWSE_SOURCES = "getBrowseSources"
 """The event asking for the sources the host can browse."""
@@ -165,6 +177,9 @@ EVENT_GET_LIST_SHARES = "getListShares"
 EVENT_GET_MENU_ITEMS = "getMenuItems"
 """The event asking for the menu the host offers its user interface."""
 
+EVENT_GET_MULTIROOM = "getMultiroom"
+"""The event asking for the multiroom configuration of the host."""
+
 EVENT_GET_MULTI_ROOM_DEVICES = "getMultiRoomDevices"
 """The event asking for the Volumio devices on the network."""
 
@@ -210,6 +225,9 @@ EVENT_GET_UI_CONFIG = "getUiConfig"
 EVENT_GET_UI_SETTINGS = "getUiSettings"
 """The event asking for the look of the user interface."""
 
+EVENT_GET_UPDATER_CHANNEL = "getUpdaterChannel"
+"""The event asking for the update channel the host follows."""
+
 EVENT_GET_WIRELESS_NETWORKS = "getWirelessNetworks"
 """The event scanning for wireless networks."""
 
@@ -225,11 +243,17 @@ EVENT_IMPORT_SERVICE_PLAYLISTS = "importServicePlaylists"
 EVENT_INSTALL_PLUGIN = "installPlugin"
 """The event installing a plugin from a URL."""
 
+EVENT_INSTALL_TO_DISK = "installToDisk"
+"""The event writing Volumio to the internal storage of the host."""
+
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
 
 EVENT_LIST_USB_DRIVES = "listUsbDrives"
 """The event asking for the USB drives attached to the host."""
+
+EVENT_MANAGE_BACKUP = "manageBackup"
+"""The event restoring a backup of the configuration."""
 
 EVENT_MODIFY_PLUGIN_STATUS = "modifyPluginStatus"
 """The event enabling or disabling a plugin in one call."""
@@ -288,6 +312,9 @@ EVENT_PUSH_ALARM = "pushAlarm"
 EVENT_PUSH_AUDIO_OUTPUTS = "pushAudioOutputs"
 """The event carrying the audio outputs of the host."""
 
+EVENT_PUSH_AUTOMATIC_UPDATE_ENABLED = "pushAutomaticUpdateEnabled"
+"""The event carrying whether the host updates itself."""
+
 EVENT_PUSH_AVAILABLE_LANGUAGES = "pushAvailableLanguages"
 """The event carrying the languages of the user interface."""
 
@@ -296,6 +323,9 @@ EVENT_PUSH_AVAILABLE_TIMEZONES = "pushAvailableTimezones"
 
 EVENT_PUSH_BACKGROUNDS = "pushBackgrounds"
 """The event carrying the background images of the user interface."""
+
+EVENT_PUSH_BACKUP = "pushBackup"
+"""The event carrying a backup of the configuration of the host."""
 
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
@@ -357,6 +387,9 @@ EVENT_PUSH_LIST_USB_DRIVES = "pushListUsbDrives"
 EVENT_PUSH_MENU_ITEMS = "pushMenuItems"
 """The event carrying the menu of the user interface."""
 
+EVENT_PUSH_MULTIROOM = "pushMultiroom"
+"""The event carrying the multiroom configuration of the host."""
+
 EVENT_PUSH_MULTI_ROOM_DEVICES = "pushMultiRoomDevices"
 """The event carrying the Volumio devices on the network."""
 
@@ -417,11 +450,17 @@ EVENT_PUSH_UI_CONFIG = "pushUiConfig"
 EVENT_PUSH_UI_SETTINGS = "pushUiSettings"
 """The event carrying the look of the user interface."""
 
+EVENT_PUSH_UPDATER_CHANNEL = "pushUpdaterChannel"
+"""The event carrying the update channel the host follows."""
+
 EVENT_PUSH_WIRELESS_NETWORKS = "pushWirelessNetworks"
 """The event carrying the wireless networks that were scanned for."""
 
 EVENT_PUSH_WIRELESS_NETWORKS_CACHE = "pushWirelessNetworksCache"
 """The event carrying the wireless networks seen last."""
+
+EVENT_PUSH_WRITE_MULTIROOM = "pushWriteMultiroom"
+"""The event confirming the multiroom role of the host."""
 
 EVENT_REBOOT = "reboot"
 """The event restarting the host."""
@@ -453,6 +492,9 @@ EVENT_REPLACE_AND_PLAY_CUE = "replaceAndPlayCue"
 EVENT_RESCAN_DB = "rescanDb"
 """The event rescanning the music collection from scratch."""
 
+EVENT_RESTORE_CONFIG = "restoreConfig"
+"""The event restoring the configuration of the plugins."""
+
 EVENT_SAFE_REMOVE_DRIVE = "safeRemoveDrive"
 """The event unmounting a USB drive before it is unplugged."""
 
@@ -473,6 +515,15 @@ EVENT_SEEK = "seek"
 
 EVENT_SERVICE_UPDATE_TRACKLIST = "serviceUpdateTracklist"
 """The event refreshing the tracks of one music service."""
+
+EVENT_SET_AS_MULTIROOM_CLIENT = "setAsMultiroomClient"
+"""The event making the host a multiroom client."""
+
+EVENT_SET_AS_MULTIROOM_SERVER = "setAsMultiroomServer"
+"""The event making the host a multiroom server."""
+
+EVENT_SET_AS_MULTIROOM_SINGLE = "setAsMultiroomSingle"
+"""The event taking the host out of multiroom."""
 
 EVENT_SET_AUDIO_OUTPUT_VOLUME = "setAudioOutputVolume"
 """The event setting the volume of one audio output."""
@@ -495,6 +546,9 @@ EVENT_SET_INFINITY_PLAYBACK = "setInfinityPlayback"
 EVENT_SET_LANGUAGE = "setLanguage"
 """The event choosing the language of the user interface."""
 
+EVENT_SET_MULTIROOM = "setMultiroom"
+"""The event changing the multiroom configuration of the host."""
+
 EVENT_SET_OUTPUT_DEVICES = "setOutputDevices"
 """The event choosing the output device of the host."""
 
@@ -509,6 +563,9 @@ EVENT_SET_SLEEP = "setSleep"
 
 EVENT_SET_TIMEZONE = "setTimezone"
 """The event choosing the time zone of the host."""
+
+EVENT_SET_UPDATER_CHANNEL = "setUpdaterChannel"
+"""The event choosing the update channel the host follows."""
 
 EVENT_SHUTDOWN = "shutdown"
 """The event powering the host off."""
@@ -531,8 +588,17 @@ EVENT_UNINSTALL_PLUGIN = "unInstallPlugin"
 EVENT_UNMUTE = "unmute"
 """The event unmuting the volume."""
 
+EVENT_UPDATE = "update"
+"""The event installing the update the host found."""
+
 EVENT_UPDATE_ALL_METADATA = "updateAllMetadata"
 """The event refreshing the metadata of the whole collection."""
+
+EVENT_UPDATE_CHECK = "updateCheck"
+"""The event checking whether an update is available."""
+
+EVENT_UPDATE_CHECK_CACHE = "updateCheckCache"
+"""The event checking the cached update information."""
 
 EVENT_UPDATE_DB = "updateDb"
 """The event updating the music collection."""
@@ -549,13 +615,18 @@ EVENT_VOLATILE_PLAY = "volatilePlay"
 EVENT_VOLUME = "volume"
 """The event setting the volume, by level or by increment."""
 
+EVENT_WRITE_MULTIROOM = "writeMultiroom"
+"""The event writing the multiroom configuration of the host."""
+
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
     EVENT_GET_AUDIO_OUTPUTS: EVENT_PUSH_AUDIO_OUTPUTS,
+    EVENT_GET_AUTOMATIC_UPDATE_ENABLED: EVENT_PUSH_AUTOMATIC_UPDATE_ENABLED,
     EVENT_GET_AVAILABLE_LANGUAGES: EVENT_PUSH_AVAILABLE_LANGUAGES,
     EVENT_GET_AVAILABLE_TIMEZONES: EVENT_PUSH_AVAILABLE_TIMEZONES,
     EVENT_GET_BACKGROUNDS: EVENT_PUSH_BACKGROUNDS,
+    EVENT_GET_BACKUP: EVENT_PUSH_BACKUP,
     EVENT_GET_BROWSE_SOURCES: EVENT_PUSH_BROWSE_SOURCES,
     EVENT_GET_CURRENT_TIMEZONE: EVENT_PUSH_CURRENT_TIMEZONE,
     EVENT_GET_DEVICE_HW_UUID: EVENT_PUSH_DEVICE_HW_UUID,
@@ -572,6 +643,7 @@ RESPONSE_EVENTS = {
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_LIST_SHARES: EVENT_PUSH_LIST_SHARES,
     EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
+    EVENT_GET_MULTIROOM: EVENT_PUSH_MULTIROOM,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
     EVENT_GET_MY_MUSIC_PLUGINS: EVENT_PUSH_MY_MUSIC_PLUGINS,
@@ -587,6 +659,7 @@ RESPONSE_EVENTS = {
     EVENT_GET_SYSTEM_VERSION: EVENT_PUSH_SYSTEM_VERSION,
     EVENT_GET_UI_CONFIG: EVENT_PUSH_UI_CONFIG,
     EVENT_GET_UI_SETTINGS: EVENT_PUSH_UI_SETTINGS,
+    EVENT_GET_UPDATER_CHANNEL: EVENT_PUSH_UPDATER_CHANNEL,
     EVENT_GET_WIRELESS_NETWORKS: EVENT_PUSH_WIRELESS_NETWORKS,
     EVENT_GET_WIRELESS_NETWORKS_CACHE: EVENT_PUSH_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
@@ -595,6 +668,7 @@ RESPONSE_EVENTS = {
     EVENT_PINGER: EVENT_PONGER,
     EVENT_PLUGIN_MANAGER: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_SET_MULTIROOM: EVENT_PUSH_MULTIROOM,
     EVENT_SUPER_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
 }
 """The event each read waits for, keyed by the event it emits.

@@ -32,6 +32,7 @@ from volumito.clients.models import (
     InputSources,
     Languages,
     MenuItems,
+    Multiroom,
     MusicSources,
     NetworkInfo,
     OutputDevices,
@@ -53,6 +54,7 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdaterChannel,
     UsbDrives,
     WirelessNetworks,
     Zones,
@@ -87,9 +89,11 @@ from volumito.clients.websocket.common import (
     EVENT_ENQUEUE,
     EVENT_GET_ALARMS,
     EVENT_GET_AUDIO_OUTPUTS,
+    EVENT_GET_AUTOMATIC_UPDATE_ENABLED,
     EVENT_GET_AVAILABLE_LANGUAGES,
     EVENT_GET_AVAILABLE_TIMEZONES,
     EVENT_GET_BACKGROUNDS,
+    EVENT_GET_BACKUP,
     EVENT_GET_BROWSE_SOURCES,
     EVENT_GET_CURRENT_TIMEZONE,
     EVENT_GET_DEVICE_HW_UUID,
@@ -107,6 +111,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_LIST_SHARES,
     EVENT_GET_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES,
+    EVENT_GET_MULTIROOM,
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_MY_MUSIC_PLUGINS,
     EVENT_GET_NETWORK_SHARES_DISCOVERY,
@@ -121,13 +126,16 @@ from volumito.clients.websocket.common import (
     EVENT_GET_SYSTEM_VERSION,
     EVENT_GET_UI_CONFIG,
     EVENT_GET_UI_SETTINGS,
+    EVENT_GET_UPDATER_CHANNEL,
     EVENT_GET_WIRELESS_NETWORKS,
     EVENT_GET_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO,
     EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_INSTALL_PLUGIN,
+    EVENT_INSTALL_TO_DISK,
     EVENT_LIST_PLAYLIST,
     EVENT_LIST_USB_DRIVES,
+    EVENT_MANAGE_BACKUP,
     EVENT_MODIFY_PLUGIN_STATUS,
     EVENT_MOVE_QUEUE,
     EVENT_MUTE,
@@ -152,6 +160,7 @@ from volumito.clients.websocket.common import (
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
     EVENT_RESCAN_DB,
+    EVENT_RESTORE_CONFIG,
     EVENT_SAFE_REMOVE_DRIVE,
     EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
@@ -159,6 +168,9 @@ from volumito.clients.websocket.common import (
     EVENT_SEARCH,
     EVENT_SEEK,
     EVENT_SERVICE_UPDATE_TRACKLIST,
+    EVENT_SET_AS_MULTIROOM_CLIENT,
+    EVENT_SET_AS_MULTIROOM_SERVER,
+    EVENT_SET_AS_MULTIROOM_SINGLE,
     EVENT_SET_AUDIO_OUTPUT_VOLUME,
     EVENT_SET_BACKGROUNDS,
     EVENT_SET_CONSUME,
@@ -166,11 +178,13 @@ from volumito.clients.websocket.common import (
     EVENT_SET_EXPERIENCE_ADVANCED_SETTINGS,
     EVENT_SET_INFINITY_PLAYBACK,
     EVENT_SET_LANGUAGE,
+    EVENT_SET_MULTIROOM,
     EVENT_SET_OUTPUT_DEVICES,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
     EVENT_SET_SLEEP,
     EVENT_SET_TIMEZONE,
+    EVENT_SET_UPDATER_CHANNEL,
     EVENT_SHUTDOWN,
     EVENT_STANDBY,
     EVENT_STOP,
@@ -178,11 +192,15 @@ from volumito.clients.websocket.common import (
     EVENT_TOGGLE,
     EVENT_UNINSTALL_PLUGIN,
     EVENT_UNMUTE,
+    EVENT_UPDATE,
     EVENT_UPDATE_ALL_METADATA,
+    EVENT_UPDATE_CHECK,
+    EVENT_UPDATE_CHECK_CACHE,
     EVENT_UPDATE_DB,
     EVENT_UPDATE_PLUGIN,
     EVENT_VOLATILE_PLAY,
     EVENT_VOLUME,
+    EVENT_WRITE_MULTIROOM,
     RESPONSE_EVENTS,
     VOLUME_DOWN,
     VOLUME_UP,
@@ -336,6 +354,22 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not an array
         """
         return self._as_json_array(await self._request(event, payload=payload))
+
+    async def _read_boolean(self, event: str, payload: object = None) -> bool:
+        """Read an event answered by a bare JSON boolean.
+
+        Args:
+            event: The event to emit
+            payload: What the emitted event carries, when it carries anything
+
+        Returns:
+            The boolean the answer carried
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not a boolean
+        """
+        return self._as_json_boolean(await self._request(event, payload=payload))
 
     async def _read_object(self, event: str, payload: object = None) -> dict[str, Any]:
         """Read an event answered by a JSON object.
@@ -592,6 +626,18 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_AUDIO_OUTPUT_PLAY, self._audio_output_payload(output_id))
 
+    async def backup(self) -> dict[str, Any]:
+        """Read a backup of the configuration of the Volumio instance.
+
+        Returns:
+            The backup, as the host reported it
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return await self._read_object(EVENT_GET_BACKUP)
+
     async def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
 
@@ -631,6 +677,25 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         payload: dict[str, Any] = {"endpoint": endpoint, "method": method}
         payload["data"] = data if data is not None else {}
         await self._emit(EVENT_CALL_METHOD, payload)
+
+    async def check_for_update(self) -> None:
+        """Ask the Volumio instance to check whether an update is available.
+
+        The host reports what it found through the events its user interface listens
+        for, which :meth:`on` can be registered for.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_UPDATE_CHECK, {"hideModal": True})
+
+    async def check_update_cache(self) -> None:
+        """Ask the Volumio instance to check the update information it cached.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_UPDATE_CHECK_CACHE)
 
     async def clear(self) -> None:
         """Empty the playback queue.
@@ -743,6 +808,23 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_DELETE_SHARE, {"id": share_id})
+
+    async def delete_user_data(self) -> None:
+        """Erase the data of the user from the Volumio host.
+
+        The implementation is deliberately disabled: this erases the data of the user,
+        with no undo and no confirmation from Volumio itself. Emit the event yourself
+        if you mean it.
+
+        Raises:
+            NotImplementedError: Always
+        """
+        # await self._emit(EVENT_DELETE_USER_DATA)
+        raise NotImplementedError(
+            "delete_user_data() is deliberately not implemented: it erases the data of "
+            "the user on the Volumio host. Emit the event yourself if you mean it: "
+            'await client.emit("deleteUserData")'
+        )
 
     async def disable_audio_output(self, output_id: str) -> None:
         """Disable one audio output of the Volumio instance.
@@ -859,6 +941,23 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_ENQUEUE, self._playlist_payload(name))
+
+    async def factory_reset(self) -> None:
+        """Reset the Volumio host to its factory configuration.
+
+        The implementation is deliberately disabled: this erases every setting on the
+        host, with no undo and no confirmation from Volumio itself. Emit the event
+        yourself if you mean it.
+
+        Raises:
+            NotImplementedError: Always
+        """
+        # await self._emit(EVENT_FACTORY_RESET)
+        raise NotImplementedError(
+            "factory_reset() is deliberately not implemented: it erases every setting "
+            "on the Volumio host. Emit the event yourself if you mean it: "
+            'await client.emit("factoryReset")'
+        )
 
     async def get_alarms(self) -> Alarms:
         """Get the alarms set on the Volumio instance.
@@ -1091,6 +1190,21 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not an array
         """
         return MenuItems.from_raw({"items": await self._read_array(EVENT_GET_MENU_ITEMS)})
+
+    async def get_multiroom(self) -> Multiroom:
+        """Get the multiroom configuration of the Volumio instance.
+
+        The configuration comes from the ``multiroom``
+        plugin: a host without it never answers, and the read times out.
+
+        Returns:
+            The multiroom configuration of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return Multiroom.from_raw(await self._read_object(EVENT_GET_MULTIROOM))
 
     async def get_music_sources(self) -> MusicSources:
         """Get the music source plugins of the Volumio instance.
@@ -1352,6 +1466,18 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         return UiSettings.from_raw(await self._read_object(EVENT_GET_UI_SETTINGS))
 
+    async def get_updater_channel(self) -> UpdaterChannel:
+        """Get the update channel the Volumio instance follows.
+
+        Returns:
+            The update channel of the host, and the ones it can follow
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return UpdaterChannel.from_raw(await self._read_object(EVENT_GET_UPDATER_CHANNEL))
+
     async def get_usb_drives(self) -> UsbDrives:
         """Get the USB drives attached to the Volumio instance.
 
@@ -1492,6 +1618,28 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_INSTALL_PLUGIN, {"url": url, "confirm": True})
+
+    async def install_to_disk(self) -> None:
+        """Write Volumio to the internal storage of the host.
+
+        This overwrites whatever the internal storage holds.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_INSTALL_TO_DISK)
+
+    async def is_automatic_update_enabled(self) -> bool:
+        """Whether the Volumio instance updates itself.
+
+        Returns:
+            True if the host updates itself, False otherwise
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not a boolean
+        """
+        return await self._read_boolean(EVENT_GET_AUTOMATIC_UPDATE_ENABLED)
 
     async def is_muted(self) -> bool:
         """Whether the playback volume of the Volumio instance is muted.
@@ -1970,6 +2118,25 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_RESCAN_DB)
 
+    async def restore_backup(self, backup: dict[str, Any]) -> None:
+        """Restore a backup of the configuration of the Volumio instance.
+
+        Args:
+            backup: The backup to restore, as :meth:`backup` reported it
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_MANAGE_BACKUP, backup)
+
+    async def restore_config(self) -> None:
+        """Restore the configuration of the plugins of the Volumio instance.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_RESTORE_CONFIG)
+
     async def safe_remove_drive(self, name: str) -> None:
         """Unmount a USB drive of the Volumio instance before it is unplugged.
 
@@ -2064,6 +2231,33 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_SAVE_ALARM, self._alarms_payload(alarms))
 
+    async def set_as_multiroom_client(self, server: str) -> None:
+        """Make the Volumio instance a multiroom client of another host.
+
+        Args:
+            server: The address of the host to follow
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_AS_MULTIROOM_CLIENT, {"server": server})
+
+    async def set_as_multiroom_server(self) -> None:
+        """Make the Volumio instance a multiroom server.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_AS_MULTIROOM_SERVER)
+
+    async def set_as_multiroom_single(self) -> None:
+        """Take the Volumio instance out of multiroom.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_AS_MULTIROOM_SINGLE)
+
     async def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         """Set the volume of one audio output of the Volumio instance.
 
@@ -2139,6 +2333,21 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         chosen = {"code": code, "language": language if language is not None else code}
         await self._emit(EVENT_SET_LANGUAGE, {"defaultLanguage": chosen})
 
+    async def set_multiroom(self, settings: dict[str, Any]) -> Multiroom:
+        """Change the multiroom configuration of the Volumio instance.
+
+        Args:
+            settings: The configuration to apply
+
+        Returns:
+            The configuration as it stands afterwards
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return Multiroom.from_raw(await self._read_object(EVENT_SET_MULTIROOM, settings))
+
     async def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         """Enable or disable one music source of the Volumio instance.
 
@@ -2204,6 +2413,17 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_SET_TIMEZONE, {"timeZone": value})
+
+    async def set_updater_channel(self, value: str) -> None:
+        """Move the Volumio instance to another update channel.
+
+        Args:
+            value: The channel to follow, one of the available ones
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_UPDATER_CHANNEL, {"channel": value})
 
     async def set_volume(self, value: int) -> None:
         """Set the playback volume to an absolute level.
@@ -2298,6 +2518,20 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_UNMUTE)
 
+    async def update(self, ignore_integrity_check: bool = False) -> None:
+        """Install the update the Volumio instance found.
+
+        The host reports its progress through the events its user interface listens
+        for, and restarts when it is done.
+
+        Args:
+            ignore_integrity_check: True to install even when the check fails
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_UPDATE, {"ignoreIntegrityCheck": ignore_integrity_check})
+
     async def update_all_metadata(self) -> None:
         """Refresh the metadata of the whole collection of the Volumio instance.
 
@@ -2351,6 +2585,17 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         self._log_debug("Waiting for the connection to drop...")
         await self._client.wait()
         self._log_debug("Waiting for the connection to drop... done")
+
+    async def write_multiroom(self, settings: dict[str, Any]) -> None:
+        """Write the multiroom configuration of the Volumio instance.
+
+        Args:
+            settings: The configuration to write
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_WRITE_MULTIROOM, settings)
 
     async def __aenter__(self) -> Self:
         """Async context manager entry - connects to the Volumio WebSocket API.

@@ -27,6 +27,8 @@ from volumito.clients.models import Alarm, Playlist, QueueTrack  # noqa: E402
 from volumito.clients.websocket.asyncclient import VolumioAsyncWebSocketClient  # noqa: E402
 from volumito.clients.websocket.common import (  # noqa: E402
     EVENT_BROWSE_LIBRARY,
+    EVENT_DELETE_USER_DATA,
+    EVENT_FACTORY_RESET,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_QUEUE,
@@ -2033,3 +2035,141 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
 
         assert settings.status is False
         assert fake.calls[-1] == _Call("setExperienceAdvancedSettings", {"status": True})
+
+
+class TestVolumioAsyncWebSocketClientSystemAdministration:
+    """Updates, backups, multiroom, and the two members that refuse to run."""
+
+    async def test_automatic_update_enabled(self, mocker: MockerFixture):
+        """The flag is answered bare, and read as the boolean it is."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getAutomaticUpdateEnabled": ("pushAutomaticUpdateEnabled", False)}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert await client.is_automatic_update_enabled() is False
+
+    async def test_an_automatic_update_flag_that_is_not_a_boolean(self, mocker: MockerFixture):
+        """Anything but a boolean is refused."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getAutomaticUpdateEnabled": ("pushAutomaticUpdateEnabled", "yes")}
+        )
+        client, _ = await _client(mocker, fake)
+
+        with pytest.raises(VolumioAPIError, match="Expected JSON boolean"):
+            await client.is_automatic_update_enabled()
+
+    async def test_the_updater_channel(self, mocker: MockerFixture):
+        """The channel is read beside the available ones, and one is chosen."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getUpdaterChannel": (
+                    "pushUpdaterChannel",
+                    {"availableChannels": ["stable", "test"], "currentChannel": "stable"},
+                )
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        channel = await client.get_updater_channel()
+        await client.set_updater_channel("test")
+
+        assert channel.current_channel == "stable"
+        assert channel.available_channels == ["stable", "test"]
+        assert fake.calls[-1] == _Call("setUpdaterChannel", {"channel": "test"})
+
+    async def test_the_update_commands(self, mocker: MockerFixture):
+        """Checking and installing carry the flags the host expects."""
+        client, fake = await _client(mocker)
+
+        await client.check_for_update()
+        await client.check_update_cache()
+        await client.update()
+        await client.update(ignore_integrity_check=True)
+
+        assert fake.calls == [
+            _Call("updateCheck", {"hideModal": True}),
+            _Call("updateCheckCache", None),
+            _Call("update", {"ignoreIntegrityCheck": False}),
+            _Call("update", {"ignoreIntegrityCheck": True}),
+        ]
+
+    async def test_backup_and_restore(self, mocker: MockerFixture):
+        """A backup is read and handed back to be restored."""
+        fake = _FakeAsyncSocketIOClient(answers={"getBackup": ("pushBackup", {"playlist": []})})
+        client, fake = await _client(mocker, fake)
+
+        backup = await client.backup()
+        await client.restore_backup(backup)
+        await client.restore_config()
+
+        assert backup == {"playlist": []}
+        assert fake.calls[-2:] == [
+            _Call("manageBackup", {"playlist": []}),
+            _Call("restoreConfig", None),
+        ]
+
+    async def test_install_to_disk(self, mocker: MockerFixture):
+        """Writing to the internal storage carries nothing."""
+        client, fake = await _client(mocker)
+
+        await client.install_to_disk()
+
+        assert fake.calls == [_Call("installToDisk", None)]
+
+    async def test_multiroom(self, mocker: MockerFixture):
+        """The configuration is read, changed, and the role chosen."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getMultiroom": ("pushMultiroom", {"enabled": True, "mode": "server"}),
+                "setMultiroom": ("pushMultiroom", {"enabled": False, "mode": "single"}),
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        current = await client.get_multiroom()
+        changed = await client.set_multiroom({"enabled": False})
+        await client.set_as_multiroom_client("192.168.1.2")
+        await client.set_as_multiroom_server()
+        await client.set_as_multiroom_single()
+        await client.write_multiroom({"enabled": False})
+
+        assert current.mode == "server"
+        assert changed.mode == "single"
+        assert fake.calls[-4:] == [
+            _Call("setAsMultiroomClient", {"server": "192.168.1.2"}),
+            _Call("setAsMultiroomServer", None),
+            _Call("setAsMultiroomSingle", None),
+            _Call("writeMultiroom", {"enabled": False}),
+        ]
+
+    async def test_factory_reset_refuses_to_run(self, mocker: MockerFixture):
+        """The reset is deliberately not implemented, and says how to mean it."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(NotImplementedError) as exc_info:
+            await client.factory_reset()
+
+        assert "deliberately not implemented" in str(exc_info.value)
+        assert 'await client.emit("factoryReset")' in str(exc_info.value)
+        assert fake.calls == []
+
+    async def test_delete_user_data_refuses_to_run(self, mocker: MockerFixture):
+        """Erasing the user data is deliberately not implemented."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(NotImplementedError) as exc_info:
+            await client.delete_user_data()
+
+        assert "deliberately not implemented" in str(exc_info.value)
+        assert 'await client.emit("deleteUserData")' in str(exc_info.value)
+        assert fake.calls == []
+
+    async def test_the_disabled_events_are_still_named(self, mocker: MockerFixture):
+        """Both events keep their constant, so emit() remains the way to mean it."""
+        client, fake = await _client(mocker)
+
+        await client.emit(EVENT_FACTORY_RESET)
+        await client.emit(EVENT_DELETE_USER_DATA)
+
+        assert fake.calls == [_Call("factoryReset", None), _Call("deleteUserData", None)]

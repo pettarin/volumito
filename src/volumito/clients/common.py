@@ -110,6 +110,26 @@ class VolumioCommon(VolumioBaseClient):
 
         return data
 
+    def _as_json_boolean(self, data: object) -> bool:
+        """Check that a parsed response body is a JSON boolean.
+
+        Args:
+            data: The parsed response body
+
+        Returns:
+            The JSON boolean
+
+        Raises:
+            VolumioAPIError: If the body is not a boolean
+        """
+        if not isinstance(data, bool):
+            self._log_warning(f"The response is not a JSON boolean: {type(data).__name__}")
+            raise VolumioAPIError(
+                f"Expected JSON boolean from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
     def _as_json_string(self, data: object) -> str:
         """Check that a parsed response body is a JSON string.
 

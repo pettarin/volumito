@@ -31,6 +31,8 @@ from volumito.clients.websocket.client import (  # noqa: E402
 )
 from volumito.clients.websocket.common import (  # noqa: E402
     EVENT_BROWSE_LIBRARY,
+    EVENT_DELETE_USER_DATA,
+    EVENT_FACTORY_RESET,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_QUEUE,
@@ -2252,3 +2254,141 @@ class TestVolumioWebSocketClientUiPreferences:
 
         assert settings.status is False
         assert fake.calls[-1] == _Call("setExperienceAdvancedSettings", {"status": True})
+
+
+class TestVolumioWebSocketClientSystemAdministration:
+    """Updates, backups, multiroom, and the two members that refuse to run."""
+
+    def test_automatic_update_enabled(self, mocker: MockerFixture):
+        """The flag is answered bare, and read as the boolean it is."""
+        fake = _FakeSocketIOClient(
+            answers={"getAutomaticUpdateEnabled": ("pushAutomaticUpdateEnabled", False)}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert client.automatic_update_enabled is False
+
+    def test_an_automatic_update_flag_that_is_not_a_boolean(self, mocker: MockerFixture):
+        """Anything but a boolean is refused."""
+        fake = _FakeSocketIOClient(
+            answers={"getAutomaticUpdateEnabled": ("pushAutomaticUpdateEnabled", "yes")}
+        )
+        client, _ = _client(mocker, fake)
+
+        with pytest.raises(VolumioAPIError, match="Expected JSON boolean"):
+            _ = client.automatic_update_enabled
+
+    def test_the_updater_channel(self, mocker: MockerFixture):
+        """The channel is read beside the available ones, and one is chosen."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getUpdaterChannel": (
+                    "pushUpdaterChannel",
+                    {"availableChannels": ["stable", "test"], "currentChannel": "stable"},
+                )
+            }
+        )
+        client, fake = _client(mocker, fake)
+
+        channel = client.updater_channel
+        client.updater_channel = "test"
+
+        assert channel.current_channel == "stable"
+        assert channel.available_channels == ["stable", "test"]
+        assert fake.calls[-1] == _Call("setUpdaterChannel", {"channel": "test"})
+
+    def test_the_update_commands(self, mocker: MockerFixture):
+        """Checking and installing carry the flags the host expects."""
+        client, fake = _client(mocker)
+
+        client.check_for_update()
+        client.check_update_cache()
+        client.update()
+        client.update(ignore_integrity_check=True)
+
+        assert fake.calls == [
+            _Call("updateCheck", {"hideModal": True}),
+            _Call("updateCheckCache", None),
+            _Call("update", {"ignoreIntegrityCheck": False}),
+            _Call("update", {"ignoreIntegrityCheck": True}),
+        ]
+
+    def test_backup_and_restore(self, mocker: MockerFixture):
+        """A backup is read and handed back to be restored."""
+        fake = _FakeSocketIOClient(answers={"getBackup": ("pushBackup", {"playlist": []})})
+        client, fake = _client(mocker, fake)
+
+        backup = client.backup()
+        client.restore_backup(backup)
+        client.restore_config()
+
+        assert backup == {"playlist": []}
+        assert fake.calls[-2:] == [
+            _Call("manageBackup", {"playlist": []}),
+            _Call("restoreConfig", None),
+        ]
+
+    def test_install_to_disk(self, mocker: MockerFixture):
+        """Writing to the internal storage carries nothing."""
+        client, fake = _client(mocker)
+
+        client.install_to_disk()
+
+        assert fake.calls == [_Call("installToDisk", None)]
+
+    def test_multiroom(self, mocker: MockerFixture):
+        """The configuration is read, changed, and the role chosen."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getMultiroom": ("pushMultiroom", {"enabled": True, "mode": "server"}),
+                "setMultiroom": ("pushMultiroom", {"enabled": False, "mode": "single"}),
+            }
+        )
+        client, fake = _client(mocker, fake)
+
+        current = client.multiroom
+        changed = client.set_multiroom({"enabled": False})
+        client.set_as_multiroom_client("192.168.1.2")
+        client.set_as_multiroom_server()
+        client.set_as_multiroom_single()
+        client.write_multiroom({"enabled": False})
+
+        assert current.mode == "server"
+        assert changed.mode == "single"
+        assert fake.calls[-4:] == [
+            _Call("setAsMultiroomClient", {"server": "192.168.1.2"}),
+            _Call("setAsMultiroomServer", None),
+            _Call("setAsMultiroomSingle", None),
+            _Call("writeMultiroom", {"enabled": False}),
+        ]
+
+    def test_factory_reset_refuses_to_run(self, mocker: MockerFixture):
+        """The reset is deliberately not implemented, and says how to mean it."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(NotImplementedError) as exc_info:
+            client.factory_reset()
+
+        assert "deliberately not implemented" in str(exc_info.value)
+        assert 'client.emit("factoryReset")' in str(exc_info.value)
+        assert fake.calls == []
+
+    def test_delete_user_data_refuses_to_run(self, mocker: MockerFixture):
+        """Erasing the user data is deliberately not implemented."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(NotImplementedError) as exc_info:
+            client.delete_user_data()
+
+        assert "deliberately not implemented" in str(exc_info.value)
+        assert 'client.emit("deleteUserData")' in str(exc_info.value)
+        assert fake.calls == []
+
+    def test_the_disabled_events_are_still_named(self, mocker: MockerFixture):
+        """Both events keep their constant, so emit() remains the way to mean it."""
+        client, fake = _client(mocker)
+
+        client.emit(EVENT_FACTORY_RESET)
+        client.emit(EVENT_DELETE_USER_DATA)
+
+        assert fake.calls == [_Call("factoryReset", None), _Call("deleteUserData", None)]
