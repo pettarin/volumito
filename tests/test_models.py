@@ -13,15 +13,21 @@ from volumito.clients.errors import VolumioAPIError, VolumioStoryError
 from volumito.clients.models import (
     Alarms,
     AudioOutputs,
+    Backgrounds,
     BrowseResults,
     BrowseSources,
     CollectionStatistics,
     CommandResponse,
     DeviceInfo,
     DeviceState,
+    ExperienceSettings,
+    InfinityPlayback,
     InputSources,
+    Languages,
     MenuItems,
+    Multiroom,
     MusicSources,
+    NetworkInfo,
     Notification,
     Notifications,
     OutputDevices,
@@ -29,7 +35,9 @@ from volumito.clients.models import (
     Playlist,
     PlaylistContent,
     Playlists,
+    Plugins,
     PowerModes,
+    PrivacySettings,
     PushNotification,
     Queue,
     QueueTrack,
@@ -37,12 +45,18 @@ from volumito.clients.models import (
     SearchResultItemKind,
     SearchResultList,
     SearchResults,
+    Shares,
     SleepTimer,
     Story,
     SuccessResponse,
     SystemInfo,
     SystemVersion,
+    Timezones,
+    UiConfig,
     UiSettings,
+    UpdaterChannel,
+    UsbDrives,
+    WirelessNetworks,
     Zone,
     Zones,
 )
@@ -1511,3 +1525,169 @@ class TestUiSettings:
         assert settings.color == "#000"
         assert settings.language == "en"
         assert settings.theme == "default"
+
+
+class TestTierCModels:
+    """The models of the administration surfaces, whose shapes came from a live host."""
+
+    def test_network_info(self):
+        """The interfaces are answered as a bare array, which the model wraps."""
+        info = NetworkInfo.from_raw(
+            {
+                "interfaces": [
+                    {"type": "Wired", "ip": "192.168.1.122", "status": "connected",
+                     "speed": "1Gb/s"}
+                ]
+            }
+        )
+
+        assert len(info) == 1
+        assert info[0].ip == "192.168.1.122"
+        assert [i.type for i in info] == ["Wired"]
+
+    def test_backgrounds(self):
+        """The background in use is read beside the available ones."""
+        backgrounds = Backgrounds.from_raw(
+            {
+                "current": {"name": "Darkness", "path": "darkness.jpg"},
+                "available": [
+                    {"name": "Aurora", "path": "aurora.jpg", "thumbnail": "thumb.jpg"}
+                ],
+            }
+        )
+
+        assert backgrounds.current is not None
+        assert backgrounds.current.name == "Darkness"
+        assert len(backgrounds) == 1
+        assert backgrounds[0].thumbnail == "thumb.jpg"
+        assert [b.name for b in backgrounds] == ["Aurora"]
+
+    def test_timezones(self):
+        """The time zones are answered as bare strings, which the model wraps."""
+        zones = Timezones.from_raw({"timezones": ["Europe/Rome", "UTC"]})
+
+        assert len(zones) == 2
+        assert zones[0] == "Europe/Rome"
+        assert list(zones) == ["Europe/Rome", "UTC"]
+
+    def test_languages(self):
+        """The language in use is read beside the available ones."""
+        languages = Languages.from_raw(
+            {
+                "defaultLanguage": {"language": "English", "code": "en"},
+                "available": [{"language": "Catala", "code": "ca"}],
+            }
+        )
+
+        assert languages.default_language is not None
+        assert languages.default_language.code == "en"
+        assert len(languages) == 1
+        assert languages[0].language == "Catala"
+        assert [lang.code for lang in languages] == ["ca"]
+
+    def test_updater_channel(self):
+        """The channel in use is read beside the available ones."""
+        channel = UpdaterChannel.from_raw(
+            {"availableChannels": ["stable", "test"], "currentChannel": "stable"}
+        )
+
+        assert channel.current_channel == "stable"
+        assert channel.available_channels == ["stable", "test"]
+
+    def test_privacy_settings(self):
+        """The statistics flag is read from its alias."""
+        assert PrivacySettings.from_raw({"allowUIStatistics": False}).allow_ui_statistics is False
+
+    def test_infinity_playback(self):
+        """Both flags are parsed."""
+        playback = InfinityPlayback.from_raw({"available": True, "enabled": False})
+
+        assert playback.available is True
+        assert playback.enabled is False
+
+    def test_experience_settings(self):
+        """The options are kept as the host reported them."""
+        settings = ExperienceSettings.from_raw(
+            {"options": [{"id": False, "label": "Simplified"}], "status": True}
+        )
+
+        assert settings.status is True
+        assert settings.options[0]["label"] == "Simplified"
+
+    def test_ui_config(self):
+        """The page and its sections are parsed."""
+        config = UiConfig.from_raw(
+            {"page": {"label": "System Settings"}, "sections": [{"id": "language_selector"}]}
+        )
+
+        assert config.page == {"label": "System Settings"}
+        assert config.sections[0]["id"] == "language_selector"
+
+    def test_plugins(self):
+        """The plugins are parsed, aliases included."""
+        plugins = Plugins.from_raw(
+            {
+                "plugins": [
+                    {"name": "spop", "prettyName": "Spotify", "category": "music_service",
+                     "version": "1.0", "enabled": True, "active": True}
+                ]
+            }
+        )
+
+        assert len(plugins) == 1
+        assert plugins[0].pretty_name == "Spotify"
+        assert [p.name for p in plugins] == ["spop"]
+
+    def test_shares(self):
+        """The shares are parsed with the fields the networkfs plugin reports."""
+        shares = Shares.from_raw(
+            {
+                "shares": [
+                    {"id": "uuid", "name": "NAS", "path": "Music", "fstype": "cifs",
+                     "username": "guest", "options": "ro", "size": ""}
+                ]
+            }
+        )
+
+        assert len(shares) == 1
+        assert shares[0].fstype == "cifs"
+        assert [s.name for s in shares] == ["NAS"]
+
+    def test_wireless_networks(self):
+        """The networks are parsed."""
+        networks = WirelessNetworks.from_raw(
+            {"available": [{"ssid": "home", "signal": 70, "security": "wpa", "configured": True}]}
+        )
+
+        assert len(networks) == 1
+        assert networks[0].signal == 70
+        assert [n.ssid for n in networks] == ["home"]
+
+    def test_usb_drives(self):
+        """The drives are parsed."""
+        drives = UsbDrives.from_raw(
+            {"drives": [{"name": "USB", "device": "sda1", "mountpoint": "/media/USB"}]}
+        )
+
+        assert len(drives) == 1
+        assert drives[0].mountpoint == "/media/USB"
+        assert [d.name for d in drives] == ["USB"]
+
+    def test_multiroom(self):
+        """The multiroom configuration keeps whatever the plugin reported."""
+        multiroom = Multiroom.from_raw({"enabled": True, "mode": "server", "extra": 1})
+
+        assert multiroom.enabled is True
+        assert multiroom.mode == "server"
+        assert multiroom.raw["extra"] == 1
+
+    def test_the_empty_collections(self):
+        """Every Tier C collection reads an empty answer as empty."""
+        assert len(NetworkInfo.from_raw({"interfaces": []})) == 0
+        assert len(Plugins.from_raw({"plugins": []})) == 0
+        assert len(Shares.from_raw({"shares": []})) == 0
+        assert len(Timezones.from_raw({"timezones": []})) == 0
+        assert len(UsbDrives.from_raw({"drives": []})) == 0
+        assert len(WirelessNetworks.from_raw({"available": []})) == 0
+        assert len(Backgrounds.from_raw({"available": []})) == 0
+        assert len(Languages.from_raw({"available": []})) == 0
