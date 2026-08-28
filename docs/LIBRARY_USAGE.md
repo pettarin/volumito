@@ -305,8 +305,7 @@ are coroutine methods here:
 > A type checker rejects the assignment, but a Python interpreter does not.
 > You must use `await client.set_volume(50)` instead.
 >
-> Note that, unlike their synchronous counterparts
-> which return the raw value that has been provided,
+> Note that, unlike their synchronous counterparts,
 > the setters `set_*()` return the `CommandResponse`
 > the Volumio host answered with.
 

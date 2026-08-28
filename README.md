@@ -341,9 +341,9 @@ There are five major clients available for the APIs of Volumio:
 
 - `VolumioAsyncRESTAPIClient`: asynchronous client for the REST API;
 - `VolumioAsyncWebSocketClient`: asynchronous client for the WebSocket API;
-- `VolumioMPDClient`: synchronous client for the MPD API.
+- `VolumioMPDClient`: synchronous client for the MPD API;
 - `VolumioRESTAPIClient`: synchronous client for the REST API;
-- `VolumioWebSocketClient`: synchronous client for the WebSocket API;
+- `VolumioWebSocketClient`: synchronous client for the WebSocket API.
 
 The following is a short example
 of the synchronous client for the REST API of Volumio:
