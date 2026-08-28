@@ -9,14 +9,30 @@ This document describes how to use `volumito` as a Python library.
 
 ## Contents
 
-- [Quick Start](#quick-start)
-- [Async Client](#async-client)
-- [WebSocket Client](#websocket-client)
+- [Synchronous REST API Client](#synchronous-rest-api-client)
+- [Asynchronous REST API Client](#asynchronous-rest-api-client)
+  - [Differences Between Synchronous And Asynchronous Clients](#differences-between-synchronous-and-asynchronous-clients)
+  - [Running Queries Concurrently](#running-queries-concurrently)
+- [WebSocket Clients](#websocket-clients)
+  - [Listening To Events](#listening-to-events)
+  - [Generic Emit And Request](#generic-emit-and-request)
+  - [Differences From The REST API Clients](#differences-from-the-rest-api-clients)
 - [Response Models](#response-models)
 - [Reference](#reference)
 
 
-## Quick Start
+## Synchronous REST API Client
+
+There are five major clients available for the APIs of Volumio:
+
+- `VolumioAsyncRESTAPIClient`: asynchronous client for the REST API;
+- `VolumioAsyncWebSocketClient`: asynchronous client for the WebSocket API;
+- `VolumioMPDClient`: synchronous client for the MPD API;
+- `VolumioRESTAPIClient`: synchronous client for the REST API;
+- `VolumioWebSocketClient`: synchronous client for the WebSocket API.
+
+The following is a short example
+of the synchronous client for the REST API of Volumio:
 
 ```python
 from volumito import (
@@ -179,7 +195,7 @@ except VolumioStoryError as e:
 ```
 
 
-## Async Client
+## Asynchronous REST API Client
 
 `VolumioAsyncRESTAPIClient` is the
 [aiohttp](https://docs.aiohttp.org/)
@@ -251,14 +267,17 @@ a later request opens a fresh session.
 
 ### Differences Between Synchronous And Asynchronous Clients
 
-The two clients expose the same members and return the same models.
+Roughly speaking, the two clients for the REST API of Volumio
+expose the same members and return the same models.
+The exceptions are noted below.
 
-However, since a property cannot be awaited,
-the members the synchronous client exposes
-as properties are coroutine methods here:
-the nouns take a `get_` prefix,
-the predicates keep their names,
-and the assignable properties take a `set_` prefix.
+Since a property cannot be awaited,
+the members that the synchronous client exposes as properties
+are coroutine methods here:
+
+- the nouns take a `get_` prefix;
+- the predicates keep their names;
+- the assignable properties take a `set_` prefix.
 
 | Synchronous                     | Asynchronous                               |
 | ------------------------------- | ------------------------------------------ |
@@ -285,10 +304,11 @@ and the assignable properties take a `set_` prefix.
 > silently replaces the method with the number instead of setting the volume.
 > A type checker rejects the assignment, but a Python interpreter does not.
 > You must use `await client.set_volume(50)` instead.
-
-> [!WARNING]
-> Unlike their synchronous counterparts,
-> setters `set_*()` return the `CommandResponse` the Volumio host answered with.
+>
+> Note that, unlike their synchronous counterparts
+> which return the raw value that has been provided,
+> the setters `set_*()` return the `CommandResponse`
+> the Volumio host answered with.
 
 ### Running Queries Concurrently
 
@@ -316,11 +336,12 @@ as the synchronous one:
 `aiohttp` package is not installed.
 
 
-## WebSocket Client
+## WebSocket Clients
 
-`VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` speak Volumio's
-[WebSocket API](https://developers.volumio.com/api/websocket-api),
-which the Volumio project considers its primary one.
+`VolumioWebSocketClient` and `VolumioAsyncWebSocketClient`
+connect to the
+[WebSocket API](https://developers.volumio.com/api/websocket-api)
+of Volumio.
 
 They need `volumito` to be installed with the `websocket` extra:
 
@@ -373,12 +394,11 @@ finally:
 Disconnecting is idempotent and leaves the client usable:
 connecting again opens a fresh connection.
 
-### Listening To What The Host Pushes
+### Listening To Events
 
-This is what the WebSocket API offers that the REST API does not.
 A Volumio host pushes an event whenever something changes --
 `pushState` on every change of the playback state above all --
-and `on` registers a handler for it:
+and the `on` method registers a handler for it:
 
 ```python
 with VolumioWebSocketClient(host) as client:
@@ -386,18 +406,23 @@ with VolumioWebSocketClient(host) as client:
     client.wait()  # block until the connection drops
 ```
 
-`off(event, handler)` removes one handler,
-`off(event)` removes them all.
+Method `off(event, handler)` removes one handler,
+while `off(event)` removes them all.
 Handlers may be registered before connecting.
 On the asynchronous client a handler may also be a coroutine function.
 
-> [!TIP]
+> [!NOTE]
 > The REST API offers the same updates through `NotificationListener`,
 > which runs a local HTTP server the host posts to.
 > That needs a routable local address and an open inbound port;
 > a WebSocket connection needs neither.
 
-### Reaching The Rest Of The API
+### Generic Emit And Request
+
+> [!WARNING]
+> This section needs to be reviewed as the Python interface of
+> the WebSocket clients is expanded to cover the functionalities
+> not reachable via the REST API.
 
 A Volumio host listens for far more events than the REST API has endpoints.
 `emit` sends one without waiting,
@@ -533,11 +558,11 @@ Units follow the Volumio API: `PlayerState.seek` is in **milliseconds**, while
 
 The library logs under the standard `volumito` logger, which carries a
 `logging.NullHandler` by default: attach your own handler
-(`logging.getLogger("volumito").addHandler(...)`) to see its records. The clients also
-accept a `logger` argument, for callers who manage their own.
+(`logging.getLogger("volumito").addHandler(...)`) to see its records.
+The clients also accept a `logger` argument, for callers who manage their own.
 
-The table above names the members of the synchronous client; the asynchronous client
-returns the same models from the members named in
+The table above names the members of the synchronous client;
+the asynchronous client returns the same models from the members named in
 [Differences Between Synchronous And Asynchronous Clients](#differences-between-synchronous-and-asynchronous-clients).
 
 
