@@ -10,10 +10,12 @@ from volumito.clients.errors import (
     VolumioError,
     VolumioWebSocketError,
 )
+from volumito.clients.websocket.asyncclient import VolumioAsyncWebSocketClient
 from volumito.clients.websocket.client import VolumioWebSocketClient
 
 __all__ = [
     "VolumioAPIError",
+    "VolumioAsyncWebSocketClient",
     "VolumioConnectionError",
     "VolumioError",
     "VolumioWebSocketClient",
