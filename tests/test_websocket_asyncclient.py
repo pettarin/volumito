@@ -890,3 +890,181 @@ class TestVolumioAsyncWebSocketClientPing:
 
         with pytest.raises(VolumioConnectionError):
             await client.ping()
+
+
+class TestVolumioAsyncWebSocketClientQueueEditing:
+    """The queue operations the REST API has no endpoint for."""
+
+    async def test_move_in_queue(self, mocker: MockerFixture):
+        """Moving a track names the two positions the way Volumio expects."""
+        client, fake = await _client(mocker)
+
+        await client.move_in_queue(3, 0)
+
+        assert fake.calls == [_Call("moveQueue", {"from": 3, "to": 0})]
+
+    @pytest.mark.parametrize(("source", "target"), [(-1, 0), (0, -1)])
+    async def test_move_in_queue_refuses_a_negative_position(
+        self, mocker: MockerFixture, source, target
+    ):
+        """A negative position is refused before anything is sent."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="0 or greater"):
+            await client.move_in_queue(source, target)
+
+        assert fake.calls == []
+
+    async def test_remove_from_queue(self, mocker: MockerFixture):
+        """Removing a track carries the position under "value", not bare."""
+        client, fake = await _client(mocker)
+
+        await client.remove_from_queue(2)
+
+        assert fake.calls == [_Call("removeQueueItem", {"value": 2})]
+
+    async def test_remove_from_queue_refuses_a_negative_position(self, mocker: MockerFixture):
+        """A negative position is refused before anything is sent."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="0 or greater"):
+            await client.remove_from_queue(-1)
+
+        assert fake.calls == []
+
+    async def test_play_next(self, mocker: MockerFixture):
+        """Queueing next carries only the fields that are known."""
+        client, fake = await _client(mocker)
+
+        await client.play_next("mpd://a", title="So What", album="Kind of Blue")
+        await client.play_next("mpd://b")
+
+        assert fake.calls == [
+            _Call("playNext", {"uri": "mpd://a", "title": "So What", "album": "Kind of Blue"}),
+            _Call("playNext", {"uri": "mpd://b"}),
+        ]
+
+    async def test_add_and_play_a_local_uri(self, mocker: MockerFixture):
+        """A URI of the local library is queued as itself and played."""
+        client, fake = await _client(mocker)
+
+        await client.add_and_play("mpd://NAS/track.flac")
+
+        assert fake.calls == [
+            _Call("addPlay", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
+        ]
+
+    async def test_add_and_play_a_container(self, mocker: MockerFixture):
+        """A container of another source is browsed and played as its items."""
+        client, fake = await _browse_client(mocker)
+
+        await client.add_and_play("qobuz://album/1")
+
+        assert fake.calls[-1] == _Call(
+            "addPlay", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
+        )
+
+    async def test_save_queue_as_playlist(self, mocker: MockerFixture):
+        """The queue is saved under a name, given as a string or as a playlist."""
+        client, fake = await _client(mocker)
+
+        await client.save_queue_as_playlist("jazz")
+        await client.save_queue_as_playlist(Playlist.from_name("rock"))
+
+        assert fake.calls == [
+            _Call("saveQueueToPlaylist", {"name": "jazz"}),
+            _Call("saveQueueToPlaylist", {"name": "rock"}),
+        ]
+
+    async def test_save_queue_as_playlist_without_a_name(self, mocker: MockerFixture):
+        """A playlist with no name is refused before anything is sent."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="playlist has no name"):
+            await client.save_queue_as_playlist(Playlist.from_raw({}))
+
+        assert fake.calls == []
+
+    @pytest.mark.parametrize("value", [True, False])
+    async def test_consume(self, mocker: MockerFixture, value):
+        """The consume mode carries its value."""
+        client, fake = await _client(mocker)
+
+        await client.consume(value)
+
+        assert fake.calls == [_Call("setConsume", {"value": value})]
+
+    async def test_add_uids_to_queue(self, mocker: MockerFixture):
+        """The identifiers are sent as the bare list Volumio expects."""
+        client, fake = await _client(mocker)
+
+        await client.add_uids_to_queue(["uid1", "uid2"])
+
+        assert fake.calls == [_Call("addQueueUids", ["uid1", "uid2"])]
+
+    async def test_the_cue_events(self, mocker: MockerFixture):
+        """Both cue events carry the sheet, the track number, and the service."""
+        client, fake = await _client(mocker)
+
+        await client.add_cue_track("mpd://sheet.cue", 3)
+        await client.replace_queue_with_cue_track("qobuz://sheet.cue", 1, service="qobuz")
+
+        assert fake.calls == [
+            _Call("addPlayCue", {"number": 3, "service": "mpd", "uri": "mpd://sheet.cue"}),
+            _Call(
+                "replaceAndPlayCue",
+                {"number": 1, "service": "qobuz", "uri": "qobuz://sheet.cue"},
+            ),
+        ]
+
+    async def test_play_items(self, mocker: MockerFixture):
+        """The items are reduced to the keys queueing reads, and the index is carried."""
+        client, fake = await _client(mocker)
+        items = [{"uri": "mpd://a", "title": "a", "service": "mpd", "albumart": "/x"}]
+
+        await client.play_items(items, 0)
+
+        assert fake.calls == [
+            _Call(
+                "playItemsList",
+                {"list": [{"service": "mpd", "title": "a", "uri": "mpd://a"}], "index": 0},
+            )
+        ]
+
+    async def test_play_items_refuses_a_negative_index(self, mocker: MockerFixture):
+        """A negative index is refused before anything is sent."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="0 or greater"):
+            await client.play_items([], -1)
+
+        assert fake.calls == []
+
+    async def test_play_volatile(self, mocker: MockerFixture):
+        """A volatile source is started at a position carried under "value"."""
+        client, fake = await _client(mocker)
+
+        await client.play_volatile(2)
+
+        assert fake.calls == [_Call("volatilePlay", {"value": 2})]
+
+    async def test_play_volatile_refuses_a_negative_position(self, mocker: MockerFixture):
+        """A negative position is refused before anything is sent."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="0 or greater"):
+            await client.play_volatile(-1)
+
+        assert fake.calls == []
+
+    async def test_goto(self, mocker: MockerFixture):
+        """Browsing to the artist of what is playing reads the listing back."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"goTo": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)}
+        )
+        client, _ = await _client(mocker, fake)
+
+        results = await client.goto("artist", "Miles Davis")
+
+        assert [item.title for item in results.items] == ["jazz"]
+        assert fake.calls == [_Call("goTo", {"type": "artist", "value": "Miles Davis"})]

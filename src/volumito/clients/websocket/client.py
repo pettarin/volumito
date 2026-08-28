@@ -33,6 +33,9 @@ from volumito.clients.models import (
     Zones,
 )
 from volumito.clients.websocket.common import (
+    EVENT_ADD_PLAY,
+    EVENT_ADD_PLAY_CUE,
+    EVENT_ADD_QUEUE_UIDS,
     EVENT_ADD_TO_QUEUE,
     EVENT_BROWSE_LIBRARY,
     EVENT_CLEAR_QUEUE,
@@ -42,22 +45,31 @@ from volumito.clients.websocket.common import (
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
+    EVENT_GO_TO,
     EVENT_LIST_PLAYLIST,
+    EVENT_MOVE_QUEUE,
     EVENT_MUTE,
     EVENT_NEXT,
     EVENT_PAUSE,
     EVENT_PINGER,
     EVENT_PLAY,
+    EVENT_PLAY_ITEMS_LIST,
+    EVENT_PLAY_NEXT,
     EVENT_PLAY_PLAYLIST,
     EVENT_PREVIOUS,
+    EVENT_REMOVE_QUEUE_ITEM,
     EVENT_REPLACE_AND_PLAY,
+    EVENT_REPLACE_AND_PLAY_CUE,
+    EVENT_SAVE_QUEUE_TO_PLAYLIST,
     EVENT_SEARCH,
     EVENT_SEEK,
+    EVENT_SET_CONSUME,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
     EVENT_STOP,
     EVENT_TOGGLE,
     EVENT_UNMUTE,
+    EVENT_VOLATILE_PLAY,
     EVENT_VOLUME,
     RESPONSE_EVENTS,
     VOLUME_DOWN,
@@ -301,6 +313,38 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             self._log_debug(f'Requesting "{event}", waiting for "{awaited}"... done')
             return answer
 
+    def add_and_play(self, uri: str) -> None:
+        """Add the content of a URI to the queue and start playing it.
+
+        Like :meth:`add_to_queue`, the URI of a container of a source other than the
+        local library is browsed first and queued as the items it lists.
+
+        Args:
+            uri: The URI whose content to add and play, from a browse or a search
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioAPIError: If the browse of a container answers something unexpected
+        """
+        self._log_debug(f'Adding "{uri}" to the queue and playing it...')
+        items = self._queue_payload_items(uri)
+        payload: object = items if items is not None else self._queue_uri_item(uri)
+        self._emit(EVENT_ADD_PLAY, payload)
+        self._log_debug(f'Adding "{uri}" to the queue and playing it... done')
+
+    def add_cue_track(self, uri: str, number: int, service: str | None = None) -> None:
+        """Add one track of a cue sheet to the queue and play it.
+
+        Args:
+            uri: The URI of the cue sheet
+            number: The position of the track inside the cue sheet
+            service: The service the URI belongs to, derived from it when not given
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ADD_PLAY_CUE, self._cue_payload(uri, number, service))
+
     def add_to_queue(self, uri: str) -> None:
         """Add the content of a URI to the end of the queue, without touching playback.
 
@@ -320,6 +364,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         payload: object = items if items is not None else self._queue_uri_item(uri)
         self._emit(EVENT_ADD_TO_QUEUE, payload)
         self._log_debug(f'Adding "{uri}" to the queue... done')
+
+    def add_uids_to_queue(self, uids: list[str]) -> None:
+        """Add items of the local library to the queue, by identifier.
+
+        Args:
+            uids: The identifiers of the items to queue
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ADD_QUEUE_UIDS, uids)
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -396,6 +451,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._connected = True
         self._log_debug(f'Connecting to the Volumio WebSocket API at "{url}"... done')
 
+    def consume(self, value: bool) -> None:
+        """Set the consume mode, which drops each track from the queue once played.
+
+        Args:
+            value: True to enable the consume mode, False to disable it
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SET_CONSUME, self._mode_payload(value))
+
     def decrease_volume(self) -> None:
         """Decrease the playback volume by one step.
 
@@ -440,6 +506,24 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(event, payload)
+
+    def goto(self, kind: str, value: str) -> BrowseResults:
+        """Browse to the artist or the album of the track currently playing.
+
+        Args:
+            kind: What to browse to (``"artist"`` or ``"album"``)
+            value: The name to browse to
+
+        Returns:
+            The content listed for it
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return BrowseResults.from_envelope(
+            self._read_object(EVENT_GO_TO, self._goto_payload(kind, value))
+        )
 
     @property
     def has_next(self) -> bool:
@@ -547,6 +631,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return self._state_status(self.state) == "stop"
 
+    def move_in_queue(self, source: int, target: int) -> None:
+        """Move a track to another position of the queue.
+
+        Args:
+            source: The position the track is at (0-based)
+            target: The position to move it to (0-based)
+
+        Raises:
+            ValueError: If either position is negative
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_MOVE_QUEUE, self._move_payload(source, target))
+
     def mute(self) -> None:
         """Mute the playback volume.
 
@@ -640,6 +737,37 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_PLAY, self._play_payload(position))
 
+    def play_items(self, items: list[dict[str, Any]], index: int = 0) -> None:
+        """Replace the queue with a list of items and play it from one of them.
+
+        The items come from a browse or a search; they are reduced to the keys queueing
+        reads, as :meth:`replace_queue_and_play` does.
+
+        Args:
+            items: The items to play
+            index: The position of the item to play first (0-based)
+
+        Raises:
+            ValueError: If the index is negative
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._check_play_index(index)
+        payload = {"list": [self._slim_queue_item(item) for item in items], "index": index}
+        self._emit(EVENT_PLAY_ITEMS_LIST, payload)
+
+    def play_next(self, uri: str, title: str | None = None, album: str | None = None) -> None:
+        """Queue an item right after the track currently playing.
+
+        Args:
+            uri: The URI to queue
+            title: The title to show for it, when known
+            album: The album to show for it, when known
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_PLAY_NEXT, self._play_next_payload(uri, title, album))
+
     def play_playlist(self, name: str | Playlist) -> None:
         """Start the playback of a saved playlist.
 
@@ -651,6 +779,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_PLAY_PLAYLIST, self._playlist_payload(name))
+
+    def play_volatile(self, position: int) -> None:
+        """Start a volatile source (e.g., Spotify Connect) at a position.
+
+        Args:
+            position: The position to start at (0-based)
+
+        Raises:
+            ValueError: If the position is negative
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_VOLATILE_PLAY, self._index_payload(position))
 
     @property
     def playlists(self) -> Playlists:
@@ -729,6 +869,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         wanted = value if value is not None else not self.state.random
         self._emit(EVENT_SET_RANDOM, self._mode_payload(wanted))
 
+    def remove_from_queue(self, position: int) -> None:
+        """Remove a track from the queue.
+
+        Args:
+            position: The position of the track to remove (0-based)
+
+        Raises:
+            ValueError: If the position is negative
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_REMOVE_QUEUE_ITEM, self._index_payload(position))
+
     def repeat(self, value: bool | None = None) -> None:
         """Set or toggle the repeat mode.
 
@@ -787,6 +939,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._emit(EVENT_REPLACE_AND_PLAY, {"item": self._queue_uri_item(uri)})
         self._log_debug(f'Replacing the queue with "{uri}"... done')
 
+    def replace_queue_with_cue_track(
+        self, uri: str, number: int, service: str | None = None
+    ) -> None:
+        """Replace the queue with one track of a cue sheet and play it.
+
+        Args:
+            uri: The URI of the cue sheet
+            number: The position of the track inside the cue sheet
+            service: The service the URI belongs to, derived from it when not given
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_REPLACE_AND_PLAY_CUE, self._cue_payload(uri, number, service))
+
     def request(
         self,
         event: str,
@@ -815,6 +982,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
                 the host does not answer in time
         """
         return self._request(event, response_event, payload, timeout)
+
+    def save_queue_as_playlist(self, name: str | Playlist) -> None:
+        """Save the current queue as a saved playlist.
+
+        Args:
+            name: The name to save the queue under, or the playlist to overwrite
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SAVE_QUEUE_TO_PLAYLIST, self._playlist_payload(name))
 
     def search(self, query: str) -> SearchResults:
         """Search the sources of the Volumio instance.

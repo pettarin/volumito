@@ -17,11 +17,20 @@ This module knows nothing about how a client talks to the host: it imports neith
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from volumito.clients.common import VolumioCommon
 from volumito.clients.errors import VolumioConnectionError
 from volumito.clients.models import Playlist, QueueTrack
+
+EVENT_ADD_PLAY = "addPlay"
+"""The event appending items to the queue and playing them."""
+
+EVENT_ADD_PLAY_CUE = "addPlayCue"
+"""The event appending a track of a cue sheet and playing it."""
+
+EVENT_ADD_QUEUE_UIDS = "addQueueUids"
+"""The event appending library items to the queue by identifier."""
 
 EVENT_ADD_TO_QUEUE = "addToQueue"
 """The event appending items to the playback queue."""
@@ -50,8 +59,14 @@ EVENT_GET_SYSTEM_INFO = "getSystemInfo"
 EVENT_GET_SYSTEM_VERSION = "getSystemVersion"
 """The event asking for the Volumio version the host runs."""
 
+EVENT_GO_TO = "goTo"
+"""The event browsing to the artist or the album of what is playing."""
+
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
+
+EVENT_MOVE_QUEUE = "moveQueue"
+"""The event moving a track to another position of the queue."""
 
 EVENT_MUTE = "mute"
 """The event muting the volume."""
@@ -67,6 +82,12 @@ EVENT_PINGER = "pinger"
 
 EVENT_PLAY = "play"
 """The event starting the playback."""
+
+EVENT_PLAY_ITEMS_LIST = "playItemsList"
+"""The event replacing the queue with a list of items and playing it."""
+
+EVENT_PLAY_NEXT = "playNext"
+"""The event queueing an item right after the current track."""
 
 EVENT_PLAY_PLAYLIST = "playPlaylist"
 """The event starting the playback of a saved playlist."""
@@ -92,6 +113,12 @@ EVENT_PUSH_MY_COLLECTION_STATS = "pushMyCollectionStats"
 EVENT_PUSH_QUEUE = "pushQueue"
 """The event carrying the playback queue."""
 
+EVENT_PUSH_SAVE_QUEUE_TO_PLAYLIST = "pushSaveQueueToPlaylist"
+"""The event confirming the queue was saved as a playlist."""
+
+EVENT_PUSH_SET_CONSUME = "pushSetConsume"
+"""The event carrying the consume mode."""
+
 EVENT_PUSH_STATE = "pushState"
 """The event carrying the playback state, broadcast on every change of it."""
 
@@ -101,14 +128,26 @@ EVENT_PUSH_SYSTEM_INFO = "pushSystemInfo"
 EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 """The event carrying the Volumio version the host runs."""
 
+EVENT_REMOVE_QUEUE_ITEM = "removeQueueItem"
+"""The event removing a track from the queue."""
+
 EVENT_REPLACE_AND_PLAY = "replaceAndPlay"
 """The event replacing the playback queue and starting it."""
+
+EVENT_REPLACE_AND_PLAY_CUE = "replaceAndPlayCue"
+"""The event replacing the queue with a track of a cue sheet."""
+
+EVENT_SAVE_QUEUE_TO_PLAYLIST = "saveQueueToPlaylist"
+"""The event saving the queue as a saved playlist."""
 
 EVENT_SEARCH = "search"
 """The event searching the sources of the host."""
 
 EVENT_SEEK = "seek"
 """The event seeking to an absolute position."""
+
+EVENT_SET_CONSUME = "setConsume"
+"""The event setting the consume mode."""
 
 EVENT_SET_RANDOM = "setRandom"
 """The event setting the random playback mode."""
@@ -125,12 +164,16 @@ EVENT_TOGGLE = "toggle"
 EVENT_UNMUTE = "unmute"
 """The event unmuting the volume."""
 
+EVENT_VOLATILE_PLAY = "volatilePlay"
+"""The event starting a volatile source at a position."""
+
 EVENT_VOLUME = "volume"
 """The event setting the volume, by level or by increment."""
 
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
+    EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
     EVENT_GET_STATE: EVENT_PUSH_STATE,
@@ -259,6 +302,88 @@ class VolumioWebSocketCommon(VolumioCommon):
         if played is None:
             return None
         return {"value": played}
+
+    def _cue_payload(self, uri: str, number: int, service: str | None = None) -> dict[str, Any]:
+        """Build the payload naming a track inside a cue sheet.
+
+        Args:
+            uri: The URI of the cue sheet
+            number: The position of the track inside the cue sheet
+            service: The service the URI belongs to, derived from it when not given
+
+        Returns:
+            The payload the cue events carry
+        """
+        return {
+            "number": number,
+            "service": service if service is not None else self._uri_service(uri),
+            "uri": uri,
+        }
+
+    def _goto_payload(self, kind: str, value: str) -> dict[str, str]:
+        """Build the payload browsing to the artist or the album of what is playing.
+
+        Args:
+            kind: What to browse to (``"artist"`` or ``"album"``)
+            value: The name to browse to
+
+        Returns:
+            The payload the goto event carries
+        """
+        return {"type": kind, "value": value}
+
+    def _index_payload(self, index: int) -> dict[str, int]:
+        """Build the payload naming a position of the queue.
+
+        Args:
+            index: The position, 0-based
+
+        Returns:
+            The payload the event carries
+
+        Raises:
+            ValueError: If the position is negative
+        """
+        self._check_play_index(index)
+        return {"value": index}
+
+    def _move_payload(self, source: int, target: int) -> dict[str, int]:
+        """Build the payload moving a track to another position of the queue.
+
+        Args:
+            source: The position the track is at, 0-based
+            target: The position to move it to, 0-based
+
+        Returns:
+            The payload the move event carries
+
+        Raises:
+            ValueError: If either position is negative
+        """
+        self._check_play_index(source)
+        self._check_play_index(target)
+        return {"from": source, "to": target}
+
+    def _play_next_payload(
+        self, uri: str, title: str | None = None, album: str | None = None
+    ) -> dict[str, str]:
+        """Build the payload queueing an item right after the current track.
+
+        Args:
+            uri: The URI to queue
+            title: The title to show for it, when known
+            album: The album to show for it, when known
+
+        Returns:
+            The payload the play-next event carries
+        """
+        payload = {"uri": uri}
+        if title is not None:
+            payload["title"] = title
+        if album is not None:
+            payload["album"] = album
+        return payload
+
 
     def _playlist_payload(self, name: str | Playlist) -> dict[str, str]:
         """Build the payload starting the playback of a saved playlist.
