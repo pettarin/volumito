@@ -32,11 +32,20 @@ EVENT_ADD_PLAY_CUE = "addPlayCue"
 EVENT_ADD_QUEUE_UIDS = "addQueueUids"
 """The event appending library items to the queue by identifier."""
 
+EVENT_ADD_TO_FAVOURITES = "addToFavourites"
+"""The event adding an item to the favourites."""
+
 EVENT_ADD_TO_PLAYLIST = "addToPlaylist"
 """The event adding an item to a saved playlist."""
 
 EVENT_ADD_TO_QUEUE = "addToQueue"
 """The event appending items to the playback queue."""
+
+EVENT_ADD_TO_RADIO_FAVOURITES = "addToRadioFavourites"
+"""The event adding a web radio to the radio favourites."""
+
+EVENT_ADD_WEB_RADIO = "addWebRadio"
+"""The event saving a web radio of the user."""
 
 EVENT_BROWSE_LIBRARY = "browseLibrary"
 """The event listing the content of a URI."""
@@ -101,6 +110,9 @@ EVENT_PINGER = "pinger"
 EVENT_PLAY = "play"
 """The event starting the playback."""
 
+EVENT_PLAY_FAVOURITES = "playFavourites"
+"""The event playing the favourites."""
+
 EVENT_PLAY_ITEMS_LIST = "playItemsList"
 """The event replacing the queue with a list of items and playing it."""
 
@@ -110,11 +122,20 @@ EVENT_PLAY_NEXT = "playNext"
 EVENT_PLAY_PLAYLIST = "playPlaylist"
 """The event starting the playback of a saved playlist."""
 
+EVENT_PLAY_RADIO_FAVOURITES = "playRadioFavourites"
+"""The event playing the radio favourites."""
+
 EVENT_PONGER = "ponger"
 """The event echoing back what ``pinger`` carried."""
 
 EVENT_PREVIOUS = "prev"
 """The event going back to the previous track."""
+
+EVENT_PUSH_ADD_TO_RADIO_FAVOURITES = "pushAddToRadioFavourites"
+"""The event confirming a web radio was made a favourite."""
+
+EVENT_PUSH_ADD_WEB_RADIO = "pushAddWebRadio"
+"""The event confirming a web radio was saved."""
 
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
@@ -137,8 +158,17 @@ EVENT_PUSH_MY_COLLECTION_STATS = "pushMyCollectionStats"
 EVENT_PUSH_PLAYLIST_CONTENT = "pushPlaylistContent"
 """The event carrying the tracks of a saved playlist."""
 
+EVENT_PUSH_PLAY_FAVOURITES = "pushPlayFavourites"
+"""The event confirming the favourites are playing."""
+
+EVENT_PUSH_PLAY_RADIO_FAVOURITES = "pushPlayRadioFavourites"
+"""The event confirming the radio favourites are playing."""
+
 EVENT_PUSH_QUEUE = "pushQueue"
 """The event carrying the playback queue."""
+
+EVENT_PUSH_REMOVE_FROM_RADIO_FAVOURITES = "pushRemoveFromRadioFavourites"
+"""The event confirming a web radio is no longer a favourite."""
 
 EVENT_PUSH_SAVE_QUEUE_TO_PLAYLIST = "pushSaveQueueToPlaylist"
 """The event confirming the queue was saved as a playlist."""
@@ -155,11 +185,20 @@ EVENT_PUSH_SYSTEM_INFO = "pushSystemInfo"
 EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 """The event carrying the Volumio version the host runs."""
 
+EVENT_REMOVE_FROM_FAVOURITES = "removeFromFavourites"
+"""The event removing an item from the favourites."""
+
 EVENT_REMOVE_FROM_PLAYLIST = "removeFromPlaylist"
 """The event removing an item from a saved playlist."""
 
+EVENT_REMOVE_FROM_RADIO_FAVOURITES = "removeFromRadioFavourites"
+"""The event removing a web radio from the radio favourites."""
+
 EVENT_REMOVE_QUEUE_ITEM = "removeQueueItem"
 """The event removing a track from the queue."""
+
+EVENT_REMOVE_WEB_RADIO = "removeWebRadio"
+"""The event deleting a web radio of the user."""
 
 EVENT_REPLACE_AND_PLAY = "replaceAndPlay"
 """The event replacing the playback queue and starting it."""
@@ -193,6 +232,9 @@ EVENT_TOGGLE = "toggle"
 
 EVENT_UNMUTE = "unmute"
 """The event unmuting the volume."""
+
+EVENT_URI_FAVOURITES = "urifavourites"
+"""The event carrying the favourite status of a URI."""
 
 EVENT_VOLATILE_PLAY = "volatilePlay"
 """The event starting a volatile source at a position."""
@@ -321,6 +363,34 @@ class VolumioWebSocketCommon(VolumioCommon):
         raise VolumioConnectionError(
             f"Not connected to the Volumio WebSocket API at {self._endpoint_description}"
         )
+
+    def _favourite_payload(
+        self,
+        uri: str,
+        title: str | None = None,
+        service: str | None = None,
+        albumart: str | None = None,
+    ) -> dict[str, str]:
+        """Build the payload naming an item of the favourites.
+
+        Args:
+            uri: The URI of the item
+            title: The title to show for it, when known
+            service: The service the URI belongs to, derived from it when not given
+            albumart: The URL of the cover to show for it, when known
+
+        Returns:
+            The payload the favourite events carry
+        """
+        payload = {
+            "service": service if service is not None else self._uri_service(uri),
+            "uri": uri,
+        }
+        if title is not None:
+            payload["title"] = title
+        if albumart is not None:
+            payload["albumart"] = albumart
+        return payload
 
     def _goto_payload(self, kind: str, value: str) -> dict[str, str]:
         """Build the payload browsing to the artist or the album of what is playing.
@@ -511,3 +581,18 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._check_volume_level(value)
         return value
+
+    def _web_radio_payload(self, name: str, uri: str | None = None) -> dict[str, str]:
+        """Build the payload naming a web radio of the user.
+
+        Args:
+            name: The name of the web radio
+            uri: The URL it streams from, when the event needs it
+
+        Returns:
+            The payload the web radio events carry
+        """
+        payload = {"name": name}
+        if uri is not None:
+            payload["uri"] = uri
+        return payload

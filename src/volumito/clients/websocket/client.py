@@ -37,8 +37,11 @@ from volumito.clients.websocket.common import (
     EVENT_ADD_PLAY,
     EVENT_ADD_PLAY_CUE,
     EVENT_ADD_QUEUE_UIDS,
+    EVENT_ADD_TO_FAVOURITES,
     EVENT_ADD_TO_PLAYLIST,
     EVENT_ADD_TO_QUEUE,
+    EVENT_ADD_TO_RADIO_FAVOURITES,
+    EVENT_ADD_WEB_RADIO,
     EVENT_BROWSE_LIBRARY,
     EVENT_CLEAR_QUEUE,
     EVENT_CREATE_PLAYLIST,
@@ -60,12 +63,17 @@ from volumito.clients.websocket.common import (
     EVENT_PAUSE,
     EVENT_PINGER,
     EVENT_PLAY,
+    EVENT_PLAY_FAVOURITES,
     EVENT_PLAY_ITEMS_LIST,
     EVENT_PLAY_NEXT,
     EVENT_PLAY_PLAYLIST,
+    EVENT_PLAY_RADIO_FAVOURITES,
     EVENT_PREVIOUS,
+    EVENT_REMOVE_FROM_FAVOURITES,
     EVENT_REMOVE_FROM_PLAYLIST,
+    EVENT_REMOVE_FROM_RADIO_FAVOURITES,
     EVENT_REMOVE_QUEUE_ITEM,
+    EVENT_REMOVE_WEB_RADIO,
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
@@ -353,6 +361,38 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_ADD_PLAY_CUE, self._cue_payload(uri, number, service))
 
+    def add_radio_favourite(self, uri: str) -> None:
+        """Add a web radio to the radio favourites.
+
+        Args:
+            uri: The URL the web radio streams from
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ADD_TO_RADIO_FAVOURITES, {"uri": uri})
+
+    def add_to_favourites(
+        self,
+        uri: str,
+        title: str | None = None,
+        service: str | None = None,
+        albumart: str | None = None,
+    ) -> None:
+        """Add an item to the favourites.
+
+        Args:
+            uri: The URI of the item, from a browse or a search
+            title: The title to show for it, when known
+            service: The service the URI belongs to, derived from it when not given
+            albumart: The URL of the cover to show for it, when known
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = self._favourite_payload(uri, title, service, albumart)
+        self._emit(EVENT_ADD_TO_FAVOURITES, payload)
+
     def add_to_playlist(
         self, name: str | Playlist, uri: str, service: str | None = None
     ) -> None:
@@ -399,6 +439,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_ADD_QUEUE_UIDS, uids)
+
+    def add_web_radio(self, name: str, uri: str) -> None:
+        """Save a web radio of the user.
+
+        Args:
+            name: The name to save the web radio under
+            uri: The URL it streams from
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ADD_WEB_RADIO, self._web_radio_payload(name, uri))
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -823,6 +875,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_PLAY, self._play_payload(position))
 
+    def play_favourites(self, name: str | None = None) -> None:
+        """Play the favourites, optionally starting at one of them.
+
+        Args:
+            name: The name of the favourite to start at, the first when not given
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_PLAY_FAVOURITES, {"name": name} if name is not None else None)
+
     def play_items(self, items: list[dict[str, Any]], index: int = 0) -> None:
         """Replace the queue with a list of items and play it from one of them.
 
@@ -865,6 +928,14 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_PLAY_PLAYLIST, self._playlist_payload(name))
+
+    def play_radio_favourites(self) -> None:
+        """Play the radio favourites.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_PLAY_RADIO_FAVOURITES)
 
     def play_volatile(self, position: int) -> None:
         """Start a volatile source (e.g., Spotify Connect) at a position.
@@ -955,6 +1026,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         wanted = value if value is not None else not self.state.random
         self._emit(EVENT_SET_RANDOM, self._mode_payload(wanted))
 
+    def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
+        """Remove an item from the favourites.
+
+        Args:
+            uri: The URI of the item to remove
+            service: The service the URI belongs to, derived from it when not given
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = self._favourite_payload(uri, service=service)
+        self._emit(EVENT_REMOVE_FROM_FAVOURITES, payload)
+
     def remove_from_playlist(
         self, name: str | Playlist, uri: str, service: str | None = None
     ) -> None:
@@ -982,6 +1066,30 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_REMOVE_QUEUE_ITEM, self._index_payload(position))
+
+    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
+        """Remove a web radio from the radio favourites.
+
+        Args:
+            uri: The URL the web radio streams from
+            name: The name it is a favourite under, when known
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = {"uri": uri} if name is None else {"name": name, "uri": uri}
+        self._emit(EVENT_REMOVE_FROM_RADIO_FAVOURITES, payload)
+
+    def remove_web_radio(self, name: str) -> None:
+        """Delete a web radio of the user.
+
+        Args:
+            name: The name the web radio was saved under
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_REMOVE_WEB_RADIO, self._web_radio_payload(name))
 
     def repeat(self, value: bool | None = None) -> None:
         """Set or toggle the repeat mode.

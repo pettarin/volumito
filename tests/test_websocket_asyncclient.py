@@ -1152,3 +1152,88 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
 
         assert content.name == "jazz"
         assert [track.title for track in content] == ["So What"]
+
+
+class TestVolumioAsyncWebSocketClientFavourites:
+    """The favourites and the web radios of the user."""
+
+    async def test_add_to_favourites(self, mocker: MockerFixture):
+        """A favourite carries its service, and only the fields that are known."""
+        client, fake = await _client(mocker)
+
+        await client.add_to_favourites("qobuz://track/1", title="So What", albumart="/cover")
+        await client.add_to_favourites("mpd://NAS/a.flac")
+
+        assert fake.calls == [
+            _Call(
+                "addToFavourites",
+                {
+                    "service": "qobuz",
+                    "uri": "qobuz://track/1",
+                    "title": "So What",
+                    "albumart": "/cover",
+                },
+            ),
+            _Call("addToFavourites", {"service": "mpd", "uri": "mpd://NAS/a.flac"}),
+        ]
+
+    async def test_remove_from_favourites(self, mocker: MockerFixture):
+        """Removing a favourite carries the URI and its service."""
+        client, fake = await _client(mocker)
+
+        await client.remove_from_favourites("qobuz://track/1")
+
+        assert fake.calls == [
+            _Call("removeFromFavourites", {"service": "qobuz", "uri": "qobuz://track/1"})
+        ]
+
+    async def test_an_explicit_service_wins(self, mocker: MockerFixture):
+        """A service given by the caller is not derived from the URI."""
+        client, fake = await _client(mocker)
+
+        await client.add_to_favourites("mpd://a", service="upnp")
+
+        assert fake.calls[-1].payload["service"] == "upnp"
+
+    async def test_play_favourites(self, mocker: MockerFixture):
+        """The favourites play from the start, or from a named one."""
+        client, fake = await _client(mocker)
+
+        await client.play_favourites()
+        await client.play_favourites("So What")
+
+        assert fake.calls == [
+            _Call("playFavourites", None),
+            _Call("playFavourites", {"name": "So What"}),
+        ]
+
+    async def test_the_radio_favourites(self, mocker: MockerFixture):
+        """A web radio is made a favourite, played, and removed."""
+        client, fake = await _client(mocker)
+
+        await client.add_radio_favourite("http://stream/1")
+        await client.play_radio_favourites()
+        await client.remove_radio_favourite("http://stream/1")
+        await client.remove_radio_favourite("http://stream/2", name="Jazz FM")
+
+        assert fake.calls == [
+            _Call("addToRadioFavourites", {"uri": "http://stream/1"}),
+            _Call("playRadioFavourites", None),
+            _Call("removeFromRadioFavourites", {"uri": "http://stream/1"}),
+            _Call(
+                "removeFromRadioFavourites",
+                {"name": "Jazz FM", "uri": "http://stream/2"},
+            ),
+        ]
+
+    async def test_the_web_radios_of_the_user(self, mocker: MockerFixture):
+        """A web radio is saved with its URL and deleted by name alone."""
+        client, fake = await _client(mocker)
+
+        await client.add_web_radio("Jazz FM", "http://stream/1")
+        await client.remove_web_radio("Jazz FM")
+
+        assert fake.calls == [
+            _Call("addWebRadio", {"name": "Jazz FM", "uri": "http://stream/1"}),
+            _Call("removeWebRadio", {"name": "Jazz FM"}),
+        ]
