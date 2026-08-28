@@ -62,6 +62,15 @@ EVENT_DELETE_PLAYLIST = "deletePlaylist"
 EVENT_ENQUEUE = "enqueue"
 """The event appending a saved playlist to the queue."""
 
+EVENT_GET_BROWSE_SOURCES = "getBrowseSources"
+"""The event asking for the sources the host can browse."""
+
+EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY = "getLastPushedBrowseLibrary"
+"""The event asking for the listing the host pushed last."""
+
+EVENT_GET_MENU_ITEMS = "getMenuItems"
+"""The event asking for the menu the host offers its user interface."""
+
 EVENT_GET_MULTI_ROOM_DEVICES = "getMultiRoomDevices"
 """The event asking for the Volumio devices on the network."""
 
@@ -140,6 +149,9 @@ EVENT_PUSH_ADD_WEB_RADIO = "pushAddWebRadio"
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
 
+EVENT_PUSH_BROWSE_SOURCES = "pushBrowseSources"
+"""The event carrying the sources the host can browse."""
+
 EVENT_PUSH_CREATE_PLAYLIST = "pushCreatePlaylist"
 """The event confirming a playlist was created."""
 
@@ -148,6 +160,9 @@ EVENT_PUSH_ENQUEUE = "pushEnqueue"
 
 EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 """The event carrying the names of the saved playlists."""
+
+EVENT_PUSH_MENU_ITEMS = "pushMenuItems"
+"""The event carrying the menu of the user interface."""
 
 EVENT_PUSH_MULTI_ROOM_DEVICES = "pushMultiRoomDevices"
 """The event carrying the Volumio devices on the network."""
@@ -184,6 +199,9 @@ EVENT_PUSH_SYSTEM_INFO = "pushSystemInfo"
 
 EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 """The event carrying the Volumio version the host runs."""
+
+EVENT_REGENERATE_THUMBNAILS = "regenerateThumbnails"
+"""The event rebuilding the thumbnails of the album art."""
 
 EVENT_REMOVE_FROM_FAVOURITES = "removeFromFavourites"
 """The event removing an item from the favourites."""
@@ -227,6 +245,9 @@ EVENT_SET_REPEAT = "setRepeat"
 EVENT_STOP = "stop"
 """The event stopping the playback."""
 
+EVENT_SUPER_SEARCH = "superSearch"
+"""The event searching the sources of the host, across all of them."""
+
 EVENT_TOGGLE = "toggle"
 """The event toggling between playing and paused."""
 
@@ -244,6 +265,9 @@ EVENT_VOLUME = "volume"
 
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_GET_BROWSE_SOURCES: EVENT_PUSH_BROWSE_SOURCES,
+    EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
     EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
@@ -255,6 +279,7 @@ RESPONSE_EVENTS = {
     EVENT_LIST_PLAYLIST: EVENT_PUSH_LIST_PLAYLIST,
     EVENT_PINGER: EVENT_PONGER,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_SUPER_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
 }
 """The event each read waits for, keyed by the event it emits.
 

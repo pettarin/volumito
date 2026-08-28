@@ -21,7 +21,9 @@ from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
     BrowseResults,
+    BrowseSources,
     CollectionStatistics,
+    MenuItems,
     PlayerState,
     Playlist,
     PlaylistContent,
@@ -47,6 +49,9 @@ from volumito.clients.websocket.common import (
     EVENT_CREATE_PLAYLIST,
     EVENT_DELETE_PLAYLIST,
     EVENT_ENQUEUE,
+    EVENT_GET_BROWSE_SOURCES,
+    EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY,
+    EVENT_GET_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
     EVENT_GET_PLAYLIST_CONTENT,
@@ -69,6 +74,7 @@ from volumito.clients.websocket.common import (
     EVENT_PLAY_PLAYLIST,
     EVENT_PLAY_RADIO_FAVOURITES,
     EVENT_PREVIOUS,
+    EVENT_REGENERATE_THUMBNAILS,
     EVENT_REMOVE_FROM_FAVOURITES,
     EVENT_REMOVE_FROM_PLAYLIST,
     EVENT_REMOVE_FROM_RADIO_FAVOURITES,
@@ -83,6 +89,7 @@ from volumito.clients.websocket.common import (
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
     EVENT_STOP,
+    EVENT_SUPER_SEARCH,
     EVENT_TOGGLE,
     EVENT_UNMUTE,
     EVENT_VOLATILE_PLAY,
@@ -476,6 +483,23 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             self._read_object(EVENT_BROWSE_LIBRARY, self._browse_payload(uri))
         )
 
+    @property
+    def browse_sources(self) -> BrowseSources:
+        """The sources the Volumio instance can browse.
+
+        Each access emits a fresh event. These are the roots the URIs of :meth:`browse`
+        descend from.
+
+        Returns:
+            The browsable sources
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        sources = self._read_array(EVENT_GET_BROWSE_SOURCES)
+        return BrowseSources.from_raw({"sources": sources})
+
     def clear(self) -> None:
         """Empty the playback queue.
 
@@ -769,6 +793,38 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return self._state_status(self.state) == "stop"
 
+    @property
+    def last_browse(self) -> BrowseResults:
+        """The listing the Volumio instance pushed last, to any of its clients.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The last listing the host pushed
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return BrowseResults.from_envelope(
+            self._read_object(EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY)
+        )
+
+    @property
+    def menu_items(self) -> MenuItems:
+        """The menu the Volumio instance offers its user interface.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The menu entries
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        return MenuItems.from_raw({"items": self._read_array(EVENT_GET_MENU_ITEMS)})
+
     def move_in_queue(self, source: int, target: int) -> None:
         """Move a track to another position of the queue.
 
@@ -1025,6 +1081,14 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         wanted = value if value is not None else not self.state.random
         self._emit(EVENT_SET_RANDOM, self._mode_payload(wanted))
+
+    def regenerate_thumbnails(self) -> None:
+        """Rebuild the thumbnails of the album art of the collection.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_REGENERATE_THUMBNAILS)
 
     def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         """Remove an item from the favourites.
@@ -1297,6 +1361,26 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_STOP)
+
+    def super_search(self, query: str) -> SearchResults:
+        """Search every source of the Volumio instance at once.
+
+        Unlike :meth:`search`, which the sources answer one by one, this asks the host
+        to search them together.
+
+        Args:
+            query: The text to search for
+
+        Returns:
+            The results of the search
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return SearchResults.from_envelope(
+            self._read_object(EVENT_SUPER_SEARCH, self._search_payload(query))
+        )
 
     @property
     def system_info(self) -> SystemInfo:

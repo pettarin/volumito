@@ -1237,3 +1237,69 @@ class TestVolumioAsyncWebSocketClientFavourites:
             _Call("addWebRadio", {"name": "Jazz FM", "uri": "http://stream/1"}),
             _Call("removeWebRadio", {"name": "Jazz FM"}),
         ]
+
+
+class TestVolumioAsyncWebSocketClientBrowseSources:
+    """The browse roots, the menu, and the search across every source."""
+
+    _SOURCES = [
+        {
+            "albumart": "/albumart?sourceicon=x.png",
+            "name": "Playlists",
+            "uri": "playlists",
+            "plugin_type": "music_service",
+            "plugin_name": "mpd",
+        }
+    ]
+
+    async def test_browse_sources(self, mocker: MockerFixture):
+        """The sources are answered as a bare array, which the model wraps."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getBrowseSources": ("pushBrowseSources", self._SOURCES)}
+        )
+        client, _ = await _client(mocker, fake)
+
+        sources = (await client.get_browse_sources())
+
+        assert [source.name for source in sources] == ["Playlists"]
+        assert sources[0].plugin_type == "music_service"
+
+    async def test_menu_items(self, mocker: MockerFixture):
+        """The menu is answered as a bare array, which the model wraps."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getMenuItems": ("pushMenuItems", [{"id": "mymusic", "name": "Sources"}])}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert [item.id for item in (await client.get_menu_items())] == ["mymusic"]
+
+    async def test_last_browse(self, mocker: MockerFixture):
+        """The listing pushed last is read as a browse result."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getLastPushedBrowseLibrary": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert [item.title for item in (await client.get_last_browse()).items] == ["jazz"]
+
+    async def test_super_search(self, mocker: MockerFixture):
+        """The search across every source carries the query and reads the envelope."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"superSearch": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)}
+        )
+        client, fake = await _client(mocker, fake)
+
+        results = await client.super_search("miles")
+
+        assert [item.title for item in results.items] == ["jazz"]
+        assert fake.calls == [_Call("superSearch", {"value": "miles"})]
+
+    async def test_regenerate_thumbnails(self, mocker: MockerFixture):
+        """Rebuilding the thumbnails carries nothing."""
+        client, fake = await _client(mocker)
+
+        await client.regenerate_thumbnails()
+
+        assert fake.calls == [_Call("regenerateThumbnails", None)]
