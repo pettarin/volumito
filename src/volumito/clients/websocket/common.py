@@ -32,6 +32,9 @@ EVENT_ADD_PLAY_CUE = "addPlayCue"
 EVENT_ADD_QUEUE_UIDS = "addQueueUids"
 """The event appending library items to the queue by identifier."""
 
+EVENT_ADD_TO_PLAYLIST = "addToPlaylist"
+"""The event adding an item to a saved playlist."""
+
 EVENT_ADD_TO_QUEUE = "addToQueue"
 """The event appending items to the playback queue."""
 
@@ -41,11 +44,23 @@ EVENT_BROWSE_LIBRARY = "browseLibrary"
 EVENT_CLEAR_QUEUE = "clearQueue"
 """The event emptying the playback queue."""
 
+EVENT_CREATE_PLAYLIST = "createPlaylist"
+"""The event creating an empty saved playlist."""
+
+EVENT_DELETE_PLAYLIST = "deletePlaylist"
+"""The event deleting a saved playlist."""
+
+EVENT_ENQUEUE = "enqueue"
+"""The event appending a saved playlist to the queue."""
+
 EVENT_GET_MULTI_ROOM_DEVICES = "getMultiRoomDevices"
 """The event asking for the Volumio devices on the network."""
 
 EVENT_GET_MY_COLLECTION_STATS = "getMyCollectionStats"
 """The event asking for the statistics of the music collection."""
+
+EVENT_GET_PLAYLIST_CONTENT = "getPlaylistContent"
+"""The event asking for the tracks of a saved playlist."""
 
 EVENT_GET_QUEUE = "getQueue"
 """The event asking for the playback queue."""
@@ -61,6 +76,9 @@ EVENT_GET_SYSTEM_VERSION = "getSystemVersion"
 
 EVENT_GO_TO = "goTo"
 """The event browsing to the artist or the album of what is playing."""
+
+EVENT_IMPORT_SERVICE_PLAYLISTS = "importServicePlaylists"
+"""The event importing the playlists of the music services."""
 
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
@@ -101,6 +119,12 @@ EVENT_PREVIOUS = "prev"
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
 
+EVENT_PUSH_CREATE_PLAYLIST = "pushCreatePlaylist"
+"""The event confirming a playlist was created."""
+
+EVENT_PUSH_ENQUEUE = "pushEnqueue"
+"""The event carrying the queue a playlist was appended to."""
+
 EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 """The event carrying the names of the saved playlists."""
 
@@ -109,6 +133,9 @@ EVENT_PUSH_MULTI_ROOM_DEVICES = "pushMultiRoomDevices"
 
 EVENT_PUSH_MY_COLLECTION_STATS = "pushMyCollectionStats"
 """The event carrying the statistics of the music collection."""
+
+EVENT_PUSH_PLAYLIST_CONTENT = "pushPlaylistContent"
+"""The event carrying the tracks of a saved playlist."""
 
 EVENT_PUSH_QUEUE = "pushQueue"
 """The event carrying the playback queue."""
@@ -127,6 +154,9 @@ EVENT_PUSH_SYSTEM_INFO = "pushSystemInfo"
 
 EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 """The event carrying the Volumio version the host runs."""
+
+EVENT_REMOVE_FROM_PLAYLIST = "removeFromPlaylist"
+"""The event removing an item from a saved playlist."""
 
 EVENT_REMOVE_QUEUE_ITEM = "removeQueueItem"
 """The event removing a track from the queue."""
@@ -173,12 +203,13 @@ EVENT_VOLUME = "volume"
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
-    EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
+    EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
     EVENT_GET_STATE: EVENT_PUSH_STATE,
     EVENT_GET_SYSTEM_INFO: EVENT_PUSH_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION: EVENT_PUSH_SYSTEM_VERSION,
+    EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_LIST_PLAYLIST: EVENT_PUSH_LIST_PLAYLIST,
     EVENT_PINGER: EVENT_PONGER,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
@@ -218,6 +249,23 @@ class VolumioWebSocketCommon(VolumioCommon):
         browsed = uri if uri is not None else "/"
         self._log_debug(f'Browsing "{browsed}"')
         return {"uri": browsed}
+
+    def _cue_payload(self, uri: str, number: int, service: str | None = None) -> dict[str, Any]:
+        """Build the payload naming a track inside a cue sheet.
+
+        Args:
+            uri: The URI of the cue sheet
+            number: The position of the track inside the cue sheet
+            service: The service the URI belongs to, derived from it when not given
+
+        Returns:
+            The payload the cue events carry
+        """
+        return {
+            "number": number,
+            "service": service if service is not None else self._uri_service(uri),
+            "uri": uri,
+        }
 
     @property
     def _endpoint_description(self) -> str:
@@ -274,52 +322,6 @@ class VolumioWebSocketCommon(VolumioCommon):
             f"Not connected to the Volumio WebSocket API at {self._endpoint_description}"
         )
 
-    def _mode_payload(self, value: bool) -> dict[str, bool]:
-        """Build the payload setting a playback mode.
-
-        Args:
-            value: True to enable the mode, False to disable it
-
-        Returns:
-            The payload the mode event carries
-        """
-        return {"value": value}
-
-    def _play_payload(self, position: int | QueueTrack | None) -> dict[str, int] | None:
-        """Build the payload starting the playback, optionally at a queue position.
-
-        Args:
-            position: Optional position in the queue to play (0-indexed), or a track
-                of the queue
-
-        Returns:
-            The payload the play event carries, or None to play where the queue stands
-
-        Raises:
-            ValueError: If the given track does not know its position in the queue
-        """
-        played = self._play_position(position)
-        if played is None:
-            return None
-        return {"value": played}
-
-    def _cue_payload(self, uri: str, number: int, service: str | None = None) -> dict[str, Any]:
-        """Build the payload naming a track inside a cue sheet.
-
-        Args:
-            uri: The URI of the cue sheet
-            number: The position of the track inside the cue sheet
-            service: The service the URI belongs to, derived from it when not given
-
-        Returns:
-            The payload the cue events carry
-        """
-        return {
-            "number": number,
-            "service": service if service is not None else self._uri_service(uri),
-            "uri": uri,
-        }
-
     def _goto_payload(self, kind: str, value: str) -> dict[str, str]:
         """Build the payload browsing to the artist or the album of what is playing.
 
@@ -346,6 +348,17 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._check_play_index(index)
         return {"value": index}
+
+    def _mode_payload(self, value: bool) -> dict[str, bool]:
+        """Build the payload setting a playback mode.
+
+        Args:
+            value: True to enable the mode, False to disable it
+
+        Returns:
+            The payload the mode event carries
+        """
+        return {"value": value}
 
     def _move_payload(self, source: int, target: int) -> dict[str, int]:
         """Build the payload moving a track to another position of the queue.
@@ -384,6 +397,45 @@ class VolumioWebSocketCommon(VolumioCommon):
             payload["album"] = album
         return payload
 
+    def _play_payload(self, position: int | QueueTrack | None) -> dict[str, int] | None:
+        """Build the payload starting the playback, optionally at a queue position.
+
+        Args:
+            position: Optional position in the queue to play (0-indexed), or a track
+                of the queue
+
+        Returns:
+            The payload the play event carries, or None to play where the queue stands
+
+        Raises:
+            ValueError: If the given track does not know its position in the queue
+        """
+        played = self._play_position(position)
+        if played is None:
+            return None
+        return {"value": played}
+
+    def _playlist_item_payload(
+        self, name: str | Playlist, uri: str, service: str | None = None
+    ) -> dict[str, str]:
+        """Build the payload naming an item inside a saved playlist.
+
+        Args:
+            name: The name of the playlist, or the playlist itself
+            uri: The URI of the item
+            service: The service the URI belongs to, derived from it when not given
+
+        Returns:
+            The payload the playlist item events carry
+
+        Raises:
+            ValueError: If the given playlist has no name
+        """
+        return {
+            "name": self._playlist_name(name),
+            "service": service if service is not None else self._uri_service(uri),
+            "uri": uri,
+        }
 
     def _playlist_payload(self, name: str | Playlist) -> dict[str, str]:
         """Build the payload starting the playback of a saved playlist.

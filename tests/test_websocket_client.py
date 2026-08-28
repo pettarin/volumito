@@ -1287,3 +1287,87 @@ class TestVolumioWebSocketClientQueueEditing:
 
         assert [item.title for item in results.items] == ["jazz"]
         assert fake.calls == [_Call("goTo", {"type": "artist", "value": "Miles Davis"})]
+
+
+class TestVolumioWebSocketClientPlaylistEditing:
+    """Creating, editing and reading the saved playlists."""
+
+    def test_create_and_delete(self, mocker: MockerFixture):
+        """A playlist is created and deleted by name."""
+        client, fake = _client(mocker)
+
+        client.create_playlist("jazz")
+        client.delete_playlist(Playlist.from_name("rock"))
+
+        assert fake.calls == [
+            _Call("createPlaylist", {"name": "jazz"}),
+            _Call("deletePlaylist", {"name": "rock"}),
+        ]
+
+    def test_add_and_remove_an_item(self, mocker: MockerFixture):
+        """An item carries the playlist, the URI, and the service it belongs to."""
+        client, fake = _client(mocker)
+
+        client.add_to_playlist("jazz", "qobuz://track/1")
+        client.remove_from_playlist("jazz", "mpd://NAS/a.flac")
+
+        assert fake.calls == [
+            _Call(
+                "addToPlaylist",
+                {"name": "jazz", "service": "qobuz", "uri": "qobuz://track/1"},
+            ),
+            _Call(
+                "removeFromPlaylist",
+                {"name": "jazz", "service": "mpd", "uri": "mpd://NAS/a.flac"},
+            ),
+        ]
+
+    def test_an_explicit_service_wins(self, mocker: MockerFixture):
+        """A service given by the caller is not derived from the URI."""
+        client, fake = _client(mocker)
+
+        client.add_to_playlist("jazz", "mpd://a", service="upnp")
+
+        assert fake.calls[-1].payload["service"] == "upnp"
+
+    def test_editing_a_playlist_without_a_name(self, mocker: MockerFixture):
+        """A playlist with no name is refused before anything is sent."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(ValueError, match="playlist has no name"):
+            client.add_to_playlist(Playlist.from_raw({}), "mpd://a")
+
+        assert fake.calls == []
+
+    def test_enqueue_playlist(self, mocker: MockerFixture):
+        """A playlist is appended to the queue by name."""
+        client, fake = _client(mocker)
+
+        client.enqueue_playlist("jazz")
+
+        assert fake.calls == [_Call("enqueue", {"name": "jazz"})]
+
+    def test_import_service_playlists(self, mocker: MockerFixture):
+        """The import carries nothing."""
+        client, fake = _client(mocker)
+
+        client.import_service_playlists()
+
+        assert fake.calls == [_Call("importServicePlaylists", None)]
+
+    def test_get_playlist_content(self, mocker: MockerFixture):
+        """The tracks are read out of the one list per source the host groups them in."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getPlaylistContent": (
+                    "pushPlaylistContent",
+                    {"name": "jazz", "lists": [[{"title": "So What", "uri": "mpd://a"}]]},
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        content = client.get_playlist_content("jazz")
+
+        assert content.name == "jazz"
+        assert [track.title for track in content] == ["So What"]

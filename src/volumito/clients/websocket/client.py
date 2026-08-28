@@ -24,6 +24,7 @@ from volumito.clients.models import (
     CollectionStatistics,
     PlayerState,
     Playlist,
+    PlaylistContent,
     Playlists,
     Queue,
     QueueTrack,
@@ -36,16 +37,22 @@ from volumito.clients.websocket.common import (
     EVENT_ADD_PLAY,
     EVENT_ADD_PLAY_CUE,
     EVENT_ADD_QUEUE_UIDS,
+    EVENT_ADD_TO_PLAYLIST,
     EVENT_ADD_TO_QUEUE,
     EVENT_BROWSE_LIBRARY,
     EVENT_CLEAR_QUEUE,
+    EVENT_CREATE_PLAYLIST,
+    EVENT_DELETE_PLAYLIST,
+    EVENT_ENQUEUE,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
+    EVENT_GET_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE,
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
     EVENT_GO_TO,
+    EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_LIST_PLAYLIST,
     EVENT_MOVE_QUEUE,
     EVENT_MUTE,
@@ -57,6 +64,7 @@ from volumito.clients.websocket.common import (
     EVENT_PLAY_NEXT,
     EVENT_PLAY_PLAYLIST,
     EVENT_PREVIOUS,
+    EVENT_REMOVE_FROM_PLAYLIST,
     EVENT_REMOVE_QUEUE_ITEM,
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
@@ -345,6 +353,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_ADD_PLAY_CUE, self._cue_payload(uri, number, service))
 
+    def add_to_playlist(
+        self, name: str | Playlist, uri: str, service: str | None = None
+    ) -> None:
+        """Add an item to a saved playlist, creating the playlist if it does not exist.
+
+        Args:
+            name: The name of the playlist, or the playlist itself
+            uri: The URI of the item to add, from a browse or a search
+            service: The service the URI belongs to, derived from it when not given
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ADD_TO_PLAYLIST, self._playlist_item_payload(name, uri, service))
+
     def add_to_queue(self, uri: str) -> None:
         """Add the content of a URI to the end of the queue, without touching playback.
 
@@ -462,6 +486,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_SET_CONSUME, self._mode_payload(value))
 
+    def create_playlist(self, name: str | Playlist) -> None:
+        """Create an empty saved playlist.
+
+        Args:
+            name: The name to give the playlist, or the playlist itself
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_CREATE_PLAYLIST, self._playlist_payload(name))
+
     def decrease_volume(self) -> None:
         """Decrease the playback volume by one step.
 
@@ -471,6 +507,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_VOLUME, VOLUME_DOWN)
+
+    def delete_playlist(self, name: str | Playlist) -> None:
+        """Delete a saved playlist.
+
+        Args:
+            name: The name of the playlist to delete, or the playlist itself
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_DELETE_PLAYLIST, self._playlist_payload(name))
 
     def disconnect(self) -> None:
         """Close the connection to the Volumio WebSocket API.
@@ -506,6 +554,36 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(event, payload)
+
+    def enqueue_playlist(self, name: str | Playlist) -> None:
+        """Append a saved playlist to the queue, without touching the playback.
+
+        Args:
+            name: The name of the playlist to append, or the playlist itself
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ENQUEUE, self._playlist_payload(name))
+
+    def get_playlist_content(self, name: str | Playlist) -> PlaylistContent:
+        """Read the tracks of a saved playlist.
+
+        Args:
+            name: The name of the playlist to read, or the playlist itself
+
+        Returns:
+            The tracks of the playlist
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return PlaylistContent.from_envelope(
+            self._read_object(EVENT_GET_PLAYLIST_CONTENT, self._playlist_payload(name))
+        )
 
     def goto(self, kind: str, value: str) -> BrowseResults:
         """Browse to the artist or the album of the track currently playing.
@@ -560,6 +638,14 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If an answer is of an unexpected shape
         """
         return bool(self.queue_status["has_previous"])
+
+    def import_service_playlists(self) -> None:
+        """Import the playlists the music services of the host expose.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_IMPORT_SERVICE_PLAYLISTS)
 
     def increase_volume(self) -> None:
         """Increase the playback volume by one step.
@@ -868,6 +954,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         wanted = value if value is not None else not self.state.random
         self._emit(EVENT_SET_RANDOM, self._mode_payload(wanted))
+
+    def remove_from_playlist(
+        self, name: str | Playlist, uri: str, service: str | None = None
+    ) -> None:
+        """Remove an item from a saved playlist.
+
+        Args:
+            name: The name of the playlist, or the playlist itself
+            uri: The URI of the item to remove
+            service: The service the URI belongs to, derived from it when not given
+
+        Raises:
+            ValueError: If the given playlist has no name
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_REMOVE_FROM_PLAYLIST, self._playlist_item_payload(name, uri, service))
 
     def remove_from_queue(self, position: int) -> None:
         """Remove a track from the queue.
