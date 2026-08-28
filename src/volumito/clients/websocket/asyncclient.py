@@ -301,6 +301,22 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         return self._as_json_object(await self._request(event, payload=payload))
 
+    async def _read_text(self, event: str, payload: object = None) -> str:
+        """Read an event answered by a bare JSON string.
+
+        Args:
+            event: The event to emit
+            payload: What the emitted event carries, when it carries anything
+
+        Returns:
+            The string the answer carried
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not a string
+        """
+        return self._as_json_string(await self._request(event, payload=payload))
+
     def _receiver(self, event: str) -> Callable[..., Any]:
         """Build the callback the connection calls when the host pushes an event.
 
@@ -754,18 +770,17 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         answer = await self._read_object(EVENT_GET_DEVICE_NAME)
         return DeviceInfo.from_raw(answer).name
 
-    async def get_device_uuid(self) -> str | None:
+    async def get_device_uuid(self) -> str:
         """Get the hardware identifier of the Volumio instance.
 
         Returns:
-            The hardware identifier of the host, None when it reports none
+            The hardware identifier of the host
 
         Raises:
             VolumioConnectionError: If not connected, or if the host does not answer
-            VolumioAPIError: If the answer is not an object
+            VolumioAPIError: If the answer is not a string
         """
-        answer = await self._read_object(EVENT_GET_DEVICE_HW_UUID)
-        return DeviceInfo.from_raw(answer).uuid
+        return await self._read_text(EVENT_GET_DEVICE_HW_UUID)
 
     async def get_extended_output_devices(self) -> OutputDevices:
         """Get the output devices of the Volumio instance, with their details.

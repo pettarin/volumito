@@ -1813,24 +1813,22 @@ class TestVolumioWebSocketClientPower:
     def test_device_uuid(self, mocker: MockerFixture):
         """The hardware identifier is read on its own."""
         fake = _FakeSocketIOClient(
-            answers={"getDeviceHWUUID": ("pushDeviceHWUUID", {"uuid": "5dc4-ca49"})}
+            answers={"getDeviceHWUUID": ("pushDeviceHWUUID", "5dc4ca49")}
         )
         client, _ = _client(mocker, fake)
 
-        assert client.device_uuid == "5dc4-ca49"
+        assert client.device_uuid == "5dc4ca49"
 
     def test_a_host_reporting_no_name(self, mocker: MockerFixture):
         """A host answering without the field reports None rather than failing."""
         fake = _FakeSocketIOClient(
             answers={
                 "getDeviceName": ("pushDeviceName", {}),
-                "getDeviceHWUUID": ("pushDeviceHWUUID", {}),
             }
         )
         client, _ = _client(mocker, fake)
 
         assert client.device_name is None
-        assert client.device_uuid is None
 
     def test_power_modes(self, mocker: MockerFixture):
         """The power modes are read from their aliases."""
@@ -1848,6 +1846,17 @@ class TestVolumioWebSocketClientPower:
 
         assert modes.has_power_off_mode is True
         assert modes.has_standby_mode is False
+
+
+    def test_a_hardware_identifier_that_is_not_a_string(self, mocker: MockerFixture):
+        """The identifier comes back bare; an object instead of it is refused."""
+        fake = _FakeSocketIOClient(
+            answers={"getDeviceHWUUID": ("pushDeviceHWUUID", {"uuid": "5dc4"})}
+        )
+        client, _ = _client(mocker, fake)
+
+        with pytest.raises(VolumioAPIError, match="Expected JSON string"):
+            _ = client.device_uuid
 
     @pytest.mark.parametrize(
         ("method", "event"),

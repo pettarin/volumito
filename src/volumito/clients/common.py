@@ -110,6 +110,26 @@ class VolumioCommon(VolumioBaseClient):
 
         return data
 
+    def _as_json_string(self, data: object) -> str:
+        """Check that a parsed response body is a JSON string.
+
+        Args:
+            data: The parsed response body
+
+        Returns:
+            The JSON string
+
+        Raises:
+            VolumioAPIError: If the body is not a string
+        """
+        if not isinstance(data, str):
+            self._log_warning(f"The response is not a JSON string: {type(data).__name__}")
+            raise VolumioAPIError(
+                f"Expected JSON string from Volumio API, got {type(data).__name__}"
+            )
+
+        return data
+
     def _check_play_index(self, index: int | None) -> None:
         """Check that an index naming the item to play first is not negative.
 
