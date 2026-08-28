@@ -69,6 +69,9 @@ EVENT_CLEAR_QUEUE = "clearQueue"
 EVENT_CREATE_PLAYLIST = "createPlaylist"
 """The event creating an empty saved playlist."""
 
+EVENT_DELETE_BACKGROUND = "deleteBackground"
+"""The event deleting a background image."""
+
 EVENT_DELETE_FOLDER = "deleteFolder"
 """The event deleting a folder of the collection."""
 
@@ -105,8 +108,20 @@ EVENT_GET_ALARMS = "getAlarms"
 EVENT_GET_AUDIO_OUTPUTS = "getAudioOutputs"
 """The event asking for the audio outputs of the host."""
 
+EVENT_GET_AVAILABLE_LANGUAGES = "getAvailableLanguages"
+"""The event asking for the languages of the user interface."""
+
+EVENT_GET_AVAILABLE_TIMEZONES = "getAvailableTimezones"
+"""The event asking for the time zones the host can be set to."""
+
+EVENT_GET_BACKGROUNDS = "getBackgrounds"
+"""The event asking for the background images of the user interface."""
+
 EVENT_GET_BROWSE_SOURCES = "getBrowseSources"
 """The event asking for the sources the host can browse."""
+
+EVENT_GET_CURRENT_TIMEZONE = "getCurrentTimezone"
+"""The event asking for the time zone of the host."""
 
 EVENT_GET_DEVICE_HW_UUID = "getDeviceHWUUID"
 """The event asking for the hardware identifier of the host."""
@@ -120,8 +135,14 @@ EVENT_GET_DEVICE_NAME = "getDeviceName"
 EVENT_GET_DSP_UI_CONFIG = "getDSPUiConfig"
 """The event asking for the configuration page of the DSP."""
 
+EVENT_GET_EXPERIENCE_ADVANCED_SETTINGS = "getExperienceAdvancedSettings"
+"""The event asking how many options the user interface offers."""
+
 EVENT_GET_EXTENDED_OUTPUT_DEVICES = "getExtendedOutputDevices"
 """The event asking for the output devices, with their details."""
+
+EVENT_GET_INFINITY_PLAYBACK = "getInfinityPlayback"
+"""The event asking for the infinity playback setting."""
 
 EVENT_GET_INFO_NETWORK = "getInfoNetwork"
 """The event asking for the network interfaces of the host."""
@@ -162,6 +183,9 @@ EVENT_GET_OUTPUT_DEVICES = "getOutputDevices"
 EVENT_GET_PLAYLIST_CONTENT = "getPlaylistContent"
 """The event asking for the tracks of a saved playlist."""
 
+EVENT_GET_PRIVACY_SETTINGS = "getPrivacySettings"
+"""The event asking for the privacy settings of the host."""
+
 EVENT_GET_QUEUE = "getQueue"
 """The event asking for the playback queue."""
 
@@ -182,6 +206,9 @@ EVENT_GET_SYSTEM_VERSION = "getSystemVersion"
 
 EVENT_GET_UI_CONFIG = "getUiConfig"
 """The event asking for the configuration page of a plugin."""
+
+EVENT_GET_UI_SETTINGS = "getUiSettings"
+"""The event asking for the look of the user interface."""
 
 EVENT_GET_WIRELESS_NETWORKS = "getWirelessNetworks"
 """The event scanning for wireless networks."""
@@ -261,6 +288,15 @@ EVENT_PUSH_ALARM = "pushAlarm"
 EVENT_PUSH_AUDIO_OUTPUTS = "pushAudioOutputs"
 """The event carrying the audio outputs of the host."""
 
+EVENT_PUSH_AVAILABLE_LANGUAGES = "pushAvailableLanguages"
+"""The event carrying the languages of the user interface."""
+
+EVENT_PUSH_AVAILABLE_TIMEZONES = "pushAvailableTimezones"
+"""The event carrying the time zones the host can be set to."""
+
+EVENT_PUSH_BACKGROUNDS = "pushBackgrounds"
+"""The event carrying the background images of the user interface."""
+
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
 
@@ -269,6 +305,9 @@ EVENT_PUSH_BROWSE_SOURCES = "pushBrowseSources"
 
 EVENT_PUSH_CREATE_PLAYLIST = "pushCreatePlaylist"
 """The event confirming a playlist was created."""
+
+EVENT_PUSH_CURRENT_TIMEZONE = "pushCurrentTimezone"
+"""The event carrying the time zone of the host."""
 
 EVENT_PUSH_DEVICE_HW_UUID = "pushDeviceHWUUID"
 """The event carrying the hardware identifier of the host."""
@@ -285,8 +324,14 @@ EVENT_PUSH_DSP_UI_CONFIG = "pushDSPUiConfig"
 EVENT_PUSH_ENQUEUE = "pushEnqueue"
 """The event carrying the queue a playlist was appended to."""
 
+EVENT_PUSH_EXPERIENCE_ADVANCED_SETTINGS = "pushExperienceAdvancedSettings"
+"""The event carrying how many options the user interface offers."""
+
 EVENT_PUSH_EXTENDED_OUTPUT_DEVICES = "pushExtendedOutputDevices"
 """The event carrying the output devices with their details."""
+
+EVENT_PUSH_INFINITY_PLAYBACK = "pushInfinityPlayback"
+"""The event carrying the infinity playback setting."""
 
 EVENT_PUSH_INFO_NETWORK = "pushInfoNetwork"
 """The event carrying the network interfaces of the host."""
@@ -336,6 +381,9 @@ EVENT_PUSH_PLAY_FAVOURITES = "pushPlayFavourites"
 EVENT_PUSH_PLAY_RADIO_FAVOURITES = "pushPlayRadioFavourites"
 """The event confirming the radio favourites are playing."""
 
+EVENT_PUSH_PRIVACY_SETTINGS = "pushPrivacySettings"
+"""The event carrying the privacy settings of the host."""
+
 EVENT_PUSH_QUEUE = "pushQueue"
 """The event carrying the playback queue."""
 
@@ -365,6 +413,9 @@ EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 
 EVENT_PUSH_UI_CONFIG = "pushUiConfig"
 """The event carrying the configuration page of a plugin."""
+
+EVENT_PUSH_UI_SETTINGS = "pushUiSettings"
+"""The event carrying the look of the user interface."""
 
 EVENT_PUSH_WIRELESS_NETWORKS = "pushWirelessNetworks"
 """The event carrying the wireless networks that were scanned for."""
@@ -426,11 +477,23 @@ EVENT_SERVICE_UPDATE_TRACKLIST = "serviceUpdateTracklist"
 EVENT_SET_AUDIO_OUTPUT_VOLUME = "setAudioOutputVolume"
 """The event setting the volume of one audio output."""
 
+EVENT_SET_BACKGROUNDS = "setBackgrounds"
+"""The event choosing the background image of the user interface."""
+
 EVENT_SET_CONSUME = "setConsume"
 """The event setting the consume mode."""
 
 EVENT_SET_DEVICE_NAME = "setDeviceName"
 """The event renaming the host."""
+
+EVENT_SET_EXPERIENCE_ADVANCED_SETTINGS = "setExperienceAdvancedSettings"
+"""The event choosing how many options the user interface offers."""
+
+EVENT_SET_INFINITY_PLAYBACK = "setInfinityPlayback"
+"""The event turning infinity playback on or off."""
+
+EVENT_SET_LANGUAGE = "setLanguage"
+"""The event choosing the language of the user interface."""
 
 EVENT_SET_OUTPUT_DEVICES = "setOutputDevices"
 """The event choosing the output device of the host."""
@@ -443,6 +506,9 @@ EVENT_SET_REPEAT = "setRepeat"
 
 EVENT_SET_SLEEP = "setSleep"
 """The event arming or disarming the sleep timer."""
+
+EVENT_SET_TIMEZONE = "setTimezone"
+"""The event choosing the time zone of the host."""
 
 EVENT_SHUTDOWN = "shutdown"
 """The event powering the host off."""
@@ -487,12 +553,18 @@ RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
     EVENT_GET_AUDIO_OUTPUTS: EVENT_PUSH_AUDIO_OUTPUTS,
+    EVENT_GET_AVAILABLE_LANGUAGES: EVENT_PUSH_AVAILABLE_LANGUAGES,
+    EVENT_GET_AVAILABLE_TIMEZONES: EVENT_PUSH_AVAILABLE_TIMEZONES,
+    EVENT_GET_BACKGROUNDS: EVENT_PUSH_BACKGROUNDS,
     EVENT_GET_BROWSE_SOURCES: EVENT_PUSH_BROWSE_SOURCES,
+    EVENT_GET_CURRENT_TIMEZONE: EVENT_PUSH_CURRENT_TIMEZONE,
     EVENT_GET_DEVICE_HW_UUID: EVENT_PUSH_DEVICE_HW_UUID,
     EVENT_GET_DEVICE_INFO: EVENT_PUSH_DEVICE_INFO,
     EVENT_GET_DEVICE_NAME: EVENT_PUSH_DEVICE_NAME,
     EVENT_GET_DSP_UI_CONFIG: EVENT_PUSH_DSP_UI_CONFIG,
+    EVENT_GET_EXPERIENCE_ADVANCED_SETTINGS: EVENT_PUSH_EXPERIENCE_ADVANCED_SETTINGS,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES: EVENT_PUSH_EXTENDED_OUTPUT_DEVICES,
+    EVENT_GET_INFINITY_PLAYBACK: EVENT_PUSH_INFINITY_PLAYBACK,
     EVENT_GET_INFO_NETWORK: EVENT_PUSH_INFO_NETWORK,
     EVENT_GET_INFO_SHARE: EVENT_PUSH_INFO_SHARE,
     EVENT_GET_INPUT_SOURCES: EVENT_PUSH_INPUT_SOURCES,
@@ -506,6 +578,7 @@ RESPONSE_EVENTS = {
     EVENT_GET_NETWORK_SHARES_DISCOVERY: EVENT_PUSH_NETWORK_SHARES_DISCOVERY,
     EVENT_GET_OUTPUT_DEVICES: EVENT_PUSH_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
+    EVENT_GET_PRIVACY_SETTINGS: EVENT_PUSH_PRIVACY_SETTINGS,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
     EVENT_GET_SHUTDOWN_OR_STANDBY_MODE: EVENT_PUSH_SHUTDOWN_OR_STANDBY_MODE,
     EVENT_GET_SLEEP: EVENT_PUSH_SLEEP,
@@ -513,6 +586,7 @@ RESPONSE_EVENTS = {
     EVENT_GET_SYSTEM_INFO: EVENT_PUSH_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION: EVENT_PUSH_SYSTEM_VERSION,
     EVENT_GET_UI_CONFIG: EVENT_PUSH_UI_CONFIG,
+    EVENT_GET_UI_SETTINGS: EVENT_PUSH_UI_SETTINGS,
     EVENT_GET_WIRELESS_NETWORKS: EVENT_PUSH_WIRELESS_NETWORKS,
     EVENT_GET_WIRELESS_NETWORKS_CACHE: EVENT_PUSH_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,

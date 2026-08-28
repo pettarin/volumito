@@ -22,11 +22,15 @@ from volumito.clients.models import (
     Alarm,
     Alarms,
     AudioOutputs,
+    Backgrounds,
     BrowseResults,
     BrowseSources,
     CollectionStatistics,
     DeviceInfo,
+    ExperienceSettings,
+    InfinityPlayback,
     InputSources,
+    Languages,
     MenuItems,
     MusicSources,
     NetworkInfo,
@@ -37,6 +41,7 @@ from volumito.clients.models import (
     Playlists,
     Plugins,
     PowerModes,
+    PrivacySettings,
     Queue,
     QueueTrack,
     SearchResults,
@@ -45,7 +50,9 @@ from volumito.clients.models import (
     SleepTimer,
     SystemInfo,
     SystemVersion,
+    Timezones,
     UiConfig,
+    UiSettings,
     UsbDrives,
     WirelessNetworks,
     Zones,
@@ -67,6 +74,7 @@ from volumito.clients.websocket.common import (
     EVENT_CALL_METHOD,
     EVENT_CLEAR_QUEUE,
     EVENT_CREATE_PLAYLIST,
+    EVENT_DELETE_BACKGROUND,
     EVENT_DELETE_FOLDER,
     EVENT_DELETE_PLAYLIST,
     EVENT_DELETE_SHARE,
@@ -79,12 +87,18 @@ from volumito.clients.websocket.common import (
     EVENT_ENQUEUE,
     EVENT_GET_ALARMS,
     EVENT_GET_AUDIO_OUTPUTS,
+    EVENT_GET_AVAILABLE_LANGUAGES,
+    EVENT_GET_AVAILABLE_TIMEZONES,
+    EVENT_GET_BACKGROUNDS,
     EVENT_GET_BROWSE_SOURCES,
+    EVENT_GET_CURRENT_TIMEZONE,
     EVENT_GET_DEVICE_HW_UUID,
     EVENT_GET_DEVICE_INFO,
     EVENT_GET_DEVICE_NAME,
     EVENT_GET_DSP_UI_CONFIG,
+    EVENT_GET_EXPERIENCE_ADVANCED_SETTINGS,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES,
+    EVENT_GET_INFINITY_PLAYBACK,
     EVENT_GET_INFO_NETWORK,
     EVENT_GET_INFO_SHARE,
     EVENT_GET_INPUT_SOURCES,
@@ -98,6 +112,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_NETWORK_SHARES_DISCOVERY,
     EVENT_GET_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT,
+    EVENT_GET_PRIVACY_SETTINGS,
     EVENT_GET_QUEUE,
     EVENT_GET_SHUTDOWN_OR_STANDBY_MODE,
     EVENT_GET_SLEEP,
@@ -105,6 +120,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_SYSTEM_INFO,
     EVENT_GET_SYSTEM_VERSION,
     EVENT_GET_UI_CONFIG,
+    EVENT_GET_UI_SETTINGS,
     EVENT_GET_WIRELESS_NETWORKS,
     EVENT_GET_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO,
@@ -144,12 +160,17 @@ from volumito.clients.websocket.common import (
     EVENT_SEEK,
     EVENT_SERVICE_UPDATE_TRACKLIST,
     EVENT_SET_AUDIO_OUTPUT_VOLUME,
+    EVENT_SET_BACKGROUNDS,
     EVENT_SET_CONSUME,
     EVENT_SET_DEVICE_NAME,
+    EVENT_SET_EXPERIENCE_ADVANCED_SETTINGS,
+    EVENT_SET_INFINITY_PLAYBACK,
+    EVENT_SET_LANGUAGE,
     EVENT_SET_OUTPUT_DEVICES,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
     EVENT_SET_SLEEP,
+    EVENT_SET_TIMEZONE,
     EVENT_SHUTDOWN,
     EVENT_STANDBY,
     EVENT_STOP,
@@ -678,6 +699,17 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_VOLUME, VOLUME_DOWN)
 
+    async def delete_background(self, name: str) -> None:
+        """Delete a background image of the user interface.
+
+        Args:
+            name: The name of the background to delete
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_DELETE_BACKGROUND, {"name": name})
+
     async def delete_folder(self, path: str) -> None:
         """Delete a folder of the collection of the Volumio instance.
 
@@ -855,6 +887,31 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         return AudioOutputs.from_raw(await self._read_object(EVENT_GET_AUDIO_OUTPUTS))
 
+    async def get_available_timezones(self) -> Timezones:
+        """The time zones the Volumio instance can be set to.
+
+        Returns:
+            The names of the time zones
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        zones = await self._read_array(EVENT_GET_AVAILABLE_TIMEZONES)
+        return Timezones.from_raw({"timezones": zones})
+
+    async def get_backgrounds(self) -> Backgrounds:
+        """The background images of the user interface of the Volumio instance.
+
+        Returns:
+            The background images, and the one in use
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return Backgrounds.from_raw(await self._read_object(EVENT_GET_BACKGROUNDS))
+
     async def get_browse_sources(self) -> BrowseSources:
         """Get the sources the Volumio instance can browse.
 
@@ -933,6 +990,19 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         return UiConfig.from_raw(await self._read_object(EVENT_GET_DSP_UI_CONFIG))
 
+    async def get_experience_settings(self) -> ExperienceSettings:
+        """How many options the user interface of the Volumio instance offers.
+
+        Returns:
+            The experience settings of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        answer = await self._read_object(EVENT_GET_EXPERIENCE_ADVANCED_SETTINGS)
+        return ExperienceSettings.from_raw(answer)
+
     async def get_extended_output_devices(self) -> OutputDevices:
         """Get the output devices of the Volumio instance, with their details.
 
@@ -946,6 +1016,18 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         return OutputDevices.from_envelope(
             await self._read_object(EVENT_GET_EXTENDED_OUTPUT_DEVICES)
         )
+
+    async def get_infinity_playback(self) -> InfinityPlayback:
+        """The infinity playback setting of the Volumio instance.
+
+        Returns:
+            The infinity playback setting
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return InfinityPlayback.from_raw(await self._read_object(EVENT_GET_INFINITY_PLAYBACK))
 
     async def get_input_sources(self) -> InputSources:
         """Get the input sources the Volumio instance exposes.
@@ -971,6 +1053,18 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         plugins = await self._read_array(EVENT_GET_INSTALLED_PLUGINS)
         return Plugins.from_raw({"plugins": plugins})
+
+    async def get_languages(self) -> Languages:
+        """The languages the user interface of the Volumio instance can be shown in.
+
+        Returns:
+            The languages, and the one in use
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return Languages.from_raw(await self._read_object(EVENT_GET_AVAILABLE_LANGUAGES))
 
     async def get_last_browse(self) -> BrowseResults:
         """Get the listing the Volumio instance pushed last, to any of its clients.
@@ -1097,6 +1191,18 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         answer = await self._read_object(EVENT_GET_SHUTDOWN_OR_STANDBY_MODE)
         return PowerModes.from_raw(answer)
 
+    async def get_privacy_settings(self) -> PrivacySettings:
+        """The privacy settings of the Volumio instance.
+
+        Returns:
+            The privacy settings of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return PrivacySettings.from_raw(await self._read_object(EVENT_GET_PRIVACY_SETTINGS))
+
     async def get_queue(self) -> Queue:
         """Get the current playback queue of the Volumio instance.
 
@@ -1221,6 +1327,30 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not an object
         """
         return SystemVersion.from_raw(await self._read_object(EVENT_GET_SYSTEM_VERSION))
+
+    async def get_timezone(self) -> str:
+        """Get the time zone of the Volumio instance.
+
+        Returns:
+            The name of the time zone (e.g., ``"Europe/Rome"``)
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not a string
+        """
+        return await self._read_text(EVENT_GET_CURRENT_TIMEZONE)
+
+    async def get_ui_settings(self) -> UiSettings:
+        """The look of the user interface of the Volumio instance.
+
+        Returns:
+            The colour, language, and theme of the interface
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return UiSettings.from_raw(await self._read_object(EVENT_GET_UI_SETTINGS))
 
     async def get_usb_drives(self) -> UsbDrives:
         """Get the USB drives attached to the Volumio instance.
@@ -1950,6 +2080,19 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         payload = self._audio_output_payload(output_id, volume)
         await self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
 
+    async def set_background(self, name: str, path: str | None = None) -> None:
+        """Choose the background image of the user interface.
+
+        Args:
+            name: The name of the background, from :meth:`get_backgrounds`
+            path: The path of its image, when the host needs it named too
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = {"name": name} if path is None else {"name": name, "path": path}
+        await self._emit(EVENT_SET_BACKGROUNDS, payload)
+
     async def set_device_name(self, value: str) -> None:
         """Rename the Volumio host.
 
@@ -1960,6 +2103,41 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_SET_DEVICE_NAME, {"name": value})
+
+    async def set_experience_settings(self, advanced: bool) -> None:
+        """Choose how many options the user interface of the Volumio instance offers.
+
+        Args:
+            advanced: True for the full set of options, False for the simplified one
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_EXPERIENCE_ADVANCED_SETTINGS, {"status": advanced})
+
+    async def set_infinity_playback(self, enabled: bool) -> None:
+        """Turn infinity playback on or off.
+
+        Args:
+            enabled: True to enable infinity playback, False to disable it
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_INFINITY_PLAYBACK, {"enabled": enabled})
+
+    async def set_language(self, code: str, language: str | None = None) -> None:
+        """Choose the language of the user interface of the Volumio instance.
+
+        Args:
+            code: The code of the language (e.g., ``"en"``), from :meth:`get_languages`
+            language: The name of the language, when the host needs it named too
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        chosen = {"code": code, "language": language if language is not None else code}
+        await self._emit(EVENT_SET_LANGUAGE, {"defaultLanguage": chosen})
 
     async def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         """Enable or disable one music source of the Volumio instance.
@@ -2015,6 +2193,17 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
+
+    async def set_timezone(self, value: str) -> None:
+        """Move the Volumio instance to another time zone.
+
+        Args:
+            value: The name of the zone, from :meth:`get_available_timezones`
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        await self._emit(EVENT_SET_TIMEZONE, {"timeZone": value})
 
     async def set_volume(self, value: int) -> None:
         """Set the playback volume to an absolute level.

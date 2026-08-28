@@ -1898,3 +1898,138 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
             _Call("saveWirelessNetworkSettings", {"ssid": "home", "password": "hunter2"}),
             _Call("saveWirelessNetworkSettings", {"ssid": "open", "password": ""}),
         ]
+
+
+class TestVolumioAsyncWebSocketClientUiPreferences:
+    """The look, the language, the time zone, and the other host preferences."""
+
+    async def test_ui_settings(self, mocker: MockerFixture):
+        """The look of the interface is parsed."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getUiSettings": ("pushUiSettings", {"color": "#000", "language": "en",
+                                                     "theme": "default"})
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        settings = (await client.get_ui_settings())
+
+        assert settings.color == "#000"
+        assert settings.theme == "default"
+
+    async def test_languages_and_set_language(self, mocker: MockerFixture):
+        """The languages are read, and one is chosen by code."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getAvailableLanguages": (
+                    "pushAvailableLanguages",
+                    {
+                        "defaultLanguage": {"language": "English", "code": "en"},
+                        "available": [{"language": "Italiano", "code": "it"}],
+                    },
+                )
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        languages = (await client.get_languages())
+        await client.set_language("it", "Italiano")
+        await client.set_language("fr")
+
+        assert languages.default_language is not None
+        assert languages.default_language.code == "en"
+        assert [lang.code for lang in languages] == ["it"]
+        assert fake.calls[-2:] == [
+            _Call("setLanguage", {"defaultLanguage": {"code": "it", "language": "Italiano"}}),
+            _Call("setLanguage", {"defaultLanguage": {"code": "fr", "language": "fr"}}),
+        ]
+
+    async def test_the_timezone(self, mocker: MockerFixture):
+        """The zone is read as a bare string, and assigning to it moves the host."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getCurrentTimezone": ("pushCurrentTimezone", "Europe/Rome"),
+                "getAvailableTimezones": ("pushAvailableTimezones", ["Europe/Rome", "UTC"]),
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        assert await client.get_timezone() == "Europe/Rome"
+        assert list(await client.get_available_timezones()) == ["Europe/Rome", "UTC"]
+
+        await client.set_timezone("UTC")
+
+        assert fake.calls[-1] == _Call("setTimezone", {"timeZone": "UTC"})
+
+    async def test_backgrounds(self, mocker: MockerFixture):
+        """The background in use is read beside the available ones."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getBackgrounds": (
+                    "pushBackgrounds",
+                    {
+                        "current": {"name": "Darkness", "path": "darkness.jpg"},
+                        "available": [{"name": "Aurora", "path": "aurora.jpg"}],
+                    },
+                )
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        backgrounds = (await client.get_backgrounds())
+        await client.set_background("Aurora", "aurora.jpg")
+        await client.set_background("Darkness")
+        await client.delete_background("Aurora")
+
+        assert backgrounds.current is not None
+        assert backgrounds.current.name == "Darkness"
+        assert [b.name for b in backgrounds] == ["Aurora"]
+        assert fake.calls[-3:] == [
+            _Call("setBackgrounds", {"name": "Aurora", "path": "aurora.jpg"}),
+            _Call("setBackgrounds", {"name": "Darkness"}),
+            _Call("deleteBackground", {"name": "Aurora"}),
+        ]
+
+    async def test_privacy_settings(self, mocker: MockerFixture):
+        """The statistics flag is read from its alias."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getPrivacySettings": ("pushPrivacySettings",
+                                            {"allowUIStatistics": False})}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert (await client.get_privacy_settings()).allow_ui_statistics is False
+
+    async def test_infinity_playback(self, mocker: MockerFixture):
+        """The setting is read, and turned on."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getInfinityPlayback": ("pushInfinityPlayback",
+                                             {"available": True, "enabled": False})}
+        )
+        client, fake = await _client(mocker, fake)
+
+        playback = (await client.get_infinity_playback())
+        await client.set_infinity_playback(True)
+
+        assert playback.available is True
+        assert playback.enabled is False
+        assert fake.calls[-1] == _Call("setInfinityPlayback", {"enabled": True})
+
+    async def test_experience_settings(self, mocker: MockerFixture):
+        """The setting is read, and the full set of options chosen."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getExperienceAdvancedSettings": (
+                    "pushExperienceAdvancedSettings",
+                    {"options": [{"id": True, "label": "Full"}], "status": False},
+                )
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        settings = (await client.get_experience_settings())
+        await client.set_experience_settings(True)
+
+        assert settings.status is False
+        assert fake.calls[-1] == _Call("setExperienceAdvancedSettings", {"status": True})
