@@ -48,6 +48,12 @@ EVENT_ADD_TO_RADIO_FAVOURITES = "addToRadioFavourites"
 EVENT_ADD_WEB_RADIO = "addWebRadio"
 """The event saving a web radio of the user."""
 
+EVENT_AUDIO_OUTPUT_PAUSE = "audioOutputPause"
+"""The event pausing one audio output."""
+
+EVENT_AUDIO_OUTPUT_PLAY = "audioOutputPlay"
+"""The event starting one audio output."""
+
 EVENT_BROWSE_LIBRARY = "browseLibrary"
 """The event listing the content of a URI."""
 
@@ -60,14 +66,29 @@ EVENT_CREATE_PLAYLIST = "createPlaylist"
 EVENT_DELETE_PLAYLIST = "deletePlaylist"
 """The event deleting a saved playlist."""
 
+EVENT_DISABLE_AUDIO_OUTPUT = "disableAudioOutput"
+"""The event disabling one audio output."""
+
+EVENT_ENABLE_AUDIO_OUTPUT = "enableAudioOutput"
+"""The event enabling one audio output."""
+
 EVENT_ENQUEUE = "enqueue"
 """The event appending a saved playlist to the queue."""
 
 EVENT_GET_ALARMS = "getAlarms"
 """The event asking for the alarms set on the host."""
 
+EVENT_GET_AUDIO_OUTPUTS = "getAudioOutputs"
+"""The event asking for the audio outputs of the host."""
+
 EVENT_GET_BROWSE_SOURCES = "getBrowseSources"
 """The event asking for the sources the host can browse."""
+
+EVENT_GET_EXTENDED_OUTPUT_DEVICES = "getExtendedOutputDevices"
+"""The event asking for the output devices, with their details."""
+
+EVENT_GET_INPUT_SOURCES = "getInputSources"
+"""The event asking for the input sources of the host."""
 
 EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY = "getLastPushedBrowseLibrary"
 """The event asking for the listing the host pushed last."""
@@ -80,6 +101,9 @@ EVENT_GET_MULTI_ROOM_DEVICES = "getMultiRoomDevices"
 
 EVENT_GET_MY_COLLECTION_STATS = "getMyCollectionStats"
 """The event asking for the statistics of the music collection."""
+
+EVENT_GET_OUTPUT_DEVICES = "getOutputDevices"
+"""The event asking for the output devices of the host."""
 
 EVENT_GET_PLAYLIST_CONTENT = "getPlaylistContent"
 """The event asking for the tracks of a saved playlist."""
@@ -156,6 +180,9 @@ EVENT_PUSH_ADD_WEB_RADIO = "pushAddWebRadio"
 EVENT_PUSH_ALARM = "pushAlarm"
 """The event carrying the alarms set on the host."""
 
+EVENT_PUSH_AUDIO_OUTPUTS = "pushAudioOutputs"
+"""The event carrying the audio outputs of the host."""
+
 EVENT_PUSH_BROWSE_LIBRARY = "pushBrowseLibrary"
 """The event carrying a browse listing, and also a search result."""
 
@@ -168,6 +195,12 @@ EVENT_PUSH_CREATE_PLAYLIST = "pushCreatePlaylist"
 EVENT_PUSH_ENQUEUE = "pushEnqueue"
 """The event carrying the queue a playlist was appended to."""
 
+EVENT_PUSH_EXTENDED_OUTPUT_DEVICES = "pushExtendedOutputDevices"
+"""The event carrying the output devices with their details."""
+
+EVENT_PUSH_INPUT_SOURCES = "pushInputSources"
+"""The event carrying the input sources of the host."""
+
 EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 """The event carrying the names of the saved playlists."""
 
@@ -179,6 +212,9 @@ EVENT_PUSH_MULTI_ROOM_DEVICES = "pushMultiRoomDevices"
 
 EVENT_PUSH_MY_COLLECTION_STATS = "pushMyCollectionStats"
 """The event carrying the statistics of the music collection."""
+
+EVENT_PUSH_OUTPUT_DEVICES = "pushOutputDevices"
+"""The event carrying the output devices of the host."""
 
 EVENT_PUSH_PLAYLIST_CONTENT = "pushPlaylistContent"
 """The event carrying the tracks of a saved playlist."""
@@ -249,8 +285,14 @@ EVENT_SEARCH = "search"
 EVENT_SEEK = "seek"
 """The event seeking to an absolute position."""
 
+EVENT_SET_AUDIO_OUTPUT_VOLUME = "setAudioOutputVolume"
+"""The event setting the volume of one audio output."""
+
 EVENT_SET_CONSUME = "setConsume"
 """The event setting the consume mode."""
+
+EVENT_SET_OUTPUT_DEVICES = "setOutputDevices"
+"""The event choosing the output device of the host."""
 
 EVENT_SET_RANDOM = "setRandom"
 """The event setting the random playback mode."""
@@ -285,11 +327,15 @@ EVENT_VOLUME = "volume"
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
+    EVENT_GET_AUDIO_OUTPUTS: EVENT_PUSH_AUDIO_OUTPUTS,
     EVENT_GET_BROWSE_SOURCES: EVENT_PUSH_BROWSE_SOURCES,
+    EVENT_GET_EXTENDED_OUTPUT_DEVICES: EVENT_PUSH_EXTENDED_OUTPUT_DEVICES,
+    EVENT_GET_INPUT_SOURCES: EVENT_PUSH_INPUT_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
+    EVENT_GET_OUTPUT_DEVICES: EVENT_PUSH_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
     EVENT_GET_SLEEP: EVENT_PUSH_SLEEP,
@@ -335,6 +381,25 @@ class VolumioWebSocketCommon(VolumioCommon):
             The payload the alarm event carries
         """
         return [alarm.model_dump(by_alias=True, exclude_none=True) for alarm in alarms]
+
+    def _audio_output_payload(self, output_id: str, volume: int | None = None) -> dict[str, Any]:
+        """Build the payload naming one audio output of the host.
+
+        Args:
+            output_id: The identifier of the output
+            volume: The volume level to set on it, when the event carries one
+
+        Returns:
+            The payload the audio output events carry
+
+        Raises:
+            ValueError: If the volume level is out of range
+        """
+        payload: dict[str, Any] = {"id": output_id}
+        if volume is not None:
+            self._check_volume_level(volume)
+            payload["volume"] = volume
+        return payload
 
     def _browse_payload(self, uri: str | None) -> dict[str, str]:
         """Build the payload browsing a URI.
@@ -503,6 +568,21 @@ class VolumioWebSocketCommon(VolumioCommon):
         self._check_play_index(source)
         self._check_play_index(target)
         return {"from": source, "to": target}
+
+    def _output_device_payload(self, device_id: str, mixer: str | None = None) -> dict[str, str]:
+        """Build the payload choosing the output device of the host.
+
+        Args:
+            device_id: The identifier of the device
+            mixer: The mixer to drive its volume with, when one is chosen
+
+        Returns:
+            The payload the output device event carries
+        """
+        payload = {"device": device_id}
+        if mixer is not None:
+            payload["mixer"] = mixer
+        return payload
 
     def _play_next_payload(
         self, uri: str, title: str | None = None, album: str | None = None

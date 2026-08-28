@@ -1626,3 +1626,108 @@ class TestVolumioWebSocketClientSleepAndAlarms:
         client.set_alarms([])
 
         assert fake.calls == [_Call("saveAlarm", [])]
+
+
+class TestVolumioWebSocketClientAudioOutputs:
+    """The audio outputs, the output devices, and the input sources."""
+
+    _DEVICES = {
+        "devices": {
+            "active": {"name": "HDMI Out", "id": "0"},
+            "available": [{"id": "0", "name": "HDMI Out"}, {"id": "1", "name": "Headphones"}],
+        },
+        "i2s": False,
+    }
+
+    def test_output_devices(self, mocker: MockerFixture):
+        """The devices are read out of the envelope the host answers with."""
+        fake = _FakeSocketIOClient(
+            answers={"getOutputDevices": ("pushOutputDevices", self._DEVICES)}
+        )
+        client, _ = _client(mocker, fake)
+
+        devices = client.output_devices
+
+        assert devices.active is not None
+        assert devices.active.name == "HDMI Out"
+        assert [device.name for device in devices] == ["HDMI Out", "Headphones"]
+
+    def test_extended_output_devices(self, mocker: MockerFixture):
+        """The detailed devices come back through the same envelope."""
+        fake = _FakeSocketIOClient(
+            answers={"getExtendedOutputDevices": ("pushExtendedOutputDevices", self._DEVICES)}
+        )
+        client, _ = _client(mocker, fake)
+
+        assert len(client.extended_output_devices) == 2
+
+    def test_audio_outputs(self, mocker: MockerFixture):
+        """The outputs are read from the aliased key of the answer."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getAudioOutputs": (
+                    "pushAudioOutputs",
+                    {"availableOutputs": [{"id": "0", "name": "Living room", "volume": 40}]},
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        outputs = client.audio_outputs
+
+        assert [output.name for output in outputs] == ["Living room"]
+        assert outputs[0].volume == 40
+
+    def test_input_sources(self, mocker: MockerFixture):
+        """A host with no input source answers an empty mapping."""
+        fake = _FakeSocketIOClient(answers={"getInputSources": ("pushInputSources", {})})
+        client, _ = _client(mocker, fake)
+
+        assert client.input_sources.raw == {}
+
+    def test_set_output_device(self, mocker: MockerFixture):
+        """The device is chosen by identifier, with the mixer only when given."""
+        client, fake = _client(mocker)
+
+        client.set_output_device("1")
+        client.set_output_device("1", mixer="Digital")
+
+        assert fake.calls == [
+            _Call("setOutputDevices", {"device": "1"}),
+            _Call("setOutputDevices", {"device": "1", "mixer": "Digital"}),
+        ]
+
+    @pytest.mark.parametrize(
+        ("method", "event"),
+        [
+            ("audio_output_pause", "audioOutputPause"),
+            ("audio_output_play", "audioOutputPlay"),
+            ("disable_audio_output", "disableAudioOutput"),
+            ("enable_audio_output", "enableAudioOutput"),
+        ],
+    )
+    def test_the_audio_output_commands(self, mocker: MockerFixture, method, event):
+        """Each command names the output it acts on."""
+        client, fake = _client(mocker)
+
+        getattr(client, method)("0")
+
+        assert fake.calls == [_Call(event, {"id": "0"})]
+
+    def test_set_audio_output_volume(self, mocker: MockerFixture):
+        """The volume of one output carries the identifier and the level."""
+        client, fake = _client(mocker)
+
+        client.set_audio_output_volume("0", 42)
+
+        assert fake.calls == [_Call("setAudioOutputVolume", {"id": "0", "volume": 42})]
+
+    @pytest.mark.parametrize("level", [-1, 101])
+    def test_an_out_of_range_output_volume(self, mocker: MockerFixture, level):
+        """A level outside 0..100 is refused before anything is sent."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(ValueError, match="between 0 and 100"):
+            client.set_audio_output_volume("0", level)
+
+        assert fake.calls == []

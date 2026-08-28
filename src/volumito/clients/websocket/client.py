@@ -23,10 +23,13 @@ from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
     Alarm,
     Alarms,
+    AudioOutputs,
     BrowseResults,
     BrowseSources,
     CollectionStatistics,
+    InputSources,
     MenuItems,
+    OutputDevices,
     PlayerState,
     Playlist,
     PlaylistContent,
@@ -48,17 +51,25 @@ from volumito.clients.websocket.common import (
     EVENT_ADD_TO_QUEUE,
     EVENT_ADD_TO_RADIO_FAVOURITES,
     EVENT_ADD_WEB_RADIO,
+    EVENT_AUDIO_OUTPUT_PAUSE,
+    EVENT_AUDIO_OUTPUT_PLAY,
     EVENT_BROWSE_LIBRARY,
     EVENT_CLEAR_QUEUE,
     EVENT_CREATE_PLAYLIST,
     EVENT_DELETE_PLAYLIST,
+    EVENT_DISABLE_AUDIO_OUTPUT,
+    EVENT_ENABLE_AUDIO_OUTPUT,
     EVENT_ENQUEUE,
     EVENT_GET_ALARMS,
+    EVENT_GET_AUDIO_OUTPUTS,
     EVENT_GET_BROWSE_SOURCES,
+    EVENT_GET_EXTENDED_OUTPUT_DEVICES,
+    EVENT_GET_INPUT_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
+    EVENT_GET_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE,
     EVENT_GET_SLEEP,
@@ -92,7 +103,9 @@ from volumito.clients.websocket.common import (
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
     EVENT_SEARCH,
     EVENT_SEEK,
+    EVENT_SET_AUDIO_OUTPUT_VOLUME,
     EVENT_SET_CONSUME,
+    EVENT_SET_OUTPUT_DEVICES,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
     EVENT_SET_SLEEP,
@@ -483,6 +496,43 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return Alarms.from_raw({"alarms": self._read_array(EVENT_GET_ALARMS)})
 
+    def audio_output_pause(self, output_id: str) -> None:
+        """Pause one audio output of the Volumio instance.
+
+        Args:
+            output_id: The identifier of the output to pause
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_AUDIO_OUTPUT_PAUSE, self._audio_output_payload(output_id))
+
+    def audio_output_play(self, output_id: str) -> None:
+        """Start one audio output of the Volumio instance.
+
+        Args:
+            output_id: The identifier of the output to start
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_AUDIO_OUTPUT_PLAY, self._audio_output_payload(output_id))
+
+    @property
+    def audio_outputs(self) -> AudioOutputs:
+        """The audio outputs the Volumio instance can play to.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The audio outputs of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return AudioOutputs.from_raw(self._read_object(EVENT_GET_AUDIO_OUTPUTS))
+
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
 
@@ -620,6 +670,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_DELETE_PLAYLIST, self._playlist_payload(name))
 
+    def disable_audio_output(self, output_id: str) -> None:
+        """Disable one audio output of the Volumio instance.
+
+        Args:
+            output_id: The identifier of the output to disable
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_DISABLE_AUDIO_OUTPUT, self._audio_output_payload(output_id))
+
     def disconnect(self) -> None:
         """Close the connection to the Volumio WebSocket API.
 
@@ -655,6 +716,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(event, payload)
 
+    def enable_audio_output(self, output_id: str) -> None:
+        """Enable one audio output of the Volumio instance.
+
+        Args:
+            output_id: The identifier of the output to enable
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_ENABLE_AUDIO_OUTPUT, self._audio_output_payload(output_id))
+
     def enqueue_playlist(self, name: str | Playlist) -> None:
         """Append a saved playlist to the queue, without touching the playback.
 
@@ -666,6 +738,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_ENQUEUE, self._playlist_payload(name))
+
+    @property
+    def extended_output_devices(self) -> OutputDevices:
+        """The output devices of the Volumio instance, with their details.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The output devices, with their details
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return OutputDevices.from_envelope(self._read_object(EVENT_GET_EXTENDED_OUTPUT_DEVICES))
 
     def get_playlist_content(self, name: str | Playlist) -> PlaylistContent:
         """Read the tracks of a saved playlist.
@@ -756,6 +843,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_VOLUME, VOLUME_UP)
+
+    @property
+    def input_sources(self) -> InputSources:
+        """The input sources the Volumio instance exposes.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The input sources of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return InputSources.from_raw(self._read_object(EVENT_GET_INPUT_SOURCES))
 
     @property
     def is_muted(self) -> bool:
@@ -913,6 +1015,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._handlers.setdefault(event, []).append(handler)
         self._ensure_registered(event)
         self._log_debug(f'Added a handler of "{event}"')
+
+    @property
+    def output_devices(self) -> OutputDevices:
+        """The output devices the Volumio instance can play through.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The output devices of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return OutputDevices.from_envelope(self._read_object(EVENT_GET_OUTPUT_DEVICES))
 
     def pause(self) -> None:
         """Pause the playback.
@@ -1375,6 +1492,35 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_SAVE_ALARM, self._alarms_payload(alarms))
+
+    def set_audio_output_volume(self, output_id: str, volume: int) -> None:
+        """Set the volume of one audio output of the Volumio instance.
+
+        This is the volume of one output; :attr:`volume` is the volume of the host.
+
+        Args:
+            output_id: The identifier of the output
+            volume: The volume level, an integer between 0 and 100 (inclusive)
+
+        Raises:
+            ValueError: If the volume level is out of range
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = self._audio_output_payload(output_id, volume)
+        self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
+
+    def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
+        """Choose the output device the Volumio instance plays through.
+
+        Args:
+            device_id: The identifier of the device, from :attr:`output_devices`
+            mixer: The mixer to drive its volume with, left to the host when not given
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = self._output_device_payload(device_id, mixer)
+        self._emit(EVENT_SET_OUTPUT_DEVICES, payload)
 
     def set_sleep_timer(self, delay: timedelta | None) -> None:
         """Arm or disarm the sleep timer of the Volumio instance.
