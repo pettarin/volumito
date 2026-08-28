@@ -72,6 +72,9 @@ EVENT_DISABLE_AUDIO_OUTPUT = "disableAudioOutput"
 EVENT_ENABLE_AUDIO_OUTPUT = "enableAudioOutput"
 """The event enabling one audio output."""
 
+EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN = "enableDisableMyMusicPlugin"
+"""The event enabling or disabling a music source."""
+
 EVENT_ENQUEUE = "enqueue"
 """The event appending a saved playlist to the queue."""
 
@@ -83,6 +86,15 @@ EVENT_GET_AUDIO_OUTPUTS = "getAudioOutputs"
 
 EVENT_GET_BROWSE_SOURCES = "getBrowseSources"
 """The event asking for the sources the host can browse."""
+
+EVENT_GET_DEVICE_HW_UUID = "getDeviceHWUUID"
+"""The event asking for the hardware identifier of the host."""
+
+EVENT_GET_DEVICE_INFO = "getDeviceInfo"
+"""The event asking for the identity of the host."""
+
+EVENT_GET_DEVICE_NAME = "getDeviceName"
+"""The event asking for the name of the host."""
 
 EVENT_GET_EXTENDED_OUTPUT_DEVICES = "getExtendedOutputDevices"
 """The event asking for the output devices, with their details."""
@@ -102,6 +114,9 @@ EVENT_GET_MULTI_ROOM_DEVICES = "getMultiRoomDevices"
 EVENT_GET_MY_COLLECTION_STATS = "getMyCollectionStats"
 """The event asking for the statistics of the music collection."""
 
+EVENT_GET_MY_MUSIC_PLUGINS = "getMyMusicPlugins"
+"""The event asking for the music sources of the host."""
+
 EVENT_GET_OUTPUT_DEVICES = "getOutputDevices"
 """The event asking for the output devices of the host."""
 
@@ -110,6 +125,9 @@ EVENT_GET_PLAYLIST_CONTENT = "getPlaylistContent"
 
 EVENT_GET_QUEUE = "getQueue"
 """The event asking for the playback queue."""
+
+EVENT_GET_SHUTDOWN_OR_STANDBY_MODE = "getShutdownOrStandbyMode"
+"""The event asking how the host can be powered down."""
 
 EVENT_GET_SLEEP = "getSleep"
 """The event asking for the sleep timer of the host."""
@@ -192,6 +210,15 @@ EVENT_PUSH_BROWSE_SOURCES = "pushBrowseSources"
 EVENT_PUSH_CREATE_PLAYLIST = "pushCreatePlaylist"
 """The event confirming a playlist was created."""
 
+EVENT_PUSH_DEVICE_HW_UUID = "pushDeviceHWUUID"
+"""The event carrying the hardware identifier of the host."""
+
+EVENT_PUSH_DEVICE_INFO = "pushDeviceInfo"
+"""The event carrying the identity of the host."""
+
+EVENT_PUSH_DEVICE_NAME = "pushDeviceName"
+"""The event carrying the name of the host."""
+
 EVENT_PUSH_ENQUEUE = "pushEnqueue"
 """The event carrying the queue a playlist was appended to."""
 
@@ -212,6 +239,9 @@ EVENT_PUSH_MULTI_ROOM_DEVICES = "pushMultiRoomDevices"
 
 EVENT_PUSH_MY_COLLECTION_STATS = "pushMyCollectionStats"
 """The event carrying the statistics of the music collection."""
+
+EVENT_PUSH_MY_MUSIC_PLUGINS = "pushMyMusicPlugins"
+"""The event carrying the music sources of the host."""
 
 EVENT_PUSH_OUTPUT_DEVICES = "pushOutputDevices"
 """The event carrying the output devices of the host."""
@@ -237,6 +267,9 @@ EVENT_PUSH_SAVE_QUEUE_TO_PLAYLIST = "pushSaveQueueToPlaylist"
 EVENT_PUSH_SET_CONSUME = "pushSetConsume"
 """The event carrying the consume mode."""
 
+EVENT_PUSH_SHUTDOWN_OR_STANDBY_MODE = "pushShutdownOrStandbyMode"
+"""The event carrying the ways the host can be powered down."""
+
 EVENT_PUSH_SLEEP = "pushSleep"
 """The event carrying the sleep timer of the host."""
 
@@ -248,6 +281,9 @@ EVENT_PUSH_SYSTEM_INFO = "pushSystemInfo"
 
 EVENT_PUSH_SYSTEM_VERSION = "pushSystemVersion"
 """The event carrying the Volumio version the host runs."""
+
+EVENT_REBOOT = "reboot"
+"""The event restarting the host."""
 
 EVENT_REGENERATE_THUMBNAILS = "regenerateThumbnails"
 """The event rebuilding the thumbnails of the album art."""
@@ -273,6 +309,9 @@ EVENT_REPLACE_AND_PLAY = "replaceAndPlay"
 EVENT_REPLACE_AND_PLAY_CUE = "replaceAndPlayCue"
 """The event replacing the queue with a track of a cue sheet."""
 
+EVENT_RESCAN_DB = "rescanDb"
+"""The event rescanning the music collection from scratch."""
+
 EVENT_SAVE_ALARM = "saveAlarm"
 """The event replacing the whole set of alarms."""
 
@@ -285,11 +324,17 @@ EVENT_SEARCH = "search"
 EVENT_SEEK = "seek"
 """The event seeking to an absolute position."""
 
+EVENT_SERVICE_UPDATE_TRACKLIST = "serviceUpdateTracklist"
+"""The event refreshing the tracks of one music service."""
+
 EVENT_SET_AUDIO_OUTPUT_VOLUME = "setAudioOutputVolume"
 """The event setting the volume of one audio output."""
 
 EVENT_SET_CONSUME = "setConsume"
 """The event setting the consume mode."""
+
+EVENT_SET_DEVICE_NAME = "setDeviceName"
+"""The event renaming the host."""
 
 EVENT_SET_OUTPUT_DEVICES = "setOutputDevices"
 """The event choosing the output device of the host."""
@@ -303,6 +348,12 @@ EVENT_SET_REPEAT = "setRepeat"
 EVENT_SET_SLEEP = "setSleep"
 """The event arming or disarming the sleep timer."""
 
+EVENT_SHUTDOWN = "shutdown"
+"""The event powering the host off."""
+
+EVENT_STANDBY = "standby"
+"""The event putting the host on standby."""
+
 EVENT_STOP = "stop"
 """The event stopping the playback."""
 
@@ -314,6 +365,12 @@ EVENT_TOGGLE = "toggle"
 
 EVENT_UNMUTE = "unmute"
 """The event unmuting the volume."""
+
+EVENT_UPDATE_ALL_METADATA = "updateAllMetadata"
+"""The event refreshing the metadata of the whole collection."""
+
+EVENT_UPDATE_DB = "updateDb"
+"""The event updating the music collection."""
 
 EVENT_URI_FAVOURITES = "urifavourites"
 """The event carrying the favourite status of a URI."""
@@ -329,15 +386,20 @@ RESPONSE_EVENTS = {
     EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
     EVENT_GET_AUDIO_OUTPUTS: EVENT_PUSH_AUDIO_OUTPUTS,
     EVENT_GET_BROWSE_SOURCES: EVENT_PUSH_BROWSE_SOURCES,
+    EVENT_GET_DEVICE_HW_UUID: EVENT_PUSH_DEVICE_HW_UUID,
+    EVENT_GET_DEVICE_INFO: EVENT_PUSH_DEVICE_INFO,
+    EVENT_GET_DEVICE_NAME: EVENT_PUSH_DEVICE_NAME,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES: EVENT_PUSH_EXTENDED_OUTPUT_DEVICES,
     EVENT_GET_INPUT_SOURCES: EVENT_PUSH_INPUT_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS: EVENT_PUSH_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES: EVENT_PUSH_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS: EVENT_PUSH_MY_COLLECTION_STATS,
+    EVENT_GET_MY_MUSIC_PLUGINS: EVENT_PUSH_MY_MUSIC_PLUGINS,
     EVENT_GET_OUTPUT_DEVICES: EVENT_PUSH_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT: EVENT_PUSH_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE: EVENT_PUSH_QUEUE,
+    EVENT_GET_SHUTDOWN_OR_STANDBY_MODE: EVENT_PUSH_SHUTDOWN_OR_STANDBY_MODE,
     EVENT_GET_SLEEP: EVENT_PUSH_SLEEP,
     EVENT_GET_STATE: EVENT_PUSH_STATE,
     EVENT_GET_SYSTEM_INFO: EVENT_PUSH_SYSTEM_INFO,

@@ -27,13 +27,16 @@ from volumito.clients.models import (
     BrowseResults,
     BrowseSources,
     CollectionStatistics,
+    DeviceInfo,
     InputSources,
     MenuItems,
+    MusicSources,
     OutputDevices,
     PlayerState,
     Playlist,
     PlaylistContent,
     Playlists,
+    PowerModes,
     Queue,
     QueueTrack,
     SearchResults,
@@ -59,19 +62,25 @@ from volumito.clients.websocket.common import (
     EVENT_DELETE_PLAYLIST,
     EVENT_DISABLE_AUDIO_OUTPUT,
     EVENT_ENABLE_AUDIO_OUTPUT,
+    EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN,
     EVENT_ENQUEUE,
     EVENT_GET_ALARMS,
     EVENT_GET_AUDIO_OUTPUTS,
     EVENT_GET_BROWSE_SOURCES,
+    EVENT_GET_DEVICE_HW_UUID,
+    EVENT_GET_DEVICE_INFO,
+    EVENT_GET_DEVICE_NAME,
     EVENT_GET_EXTENDED_OUTPUT_DEVICES,
     EVENT_GET_INPUT_SOURCES,
     EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY,
     EVENT_GET_MENU_ITEMS,
     EVENT_GET_MULTI_ROOM_DEVICES,
     EVENT_GET_MY_COLLECTION_STATS,
+    EVENT_GET_MY_MUSIC_PLUGINS,
     EVENT_GET_OUTPUT_DEVICES,
     EVENT_GET_PLAYLIST_CONTENT,
     EVENT_GET_QUEUE,
+    EVENT_GET_SHUTDOWN_OR_STANDBY_MODE,
     EVENT_GET_SLEEP,
     EVENT_GET_STATE,
     EVENT_GET_SYSTEM_INFO,
@@ -91,6 +100,7 @@ from volumito.clients.websocket.common import (
     EVENT_PLAY_PLAYLIST,
     EVENT_PLAY_RADIO_FAVOURITES,
     EVENT_PREVIOUS,
+    EVENT_REBOOT,
     EVENT_REGENERATE_THUMBNAILS,
     EVENT_REMOVE_FROM_FAVOURITES,
     EVENT_REMOVE_FROM_PLAYLIST,
@@ -99,20 +109,27 @@ from volumito.clients.websocket.common import (
     EVENT_REMOVE_WEB_RADIO,
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
+    EVENT_RESCAN_DB,
     EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
     EVENT_SEARCH,
     EVENT_SEEK,
+    EVENT_SERVICE_UPDATE_TRACKLIST,
     EVENT_SET_AUDIO_OUTPUT_VOLUME,
     EVENT_SET_CONSUME,
+    EVENT_SET_DEVICE_NAME,
     EVENT_SET_OUTPUT_DEVICES,
     EVENT_SET_RANDOM,
     EVENT_SET_REPEAT,
     EVENT_SET_SLEEP,
+    EVENT_SHUTDOWN,
+    EVENT_STANDBY,
     EVENT_STOP,
     EVENT_SUPER_SEARCH,
     EVENT_TOGGLE,
     EVENT_UNMUTE,
+    EVENT_UPDATE_ALL_METADATA,
+    EVENT_UPDATE_DB,
     EVENT_VOLATILE_PLAY,
     EVENT_VOLUME,
     RESPONSE_EVENTS,
@@ -670,6 +687,55 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_DELETE_PLAYLIST, self._playlist_payload(name))
 
+    @property
+    def device_info(self) -> DeviceInfo:
+        """The identity of the Volumio instance.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The name and hardware identifier of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return DeviceInfo.from_raw(self._read_object(EVENT_GET_DEVICE_INFO))
+
+    @property
+    def device_name(self) -> str | None:
+        """The name of the Volumio instance.
+
+        Reading the property emits a fresh event; assigning to it renames the host.
+
+        Returns:
+            The name of the host, None when it reports none
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return DeviceInfo.from_raw(self._read_object(EVENT_GET_DEVICE_NAME)).name
+
+    @device_name.setter
+    def device_name(self, value: str) -> None:
+        self._emit(EVENT_SET_DEVICE_NAME, {"name": value})
+
+    @property
+    def device_uuid(self) -> str | None:
+        """The hardware identifier of the Volumio instance.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The hardware identifier of the host, None when it reports none
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return DeviceInfo.from_raw(self._read_object(EVENT_GET_DEVICE_HW_UUID)).uuid
+
     def disable_audio_output(self, output_id: str) -> None:
         """Disable one audio output of the Volumio instance.
 
@@ -964,6 +1030,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_MOVE_QUEUE, self._move_payload(source, target))
 
+    @property
+    def music_sources(self) -> MusicSources:
+        """The music source plugins of the Volumio instance.
+
+        Each access emits a fresh event.
+
+        Returns:
+            The music sources of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an array
+        """
+        sources = self._read_array(EVENT_GET_MY_MUSIC_PLUGINS)
+        return MusicSources.from_raw({"plugins": sources})
+
     def mute(self) -> None:
         """Mute the playback volume.
 
@@ -1161,6 +1243,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return Playlists.from_names(self._read_array(EVENT_LIST_PLAYLIST))
 
+    @property
+    def power_modes(self) -> PowerModes:
+        """The ways the Volumio instance can be powered down.
+
+        Each access emits a fresh event. A host that reports no standby mode answers
+        :meth:`standby` by powering off instead.
+
+        Returns:
+            The power modes of the host
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return PowerModes.from_raw(self._read_object(EVENT_GET_SHUTDOWN_OR_STANDBY_MODE))
+
     def previous(self) -> None:
         """Go back to the previous track in the queue.
 
@@ -1222,6 +1320,16 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         wanted = value if value is not None else not self.state.random
         self._emit(EVENT_SET_RANDOM, self._mode_payload(wanted))
+
+    def reboot(self) -> None:
+        """Restart the Volumio host.
+
+        The host drops the connection as it goes down; reconnect once it is back.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_REBOOT)
 
     def regenerate_thumbnails(self) -> None:
         """Rebuild the thumbnails of the album art of the collection.
@@ -1398,6 +1506,16 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return self._request(event, response_event, payload, timeout)
 
+    def rescan_library(self) -> None:
+        """Rescan the music collection of the Volumio instance from scratch.
+
+        This is the slower of the two: :meth:`update_library` only looks for changes.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_RESCAN_DB)
+
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         """Save the current queue as a saved playlist.
 
@@ -1509,6 +1627,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         payload = self._audio_output_payload(output_id, volume)
         self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
 
+    def set_music_source_enabled(self, name: str, enabled: bool) -> None:
+        """Enable or disable one music source of the Volumio instance.
+
+        Args:
+            name: The name of the source, from :attr:`music_sources`
+            enabled: True to enable the source, False to disable it
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        payload = {"name": name, "enabled": enabled}
+        self._emit(EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN, payload)
+
     def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
         """Choose the output device the Volumio instance plays through.
 
@@ -1539,6 +1670,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
 
+    def shutdown(self) -> None:
+        """Power the Volumio host off.
+
+        The host drops the connection as it goes down, and does not come back on its
+        own.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SHUTDOWN)
+
     @property
     def sleep_timer(self) -> SleepTimer:
         """The sleep timer of the Volumio instance.
@@ -1554,6 +1696,16 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not an object
         """
         return SleepTimer.from_raw(self._read_object(EVENT_GET_SLEEP))
+
+    def standby(self) -> None:
+        """Put the Volumio host on standby.
+
+        A host whose :attr:`power_modes` report no standby mode powers off instead.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_STANDBY)
 
     @property
     def state(self) -> PlayerState:
@@ -1649,6 +1801,36 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_UNMUTE)
+
+    def update_all_metadata(self) -> None:
+        """Refresh the metadata of the whole collection of the Volumio instance.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_UPDATE_ALL_METADATA)
+
+    def update_library(self, uri: str | None = None) -> None:
+        """Update the music collection of the Volumio instance, looking for changes.
+
+        Args:
+            uri: The URI to update, the whole collection when not given
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_UPDATE_DB, uri)
+
+    def update_service_tracklist(self, service: str) -> None:
+        """Refresh the tracks one music service of the Volumio instance offers.
+
+        Args:
+            service: The name of the service to refresh
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_SERVICE_UPDATE_TRACKLIST, service)
 
     @property
     def volume(self) -> int:

@@ -1512,3 +1512,131 @@ class TestVolumioAsyncWebSocketClientAudioOutputs:
             await client.set_audio_output_volume("0", level)
 
         assert fake.calls == []
+
+
+class TestVolumioAsyncWebSocketClientLibrary:
+    """Scanning the collection and choosing the music sources."""
+
+    async def test_music_sources(self, mocker: MockerFixture):
+        """The sources are answered as a bare array, which the model wraps."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getMyMusicPlugins": (
+                    "pushMyMusicPlugins",
+                    [{"name": "upnp", "prettyName": "UPNP Renderer", "enabled": True}],
+                )
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        sources = (await client.get_music_sources())
+
+        assert [source.name for source in sources] == ["upnp"]
+        assert sources[0].pretty_name == "UPNP Renderer"
+
+    async def test_set_music_source_enabled(self, mocker: MockerFixture):
+        """A source is enabled or disabled by name."""
+        client, fake = await _client(mocker)
+
+        await client.set_music_source_enabled("upnp", True)
+
+        assert fake.calls == [
+            _Call("enableDisableMyMusicPlugin", {"name": "upnp", "enabled": True})
+        ]
+
+    async def test_the_scan_commands(self, mocker: MockerFixture):
+        """The scans carry nothing, or the URI or service they are scoped to."""
+        client, fake = await _client(mocker)
+
+        await client.rescan_library()
+        await client.update_all_metadata()
+        await client.update_library()
+        await client.update_library("mpd://NAS/Music")
+        await client.update_service_tracklist("qobuz")
+
+        assert fake.calls == [
+            _Call("rescanDb", None),
+            _Call("updateAllMetadata", None),
+            _Call("updateDb", None),
+            _Call("updateDb", "mpd://NAS/Music"),
+            _Call("serviceUpdateTracklist", "qobuz"),
+        ]
+
+
+class TestVolumioAsyncWebSocketClientPower:
+    """The identity of the host and the ways it can be powered down."""
+
+    async def test_device_info(self, mocker: MockerFixture):
+        """The identity carries the name and the hardware identifier."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getDeviceInfo": ("pushDeviceInfo", {"uuid": "5dc4", "name": "kitchen"})}
+        )
+        client, _ = await _client(mocker, fake)
+
+        info = (await client.get_device_info())
+
+        assert info.name == "kitchen"
+        assert info.uuid == "5dc4"
+
+    async def test_device_name(self, mocker: MockerFixture):
+        """The name is read on its own, and assigning to it renames the host."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getDeviceName": ("pushDeviceName", {"name": "kitchen"})}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert await client.get_device_name() == "kitchen"
+
+        await client.set_device_name("living room")
+
+        assert fake.calls[-1] == _Call("setDeviceName", {"name": "living room"})
+
+    async def test_device_uuid(self, mocker: MockerFixture):
+        """The hardware identifier is read on its own."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getDeviceHWUUID": ("pushDeviceHWUUID", {"uuid": "5dc4-ca49"})}
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert await client.get_device_uuid() == "5dc4-ca49"
+
+    async def test_a_host_reporting_no_name(self, mocker: MockerFixture):
+        """A host answering without the field reports None rather than failing."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getDeviceName": ("pushDeviceName", {}),
+                "getDeviceHWUUID": ("pushDeviceHWUUID", {}),
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        assert await client.get_device_name() is None
+        assert await client.get_device_uuid() is None
+
+    async def test_power_modes(self, mocker: MockerFixture):
+        """The power modes are read from their aliases."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getShutdownOrStandbyMode": (
+                    "pushShutdownOrStandbyMode",
+                    {"hasPowerOffMode": True, "hasStandbyMode": False},
+                )
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        modes = (await client.get_power_modes())
+
+        assert modes.has_power_off_mode is True
+        assert modes.has_standby_mode is False
+
+    @pytest.mark.parametrize(
+        ("method", "event"),
+        [("reboot", "reboot"), ("shutdown", "shutdown"), ("standby", "standby")],
+    )
+    async def test_the_power_commands(self, mocker: MockerFixture, method, event):
+        """Each power command carries nothing and answers nothing."""
+        client, fake = await _client(mocker)
+
+        assert await getattr(client, method)() is None
+        assert fake.calls == [_Call(event, None)]
