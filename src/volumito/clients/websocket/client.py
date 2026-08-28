@@ -1368,6 +1368,10 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         Unlike :meth:`search`, which the sources answer one by one, this asks the host
         to search them together.
 
+        The search is served by the ``metavolumio`` plugin (Volumio Premium), as the
+        story queries of the REST API clients are: a host without it answers an empty
+        result rather than an error.
+
         Args:
             query: The text to search for
 
