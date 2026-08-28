@@ -18,7 +18,8 @@ Rough plan, broken down by milestone:
 
 ## v0.2.0
 
-- Library: add async REST API client
+- Released
+  - Library: add async REST API client
 
 ## v0.3.0
 
