@@ -693,7 +693,9 @@ so their fields are typed and validated. A few things worth knowing:
 - **Certain models offer additional properties** than the original response.
   For example `PlayerState` has the `is_playing`, `is_paused`,
   and `is_stopped` properties,
-  computed from the state already fetched.
+  computed from the state already fetched,
+  unlike the client properties of the same name,
+  which each query the Volumio host again.
 - **A queue track knows its position.**
   The Volumio API reports the queue as an array,
   so `Queue` gives each of its tracks the `position` it holds
