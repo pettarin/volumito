@@ -19,6 +19,7 @@ This document describes how to use `volumito` as a Python library.
   - [Generic Emit And Request](#generic-emit-and-request)
   - [Differences From The REST API Clients](#differences-from-the-rest-api-clients)
 - [Response Models](#response-models)
+- [Logging](#logging)
 - [Reference](#reference)
 
 
@@ -280,24 +281,24 @@ are coroutine methods here:
 - the predicates keep their names;
 - the assignable properties take a `set_` prefix.
 
-| Synchronous                     | Asynchronous                               |
-| ------------------------------- | ------------------------------------------ |
-| `client.state`                  | `await client.get_state()`                 |
-| `client.queue`                  | `await client.get_queue()`                 |
-| `client.queue_status`           | `await client.get_queue_status()`          |
-| `client.playlists`              | `await client.get_playlists()`             |
-| `client.notifications`          | `await client.get_notifications()`         |
-| `client.system_info`            | `await client.get_system_info()`           |
-| `client.system_version`         | `await client.get_system_version()`        |
-| `client.collection_statistics`  | `await client.get_collection_statistics()` |
-| `client.zones`                  | `await client.get_zones()`                 |
-| `client.volume`                 | `await client.get_volume()`                |
-| `client.volume = 50`            | `await client.set_volume(50)`              |
-| `client.seek`                   | `await client.get_seek()`                  |
-| `client.seek = 102`             | `await client.set_seek(102)`               |
-| `client.is_playing`             | `await client.is_playing()`                |
-| `client.has_next`               | `await client.has_next()`                  |
-| `client.browse(uri)`            | `await client.browse(uri)`                 |
+| Synchronous                    | Asynchronous                               |
+| ------------------------------ | ------------------------------------------ |
+| `client.state`                 | `await client.get_state()`                 |
+| `client.queue`                 | `await client.get_queue()`                 |
+| `client.queue_status`          | `await client.get_queue_status()`          |
+| `client.playlists`             | `await client.get_playlists()`             |
+| `client.notifications`         | `await client.get_notifications()`         |
+| `client.system_info`           | `await client.get_system_info()`           |
+| `client.system_version`        | `await client.get_system_version()`        |
+| `client.collection_statistics` | `await client.get_collection_statistics()` |
+| `client.zones`                 | `await client.get_zones()`                 |
+| `client.volume`                | `await client.get_volume()`                |
+| `client.volume = 50`           | `await client.set_volume(50)`              |
+| `client.seek`                  | `await client.get_seek()`                  |
+| `client.seek = 102`            | `await client.set_seek(102)`               |
+| `client.is_playing`            | `await client.is_playing()`                |
+| `client.has_next`              | `await client.has_next()`                  |
+| `client.browse(uri)`           | `await client.browse(uri)`                 |
 
 > [!WARNING]
 > Be careful with the `volume` and `seek` setters:
@@ -602,101 +603,120 @@ that cannot be sent, and for a read the host does not answer in time.
 
 Every query returns a model instead of a raw dictionary:
 
-| Client member                                       | Model                               |
-| --------------------------------------------------- | ----------------------------------- |
-| `add_to_queue`, `replace_queue_and_play`            | `CommandResponse`                   |
-| `browse`                                            | `BrowseResults`                     |
-| `collection_statistics`                             | `CollectionStatistics`              |
-| `get_album_credits`, `get_story`                    | `Story`                             |
-| `notifications`                                     | `Notifications` (of `Notification`) |
-| `NotificationListener.listen`                       | `PushNotification`                  |
-| `pause`, `play`, `stop`, and the other commands     | `CommandResponse`                   |
-| `ping`                                              | `str`                               |
-| `playlists`                                         | `Playlists` (of `Playlist`)         |
-| `queue`                                             | `Queue` (of `QueueTrack`)           |
-| `register_notification`, `unregister_notification`  | `SuccessResponse`                   |
-| `search`                                            | `SearchResults`                     |
-| `state`                                             | `PlayerState`                       |
-| `system_info`                                       | `SystemInfo`                        |
-| `system_version`                                    | `SystemVersion`                     |
-| `zones`                                             | `Zones` (of `Zone`)                 |
+| Client member                                      | Model                               |
+| -------------------------------------------------- | ----------------------------------- |
+| `add_to_queue`, `replace_queue_and_play`           | `CommandResponse`                   |
+| `browse`                                           | `BrowseResults`                     |
+| `collection_statistics`                            | `CollectionStatistics`              |
+| `get_album_credits`, `get_story`                   | `Story`                             |
+| `notifications`                                    | `Notifications` (of `Notification`) |
+| `NotificationListener.listen`                      | `PushNotification`                  |
+| `pause`, `play`, `stop`, and the other commands    | `CommandResponse`                   |
+| `ping`                                             | `str`                               |
+| `playlists`                                        | `Playlists` (of `Playlist`)         |
+| `queue`                                            | `Queue` (of `QueueTrack`)           |
+| `register_notification`, `unregister_notification` | `SuccessResponse`                   |
+| `search`                                           | `SearchResults`                     |
+| `state`                                            | `PlayerState`                       |
+| `system_info`                                      | `SystemInfo`                        |
+| `system_version`                                   | `SystemVersion`                     |
+| `zones`                                            | `Zones` (of `Zone`)                 |
+
+> [!NOTE]
+> The table above names the members of the synchronous client;
+> the asynchronous client returns the same models from the members named in
+> [Differences Between Synchronous And Asynchronous Clients](#differences-between-synchronous-and-asynchronous-clients).
 
 The WebSocket clients return the same models, with two differences: their commands
 return `None` rather than a `CommandResponse`, since a Volumio host answers a command
-with nothing at all, and `emit` and `request` hand back what the host pushed, untouched.
+with nothing at all, and `emit` and `request` hand back what the host pushed, unchanged.
 
-Their own members return these:
+Moreover, the WebSocket clients provide additional methods
+than the REST API clients, and thus in turn additional models:
 
-| Client member                                        | Model                                    |
-| ---------------------------------------------------- | ---------------------------------------- |
-| `alarms`                                             | `Alarms` (of `Alarm`)                    |
-| `audio_outputs`                                      | `AudioOutputs` (of `AudioOutput`)        |
-| `automatic_update_enabled`                           | `bool`                                   |
-| `backgrounds`                                        | `Backgrounds` (of `Background`)          |
-| `backup`, `discover_network_shares`                  | `dict`                                   |
-| `browse_sources`                                     | `BrowseSources` (of `BrowseSource`)      |
-| `device_info`                                        | `DeviceInfo`                             |
-| `device_name`, `device_uuid`, `timezone`             | `str`                                    |
-| `dsp_config`, `get_plugin_config`                    | `UiConfig`                               |
-| `experience_settings`                                | `ExperienceSettings`                     |
-| `get_playlist_content`                               | `PlaylistContent` (of `QueueTrack`)      |
-| `goto`, `last_browse`                                | `BrowseResults`                          |
-| `infinity_playback`                                  | `InfinityPlayback`                       |
-| `input_sources`                                      | `InputSources`                           |
-| `installed_plugins`, `manage_plugin`                 | `Plugins` (of `Plugin`)                  |
-| `languages`                                          | `Languages` (of `Language`)              |
-| `menu_items`                                         | `MenuItems` (of `MenuItem`)              |
-| `multiroom`, `set_multiroom`                         | `Multiroom`                              |
-| `music_sources`                                      | `MusicSources` (of `MusicSource`)        |
-| `network_info`                                       | `NetworkInfo` (of `NetworkInterface`)    |
-| `output_devices`, `extended_output_devices`          | `OutputDevices` (of `OutputDevice`)      |
-| `power_modes`                                        | `PowerModes`                             |
-| `privacy_settings`                                   | `PrivacySettings`                        |
-| `shares`, `get_share`                                | `Shares` (of `Share`)                    |
-| `sleep_timer`                                        | `SleepTimer`                             |
-| `super_search`                                       | `SearchResults`                          |
-| `available_timezones`                                | `Timezones`                              |
-| `ui_settings`                                        | `UiSettings`                             |
-| `updater_channel`                                    | `UpdaterChannel`                         |
-| `usb_drives`                                         | `UsbDrives` (of `UsbDrive`)              |
-| `wireless_networks`, `wireless_networks_cache`       | `WirelessNetworks` (of `WirelessNetwork`)|
+| Client member                                  | Model                                     |
+| ---------------------------------------------- | ----------------------------------------- |
+| `alarms`                                       | `Alarms` (of `Alarm`)                     |
+| `audio_outputs`                                | `AudioOutputs` (of `AudioOutput`)         |
+| `automatic_update_enabled`                     | `bool`                                    |
+| `backgrounds`                                  | `Backgrounds` (of `Background`)           |
+| `backup`, `discover_network_shares`            | `dict`                                    |
+| `browse_sources`                               | `BrowseSources` (of `BrowseSource`)       |
+| `device_info`                                  | `DeviceInfo`                              |
+| `device_name`, `device_uuid`, `timezone`       | `str`                                     |
+| `dsp_config`, `get_plugin_config`              | `UiConfig`                                |
+| `experience_settings`                          | `ExperienceSettings`                      |
+| `get_playlist_content`                         | `PlaylistContent` (of `QueueTrack`)       |
+| `goto`, `last_browse`                          | `BrowseResults`                           |
+| `infinity_playback`                            | `InfinityPlayback`                        |
+| `input_sources`                                | `InputSources`                            |
+| `installed_plugins`, `manage_plugin`           | `Plugins` (of `Plugin`)                   |
+| `languages`                                    | `Languages` (of `Language`)               |
+| `menu_items`                                   | `MenuItems` (of `MenuItem`)               |
+| `multiroom`, `set_multiroom`                   | `Multiroom`                               |
+| `music_sources`                                | `MusicSources` (of `MusicSource`)         |
+| `network_info`                                 | `NetworkInfo` (of `NetworkInterface`)     |
+| `output_devices`, `extended_output_devices`    | `OutputDevices` (of `OutputDevice`)       |
+| `power_modes`                                  | `PowerModes`                              |
+| `privacy_settings`                             | `PrivacySettings`                         |
+| `shares`, `get_share`                          | `Shares` (of `Share`)                     |
+| `sleep_timer`                                  | `SleepTimer`                              |
+| `super_search`                                 | `SearchResults`                           |
+| `available_timezones`                          | `Timezones`                               |
+| `ui_settings`                                  | `UiSettings`                              |
+| `updater_channel`                              | `UpdaterChannel`                          |
+| `usb_drives`                                   | `UsbDrives` (of `UsbDrive`)               |
+| `wireless_networks`, `wireless_networks_cache` | `WirelessNetworks` (of `WirelessNetwork`) |
 
-The models are [pydantic](https://docs.pydantic.dev/) models, so their fields are
-typed and validated. A few things worth knowing:
+All the models are [pydantic](https://docs.pydantic.dev/) models,
+so their fields are typed and validated. A few things worth knowing:
 
-- **The raw payload is always kept.** Every model has a `raw` attribute holding the
-  JSON payload it was parsed from, including the keys the model does not describe:
-  the response object for most models, the array of names for `Playlists` and of URLs
-  for `Notifications` (and the name or the URL itself for each `Playlist` or
-  `Notification`), and the whole response envelope for `Story`.
-- **Field names are snake_case**, with the Volumio names as aliases: for example
-  `state.track_type` for `trackType`, `track.volume_number` for `volumeNumber`, and
-  `zone.is_self` for `isSelf`.
-- **Every field is optional.** Volumio omits the fields that do not apply to what is
-  playing (a web radio has no album, for instance), so a field that the host did not
-  report is `None`.
-- **An unexpected value never breaks a response.** A value that does not fit its
-  field is ignored (the attribute stays `None`) instead of failing the whole
-  response; that value is still readable in `raw`.
-- `PlayerState` also offers the `is_playing`, `is_paused`, and `is_stopped` flags,
-  computed from the state already fetched (unlike the client properties of the same
-  name, which each perform a fresh request).
-- **A queue track knows its position.** The Volumio API reports the queue as an array,
-  so `Queue` gives each of its tracks the `position` it holds (starting from zero);
-  `client.play(queue[3])` plays it. A `QueueTrack` parsed on its own has no position.
-  Likewise, `client.play_playlist(playlist)` accepts one of the saved playlists.
+- **The raw payload is always kept.**
+  Every model has a `raw` attribute holding the JSON payload
+  it was parsed from, including the keys the model does not describe:
+  the response object for most models, the array of names for `Playlists`
+  and of URLs for `Notifications`, the name or the URL itself
+  for each `Playlist` or `Notification`, and the whole response envelope
+  for `Story`.
+- **Field names are snake_case**, with the Volumio names as aliases.
+  For example `state.track_type` for `trackType`,
+  `track.volume_number` for `volumeNumber`,
+  and `zone.is_self` for `isSelf`.
+- **Every field is optional.**
+  Volumio omits the fields that do not apply to what is playing
+  (a web radio has no album, for instance),
+  so a field that the host did not report is `None`.
+- **An unexpected value never breaks a response.**
+  A value that does not fit its field is ignored
+  (the attribute stays `None`) instead of failing the whole response;
+  that value is still readable in `raw`.
+- **Certain models offer additional properties** than the original response.
+  For example `PlayerState` has the `is_playing`, `is_paused`,
+  and `is_stopped` properties,
+  computed from the state already fetched.
+- **A queue track knows its position.**
+  The Volumio API reports the queue as an array,
+  so `Queue` gives each of its tracks the `position` it holds
+  (starting from zero); `client.play(queue[index])` plays it.
+  A `QueueTrack` parsed on its own has no position.
+  Likewise, `client.play_playlist(playlist)` accepts
+  one of the saved playlists.
+- **Units follow the Volumio API.**
+  For example, `PlayerState.seek` is in **milliseconds**, while
+  `duration` and the `seek` property of the client are in **seconds**.
 
-Units follow the Volumio API: `PlayerState.seek` is in **milliseconds**, while
-`duration` and the `seek` property of the client are in **seconds**.
 
-The library logs under the standard `volumito` logger, which carries a
-`logging.NullHandler` by default: attach your own handler
-(`logging.getLogger("volumito").addHandler(...)`) to see its records.
-The clients also accept a `logger` argument, for callers who manage their own.
+## Logging
 
-The table above names the members of the synchronous client;
-the asynchronous client returns the same models from the members named in
-[Differences Between Synchronous And Asynchronous Clients](#differences-between-synchronous-and-asynchronous-clients).
+The library logs under the standard `volumito` logger,
+which carries a `logging.NullHandler` by default:
+attach your own handler
+(`logging.getLogger("volumito").addHandler(...)`)
+to see its records.
+
+The clients also accept a `logger` argument,
+for callers who manage their own logger instance
+and want to pass the latter in.
 
 
 ## Reference
@@ -707,3 +727,4 @@ the asynchronous client returns the same models from the members named in
 
 The Python reference documentation is published
 [here](https://www.albertopettarin.it/volumito/docs/).
+
