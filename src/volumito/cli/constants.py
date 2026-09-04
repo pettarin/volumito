@@ -5,29 +5,41 @@
 """
 
 API_CLIENTS = [
-    "rest_synchronous",
-    "rest_asynchronous",
-    "websocket_synchronous",
-    "websocket_asynchronous",
+    "synchronous_rest",
+    "asynchronous_rest",
+    "synchronous_websocket",
+    "asynchronous_websocket",
 ]
 """Accepted values of the -C/--api-client option, in the order --help lists them."""
 
 API_CLIENTS_WEBSOCKET = [
-    "websocket_asynchronous",
-    "websocket_synchronous",
+    "asynchronous_websocket",
+    "synchronous_websocket",
 ]
 """The -C/--api-client values selecting a WebSocket API client."""
 
-API_CLIENT_REST_ASYNCHRONOUS = "rest_asynchronous"
+API_CLIENT_ASYNCHRONOUS_REST = "asynchronous_rest"
 """The -C/--api-client value selecting the asynchronous REST API client."""
 
-API_CLIENT_REST_SYNCHRONOUS = "rest_synchronous"
-"""The -C/--api-client value selecting the synchronous REST API client."""
-
-API_CLIENT_WEBSOCKET_ASYNCHRONOUS = "websocket_asynchronous"
+API_CLIENT_ASYNCHRONOUS_WEBSOCKET = "asynchronous_websocket"
 """The -C/--api-client value selecting the asynchronous WebSocket API client."""
 
-API_CLIENT_WEBSOCKET_SYNCHRONOUS = "websocket_synchronous"
+API_CLIENT_SHORT_FORMS = {
+    "sync_rest": "synchronous_rest",
+    "sr": "synchronous_rest",
+    "async_rest": "asynchronous_rest",
+    "ar": "asynchronous_rest",
+    "sync_websocket": "synchronous_websocket",
+    "sw": "synchronous_websocket",
+    "async_websocket": "asynchronous_websocket",
+    "aw": "asynchronous_websocket",
+}
+"""The short forms accepted by the -C/--api-client option, mapped to the values they stand for."""
+
+API_CLIENT_SYNCHRONOUS_REST = "synchronous_rest"
+"""The -C/--api-client value selecting the synchronous REST API client."""
+
+API_CLIENT_SYNCHRONOUS_WEBSOCKET = "synchronous_websocket"
 """The -C/--api-client value selecting the synchronous WebSocket API client."""
 
 BROWSE_KINDS_ERROR = (
@@ -36,7 +48,7 @@ BROWSE_KINDS_ERROR = (
 )
 """Error message when "collection browse" is asked for two different kinds of result."""
 
-DEFAULT_API_CLIENT = "rest_synchronous"
+DEFAULT_API_CLIENT = "synchronous_rest"
 """Default value of the -C/--api-client option."""
 
 DEFAULT_MANIFEST_FILE = "{output_directory}/manifest.json"

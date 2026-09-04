@@ -459,7 +459,7 @@ class _RESTFallback:
         if self._factory is None:
             raise UnsupportedOperationError(
                 f"The {self._owner.description} does not offer {operation}: use "
-                "--api-client rest_synchronous or rest_asynchronous, "
+                "--api-client synchronous_rest or asynchronous_rest, "
                 "or --allow-fallback-to-rest-api"
             )
         if self._client is None:
@@ -630,7 +630,7 @@ class SyncAPIClient[C: VolumioRESTAPIClient | VolumioWebSocketClient](APIClient)
         return self._client.zones
 
 
-class RESTSyncAPIClient(SyncAPIClient[VolumioRESTAPIClient]):
+class SyncRESTAPIClient(SyncAPIClient[VolumioRESTAPIClient]):
     """The adapter of the synchronous REST API client, which needs no connection."""
 
     DESCRIPTION = "synchronous REST API client"
@@ -671,7 +671,7 @@ class RESTSyncAPIClient(SyncAPIClient[VolumioRESTAPIClient]):
         return self._client.unregister_notification(url)
 
 
-class WebSocketSyncAPIClient(SyncAPIClient[VolumioWebSocketClient]):
+class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     """The adapter of the synchronous WebSocket API client.
 
     The client connects on :meth:`open` and disconnects on :meth:`close`. The offset of
@@ -956,7 +956,7 @@ class AsyncAPIClient[C: VolumioAsyncRESTAPIClient | VolumioAsyncWebSocketClient]
         return self._run(self._client.get_zones())
 
 
-class RESTAsyncAPIClient(AsyncAPIClient[VolumioAsyncRESTAPIClient]):
+class AsyncRESTAPIClient(AsyncAPIClient[VolumioAsyncRESTAPIClient]):
     """The adapter of the asynchronous REST API client.
 
     The client opens its session on the first request and closes it on :meth:`close`.
@@ -1000,7 +1000,7 @@ class RESTAsyncAPIClient(AsyncAPIClient[VolumioAsyncRESTAPIClient]):
         return self._run(self._client.unregister_notification(url))
 
 
-class WebSocketAsyncAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
+class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     """The adapter of the asynchronous WebSocket API client.
 
     The client connects on :meth:`open` and disconnects on :meth:`close`. The offset of

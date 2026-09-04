@@ -472,7 +472,7 @@ class TestDefaultConfigurationTemplate:
             "volumio": {
                 "host": "volumio.local",
                 "scheme": "http",
-                "api-client": "rest_synchronous",
+                "api-client": "synchronous_rest",
                 "allow-fallback-to-rest-api": False,
                 "rest-api-port": 3000,
                 "websocket-port": 3000,

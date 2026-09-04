@@ -22,11 +22,11 @@ from packaging.version import InvalidVersion, Version
 from volumito import __version__
 from volumito.cli.api_client import (
     APIClient,
-    RESTAsyncAPIClient,
-    RESTSyncAPIClient,
+    AsyncRESTAPIClient,
+    AsyncWebSocketAPIClient,
+    SyncRESTAPIClient,
+    SyncWebSocketAPIClient,
     UnsupportedOperationError,
-    WebSocketAsyncAPIClient,
-    WebSocketSyncAPIClient,
 )
 from volumito.cli.configuration import (
     build_click_default_map,
@@ -35,10 +35,12 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, warning
 from volumito.cli.constants import (
-    API_CLIENT_REST_ASYNCHRONOUS,
-    API_CLIENT_REST_SYNCHRONOUS,
-    API_CLIENT_WEBSOCKET_ASYNCHRONOUS,
-    API_CLIENT_WEBSOCKET_SYNCHRONOUS,
+    API_CLIENT_ASYNCHRONOUS_REST,
+    API_CLIENT_ASYNCHRONOUS_WEBSOCKET,
+    API_CLIENT_SHORT_FORMS,
+    API_CLIENT_SYNCHRONOUS_REST,
+    API_CLIENT_SYNCHRONOUS_WEBSOCKET,
+    API_CLIENTS,
     API_CLIENTS_WEBSOCKET,
     DEFAULT_API_CLIENT,
     DEFAULT_MANIFEST_FILE,
@@ -132,6 +134,37 @@ class AliasedGroup(click.Group):
                 raise click.UsageError(problem)
             return None
         return resolve_command_path(self, ctx, target)
+
+
+class APIClientParamType(click.ParamType):
+    """Click parameter type for the API client.
+
+    Accepts the values of ``API_CLIENTS``, and the short forms of
+    ``API_CLIENT_SHORT_FORMS``, which convert to the value they stand for; anything
+    else is a usage error.
+    """
+
+    name = "api_client"
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> str:
+        text = str(value)
+        if text in API_CLIENTS:
+            return text
+        if text in API_CLIENT_SHORT_FORMS:
+            return API_CLIENT_SHORT_FORMS[text]
+        accepted = ", ".join(API_CLIENTS)
+        short_forms = ", ".join(API_CLIENT_SHORT_FORMS)
+        self.fail(
+            f"{text!r} must be one of {accepted} (or the short forms {short_forms})", param, ctx
+        )
+
+    def get_metavar(self, param: click.Parameter, ctx: click.Context) -> str:
+        return f"[{'|'.join(API_CLIENTS)}]"
 
 
 class OnOffParamType(click.ParamType):
@@ -687,33 +720,33 @@ def create_client(
         ValueError: If the name is not one of the -C/--api-client values
     """
 
-    def rest_asynchronous() -> APIClient:
-        return RESTAsyncAPIClient(
+    def asynchronous_rest() -> APIClient:
+        return AsyncRESTAPIClient(
             VolumioAsyncRESTAPIClient(
                 host_configuration, rest_api_timeout, rest_api_timeout_slow_endpoints, LOGGER
             )
         )
 
-    def rest_synchronous() -> APIClient:
-        return RESTSyncAPIClient(
+    def synchronous_rest() -> APIClient:
+        return SyncRESTAPIClient(
             VolumioRESTAPIClient(
                 host_configuration, rest_api_timeout, rest_api_timeout_slow_endpoints, LOGGER
             )
         )
 
-    if api_client == API_CLIENT_REST_SYNCHRONOUS:
-        return rest_synchronous()
-    if api_client == API_CLIENT_REST_ASYNCHRONOUS:
-        return rest_asynchronous()
-    if api_client == API_CLIENT_WEBSOCKET_SYNCHRONOUS:
-        return WebSocketSyncAPIClient(
+    if api_client == API_CLIENT_SYNCHRONOUS_REST:
+        return synchronous_rest()
+    if api_client == API_CLIENT_ASYNCHRONOUS_REST:
+        return asynchronous_rest()
+    if api_client == API_CLIENT_SYNCHRONOUS_WEBSOCKET:
+        return SyncWebSocketAPIClient(
             VolumioWebSocketClient(host_configuration, websocket_timeout, LOGGER),
-            fallback=rest_synchronous if allow_fallback_to_rest_api else None,
+            fallback=synchronous_rest if allow_fallback_to_rest_api else None,
         )
-    if api_client == API_CLIENT_WEBSOCKET_ASYNCHRONOUS:
-        return WebSocketAsyncAPIClient(
+    if api_client == API_CLIENT_ASYNCHRONOUS_WEBSOCKET:
+        return AsyncWebSocketAPIClient(
             VolumioAsyncWebSocketClient(host_configuration, websocket_timeout, LOGGER),
-            fallback=rest_asynchronous if allow_fallback_to_rest_api else None,
+            fallback=asynchronous_rest if allow_fallback_to_rest_api else None,
         )
     raise ValueError(f"Unknown API client {api_client!r}")
 

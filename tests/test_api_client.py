@@ -14,11 +14,11 @@ from volumito.cli.api_client import (
     EVENT_LOOP_THREAD_NAME,
     APIClient,
     AsyncAPIClient,
-    RESTAsyncAPIClient,
-    RESTSyncAPIClient,
+    AsyncRESTAPIClient,
+    AsyncWebSocketAPIClient,
+    SyncRESTAPIClient,
+    SyncWebSocketAPIClient,
     UnsupportedOperationError,
-    WebSocketAsyncAPIClient,
-    WebSocketSyncAPIClient,
 )
 from volumito.clients import (
     BrowseResults,
@@ -132,7 +132,7 @@ def _loop_threads() -> list[threading.Thread]:
 class TestSyncAdapters:
     """Test cases for the adapters of the synchronous clients."""
 
-    @pytest.mark.parametrize("adapter_class", [RESTSyncAPIClient, WebSocketSyncAPIClient])
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, SyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "args", "kwargs"), METHODS)
     def test_method_forwarded(self, adapter_class, name, args, kwargs):
         """A shared method calls the one of the client with the same arguments."""
@@ -142,7 +142,7 @@ class TestSyncAdapters:
         assert getattr(adapter_class(client), name)(*args, **kwargs) == "outcome"
         getattr(client, name).assert_called_once_with(*args, **kwargs)
 
-    @pytest.mark.parametrize("adapter_class", [RESTSyncAPIClient, WebSocketSyncAPIClient])
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, SyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "_async_name"), PROPERTIES)
     def test_property_forwarded(self, adapter_class, name, _async_name):
         """A shared property reads the one of the client."""
@@ -152,7 +152,7 @@ class TestSyncAdapters:
         assert getattr(adapter_class(client), name) == "value"
         prop.assert_called_once_with()
 
-    @pytest.mark.parametrize("adapter_class", [RESTSyncAPIClient, WebSocketSyncAPIClient])
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, SyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "_async_name"), SETTERS)
     def test_setter_forwarded(self, adapter_class, name, _async_name):
         """Assigning a property assigns the one of the client."""
@@ -168,7 +168,7 @@ class TestSyncAdapters:
         client = Mock()
         getattr(client, name).return_value = "outcome"
 
-        assert getattr(RESTSyncAPIClient(client), name)(*args, **kwargs) == "outcome"
+        assert getattr(SyncRESTAPIClient(client), name)(*args, **kwargs) == "outcome"
         getattr(client, name).assert_called_once_with(*args, **kwargs)
 
     def test_rest_notifications_forwarded(self):
@@ -176,13 +176,13 @@ class TestSyncAdapters:
         client = Mock()
         _property(client, "notifications", "urls")
 
-        assert RESTSyncAPIClient(client).notifications == "urls"
+        assert SyncRESTAPIClient(client).notifications == "urls"
 
     def test_rest_story_forwards_only_the_entities_given(self):
         """A story query passes the client only the entities it was given."""
         client = Mock()
 
-        RESTSyncAPIClient(client).get_story(artist="b")
+        SyncRESTAPIClient(client).get_story(artist="b")
 
         client.get_story.assert_called_once_with(artist="b")
 
@@ -190,7 +190,7 @@ class TestSyncAdapters:
         """The REST adapter has nothing to open nor to close."""
         client = Mock()
 
-        with RESTSyncAPIClient(client) as adapter:
+        with SyncRESTAPIClient(client) as adapter:
             adapter.open()
         adapter.close()
 
@@ -200,7 +200,7 @@ class TestSyncAdapters:
         """The WebSocket adapter connects on open and disconnects on close."""
         client = Mock()
 
-        with WebSocketSyncAPIClient(client) as adapter:
+        with SyncWebSocketAPIClient(client) as adapter:
             client.connect.assert_called_once_with()
             client.disconnect.assert_not_called()
         client.disconnect.assert_called_once_with()
@@ -213,7 +213,7 @@ class TestSyncAdapters:
         client = Mock()
         client.disconnect.side_effect = RuntimeError("boom")
 
-        WebSocketSyncAPIClient(client).close()
+        SyncWebSocketAPIClient(client).close()
 
         client.logger.warning.assert_called_once_with(
             "Closing the synchronous WebSocket API client failed (boom)"
@@ -225,7 +225,7 @@ class TestSyncAdapters:
         results = BrowseResults.from_envelope(_ENVELOPE)
         client.browse.return_value = results
 
-        assert WebSocketSyncAPIClient(client).browse("uri") is results
+        assert SyncWebSocketAPIClient(client).browse("uri") is results
         client.browse.assert_called_once_with("uri")
 
     def test_websocket_browse_with_offset(self):
@@ -233,7 +233,7 @@ class TestSyncAdapters:
         client = Mock()
         client.browse.return_value = BrowseResults.from_envelope(_ENVELOPE)
 
-        results = WebSocketSyncAPIClient(client).browse(None, 1)
+        results = SyncWebSocketAPIClient(client).browse(None, 1)
 
         assert [item.name for item in results.items] == ["QOBUZ"]
         client.browse.assert_called_once_with(None)
@@ -242,7 +242,7 @@ class TestSyncAdapters:
 class TestAsyncAdapters:
     """Test cases for the adapters of the asynchronous clients."""
 
-    @pytest.mark.parametrize("adapter_class", [RESTAsyncAPIClient, WebSocketAsyncAPIClient])
+    @pytest.mark.parametrize("adapter_class", [AsyncRESTAPIClient, AsyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "args", "kwargs"), METHODS)
     def test_method_forwarded(self, adapter_class, name, args, kwargs):
         """A shared method awaits the coroutine of the client with the same arguments."""
@@ -253,7 +253,7 @@ class TestAsyncAdapters:
             assert getattr(adapter, name)(*args, **kwargs) == "outcome"
         getattr(client, name).assert_awaited_once_with(*args, **kwargs)
 
-    @pytest.mark.parametrize("adapter_class", [RESTAsyncAPIClient, WebSocketAsyncAPIClient])
+    @pytest.mark.parametrize("adapter_class", [AsyncRESTAPIClient, AsyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "async_name"), PROPERTIES)
     def test_property_forwarded(self, adapter_class, name, async_name):
         """A shared property awaits the reading coroutine of the client."""
@@ -264,7 +264,7 @@ class TestAsyncAdapters:
             assert getattr(adapter, name) == "value"
         getattr(client, async_name).assert_awaited_once_with()
 
-    @pytest.mark.parametrize("adapter_class", [RESTAsyncAPIClient, WebSocketAsyncAPIClient])
+    @pytest.mark.parametrize("adapter_class", [AsyncRESTAPIClient, AsyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "async_name"), SETTERS)
     def test_setter_forwarded(self, adapter_class, name, async_name):
         """Assigning a property awaits the setting coroutine of the client."""
@@ -281,7 +281,7 @@ class TestAsyncAdapters:
         client = _async_client()
         setattr(client, name, AsyncMock(return_value="outcome"))
 
-        with RESTAsyncAPIClient(client) as adapter:
+        with AsyncRESTAPIClient(client) as adapter:
             assert getattr(adapter, name)(*args, **kwargs) == "outcome"
         getattr(client, name).assert_awaited_once_with(*args, **kwargs)
 
@@ -290,7 +290,7 @@ class TestAsyncAdapters:
         client = _async_client()
         client.get_notifications = AsyncMock(return_value="urls")
 
-        with RESTAsyncAPIClient(client) as adapter:
+        with AsyncRESTAPIClient(client) as adapter:
             assert adapter.notifications == "urls"
 
     def test_rest_story_forwards_only_the_entities_given(self):
@@ -298,7 +298,7 @@ class TestAsyncAdapters:
         client = _async_client()
         client.get_story = AsyncMock(return_value="story")
 
-        with RESTAsyncAPIClient(client) as adapter:
+        with AsyncRESTAPIClient(client) as adapter:
             assert adapter.get_story(label="c") == "story"
         client.get_story.assert_awaited_once_with(label="c")
 
@@ -309,7 +309,7 @@ class TestAsyncAdapters:
             side_effect=lambda: (asyncio.get_running_loop(), threading.current_thread().name)
         )
 
-        with RESTAsyncAPIClient(client) as adapter:
+        with AsyncRESTAPIClient(client) as adapter:
             first_loop, thread_name = adapter.ping()
             second_loop, _ = adapter.ping()
             assert len(_loop_threads()) == 1
@@ -322,7 +322,7 @@ class TestAsyncAdapters:
         """Closing awaits the client close, stops the loop, and is then a no-op."""
         client = _async_client()
         client.ping = AsyncMock(return_value="pong")
-        adapter = RESTAsyncAPIClient(client)
+        adapter = AsyncRESTAPIClient(client)
         adapter.open()
         adapter.ping()
 
@@ -338,7 +338,7 @@ class TestAsyncAdapters:
         """The WebSocket adapter connects on open and disconnects on close."""
         client = _async_client()
 
-        with WebSocketAsyncAPIClient(client):
+        with AsyncWebSocketAPIClient(client):
             client.connect.assert_awaited_once_with()
             client.disconnect.assert_not_awaited()
 
@@ -351,7 +351,7 @@ class TestAsyncAdapters:
         client.ping = AsyncMock(return_value="pong")
 
         with pytest.raises(RuntimeError, match="asynchronous REST API client is not open"):
-            RESTAsyncAPIClient(client).ping()
+            AsyncRESTAPIClient(client).ping()
 
         client.ping.assert_not_awaited()
 
@@ -359,7 +359,7 @@ class TestAsyncAdapters:
         """A closed adapter can be opened again, on a fresh loop."""
         client = _async_client()
         client.ping = AsyncMock(side_effect=lambda: asyncio.get_running_loop())
-        adapter = RESTAsyncAPIClient(client)
+        adapter = AsyncRESTAPIClient(client)
 
         with adapter:
             first = adapter.ping()
@@ -373,7 +373,7 @@ class TestAsyncAdapters:
         """When the connection fails, the loop is stopped and the failure propagates."""
         client = _async_client()
         client.connect = AsyncMock(side_effect=VolumioConnectionError("unreachable"))
-        adapter = WebSocketAsyncAPIClient(client)
+        adapter = AsyncWebSocketAPIClient(client)
 
         with pytest.raises(VolumioConnectionError, match="unreachable"):
             adapter.open()
@@ -386,7 +386,7 @@ class TestAsyncAdapters:
         """A failure while closing the session is logged, and the loop still stopped."""
         client = _async_client()
         client.close = AsyncMock(side_effect=RuntimeError("boom"))
-        adapter = RESTAsyncAPIClient(client)
+        adapter = AsyncRESTAPIClient(client)
         adapter.open()
 
         adapter.close()
@@ -406,7 +406,7 @@ class TestAsyncAdapters:
 
         client.connect = AsyncMock(side_effect=spawn)
 
-        with WebSocketAsyncAPIClient(client):
+        with AsyncWebSocketAPIClient(client):
             assert not tasks[0].done()
 
         assert tasks[0].cancelled()
@@ -417,7 +417,7 @@ class TestAsyncAdapters:
         results = BrowseResults.from_envelope(_ENVELOPE)
         client.browse = AsyncMock(return_value=results)
 
-        with WebSocketAsyncAPIClient(client) as adapter:
+        with AsyncWebSocketAPIClient(client) as adapter:
             assert adapter.browse("uri") is results
         client.browse.assert_awaited_once_with("uri")
 
@@ -426,7 +426,7 @@ class TestAsyncAdapters:
         client = _async_client()
         client.browse = AsyncMock(return_value=BrowseResults.from_envelope(_ENVELOPE))
 
-        with WebSocketAsyncAPIClient(client) as adapter:
+        with AsyncWebSocketAPIClient(client) as adapter:
             results = adapter.browse(None, 1)
 
         assert [item.name for item in results.items] == ["QOBUZ"]
@@ -445,7 +445,7 @@ class TestWebSocketFallback:
         return adapter, client
 
     @pytest.mark.parametrize(
-        "adapter_class", [WebSocketSyncAPIClient, WebSocketAsyncAPIClient]
+        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
     )
     @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), UNSUPPORTED)
     def test_unsupported_without_fallback(self, adapter_class, name, args, kwargs, operation):
@@ -453,7 +453,7 @@ class TestWebSocketFallback:
         adapter, _ = self._adapter(adapter_class)
         expected = (
             f"The {adapter.description} does not offer {operation}: use "
-            "--api-client rest_synchronous or rest_asynchronous, "
+            "--api-client synchronous_rest or asynchronous_rest, "
             "or --allow-fallback-to-rest-api"
         )
 
@@ -464,7 +464,7 @@ class TestWebSocketFallback:
         adapter.close()
 
     @pytest.mark.parametrize(
-        "adapter_class", [WebSocketSyncAPIClient, WebSocketAsyncAPIClient]
+        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
     )
     def test_unsupported_notifications_without_fallback(self, adapter_class):
         """Without a fallback, reading the notification URLs raises."""
@@ -476,7 +476,7 @@ class TestWebSocketFallback:
         adapter.close()
 
     @pytest.mark.parametrize(
-        "adapter_class", [WebSocketSyncAPIClient, WebSocketAsyncAPIClient]
+        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
     )
     @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), UNSUPPORTED)
     def test_delegated_to_the_fallback(self, adapter_class, name, args, kwargs, operation):
@@ -497,7 +497,7 @@ class TestWebSocketFallback:
         adapter.close()
 
     @pytest.mark.parametrize(
-        "adapter_class", [WebSocketSyncAPIClient, WebSocketAsyncAPIClient]
+        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
     )
     def test_the_fallback_is_built_once_and_closed_with_the_adapter(self, adapter_class):
         """The REST API client is built on the first operation, kept, and closed at the end."""
@@ -522,7 +522,7 @@ class TestWebSocketFallback:
     def test_the_fallback_is_not_closed_when_never_built(self):
         """Closing an adapter that never fell back builds nothing."""
         factory = Mock()
-        adapter, _ = self._adapter(WebSocketSyncAPIClient, fallback=factory)
+        adapter, _ = self._adapter(SyncWebSocketAPIClient, fallback=factory)
 
         adapter.close()
 
@@ -537,10 +537,10 @@ class TestCommonMembers:
     @pytest.mark.parametrize(
         ("adapter_class", "description", "base_url"),
         [
-            (RESTSyncAPIClient, "synchronous REST API client", "http://volumio:3001"),
-            (RESTAsyncAPIClient, "asynchronous REST API client", "http://volumio:3001"),
-            (WebSocketSyncAPIClient, "synchronous WebSocket API client", "http://volumio:3002"),
-            (WebSocketAsyncAPIClient, "asynchronous WebSocket API client", "http://volumio:3002"),
+            (SyncRESTAPIClient, "synchronous REST API client", "http://volumio:3001"),
+            (AsyncRESTAPIClient, "asynchronous REST API client", "http://volumio:3001"),
+            (SyncWebSocketAPIClient, "synchronous WebSocket API client", "http://volumio:3002"),
+            (AsyncWebSocketAPIClient, "asynchronous WebSocket API client", "http://volumio:3002"),
         ],
     )
     def test_description_and_base_url(self, adapter_class, description, base_url):
@@ -559,7 +559,7 @@ class TestCommonMembers:
         """The adapter exposes the host configuration and the logger of a real client."""
         client = VolumioRESTAPIClient(self._HOST)
 
-        adapter = RESTSyncAPIClient(client)
+        adapter = SyncRESTAPIClient(client)
 
         assert adapter.host_configuration is self._HOST
         assert adapter.logger is client.logger

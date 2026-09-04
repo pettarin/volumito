@@ -17,6 +17,7 @@ from volumito import __version__
 from volumito.cli.api_client import APIClient, UnsupportedOperationError
 from volumito.cli.click_helpers import (
     AliasedGroup,
+    APIClientParamType,
     OnOffParamType,
     SchemeParamType,
     SeekParamType,
@@ -116,7 +117,6 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
-    API_CLIENTS,
     BROWSE_KINDS_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
@@ -203,13 +203,15 @@ from volumito.clients import (
 @click.option(
     "--api-client",
     "-C",
-    type=click.Choice(API_CLIENTS, case_sensitive=True),
+    type=APIClientParamType(),
     default=DEFAULT_API_CLIENT,
     show_default=True,
     help=(
         "API client used to talk to the Volumio instance "
-        "(rest_asynchronous needs the 'async' extra installed, "
-        "the websocket ones the 'websocket' extra)."
+        "(asynchronous_rest needs the 'async' extra installed, "
+        "the websocket ones the 'websocket' extra); "
+        "the short forms sync_rest/sr, async_rest/ar, sync_websocket/sw, "
+        "and async_websocket/aw are accepted too."
     ),
 )
 @click.option(

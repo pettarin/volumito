@@ -19,12 +19,13 @@ from pytest_mock import MockerFixture
 
 from volumito import __version__
 from volumito.cli.api_client import (
-    RESTAsyncAPIClient,
-    RESTSyncAPIClient,
-    WebSocketAsyncAPIClient,
-    WebSocketSyncAPIClient,
+    AsyncRESTAPIClient,
+    AsyncWebSocketAPIClient,
+    SyncRESTAPIClient,
+    SyncWebSocketAPIClient,
 )
 from volumito.cli.click_helpers import (
+    APIClientParamType,
     OnOffParamType,
     ResultKindsParamType,
     SchemeParamType,
@@ -37,6 +38,7 @@ from volumito.cli.click_helpers import (
 )
 from volumito.cli.console import LOGGER
 from volumito.cli.constants import (
+    API_CLIENTS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
     MUTUALLY_EXCLUSIVE_CURRENT_TRACK_ERROR,
@@ -1528,6 +1530,50 @@ class TestSchemeParamType:
         assert SchemeParamType().get_metavar(None, None) == "[http|https]"
 
 
+class TestAPIClientParamType:
+    """Test cases for the APIClientParamType Click parameter type."""
+
+    @pytest.mark.parametrize("api_client", API_CLIENTS)
+    def test_convert_canonical(self, api_client: str):
+        """The canonical values pass through unchanged."""
+        assert APIClientParamType().convert(api_client, None, None) == api_client
+
+    @pytest.mark.parametrize(
+        ("short_form", "api_client"),
+        [
+            ("sync_rest", "synchronous_rest"),
+            ("sr", "synchronous_rest"),
+            ("async_rest", "asynchronous_rest"),
+            ("ar", "asynchronous_rest"),
+            ("sync_websocket", "synchronous_websocket"),
+            ("sw", "synchronous_websocket"),
+            ("async_websocket", "asynchronous_websocket"),
+            ("aw", "asynchronous_websocket"),
+        ],
+    )
+    def test_convert_short_form(self, short_form: str, api_client: str):
+        """A short form converts to its canonical value."""
+        assert APIClientParamType().convert(short_form, None, None) == api_client
+
+    @pytest.mark.parametrize("value", ["SYNCHRONOUS_REST", "SR", "rest", "nope"])
+    def test_convert_invalid_rejected(self, value: str):
+        """Anything else (case-sensitive) is a usage error naming every accepted value."""
+        with pytest.raises(click.exceptions.BadParameter) as excinfo:
+            APIClientParamType().convert(value, None, None)
+
+        assert str(excinfo.value) == (
+            f"{value!r} must be one of synchronous_rest, asynchronous_rest, "
+            "synchronous_websocket, asynchronous_websocket (or the short forms sync_rest, "
+            "sr, async_rest, ar, sync_websocket, sw, async_websocket, aw)"
+        )
+
+    def test_metavar_lists_the_canonical_values(self):
+        """The --help metavar lists the canonical values only."""
+        assert APIClientParamType().get_metavar(None, None) == (
+            "[synchronous_rest|asynchronous_rest|synchronous_websocket|asynchronous_websocket]"
+        )
+
+
 class TestCorrectAudioExtension:
     """Test cases for the correct_audio_extension helper."""
 
@@ -1593,10 +1639,10 @@ class TestCreateClient:
     @pytest.mark.parametrize(
         ("api_client", "adapter_class"),
         [
-            ("rest_synchronous", RESTSyncAPIClient),
-            ("rest_asynchronous", RESTAsyncAPIClient),
-            ("websocket_synchronous", WebSocketSyncAPIClient),
-            ("websocket_asynchronous", WebSocketAsyncAPIClient),
+            ("synchronous_rest", SyncRESTAPIClient),
+            ("asynchronous_rest", AsyncRESTAPIClient),
+            ("synchronous_websocket", SyncWebSocketAPIClient),
+            ("asynchronous_websocket", AsyncWebSocketAPIClient),
         ],
     )
     def test_each_choice_builds_its_adapter(self, api_client, adapter_class):
@@ -1619,10 +1665,10 @@ class TestAPIClientOption:
     """Test cases for the -C/--api-client option and the options accompanying it."""
 
     _CLIENT_CLASSES = {
-        "rest_synchronous": "VolumioRESTAPIClient",
-        "rest_asynchronous": "VolumioAsyncRESTAPIClient",
-        "websocket_synchronous": "VolumioWebSocketClient",
-        "websocket_asynchronous": "VolumioAsyncWebSocketClient",
+        "synchronous_rest": "VolumioRESTAPIClient",
+        "asynchronous_rest": "VolumioAsyncRESTAPIClient",
+        "synchronous_websocket": "VolumioWebSocketClient",
+        "asynchronous_websocket": "VolumioAsyncWebSocketClient",
     }
     """The client class the CLI instantiates for each -C/--api-client value."""
 
@@ -1646,7 +1692,7 @@ class TestAPIClientOption:
         instance = mocker.Mock()
         # The adapters log through the logger of their client: the console one
         instance.logger = LOGGER
-        if api_client.endswith("asynchronous"):
+        if api_client.startswith("asynchronous"):
             for name in ("connect", "disconnect", "close"):
                 setattr(instance, name, AsyncMock())
             instance.ping = AsyncMock(return_value="pong")
@@ -1664,7 +1710,7 @@ class TestAPIClientOption:
         """Patch the REST API client class of a value, answering the story queries."""
         mock_class, instance = self._mock_client(mocker, api_client)
         story = Story.from_envelope(self._STORY_ENVELOPE)
-        if api_client.endswith("asynchronous"):
+        if api_client.startswith("asynchronous"):
             instance.get_story = AsyncMock(return_value=story)
         else:
             instance.get_story.return_value = story
@@ -1685,24 +1731,37 @@ class TestAPIClientOption:
 
         assert result.exit_code == 0
         assert "pong" in result.output
-        if api_client.startswith("websocket"):
+        if api_client.endswith("websocket"):
             mock_class.assert_called_once_with(VolumioHostConfiguration(), 5.0, LOGGER)
             instance.connect.assert_called_once_with()
             instance.disconnect.assert_called_once_with()
         else:
             mock_class.assert_called_once_with(VolumioHostConfiguration(), 5.0, 60.0, LOGGER)
-        if api_client == "rest_asynchronous":
+        if api_client == "asynchronous_rest":
             instance.close.assert_awaited_once_with()
+
+    @pytest.mark.parametrize("short_form", ["sync_websocket", "sw"])
+    def test_a_short_form_selects_its_client(self, runner, mocker, short_form):
+        """A short form of a value selects the same client as the value itself."""
+        mock_class, _ = self._mock_client(mocker, "synchronous_websocket")
+
+        result = runner.invoke(main, ["-v", "-C", short_form, "system", "ping"])
+
+        assert result.exit_code == 0
+        assert "pong" in result.output
+        assert "Using the synchronous WebSocket API client" in result.output
+        assert "Connecting to http://volumio.local:3000... done" in result.output
+        mock_class.assert_called_once()
 
     def test_the_websocket_port_and_timeout_reach_the_client(self, runner, mocker):
         """-W/--websocket-port and --websocket-timeout configure the WebSocket API client."""
-        mock_class, _ = self._mock_client(mocker, "websocket_synchronous")
+        mock_class, _ = self._mock_client(mocker, "synchronous_websocket")
 
         result = runner.invoke(
             main,
             [
                 "-v",
-                "-C", "websocket_synchronous",
+                "-C", "synchronous_websocket",
                 "-W", "4000",
                 "--websocket-timeout", "7",
                 "system", "ping",
@@ -1718,11 +1777,11 @@ class TestAPIClientOption:
 
     def test_the_client_is_shared_by_the_calls_of_an_invocation(self, runner, mocker):
         """The resulting status of a playback command reuses the connection of the command."""
-        mock_class, instance = self._mock_client(mocker, "websocket_synchronous")
+        mock_class, instance = self._mock_client(mocker, "synchronous_websocket")
         _attach_property(instance, "state", return_value={"title": "Test Song", "status": "pause"})
         mocker.patch("volumito.cli.click_helpers.time.sleep")
 
-        result = runner.invoke(main, ["-C", "websocket_synchronous", "playback", "pause"])
+        result = runner.invoke(main, ["-C", "synchronous_websocket", "playback", "pause"])
 
         assert result.exit_code == 0
         assert "Command 'pause' executed successfully" in result.output
@@ -1735,11 +1794,11 @@ class TestAPIClientOption:
 
     def test_the_configuration_file_keys_are_honored(self, runner, mocker, tmp_path):
         """The API client, WebSocket port, and WebSocket timeout can come from the file."""
-        mock_class, _ = self._mock_client(mocker, "websocket_asynchronous")
+        mock_class, _ = self._mock_client(mocker, "asynchronous_websocket")
         config = self._write_configuration(
             tmp_path,
             "volumio:\n"
-            "  api-client: websocket_asynchronous\n"
+            "  api-client: asynchronous_websocket\n"
             "  websocket-port: 4000\n"
             "timeouts:\n"
             "  websocket-timeout: 9\n",
@@ -1751,6 +1810,17 @@ class TestAPIClientOption:
         host_configuration, timeout, _ = mock_class.call_args[0]
         assert host_configuration.websocket_port == 4000
         assert timeout == 9.0
+
+    def test_a_short_form_in_the_configuration_file(self, runner, mocker, tmp_path):
+        """A short form in the file selects the same client as the value itself."""
+        mock_class, _ = self._mock_client(mocker, "asynchronous_rest")
+        config = self._write_configuration(tmp_path, "volumio:\n  api-client: ar\n")
+
+        result = runner.invoke(main, ["-c", config, "-v", "system", "ping"])
+
+        assert result.exit_code == 0
+        assert "Using the asynchronous REST API client" in result.output
+        mock_class.assert_called_once()
 
     def test_an_invalid_api_client_in_the_configuration_file(self, runner, tmp_path):
         """A value outside the accepted ones in the file is rejected like on the command line."""
@@ -1764,12 +1834,12 @@ class TestAPIClientOption:
 
     def test_the_fallback_switch_from_the_configuration_file(self, runner, mocker, tmp_path):
         """The fallback to the REST API client can be allowed from the file."""
-        self._mock_client(mocker, "websocket_synchronous")
-        rest_class, _ = self._mock_story(mocker, "rest_synchronous")
+        self._mock_client(mocker, "synchronous_websocket")
+        rest_class, _ = self._mock_story(mocker, "synchronous_rest")
         config = self._write_configuration(
             tmp_path,
             "volumio:\n"
-            "  api-client: websocket_synchronous\n"
+            "  api-client: synchronous_websocket\n"
             "  allow-fallback-to-rest-api: true\n",
         )
 
@@ -1795,21 +1865,21 @@ class TestAPIClientOption:
         self, runner, mocker, tmp_path, arguments
     ):
         """A client failing to open (e.g., its extra missing) fails the command with exit 1."""
-        _, instance = self._mock_client(mocker, "websocket_synchronous")
+        _, instance = self._mock_client(mocker, "synchronous_websocket")
         instance.connect.side_effect = VolumioWebSocketError("needs python-socketio")
         arguments = [argument.replace("{tmp_path}", str(tmp_path)) for argument in arguments]
 
-        result = runner.invoke(main, ["-C", "websocket_synchronous", *arguments])
+        result = runner.invoke(main, ["-C", "synchronous_websocket", *arguments])
 
         assert result.exit_code == 1
         assert "API client error: needs python-socketio" in result.output
 
     def test_an_asynchronous_client_error_fails_the_command(self, runner, mocker):
         """The failure of an asynchronous client (e.g., its extra missing) exits 1."""
-        _, instance = self._mock_client(mocker, "rest_asynchronous")
+        _, instance = self._mock_client(mocker, "asynchronous_rest")
         instance.ping = AsyncMock(side_effect=VolumioAsyncError("needs aiohttp"))
 
-        result = runner.invoke(main, ["-C", "rest_asynchronous", "system", "ping"])
+        result = runner.invoke(main, ["-C", "asynchronous_rest", "system", "ping"])
 
         assert result.exit_code == 1
         assert "API client error: needs aiohttp" in result.output
@@ -1825,22 +1895,22 @@ class TestAPIClientOption:
         self, runner, mocker, arguments, operation
     ):
         """The commands the WebSocket API does not offer fail, naming the remedies."""
-        self._mock_client(mocker, "websocket_synchronous")
+        self._mock_client(mocker, "synchronous_websocket")
 
-        result = runner.invoke(main, ["-C", "websocket_synchronous", *arguments])
+        result = runner.invoke(main, ["-C", "synchronous_websocket", *arguments])
 
         assert result.exit_code == 1
         assert (
             "API client error: The synchronous WebSocket API client does not offer "
-            f"{operation}: use --api-client rest_synchronous or rest_asynchronous, "
+            f"{operation}: use --api-client synchronous_rest or asynchronous_rest, "
             "or --allow-fallback-to-rest-api"
         ) in result.output
 
     @pytest.mark.parametrize(
         ("api_client", "rest_api_client"),
         [
-            ("websocket_synchronous", "rest_synchronous"),
-            ("websocket_asynchronous", "rest_asynchronous"),
+            ("synchronous_websocket", "synchronous_rest"),
+            ("asynchronous_websocket", "asynchronous_rest"),
         ],
     )
     def test_the_websocket_gaps_fall_back_to_the_rest_api_client(
@@ -1859,21 +1929,21 @@ class TestAPIClientOption:
         assert "Falling back to the REST API client for the story queries" in result.output
         rest_class.assert_called_once()
         instance.disconnect.assert_called_once_with()
-        if rest_api_client == "rest_asynchronous":
+        if rest_api_client == "asynchronous_rest":
             rest.close.assert_awaited_once_with()
 
     def test_the_fallback_client_serves_every_operation_of_an_invocation(
         self, runner, mocker
     ):
         """The REST API client is built once, however many operations fall back to it."""
-        self._mock_client(mocker, "websocket_synchronous")
-        rest_class, rest = self._mock_client(mocker, "rest_synchronous")
+        self._mock_client(mocker, "synchronous_websocket")
+        rest_class, rest = self._mock_client(mocker, "synchronous_rest")
         _attach_property(rest, "notifications", return_value=self._URLS)
         rest.unregister_notification.return_value = SuccessResponse.from_raw({"success": True})
 
         result = runner.invoke(
             main,
-            ["-C", "websocket_synchronous", "--allow-fallback-to-rest-api", "notification",
+            ["-C", "synchronous_websocket", "--allow-fallback-to-rest-api", "notification",
              "unregister", "--all"],
         )
 
@@ -13350,7 +13420,7 @@ class TestConfigurationCommands:
                 "volumio": {
                     "host": "volumio.local",
                     "scheme": "http",
-                    "api-client": "rest_synchronous",
+                    "api-client": "synchronous_rest",
                     "allow-fallback-to-rest-api": False,
                     "rest-api-port": 3000,
                     "websocket-port": 3000,

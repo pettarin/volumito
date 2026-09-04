@@ -384,11 +384,11 @@ volumio:
   allow-fallback-to-rest-api: false
 
   # API client used to talk to the Volumio host, one of:
-  # - rest_synchronous (default)
-  # - rest_asynchronous (required extra: async)
-  # - websocket_synchronous (required extra: websocket)
-  # - websocket_asynchronous (required extra: websocket)
-  api-client: rest_synchronous
+  # - synchronous_rest (default; short forms: sync_rest, sr)
+  # - asynchronous_rest (required extra: async; short forms: async_rest, ar)
+  # - synchronous_websocket (required extra: websocket; short forms: sync_websocket, sw)
+  # - asynchronous_websocket (required extra: websocket; short forms: async_websocket, aw)
+  api-client: synchronous_rest
 
   # Hostname or IP address of the Volumio host
   host: volumio.local

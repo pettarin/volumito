@@ -59,15 +59,15 @@ $ micromamba activate volumito_env
 > - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
 >   for the REST API of Volumio
 >   (including when using the `volumito` CLI tool with
->   `--api-client rest_asynchronous`);
+>   `--api-client asynchronous_rest`);
 > - `scp`: required by the `volumito scp` and `volumito system execute`
 >   (advanced and potentially dangerous) commands;
 > - `websocket`: required by both the synchronous `VolumioWebSocketClient`
 >   and asynchronous `VolumioAsyncWebSocketClient` clients
 >   of the WebSocket API of Volumio
 >   (including when using the `volumito` CLI tool with
->   `--api-client websocket_asynchronous` or
->   `--api-client websocket_synchronous`).
+>   `--api-client asynchronous_websocket` or
+>   `--api-client synchronous_websocket`).
 
 > [!TIP]
 > The `all` extra installs all of them:
@@ -124,14 +124,14 @@ $ micromamba activate volumito_env
 > where `<EXTRA>` is:
 > - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
 >   for the REST API of Volumio, and by the `volumito` CLI tool
->   when run with `--api-client rest_asynchronous`;
+>   when run with `--api-client asynchronous_rest`;
 > - `scp`: required by the `volumito scp` and `volumito system execute`
 >   (advanced and potentially dangerous) commands;
 > - `websocket`: required by both the synchronous `VolumioWebSocketClient`
 >   and asynchronous `VolumioAsyncWebSocketClient` clients
 >   of the WebSocket API of Volumio, and by the `volumito` CLI tool
->   when run with `--api-client websocket_synchronous`
->   or `--api-client websocket_asynchronous`.
+>   when run with `--api-client synchronous_websocket`
+>   or `--api-client asynchronous_websocket`.
 
 > [!TIP]
 > The `all` extra installs all of them:
@@ -178,9 +178,9 @@ volumito configuration create -o ~/volumito.yaml
 [2026-08-13T13:52:30.130Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 
 # use the REST API or WebSocket asynchronous client,
-# instead of the default "rest_synchronous" client
-volumito --api-client rest_asynchronous playback status
-volumito --api-client websocket_asynchronous playback status
+# instead of the default "synchronous_rest" client
+volumito --api-client asynchronous_rest playback status
+volumito --api-client asynchronous_websocket playback status
 
 # print information about the Volumio host
 volumito system info

@@ -44,12 +44,15 @@ volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 
 By default, the commands talk to the Volumio host through its REST API, synchronously.
 The `-C / --api-client` option selects another of the clients of the `volumito` library:
-`rest_asynchronous` (requiring the `async` extra),
-`websocket_synchronous`, or `websocket_asynchronous` (both requiring the `websocket` extra).
+`asynchronous_rest` (requiring the `async` extra),
+`synchronous_websocket`, or `asynchronous_websocket` (both requiring the `websocket` extra).
+The short forms `sync_rest` or `sr`, `async_rest` or `ar`, `sync_websocket` or `sw`,
+and `async_websocket` or `aw` are accepted too.
 For example, to issue the `info` command over the WebSocket API:
 
 ```bash
-volumito -C websocket_synchronous info
+volumito -C synchronous_websocket info
+volumito -C sw info
 ```
 
 The WebSocket API offers neither the `story` nor the `notification` commands:
