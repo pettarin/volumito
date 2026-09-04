@@ -78,7 +78,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 The next time you want to use `volumito`,
@@ -88,7 +88,7 @@ you will only need to activate the existing virtual environment:
 $ micromamba activate volumito_env
 
 (volumito_env) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 To update `volumito`, use the `-U / --upgrade` option:
@@ -142,7 +142,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 

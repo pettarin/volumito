@@ -33,7 +33,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_dev) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 
@@ -80,7 +80,7 @@ volumito/
 │       ├── __init__.py                     # public API re-exports and version
 │       ├── cli/
 │       │   ├── __init__.py                 # CLI entry point re-export
-│       │   ├── api_client.py               # adapters giving the four API clients one surface
+│       │   ├── api_client.py               # adapters for the (async/sync, rest/websocket) API clients
 │       │   ├── click_helpers.py            # Click-dependent helpers and shared options
 │       │   ├── configuration.py            # YAML configuration file loading
 │       │   ├── console.py                  # timestamped, colored console logging on stderr
