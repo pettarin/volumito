@@ -723,14 +723,20 @@ def create_client(
     def asynchronous_rest() -> APIClient:
         return AsyncRESTAPIClient(
             VolumioAsyncRESTAPIClient(
-                host_configuration, rest_api_timeout, rest_api_timeout_slow_endpoints, LOGGER
+                host_configuration,
+                timeout=rest_api_timeout,
+                timeout_slow_endpoints=rest_api_timeout_slow_endpoints,
+                logger=LOGGER,
             )
         )
 
     def synchronous_rest() -> APIClient:
         return SyncRESTAPIClient(
             VolumioRESTAPIClient(
-                host_configuration, rest_api_timeout, rest_api_timeout_slow_endpoints, LOGGER
+                host_configuration,
+                timeout=rest_api_timeout,
+                timeout_slow_endpoints=rest_api_timeout_slow_endpoints,
+                logger=LOGGER,
             )
         )
 

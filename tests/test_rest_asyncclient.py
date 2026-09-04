@@ -175,8 +175,10 @@ class TestVolumioAsyncRESTAPIClientLifecycle:
         assert client.logger is logger
 
     def test_init_keeps_the_timeouts(self):
-        """The timeouts are stored as given, positionally like the sync client."""
-        client = VolumioAsyncRESTAPIClient(VolumioHostConfiguration(), 1.5, 30.0)
+        """The timeouts are stored as given, by keyword like the sync client."""
+        client = VolumioAsyncRESTAPIClient(
+            VolumioHostConfiguration(), timeout=1.5, timeout_slow_endpoints=30.0
+        )
 
         assert client.timeout == 1.5
         assert client.timeout_slow_endpoints == 30.0
@@ -230,6 +232,21 @@ class TestVolumioAsyncRESTAPIClientLifecycle:
         await client.close()
 
         assert client._session is None
+
+    async def test_an_injected_session_is_used_and_kept(self, mocker: MockerFixture):
+        """A session given to the constructor serves the requests, and close() leaves it."""
+        opened = mocker.patch("aiohttp.ClientSession")
+        session = _FakeSession(_json_response(STATE_PAYLOAD))
+        client = VolumioAsyncRESTAPIClient(VolumioHostConfiguration(), session=session)
+
+        await client.get_state()
+        await client.close()
+        await client.get_state()
+
+        opened.assert_not_called()
+        assert session.closed is False
+        assert len(session.calls) == 2
+        assert client._session is session
 
     async def test_the_client_is_reusable_after_close(self, mocker: MockerFixture):
         """A request after a close opens a fresh session."""

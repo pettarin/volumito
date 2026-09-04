@@ -96,6 +96,7 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
     def __init__(
         self,
         host_configuration: VolumioHostConfiguration,
+        session: "aiohttp.ClientSession | None" = None,
         timeout: float = 5.0,
         timeout_slow_endpoints: float = 60.0,
         logger: logging.Logger | None = None,
@@ -107,6 +108,9 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
 
         Args:
             host_configuration: The host configuration (scheme, host, and ports)
+            session: The HTTP session to send the requests through; without one, the
+                client opens its own on the first request, and closes it on
+                :meth:`close`
             timeout: Request timeout in seconds (default: 5.0)
             timeout_slow_endpoints: Request timeout, in seconds, for the endpoints
                 that can take long, like replacing the queue (default: 60.0)
@@ -114,7 +118,8 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
                 under its own name in the ``volumito`` hierarchy
         """
         super().__init__(host_configuration, timeout, timeout_slow_endpoints, logger)
-        self._session: aiohttp.ClientSession | None = None
+        self._session = session
+        self._session_owned = False
 
     async def _delete_json(
         self, path: str, payload: dict[str, Any] | None = None
@@ -156,6 +161,7 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
             self._log_debug("Opening the HTTP session...")
             session = cast("aiohttp.ClientSession", aio.ClientSession())
             self._session = session
+            self._session_owned = True
             self._log_debug("Opening the HTTP session... done")
         return session
 
@@ -496,12 +502,15 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
 
         Closing is idempotent, and leaves the client usable: a later request opens a
         fresh session. Calling it (or leaving an ``async with`` block, which calls it)
-        is what keeps ``aiohttp`` from reporting an unclosed session later on.
+        is what keeps ``aiohttp`` from reporting an unclosed session later on. A
+        session given to the constructor belongs to the caller: it is left open, and
+        kept for the following requests.
         """
-        if self._session is not None:
+        if self._session is not None and self._session_owned:
             self._log_debug("Closing the HTTP session...")
             await self._session.close()
             self._session = None
+            self._session_owned = False
             self._log_debug("Closing the HTTP session... done")
 
     async def decrease_volume(self) -> CommandResponse:

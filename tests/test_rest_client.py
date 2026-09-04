@@ -62,13 +62,13 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "play"}
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
         logger = Mock()
 
         _ = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger).state
 
         debugged = [call.args[0] for call in logger.debug.call_args_list]
-        assert any(line.startswith("Requesting REQUEST http://") for line in debugged)
+        assert any(line.startswith("Requesting GET http://") for line in debugged)
         assert any(line.endswith("... done") for line in debugged)
         assert "Response status: 200" in debugged
         logger.info.assert_not_called()
@@ -86,7 +86,7 @@ class TestVolumioRESTAPIClient:
         self, mocker: MockerFixture, side_effect, detail
     ):
         """Each anticipated transport failure warns once and still raises."""
-        mocker.patch("requests.get", side_effect=side_effect)
+        mocker.patch("requests.Session.get", side_effect=side_effect)
         logger = Mock()
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
@@ -102,7 +102,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 500
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("boom")
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
         logger = Mock()
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
@@ -129,7 +129,7 @@ class TestVolumioRESTAPIClient:
             mock_response.json.side_effect = body
         else:
             mock_response.json.return_value = body
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
         logger = Mock()
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
@@ -142,7 +142,7 @@ class TestVolumioRESTAPIClient:
 
     def test_the_refusals_log_a_warning(self, mocker: MockerFixture):
         """The self-raised refusals warn before raising, with nothing sent."""
-        mock_post = mocker.patch("requests.post")
+        mock_post = mocker.patch("requests.Session.post")
         logger = Mock()
         client = VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger)
 
@@ -164,11 +164,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         post_response = mocker.Mock()
         post_response.status_code = 200
         post_response.json.return_value = {"response": "success"}
-        mocker.patch("requests.post", return_value=post_response)
+        mocker.patch("requests.Session.post", return_value=post_response)
         logger = Mock()
 
         VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger).add_to_queue(
@@ -204,7 +204,7 @@ class TestVolumioRESTAPIClient:
             response.json.return_value = queue if "getQueue" in url else state
             return response
 
-        mocker.patch("requests.get", side_effect=answer)
+        mocker.patch("requests.Session.get", side_effect=answer)
         return VolumioRESTAPIClient(VolumioHostConfiguration())
 
     @pytest.mark.parametrize(
@@ -251,7 +251,7 @@ class TestVolumioRESTAPIClient:
         }
 
         # Mock requests.get
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         state = client.state
@@ -272,7 +272,7 @@ class TestVolumioRESTAPIClient:
         """Test the state property with connection error."""
         # Mock requests.get to raise ConnectionError
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
@@ -287,7 +287,7 @@ class TestVolumioRESTAPIClient:
         """Test the state property with timeout error."""
         # Mock requests.get to raise Timeout
         mocker.patch(
-            "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
+            "requests.Session.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
@@ -307,7 +307,7 @@ class TestVolumioRESTAPIClient:
         )
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -324,7 +324,7 @@ class TestVolumioRESTAPIClient:
         mock_response.json.side_effect = ValueError("Invalid JSON")
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -341,7 +341,7 @@ class TestVolumioRESTAPIClient:
         mock_response.json.return_value = []  # list, not a dictionary
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -355,7 +355,7 @@ class TestVolumioRESTAPIClient:
         """Test the state property with generic RequestException."""
         # Mock requests.get to raise generic RequestException
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
@@ -391,7 +391,7 @@ class TestVolumioRESTAPIClient:
         }
 
         # Mock requests.get
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         queue_data = client.queue
@@ -412,7 +412,7 @@ class TestVolumioRESTAPIClient:
         """Test the queue property with connection error."""
         # Mock requests.get to raise ConnectionError
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
@@ -427,7 +427,7 @@ class TestVolumioRESTAPIClient:
         """Test the queue property with timeout error."""
         # Mock requests.get to raise Timeout
         mocker.patch(
-            "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
+            "requests.Session.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
@@ -447,7 +447,7 @@ class TestVolumioRESTAPIClient:
         )
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -464,7 +464,7 @@ class TestVolumioRESTAPIClient:
         mock_response.json.side_effect = ValueError("Invalid JSON")
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -481,7 +481,7 @@ class TestVolumioRESTAPIClient:
         mock_response.json.return_value = []  # list, not a dictionary
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -495,7 +495,7 @@ class TestVolumioRESTAPIClient:
         """Test the queue property with generic RequestException."""
         # Mock requests.get to raise generic RequestException
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
@@ -511,7 +511,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.text = "pong"
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.ping()
@@ -524,7 +524,7 @@ class TestVolumioRESTAPIClient:
     def test_ping_connection_error(self, mocker: MockerFixture):
         """Test ping() translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
@@ -542,7 +542,7 @@ class TestVolumioRESTAPIClient:
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
             "503 Service Unavailable"
         )
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -561,7 +561,7 @@ class TestVolumioRESTAPIClient:
             "variant": "volumio",
             "hardware": "pi",
         }
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.system_version
@@ -574,7 +574,7 @@ class TestVolumioRESTAPIClient:
     def test_system_version_timeout_error(self, mocker: MockerFixture):
         """Test the system_version property translates a timeout error."""
         mocker.patch(
-            "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
+            "requests.Session.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
@@ -589,7 +589,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -608,7 +608,7 @@ class TestVolumioRESTAPIClient:
             "name": "volumio",
             "systemversion": "3.601",
         }
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.system_info
@@ -623,7 +623,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = []
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -635,7 +635,7 @@ class TestVolumioRESTAPIClient:
     def test_system_info_generic_request_exception(self, mocker: MockerFixture):
         """Test the system_info property with a generic RequestException."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
@@ -656,7 +656,7 @@ class TestVolumioRESTAPIClient:
             "songs": 105,
             "playtime": "7:11:15",
         }
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.collection_statistics
@@ -669,7 +669,7 @@ class TestVolumioRESTAPIClient:
     def test_collection_statistics_connection_error(self, mocker: MockerFixture):
         """Test the collection_statistics property translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -685,7 +685,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -703,7 +703,7 @@ class TestVolumioRESTAPIClient:
                 {"id": "abc", "host": "http://192.168.1.1", "name": "Volumio", "isSelf": True}
             ]
         }
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.zones
@@ -717,7 +717,7 @@ class TestVolumioRESTAPIClient:
     def test_zones_connection_error(self, mocker: MockerFixture):
         """Test the zones property translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -733,7 +733,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -747,7 +747,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = ["Rock", "Jazz"]
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.playlists
@@ -764,7 +764,7 @@ class TestVolumioRESTAPIClient:
     def test_playlists_connection_error(self, mocker: MockerFixture):
         """Test the playlists property translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -780,7 +780,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -794,7 +794,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"playlists": ["Rock"]}
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -808,7 +808,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "playPlaylist Response"}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.play_playlist("Rock")
@@ -846,7 +846,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "playPlaylist Response"}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.play_playlist("Rock & Roll/Best")
@@ -860,7 +860,7 @@ class TestVolumioRESTAPIClient:
     def test_play_playlist_connection_error(self, mocker: MockerFixture):
         """Test play_playlist() translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -879,7 +879,7 @@ class TestVolumioRESTAPIClient:
             "success": True,
             "data": {"type": "story", "value": "A story."},
         }
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client._plugin_endpoint(
@@ -900,7 +900,7 @@ class TestVolumioRESTAPIClient:
     def test_plugin_endpoint_connection_error(self, mocker: MockerFixture):
         """Test _plugin_endpoint() with connection error."""
         mocker.patch(
-            "requests.post",
+            "requests.Session.post",
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
@@ -914,7 +914,7 @@ class TestVolumioRESTAPIClient:
     def test_plugin_endpoint_timeout_error(self, mocker: MockerFixture):
         """Test _plugin_endpoint() with timeout error."""
         mocker.patch(
-            "requests.post", side_effect=requests.exceptions.Timeout("Request timeout")
+            "requests.Session.post", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
@@ -931,7 +931,7 @@ class TestVolumioRESTAPIClient:
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
             "404 Not Found"
         )
-        mocker.patch("requests.post", return_value=mock_response)
+        mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -945,7 +945,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
-        mocker.patch("requests.post", return_value=mock_response)
+        mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -959,7 +959,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = []  # list, not a dictionary
-        mocker.patch("requests.post", return_value=mock_response)
+        mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -972,7 +972,7 @@ class TestVolumioRESTAPIClient:
     def test_plugin_endpoint_generic_request_exception(self, mocker: MockerFixture):
         """Test _plugin_endpoint() with generic RequestException."""
         mocker.patch(
-            "requests.post",
+            "requests.Session.post",
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
@@ -991,7 +991,7 @@ class TestVolumioRESTAPIClient:
             "success": True,
             "data": {"type": "story", "value": "A story."},
         }
-        return mocker.patch("requests.post", return_value=mock_response)
+        return mocker.patch("requests.Session.post", return_value=mock_response)
 
     def _assert_story_posted(self, mock_post, data):
         """Assert that the metavolumio endpoint was called with the given data payload."""
@@ -1191,7 +1191,7 @@ class TestVolumioRESTAPIClient:
         }
 
         # Mock requests.get
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         response = client._send_command("play")
@@ -1209,7 +1209,7 @@ class TestVolumioRESTAPIClient:
         """Test _send_command() with connection error."""
         # Mock requests.get to raise ConnectionError
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         )
 
@@ -1224,7 +1224,7 @@ class TestVolumioRESTAPIClient:
         """Test _send_command() with timeout error."""
         # Mock requests.get to raise Timeout
         mocker.patch(
-            "requests.get", side_effect=requests.exceptions.Timeout("Request timeout")
+            "requests.Session.get", side_effect=requests.exceptions.Timeout("Request timeout")
         )
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
@@ -1244,7 +1244,7 @@ class TestVolumioRESTAPIClient:
         )
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1261,7 +1261,7 @@ class TestVolumioRESTAPIClient:
         mock_response.json.side_effect = ValueError("Invalid JSON")
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1278,7 +1278,7 @@ class TestVolumioRESTAPIClient:
         mock_response.json.return_value = []  # list, not a dictionary
 
         # Mock requests.get
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1292,7 +1292,7 @@ class TestVolumioRESTAPIClient:
         """Test _send_command() with generic RequestException."""
         # Mock requests.get to raise generic RequestException
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.RequestException("Generic error"),
         )
 
@@ -1428,7 +1428,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "play", "volume": 49}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1447,7 +1447,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = state
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1482,7 +1482,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "play", "mute": value}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1501,7 +1501,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = state
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1528,7 +1528,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": status, "volume": 49}
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1549,7 +1549,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = state
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1593,7 +1593,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "play", "seek": 125029}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1613,7 +1613,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = state
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1645,7 +1645,7 @@ class TestVolumioRESTAPIClient:
     def test_seek_connection_error(self, mocker: MockerFixture):
         """Test the seek setter translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -1735,7 +1735,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = ["http://192.168.1.100/receiver"]
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         data = client.notifications
@@ -1752,7 +1752,7 @@ class TestVolumioRESTAPIClient:
     def test_notifications_connection_error(self, mocker: MockerFixture):
         """Test the notifications property translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -1768,7 +1768,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1782,7 +1782,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"urls": []}
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1796,7 +1796,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"success": True}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.register_notification("http://192.168.1.100/receiver")
@@ -1814,7 +1814,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"success": True}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.register_notification(Notification.from_url("http://192.168.1.100/receiver"))
@@ -1827,7 +1827,7 @@ class TestVolumioRESTAPIClient:
 
     def test_register_notification_without_a_url(self, mocker: MockerFixture):
         """Test register_notification() rejects a notification carrying no URL."""
-        mock_post = mocker.patch("requests.post")
+        mock_post = mocker.patch("requests.Session.post")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1840,7 +1840,7 @@ class TestVolumioRESTAPIClient:
     def test_register_notification_connection_error(self, mocker: MockerFixture):
         """Test register_notification() translates a connection error."""
         mocker.patch(
-            "requests.post",
+            "requests.Session.post",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -1857,7 +1857,7 @@ class TestVolumioRESTAPIClient:
         mock_response.status_code = 200
         mock_response.text = '{"success": true}'
         mock_response.json.return_value = {"success": True}
-        mock_delete = mocker.patch("requests.delete", return_value=mock_response)
+        mock_delete = mocker.patch("requests.Session.delete", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.unregister_notification("http://192.168.1.100/receiver")
@@ -1875,7 +1875,7 @@ class TestVolumioRESTAPIClient:
         mock_response.status_code = 200
         mock_response.text = '{"success": true}'
         mock_response.json.return_value = {"success": True}
-        mock_delete = mocker.patch("requests.delete", return_value=mock_response)
+        mock_delete = mocker.patch("requests.Session.delete", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.unregister_notification(Notification.from_url("http://192.168.1.100/receiver"))
@@ -1892,7 +1892,7 @@ class TestVolumioRESTAPIClient:
         mock_response.status_code = 200
         mock_response.text = '{"error": "No such URL is present"}'
         mock_response.json.return_value = {"error": "No such URL is present"}
-        mocker.patch("requests.delete", return_value=mock_response)
+        mocker.patch("requests.Session.delete", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.unregister_notification("http://192.168.1.100/receiver")
@@ -1905,7 +1905,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.text = ""
-        mocker.patch("requests.delete", return_value=mock_response)
+        mocker.patch("requests.Session.delete", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.unregister_notification("http://192.168.1.100/receiver")
@@ -1916,7 +1916,7 @@ class TestVolumioRESTAPIClient:
 
     def test_unregister_notification_without_a_url(self, mocker: MockerFixture):
         """Test unregister_notification() rejects a notification carrying no URL."""
-        mock_delete = mocker.patch("requests.delete")
+        mock_delete = mocker.patch("requests.Session.delete")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1933,7 +1933,7 @@ class TestVolumioRESTAPIClient:
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
             "500 Server Error"
         )
-        mocker.patch("requests.delete", return_value=mock_response)
+        mocker.patch("requests.Session.delete", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1948,7 +1948,7 @@ class TestVolumioRESTAPIClient:
         mock_response.status_code = 200
         mock_response.text = "[]"
         mock_response.json.return_value = []
-        mocker.patch("requests.delete", return_value=mock_response)
+        mocker.patch("requests.Session.delete", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -1980,7 +1980,7 @@ class TestVolumioRESTAPIClient:
                 ],
             }
         }
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         results = client.search("Paolo Conte")
@@ -1997,7 +1997,7 @@ class TestVolumioRESTAPIClient:
     def test_search_connection_error(self, mocker: MockerFixture):
         """Test search() translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -2013,7 +2013,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = []
-        mocker.patch("requests.get", return_value=mock_response)
+        mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -2040,7 +2040,7 @@ class TestVolumioRESTAPIClient:
                 "prev": {"uri": "/"},
             }
         }
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         results = client.browse()
@@ -2060,7 +2060,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"navigation": {"lists": []}}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.browse("/")
@@ -2074,7 +2074,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"navigation": {"lists": []}}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.browse("music-library", 3)
@@ -2093,7 +2093,7 @@ class TestVolumioRESTAPIClient:
 
     def test_browse_with_a_negative_offset(self, mocker: MockerFixture):
         """Test browse() rejects a negative offset without any request."""
-        mock_get = mocker.patch("requests.get")
+        mock_get = mocker.patch("requests.Session.get")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -2108,7 +2108,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"navigation": {"lists": []}}
-        mock_get = mocker.patch("requests.get", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         # The %20 the host itself wrote stays; the bare space and the accent are encoded
@@ -2123,7 +2123,7 @@ class TestVolumioRESTAPIClient:
     def test_browse_connection_error(self, mocker: MockerFixture):
         """Test browse() translates a connection error."""
         mocker.patch(
-            "requests.get",
+            "requests.Session.get",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -2139,7 +2139,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.add_to_queue("albums://Paolo%20Conte/Aguaplano")
@@ -2171,11 +2171,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         VolumioRESTAPIClient(VolumioHostConfiguration()).add_to_queue(uri)
 
@@ -2192,11 +2192,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": [first, second]}]}}
-        mock_get = mocker.patch("requests.get", return_value=browse_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=browse_response)
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         VolumioRESTAPIClient(VolumioHostConfiguration()).add_to_queue("qobuz://album/123")
 
@@ -2211,11 +2211,11 @@ class TestVolumioRESTAPIClient:
 
     def test_add_to_queue_of_the_local_library_is_not_browsed(self, mocker: MockerFixture):
         """A local URI is queued as itself: the host explodes its own containers."""
-        mock_get = mocker.patch("requests.get")
+        mock_get = mocker.patch("requests.Session.get")
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "success"}
-        mocker.patch("requests.post", return_value=mock_response)
+        mocker.patch("requests.Session.post", return_value=mock_response)
 
         VolumioRESTAPIClient(VolumioHostConfiguration()).add_to_queue("artists://Paolo%20Conte")
 
@@ -2226,7 +2226,7 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
 
         assert VolumioRESTAPIClient(VolumioHostConfiguration()).timeout_slow_endpoints == 60.0
 
@@ -2242,7 +2242,7 @@ class TestVolumioRESTAPIClient:
     def test_add_to_queue_connection_error(self, mocker: MockerFixture):
         """Test add_to_queue() translates a connection error."""
         mocker.patch(
-            "requests.post",
+            "requests.Session.post",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -2258,8 +2258,8 @@ class TestVolumioRESTAPIClient:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=mock_response)
-        mock_get = mocker.patch("requests.get")
+        mock_post = mocker.patch("requests.Session.post", return_value=mock_response)
+        mock_get = mocker.patch("requests.Session.get")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.replace_queue_and_play("albums://Paolo%20Conte/Aguaplano")
@@ -2278,11 +2278,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         play_response = mocker.Mock()
         play_response.status_code = 200
         play_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=play_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=play_response)
 
         VolumioRESTAPIClient(VolumioHostConfiguration()).replace_queue_and_play(
             "qobuz://album/123"
@@ -2299,11 +2299,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         play_response = mocker.Mock()
         play_response.status_code = 200
         play_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=play_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=play_response)
 
         VolumioRESTAPIClient(VolumioHostConfiguration()).replace_queue_and_play(
             "qobuz://song/2210819"
@@ -2329,11 +2329,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         play_response = mocker.Mock()
         play_response.status_code = 200
         play_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=play_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=play_response)
 
         VolumioRESTAPIClient(VolumioHostConfiguration()).replace_queue_and_play(
             "qobuz://album/123", 0
@@ -2359,8 +2359,8 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": items}]}}
-        mocker.patch("requests.get", return_value=browse_response)
-        mock_post = mocker.patch("requests.post")
+        mocker.patch("requests.Session.get", return_value=browse_response)
+        mock_post = mocker.patch("requests.Session.post")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -2377,11 +2377,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": [first, second]}]}}
-        mock_get = mocker.patch("requests.get", return_value=browse_response)
+        mock_get = mocker.patch("requests.Session.get", return_value=browse_response)
         play_response = mocker.Mock()
         play_response.status_code = 200
         play_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=play_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=play_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         result = client.replace_queue_and_play("albums://X/Y", 1)
@@ -2402,11 +2402,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": [{"items": [item]}]}}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         play_response = mocker.Mock()
         play_response.status_code = 200
         play_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=play_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=play_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.replace_queue_and_play("albums://X/Y", 0)
@@ -2422,11 +2422,11 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {}
-        mocker.patch("requests.get", return_value=browse_response)
+        mocker.patch("requests.Session.get", return_value=browse_response)
         play_response = mocker.Mock()
         play_response.status_code = 200
         play_response.json.return_value = {"response": "success"}
-        mock_post = mocker.patch("requests.post", return_value=play_response)
+        mock_post = mocker.patch("requests.Session.post", return_value=play_response)
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
         client.replace_queue_and_play("music-library/INTERNAL/music/track.flac", 0)
@@ -2452,8 +2452,8 @@ class TestVolumioRESTAPIClient:
         browse_response = mocker.Mock()
         browse_response.status_code = 200
         browse_response.json.return_value = {"navigation": {"lists": lists}}
-        mocker.patch("requests.get", return_value=browse_response)
-        mock_post = mocker.patch("requests.post")
+        mocker.patch("requests.Session.get", return_value=browse_response)
+        mock_post = mocker.patch("requests.Session.post")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -2465,8 +2465,8 @@ class TestVolumioRESTAPIClient:
 
     def test_replace_queue_and_play_negative_index(self, mocker: MockerFixture):
         """Test replace_queue_and_play() rejects a negative index without any request."""
-        mock_get = mocker.patch("requests.get")
-        mock_post = mocker.patch("requests.post")
+        mock_get = mocker.patch("requests.Session.get")
+        mock_post = mocker.patch("requests.Session.post")
 
         client = VolumioRESTAPIClient(VolumioHostConfiguration())
 
@@ -2480,7 +2480,7 @@ class TestVolumioRESTAPIClient:
     def test_replace_queue_and_play_connection_error(self, mocker: MockerFixture):
         """Test replace_queue_and_play() translates a connection error."""
         mocker.patch(
-            "requests.post",
+            "requests.Session.post",
             side_effect=requests.exceptions.ConnectionError("Connection failed"),
         )
 
@@ -2490,6 +2490,127 @@ class TestVolumioRESTAPIClient:
             client.replace_queue_and_play("albums://X/Y")
 
         assert "Failed to connect to Volumio instance" in str(exc_info.value)
+
+
+class TestVolumioRESTAPIClientSession:
+    """The HTTP session the REST client sends its requests through."""
+
+    @staticmethod
+    def _response(payload: dict) -> Mock:
+        """A successful response carrying a JSON payload."""
+        response = Mock()
+        response.status_code = 200
+        response.json.return_value = payload
+        return response
+
+    def _opened(self, mocker: MockerFixture) -> Mock:
+        """Patch the session class, its instances answering every GET with a state."""
+        opened = mocker.patch("requests.Session")
+        opened.return_value.get.return_value = self._response({"status": "play"})
+        return opened
+
+    def test_init_opens_no_session(self, mocker: MockerFixture):
+        """Building the client opens no session."""
+        opened = self._opened(mocker)
+
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        opened.assert_not_called()
+        assert client._session is None
+
+    def test_the_session_is_opened_once_and_reused(self, mocker: MockerFixture):
+        """The session opens on the first request and serves the following ones."""
+        opened = self._opened(mocker)
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        _ = client.state
+        _ = client.state
+
+        opened.assert_called_once_with()
+        assert opened.return_value.get.call_count == 2
+
+    def test_close_closes_and_clears_the_session(self, mocker: MockerFixture):
+        """Closing the client closes the session it owns and forgets it."""
+        opened = self._opened(mocker)
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        _ = client.state
+
+        client.close()
+
+        opened.return_value.close.assert_called_once_with()
+        assert client._session is None
+
+    def test_close_without_a_session_is_a_no_op(self, mocker: MockerFixture):
+        """Closing a client that never sent a request opens nothing."""
+        opened = self._opened(mocker)
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+
+        client.close()
+
+        opened.assert_not_called()
+
+    def test_close_twice_is_a_no_op(self, mocker: MockerFixture):
+        """Closing an already closed client does nothing the second time."""
+        opened = self._opened(mocker)
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        _ = client.state
+
+        client.close()
+        client.close()
+
+        opened.return_value.close.assert_called_once_with()
+
+    def test_the_client_is_reusable_after_close(self, mocker: MockerFixture):
+        """A request after closing opens a fresh session."""
+        opened = self._opened(mocker)
+        client = VolumioRESTAPIClient(VolumioHostConfiguration())
+        _ = client.state
+        client.close()
+
+        _ = client.state
+
+        assert opened.call_count == 2
+
+    def test_an_injected_session_is_used_and_kept(self, mocker: MockerFixture):
+        """A session given to the constructor serves the requests, and close() leaves it."""
+        opened = self._opened(mocker)
+        session = Mock()
+        session.get.return_value = self._response({"status": "play"})
+        client = VolumioRESTAPIClient(VolumioHostConfiguration(), session=session)
+
+        _ = client.state
+        client.close()
+        _ = client.state
+
+        opened.assert_not_called()
+        session.close.assert_not_called()
+        assert session.get.call_count == 2
+        assert client._session is session
+
+    def test_the_with_block_opens_and_closes_the_session(self, mocker: MockerFixture):
+        """Entering the block opens the session, leaving it closes the session."""
+        opened = self._opened(mocker)
+
+        with VolumioRESTAPIClient(VolumioHostConfiguration()) as client:
+            assert client._session is opened.return_value
+            opened.return_value.close.assert_not_called()
+
+        opened.return_value.close.assert_called_once_with()
+        assert client._session is None
+
+    def test_the_session_steps_are_logged(self, mocker: MockerFixture):
+        """Opening and closing the session leave their pairs at debug."""
+        self._opened(mocker)
+        logger = Mock()
+
+        with VolumioRESTAPIClient(VolumioHostConfiguration(), logger=logger):
+            pass
+
+        debugged = [call.args[0] for call in logger.debug.call_args_list]
+        assert "Opening the HTTP session..." in debugged
+        assert "Opening the HTTP session... done" in debugged
+        assert "Closing the HTTP session..." in debugged
+        assert "Closing the HTTP session... done" in debugged
 
 
 class TestVolumioExceptions:

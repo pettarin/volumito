@@ -1736,7 +1736,11 @@ class TestAPIClientOption:
             instance.connect.assert_called_once_with()
             instance.disconnect.assert_called_once_with()
         else:
-            mock_class.assert_called_once_with(VolumioHostConfiguration(), 5.0, 60.0, LOGGER)
+            mock_class.assert_called_once_with(
+                VolumioHostConfiguration(), timeout=5.0, timeout_slow_endpoints=60.0, logger=LOGGER
+            )
+            # The session of the REST client is released at exit
+            instance.close.assert_called_once_with()
         if api_client == "asynchronous_rest":
             instance.close.assert_awaited_once_with()
 
@@ -2585,7 +2589,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         host_configuration = mock_client_class.call_args[0][0]
-        timeout = mock_client_class.call_args[0][1]
+        timeout = mock_client_class.call_args.kwargs["timeout"]
         assert host_configuration.host == "192.168.1.100"
         assert host_configuration.rest_api_port == 8080
         assert timeout == 10.0
@@ -3346,7 +3350,7 @@ class TestCLICommands:
 
         assert result.exit_code == 0
         # REST client receives the REST API timeout
-        assert mock_rest_class.call_args[0][1] == 10.0
+        assert mock_rest_class.call_args.kwargs["timeout"] == 10.0
         # MPD client receives the MPD timeout
         assert mock_mpd_class.call_args[0][1] == 3.0
 
@@ -6271,7 +6275,11 @@ class TestCollectionBrowse:
         )
 
         assert result.exit_code == 0
-        assert mock_class.call_args.args[1:] == (5.0, 120.0, LOGGER)
+        assert mock_class.call_args.kwargs == {
+            "timeout": 5.0,
+            "timeout_slow_endpoints": 120.0,
+            "logger": LOGGER,
+        }
 
     def test_the_short_uri_flag_of_the_search_is_not_taken(
         self, runner: CliRunner, mocker: MockerFixture
@@ -11671,7 +11679,11 @@ class TestQueueReplace:
         )
 
         assert result.exit_code == 0
-        assert mock_class.call_args.args[1:] == (5.0, 120.0, LOGGER)
+        assert mock_class.call_args.kwargs == {
+            "timeout": 5.0,
+            "timeout_slow_endpoints": 120.0,
+            "logger": LOGGER,
+        }
 
     def test_a_connection_error(self, runner: CliRunner, mocker: MockerFixture):
         """A host that cannot be reached exits 1."""

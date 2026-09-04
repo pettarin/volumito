@@ -6,7 +6,7 @@
 
 import asyncio
 import threading
-from unittest.mock import AsyncMock, Mock, PropertyMock
+from unittest.mock import AsyncMock, Mock, PropertyMock, call
 
 import pytest
 
@@ -186,15 +186,16 @@ class TestSyncAdapters:
 
         client.get_story.assert_called_once_with(artist="b")
 
-    def test_rest_lifecycle_is_a_no_op(self):
-        """The REST adapter has nothing to open nor to close."""
+    def test_rest_lifecycle(self):
+        """The REST adapter has nothing to open, and closes the session of the client."""
         client = Mock()
 
         with SyncRESTAPIClient(client) as adapter:
             adapter.open()
+            client.close.assert_not_called()
         adapter.close()
 
-        assert client.mock_calls == []
+        assert client.mock_calls == [call.close(), call.close()]
 
     def test_websocket_lifecycle(self):
         """The WebSocket adapter connects on open and disconnects on close."""

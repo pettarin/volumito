@@ -196,6 +196,35 @@ except VolumioStoryError as e:
 # Story error: not found
 ```
 
+The client sends its requests through one HTTP session,
+opened on the first request:
+use it as a context manager,
+so the session is closed when the block is left,
+or call `close()` yourself.
+Leaving the session open is harmless,
+as it is released together with the client;
+closing is idempotent and leaves the client usable:
+a later request opens a fresh session.
+
+```python
+with VolumioRESTAPIClient(host) as client:
+    print(client.ping())
+```
+
+A `requests.Session` of your own can be handed to the client
+with the `session` argument:
+the client uses it, and leaves it open and yours when closing.
+
+```python
+import requests
+
+session = requests.Session()
+client = VolumioRESTAPIClient(host, session=session)
+print(client.ping())
+client.close()  # the session is still open, and yours to close
+session.close()
+```
+
 
 ## Asynchronous REST API Client
 
@@ -266,6 +295,9 @@ finally:
 
 Closing is idempotent and leaves the client usable:
 a later request opens a fresh session.
+An `aiohttp.ClientSession` of your own can be handed to the client
+with the `session` argument:
+the client uses it, and leaves it open and yours when closing.
 
 ### Differences Between Synchronous And Asynchronous Clients
 
@@ -356,7 +388,7 @@ pip install volumito[async_websocket]
 > [!TIP]
 > The `all` extra installs both extras too.
 
-Unlike the REST clients, which open a connection per request,
+Like the REST clients hold their HTTP session,
 a WebSocket client holds one open connection:
 use it as a context manager,
 so the connection is closed when the block is left.

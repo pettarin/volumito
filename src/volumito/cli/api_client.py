@@ -631,7 +631,11 @@ class SyncAPIClient[C: VolumioRESTAPIClient | VolumioWebSocketClient](APIClient)
 
 
 class SyncRESTAPIClient(SyncAPIClient[VolumioRESTAPIClient]):
-    """The adapter of the synchronous REST API client, which needs no connection."""
+    """The adapter of the synchronous REST API client.
+
+    The client opens its HTTP session on the first request and closes it on
+    :meth:`close`.
+    """
 
     DESCRIPTION = "synchronous REST API client"
 
@@ -643,7 +647,7 @@ class SyncRESTAPIClient(SyncAPIClient[VolumioRESTAPIClient]):
         return self._client.browse(uri, offset)
 
     def close(self) -> None:
-        """Nothing to release: the client sends each request on its own connection."""
+        self._close_quietly(self._client.close)
 
     def get_album_credits(self, artist: Artist | None, album: Album) -> Story:
         return self._client.get_album_credits(artist, album)
@@ -662,7 +666,7 @@ class SyncRESTAPIClient(SyncAPIClient[VolumioRESTAPIClient]):
         return self._client.notifications
 
     def open(self) -> None:
-        """Nothing to acquire: the client sends each request on its own connection."""
+        """Nothing to acquire: the client opens its session on the first request."""
 
     def register_notification(self, url: str | Notification) -> SuccessResponse:
         return self._client.register_notification(url)
