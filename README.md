@@ -57,12 +57,19 @@ $ micromamba activate volumito_env
 > you will need to install `volumito` with `pip install volumito[<EXTRA>]`,
 > where `<EXTRA>` is:
 > - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
->   for the REST API of Volumio;
+>   for the REST API of Volumio
+>   (including when using the `volumito` CLI tool with
+>   `--api-client asynchronous_rest`);
+> - `async_websocket`: required by the asynchronous client `VolumioAsyncWebSocketClient`
+>   for the WebSocket API of Volumio
+>   (including when using the `volumito` CLI tool with
+>   `--api-client asynchronous_websocket`);
 > - `scp`: required by the `volumito scp` and `volumito system execute`
 >   (advanced and potentially dangerous) commands;
-> - `websocket`: required by both the synchronous `VolumioWebSocketClient`
->   and asynchronous `VolumioAsyncWebSocketClient` clients
->   of the WebSocket API of Volumio.
+> - `websocket`: required by the synchronous client `VolumioWebSocketClient`
+>   for the WebSocket API of Volumio
+>   (including when using the `volumito` CLI tool with
+>   `--api-client synchronous_websocket`).
 
 > [!TIP]
 > The `all` extra installs all of them:
@@ -73,7 +80,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 The next time you want to use `volumito`,
@@ -83,7 +90,7 @@ you will only need to activate the existing virtual environment:
 $ micromamba activate volumito_env
 
 (volumito_env) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 To update `volumito`, use the `-U / --upgrade` option:
@@ -118,12 +125,16 @@ $ micromamba activate volumito_env
 > or `make install-e-this-<EXTRA>`,
 > where `<EXTRA>` is:
 > - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
->   for the REST API of Volumio;
+>   for the REST API of Volumio, and by the `volumito` CLI tool
+>   when run with `--api-client asynchronous_rest`;
+> - `async_websocket`: required by the asynchronous client `VolumioAsyncWebSocketClient`
+>   for the WebSocket API of Volumio, and by the `volumito` CLI tool
+>   when run with `--api-client asynchronous_websocket`;
 > - `scp`: required by the `volumito scp` and `volumito system execute`
 >   (advanced and potentially dangerous) commands;
-> - `websocket`: required by both the synchronous `VolumioWebSocketClient`
->   and asynchronous `VolumioAsyncWebSocketClient` clients
->   of the WebSocket API of Volumio.
+> - `websocket`: required by the synchronous client `VolumioWebSocketClient`
+>   for the WebSocket API of Volumio, and by the `volumito` CLI tool
+>   when run with `--api-client synchronous_websocket`.
 
 > [!TIP]
 > The `all` extra installs all of them:
@@ -134,7 +145,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 
@@ -168,6 +179,11 @@ volumito playback --help
 # create a configuration file (you might want to inspect/edit it later)
 volumito configuration create -o ~/volumito.yaml
 [2026-08-13T13:52:30.130Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+
+# use the REST API or WebSocket asynchronous client,
+# instead of the default "synchronous_rest" client
+volumito --api-client asynchronous_rest playback status
+volumito --api-client asynchronous_websocket playback status
 
 # print information about the Volumio host
 volumito system info
@@ -470,8 +486,9 @@ asyncio.run(main())
 ```
 
 The same API is also available over Volumio's WebSocket API,
-provided the `websocket` extra is installed
-(`pip install volumito[websocket]`).
+provided the `websocket` or `async_websocket` extra is installed
+(`pip install volumito[websocket]` for the synchronous version,
+or `pip install volumito[async_websocket]` for the asynchronous version).
 Its clients hold one open connection, and can listen to what the host pushes:
 
 ```python
@@ -495,7 +512,9 @@ with VolumioWebSocketClient(host) as client:
     client.wait()
 ```
 
-An asynchronous counterpart `VolumioAsyncWebSocketClient` is also available.
+An asynchronous counterpart `VolumioAsyncWebSocketClient` is also available,
+provided the `async_websocket` extra is installed
+(`pip install volumito[async_websocket]`).
 
 Beyond the members the REST clients also offer,
 the WebSocket clients reach the functionalities that the REST API of Volumio does not

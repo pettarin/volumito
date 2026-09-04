@@ -4,11 +4,52 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+API_CLIENTS = [
+    "synchronous_rest",
+    "asynchronous_rest",
+    "synchronous_websocket",
+    "asynchronous_websocket",
+]
+"""Accepted values of the -C/--api-client option, in the order --help lists them."""
+
+API_CLIENTS_WEBSOCKET = [
+    "asynchronous_websocket",
+    "synchronous_websocket",
+]
+"""The -C/--api-client values selecting a WebSocket API client."""
+
+API_CLIENT_ASYNCHRONOUS_REST = "asynchronous_rest"
+"""The -C/--api-client value selecting the asynchronous REST API client."""
+
+API_CLIENT_ASYNCHRONOUS_WEBSOCKET = "asynchronous_websocket"
+"""The -C/--api-client value selecting the asynchronous WebSocket API client."""
+
+API_CLIENT_SHORT_FORMS = {
+    "sync_rest": "synchronous_rest",
+    "sr": "synchronous_rest",
+    "async_rest": "asynchronous_rest",
+    "ar": "asynchronous_rest",
+    "sync_websocket": "synchronous_websocket",
+    "sw": "synchronous_websocket",
+    "async_websocket": "asynchronous_websocket",
+    "aw": "asynchronous_websocket",
+}
+"""The short forms accepted by the -C/--api-client option, mapped to the values they stand for."""
+
+API_CLIENT_SYNCHRONOUS_REST = "synchronous_rest"
+"""The -C/--api-client value selecting the synchronous REST API client."""
+
+API_CLIENT_SYNCHRONOUS_WEBSOCKET = "synchronous_websocket"
+"""The -C/--api-client value selecting the synchronous WebSocket API client."""
+
 BROWSE_KINDS_ERROR = (
     "Expected the --result-kinds, --albums-only, --artists-only, --playlists-only, "
     "and --tracks-only options to agree on the kinds to keep."
 )
 """Error message when "collection browse" is asked for two different kinds of result."""
+
+DEFAULT_API_CLIENT = "synchronous_rest"
+"""Default value of the -C/--api-client option."""
 
 DEFAULT_MANIFEST_FILE = "{output_directory}/manifest.json"
 """Default path template of the queue/playlist download manifest file."""

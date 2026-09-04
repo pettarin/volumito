@@ -14,8 +14,10 @@ from typing import Any, NoReturn
 import click
 
 from volumito import __version__
+from volumito.cli.api_client import APIClient, UnsupportedOperationError
 from volumito.cli.click_helpers import (
     AliasedGroup,
+    APIClientParamType,
     OnOffParamType,
     SchemeParamType,
     SeekParamType,
@@ -26,7 +28,7 @@ from volumito.cli.click_helpers import (
     command_nodes,
     command_nodes_flattened,
     configuration_file_callback,
-    create_client,
+    connection_url,
     download_queue_albumart,
     download_queue_track,
     download_uri_to,
@@ -37,6 +39,7 @@ from volumito.cli.click_helpers import (
     expand_output_directory,
     fetch_or_exit,
     fetch_state_or_exit,
+    get_client,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
     option_album,
@@ -100,7 +103,7 @@ from volumito.cli.click_helpers import (
     resolve_output_conflict,
     resolve_story_album_entities,
     resolve_story_entity,
-    rest_api_sleep,
+    sleep_between_api_calls,
     write_queue_log,
 )
 from volumito.cli.configuration import (
@@ -115,6 +118,7 @@ from volumito.cli.configuration import (
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
     BROWSE_KINDS_ERROR,
+    DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
@@ -170,12 +174,13 @@ from volumito.clients import (
     SearchResultItemKind,
     SuccessResponse,
     VolumioAPIError,
+    VolumioAsyncError,
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioMPDClient,
-    VolumioRESTAPIClient,
     VolumioSCPError,
     VolumioSSHError,
+    VolumioWebSocketError,
     copy_from_host,
     copy_to_host,
     execute_on_host,
@@ -185,6 +190,24 @@ from volumito.clients import (
 
 
 @click.group(cls=AliasedGroup)
+@click.option(
+    "--allow-fallback-to-rest-api/--no-allow-fallback-to-rest-api",
+    default=False,
+    show_default=True,
+    help=(
+        "When a WebSocket API client is selected, serve the commands the WebSocket API "
+        "does not offer (the story and notification ones) through a REST API client, "
+        "instead of failing them."
+    ),
+)
+@click.option(
+    "--api-client",
+    "-C",
+    type=APIClientParamType(),
+    default=DEFAULT_API_CLIENT,
+    show_default=True,
+    help="API client used to talk to the Volumio instance.",
+)
 @click.option(
     "--color/--no-color",
     default=True,
@@ -272,26 +295,6 @@ from volumito.clients import (
     help="REST API port of the Volumio instance.",
 )
 @click.option(
-    "--rest-api-retries-on-unexpected-state",
-    type=int,
-    default=3,
-    show_default=True,
-    help=(
-        "When a command expects the playback status to reach a given state, "
-        "re-read the status up to this many times."
-    ),
-)
-@click.option(
-    "--rest-api-sleep-before-next-call",
-    type=float,
-    default=2.0,
-    show_default=True,
-    help=(
-        "When making multiple REST API calls, "
-        "sleep these many seconds between two consecutive calls."
-    ),
-)
-@click.option(
     "--rest-api-timeout",
     type=float,
     default=5.0,
@@ -309,11 +312,31 @@ from volumito.clients import (
     ),
 )
 @click.option(
+    "--retries-on-unexpected-state",
+    type=int,
+    default=3,
+    show_default=True,
+    help=(
+        "When a command expects the playback status to reach a given state, "
+        "re-read the status up to this many times."
+    ),
+)
+@click.option(
     "--scheme",
     type=SchemeParamType(),
     default="http",
     show_default=True,
     help="URL scheme for connecting to the Volumio instance.",
+)
+@click.option(
+    "--sleep-before-next-api-call",
+    type=float,
+    default=2.0,
+    show_default=True,
+    help=(
+        "When making multiple API calls, "
+        "sleep these many seconds between two consecutive calls."
+    ),
 )
 @click.option(
     "--ssh-password",
@@ -351,9 +374,26 @@ from volumito.clients import (
     default=False,
     help="Enable verbose output.",
 )
+@click.option(
+    "--websocket-port",
+    "-W",
+    type=int,
+    default=3000,
+    show_default=True,
+    help="WebSocket API port of the Volumio instance.",
+)
+@click.option(
+    "--websocket-timeout",
+    type=float,
+    default=5.0,
+    show_default=True,
+    help="WebSocket API request timeout, in seconds.",
+)
 @click.pass_context
 def main(
     ctx: click.Context,
+    allow_fallback_to_rest_api: bool,
+    api_client: str,
     color: bool,
     host: str,
     machine_readable: bool,
@@ -362,16 +402,18 @@ def main(
     pager: bool,
     position_starting_at_one: bool,
     rest_api_port: int,
-    rest_api_retries_on_unexpected_state: int,
-    rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     rest_api_timeout_slow_endpoints: float,
+    retries_on_unexpected_state: int,
     scheme: Scheme,
+    sleep_before_next_api_call: float,
     ssh_password: str | None,
     ssh_port: int,
     ssh_username: str,
     strict_parsing_configuration_file: bool,
     verbose: bool,
+    websocket_port: int,
+    websocket_timeout: float,
 ) -> None:
     """volumito - CLI tool for Volumio."""
     setup_console(verbose=verbose, machine_readable=machine_readable, color=color)
@@ -385,15 +427,19 @@ def main(
         host=host,
         rest_api_port=rest_api_port,
         mpd_port=mpd_port,
+        websocket_port=websocket_port,
         ssh_password=ssh_password,
         ssh_port=ssh_port,
         ssh_username=ssh_username,
     )
+    ctx.obj["api_client"] = api_client
+    ctx.obj["allow_fallback_to_rest_api"] = allow_fallback_to_rest_api
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
+    ctx.obj["websocket_timeout"] = websocket_timeout
     ctx.obj["mpd_timeout"] = mpd_timeout
-    ctx.obj["rest_api_retries_on_unexpected_state"] = rest_api_retries_on_unexpected_state
-    ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
+    ctx.obj["retries_on_unexpected_state"] = retries_on_unexpected_state
+    ctx.obj["sleep_before_next_api_call"] = sleep_before_next_api_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
     ctx.obj["pager"] = pager
@@ -826,7 +872,7 @@ def seek(
     if isinstance(value, int):
         target = value
 
-        def set_seek(client: VolumioRESTAPIClient) -> None:
+        def set_seek(client: APIClient) -> None:
             client.seek = target
 
         execute_command(ctx, f"seek {value}", set_seek)
@@ -854,7 +900,7 @@ def volume(ctx: click.Context, value: int | str | None, print_resulting_status: 
     if isinstance(value, int):
         level = value
 
-        def set_volume(client: VolumioRESTAPIClient) -> None:
+        def set_volume(client: APIClient) -> None:
             client.volume = level
 
         execute_command(ctx, f"volume {value}", set_volume)
@@ -972,14 +1018,14 @@ def audio(
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
 
-    debug(f"Connecting to {host_configuration.rest_base_url}...")
+    debug(f"Connecting to {connection_url(ctx)}...")
 
     try:
         # Get current track metadata (also validates REST connectivity)
-        client = create_client(host_configuration, rest_api_timeout)
+        client = get_client(ctx)
         state = client.state
 
-        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        debug(f"Connecting to {connection_url(ctx)}... done")
         debug("Successfully retrieved state")
 
         # Connect to MPD to get current track URI; the client logs its own steps
@@ -1047,6 +1093,9 @@ def audio(
     except VolumioAPIError as e:
         error(f"API error: {e}")
         sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
+        sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
@@ -1080,14 +1129,14 @@ def albumart(
     verbose = ctx.obj["verbose"]
     machine_readable = ctx.obj["machine_readable"]
 
-    debug(f"Connecting to {host_configuration.rest_base_url}...")
+    debug(f"Connecting to {connection_url(ctx)}...")
 
     try:
         # Get current state metadata
-        client = create_client(host_configuration, rest_api_timeout)
+        client = get_client(ctx)
         state = client.state
 
-        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        debug(f"Connecting to {connection_url(ctx)}... done")
         debug("Successfully retrieved state")
 
         # Extract albumart URI (relative URIs are made absolute against the base URL)
@@ -1136,6 +1185,9 @@ def albumart(
         sys.exit(1)
     except VolumioAPIError as e:
         error(f"API error: {e}")
+        sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
@@ -1187,17 +1239,15 @@ def queue_list(
     output_format: str,
 ) -> None:
     """Print the playback queue."""
-    host_configuration = ctx.obj["host_configuration"]
-    rest_api_timeout = ctx.obj["rest_api_timeout"]
     position_starting_at_one = ctx.obj["position_starting_at_one"]
 
-    debug(f"Connecting to {host_configuration.rest_base_url}...")
+    debug(f"Connecting to {connection_url(ctx)}...")
 
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = get_client(ctx)
         queue_data = client.queue.raw
 
-        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        debug(f"Connecting to {connection_url(ctx)}... done")
         debug("Successfully retrieved queue")
 
         # Determine output format
@@ -1234,6 +1284,9 @@ def queue_list(
         sys.exit(1)
     except VolumioAPIError as e:
         error(f"API error: {e}")
+        sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
@@ -1312,13 +1365,13 @@ def queue_download(
     if output_directory is None:
         raise click.UsageError(OUTPUT_DIRECTORY_REQUIRED_ERROR)
 
-    debug(f"Connecting to {host_configuration.rest_base_url}...")
+    debug(f"Connecting to {connection_url(ctx)}...")
 
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = get_client(ctx)
         tracks = client.queue.tracks
 
-        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        debug(f"Connecting to {connection_url(ctx)}... done")
         debug("Successfully retrieved queue")
 
         if not tracks:
@@ -1460,9 +1513,9 @@ def queue_download(
                     attempt = 0
                     while True:
                         client.play(tracks[index])
-                        rest_api_sleep(ctx)
+                        sleep_between_api_calls(ctx)
                         client.pause()
-                        rest_api_sleep(ctx)
+                        sleep_between_api_calls(ctx)
                         state = client.state
                         uri = mpd_client.get_track_uri()
                         if not check_next_track or queue_track_metadata_current(
@@ -1585,7 +1638,7 @@ def queue_download(
 
         # Leave the player stopped at the first track
         client.play(0)
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         client.stop()
 
         if machine_readable:
@@ -1608,6 +1661,9 @@ def queue_download(
     except VolumioAPIError as e:
         error(f"API error: {e}")
         sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
+        sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
@@ -1619,7 +1675,7 @@ def queue_download(
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue."""
     execute_command(ctx, "clear", lambda c: c.clear())
-    rest_api_sleep(ctx)
+    sleep_between_api_calls(ctx)
     debug(
         "Sending a stop as a workaround for a Volumio-side issue: without it, the host "
         "keeps reporting the cleared track as playing (consume-mode services, e.g. qobuz)"
@@ -1687,7 +1743,7 @@ def replace(
         execute_command(ctx, "replace", lambda c: c.replace_queue_and_play(uri, index))
     else:
         execute_command(ctx, "clear", lambda c: c.clear())
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -1813,7 +1869,8 @@ def collection_browse(
     sources currently enabled. The URIs to descend into come from the listings
     themselves, printed unless --no-print-uri is given, and from the -u/--print-uri
     option of "collection search". The -o/--offset skip is applied by the host to
-    each list, before the kind options act, and not at the root."""
+    each list, before the kind options act, and not at the root; the WebSocket API
+    clients apply it themselves, the root included."""
     machine_readable = ctx.obj["machine_readable"]
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
@@ -2099,24 +2156,24 @@ def playlist_download(
                 error("  (none)")
             sys.exit(1)
 
-    host_configuration = ctx.obj["host_configuration"]
-    rest_api_timeout = ctx.obj["rest_api_timeout"]
-
     try:
-        client = create_client(host_configuration, rest_api_timeout)
+        client = get_client(ctx)
         debug("Clearing the queue...")
         client.clear()
         debug("Clearing the queue... done")
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         debug(f'Playing playlist "{name}"...')
         client.play_playlist(name)
         debug(f'Playing playlist "{name}"... done')
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
         sys.exit(1)
     except VolumioAPIError as e:
         error(f"API error: {e}")
+        sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
         sys.exit(1)
 
     ctx.invoke(

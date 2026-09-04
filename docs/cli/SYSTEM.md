@@ -23,12 +23,12 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
-        "artist": "Enrico Ruggeri",
+        "albumart": "https://static.qobuz.com/images/covers/32/58/0060253735832_600.jpg",
+        "artist": "Paolo Conte",
         "mute": false,
         "status": "play",
-        "track": "Rien Ne Va Plus",
-        "volume": 20
+        "track": "Il Treno Va",
+        "volume": 87
     },
     "systemversion": "4.119",
     "type": "device",
@@ -47,8 +47,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-08-14T13:45:29.055Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-08-14T13:45:29.056Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-04T12:42:34.774Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-04T12:42:34.774Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -86,7 +86,7 @@ For the `volumito` (client) version, use the `version` command:
 
 ```bash
 volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 #### System Execute
@@ -116,7 +116,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-08-14T13:45:31.340Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-04T12:42:37.452Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!WARNING]
@@ -130,7 +130,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "getvolume\nhls\nmultiroom\nmyvolumio-remote.json\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nsshtunnel.sh\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-bluealsa.service-xyhprP\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-haveged.service-K7qpRC\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-ntpsec.service-M6ONNZ\nsystemd-private-c3e0732438754ab492bd9f43dbb49f05-systemd-logind.service-niT43i\nupdater\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\norg.chromium.Chromium.hKcqm2\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nserverauth.GJLdEDyOLQ\nsetvolume\nshairport-sync-metadata\nsnapfifo\nssh-IaEdzg1AJMiG\nsshtunnel.sh\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-bluealsa.service-zBpS8K\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-haveged.service-WZtla1\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-ntpsec.service-alBLg6\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-systemd-logind.service-00Dnse\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-upower.service-RpPBtu\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -140,20 +140,30 @@ volumito system execute "ls /tmp/" --yes
 
 ```bash
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
+bluetooth-cache
 getvolume
 hls
 multiroom
 myvolumio-remote.json
+networkstatus
+org.chromium.Chromium.hKcqm2
+presentation.html
 qbz-connect.cfg
 qbz-connect.socket
+serverauth.GJLdEDyOLQ
 setvolume
 shairport-sync-metadata
+snapfifo
+ssh-IaEdzg1AJMiG
 sshtunnel.sh
-systemd-private-c3e0732438754ab492bd9f43dbb49f05-bluealsa.service-xyhprP
-systemd-private-c3e0732438754ab492bd9f43dbb49f05-haveged.service-K7qpRC
-systemd-private-c3e0732438754ab492bd9f43dbb49f05-ntpsec.service-M6ONNZ
-systemd-private-c3e0732438754ab492bd9f43dbb49f05-systemd-logind.service-niT43i
+systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-bluealsa.service-zBpS8K
+systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-haveged.service-WZtla1
+systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-ntpsec.service-alBLg6
+systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-systemd-logind.service-00Dnse
+systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-upower.service-RpPBtu
 updater
+upmpdcli.conf
+upmpdclicache
 volume
 wireless.log
 ```

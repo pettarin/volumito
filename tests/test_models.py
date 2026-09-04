@@ -1022,6 +1022,28 @@ class TestBrowseResults:
         assert len(results.limited(0)) == 0
         assert len(results.items) == 2
 
+    def test_offset(self):
+        """The offset skips the first items of each list and preserves the raw payload."""
+        results = BrowseResults.from_envelope(self._ROOT_ENVELOPE)
+
+        skipped = results.offset(1)
+
+        assert [item.name for item in skipped.items] == ["QOBUZ"]
+        assert skipped.raw == self._ROOT_ENVELOPE
+        # An offset of zero, or less, changes nothing
+        assert len(results.offset(0).items) == 2
+        assert len(results.offset(-1).items) == 2
+        # Skipping everything drops the emptied list
+        assert len(results.offset(2)) == 0
+        # The results the method was called on are left alone
+        assert len(results.items) == 2
+
+    def test_offset_and_limit_open_a_window(self):
+        """The two methods compose: skip, then keep."""
+        window = BrowseResults.from_envelope(self._ROOT_ENVELOPE).offset(1).limited(1)
+
+        assert [item.name for item in window.items] == ["QOBUZ"]
+
 
 class TestStory:
     """Test cases for the Story model."""

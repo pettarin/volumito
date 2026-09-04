@@ -6,7 +6,8 @@
 
 import logging
 from collections.abc import Callable
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 
 import requests
 
@@ -53,11 +54,17 @@ from volumito.clients.rest.common import (
 
 
 class VolumioRESTAPIClient(VolumioRESTAPICommon):
-    """Client for interacting with Volumio API."""
+    """Client for interacting with Volumio API.
+
+    The client sends its requests through one HTTP session, opened on the first request
+    (or on entering a ``with`` block) and closed by :meth:`close` (or on leaving the
+    block); a session given to the constructor is used instead, and left to its owner.
+    """
 
     def __init__(
         self,
         host_configuration: VolumioHostConfiguration,
+        session: requests.Session | None = None,
         timeout: float = 5.0,
         timeout_slow_endpoints: float = 60.0,
         logger: logging.Logger | None = None,
@@ -66,6 +73,9 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
 
         Args:
             host_configuration: The host configuration (scheme, host, and ports)
+            session: The HTTP session to send the requests through; without one, the
+                client opens its own on the first request, and closes it on
+                :meth:`close`
             timeout: Request timeout in seconds (default: 5.0)
             timeout_slow_endpoints: Request timeout, in seconds, for the endpoints
                 that can take long, like replacing the queue (default: 60.0)
@@ -73,6 +83,8 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
                 under its own name in the ``volumito`` hierarchy
         """
         super().__init__(host_configuration, timeout, timeout_slow_endpoints, logger)
+        self._session = session
+        self._session_owned = False
 
     def _delete_json(
         self, path: str, payload: dict[str, Any] | None = None
@@ -93,10 +105,25 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an error or a non-object response
         """
-        response = self._request(requests.delete, path, payload)
+        response = self._request("delete", path, payload)
         if not response.text.strip():
             return {}
         return self._json_object(response)
+
+    def _ensure_session(self) -> requests.Session:
+        """Return the session the requests travel through, opening it when needed.
+
+        Returns:
+            The session of the client
+        """
+        session = self._session
+        if session is None:
+            self._log_debug("Opening the HTTP session...")
+            session = requests.Session()
+            self._session = session
+            self._session_owned = True
+            self._log_debug("Opening the HTTP session... done")
+        return session
 
     def _get(self, path: str) -> requests.Response:
         """GET ``{rest_base_url}{path}``, translating request failures to Volumio errors.
@@ -111,7 +138,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
             VolumioConnectionError: If connection to the Volumio instance fails
             VolumioAPIError: If the API returns an HTTP error response
         """
-        return self._request(requests.get, path)
+        return self._request("get", path)
 
     def _get_json(self, path: str) -> dict[str, Any]:
         """GET ``path`` and parse the response as a JSON object.
@@ -245,7 +272,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
                 if the payload is larger than the Volumio instance accepts
         """
         self._check_post_body(payload)
-        return self._json_object(self._request(requests.post, path, payload, timeout))
+        return self._json_object(self._request("post", path, payload, timeout))
 
     def _queue_payload_items(self, uri: str) -> list[dict[str, Any]] | None:
         """Return the browsed items a URI must be queued as, or None for the URI itself.
@@ -274,7 +301,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
 
     def _request(
         self,
-        send: Callable[..., requests.Response],
+        method: str,
         path: str,
         payload: dict[str, Any] | list[dict[str, Any]] | None = None,
         timeout: float | None = None,
@@ -282,7 +309,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
         """Request ``{rest_base_url}{path}``, translating failures to Volumio errors.
 
         Args:
-            send: The requests function performing the request (e.g., ``requests.get``)
+            method: The HTTP method, as the session names it (e.g., ``"get"``)
             path: The URL path (including any query string) to request
             payload: The JSON body to send, for the requests carrying one
             timeout: The request timeout in seconds, :attr:`timeout` when not given
@@ -295,7 +322,8 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
             VolumioAPIError: If the API returns an HTTP error response
         """
         url = f"{self.host_configuration.rest_base_url}{path}"
-        verb = getattr(send, "__name__", "request").upper()
+        send: Callable[..., requests.Response] = getattr(self._ensure_session(), method)
+        verb = method.upper()
         waited = timeout if timeout is not None else self.timeout
         arguments: dict[str, Any] = {"timeout": waited}
         self._log_debug(f"Requesting {verb} {url}...")
@@ -420,6 +448,20 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
             VolumioAPIError: If the API returns an error response
         """
         return self._send_command("clearQueue")
+
+    def close(self) -> None:
+        """Close the session the client sends its requests through.
+
+        Closing is idempotent, and leaves the client usable: a later request opens a
+        fresh session. A session given to the constructor belongs to the caller: it is
+        left open, and kept for the following requests.
+        """
+        if self._session is not None and self._session_owned:
+            self._log_debug("Closing the HTTP session...")
+            self._session.close()
+            self._session = None
+            self._session_owned = False
+            self._log_debug("Closing the HTTP session... done")
 
     @property
     def collection_statistics(self) -> CollectionStatistics:
@@ -1130,3 +1172,27 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
             VolumioAPIError: If the API returns an error response
         """
         return Zones.from_raw(self._get_json(PATH_GET_ZONES))
+
+    def __enter__(self) -> Self:
+        """Open the session of the client, entering a ``with`` block.
+
+        Returns:
+            The client itself
+        """
+        self._ensure_session()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        """Close the session of the client, leaving a ``with`` block.
+
+        Args:
+            exc_type: The class of the exception leaving the block, when one does
+            exc_val: The exception leaving the block, when one does
+            exc_tb: The traceback of the exception leaving the block, when one does
+        """
+        self.close()

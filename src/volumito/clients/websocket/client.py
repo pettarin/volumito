@@ -211,8 +211,12 @@ SEEK_STEP_SECONDS = 10
 """The number of seconds a relative seek moves by, matching the REST API clients."""
 
 
-def _load_socketio() -> ModuleType:
+def _load_socketio(extra: str = "websocket") -> ModuleType:
     """Import the optional WebSocket dependency, when a connection is about to be opened.
+
+    Args:
+        extra: The install extra named when the package is missing: the one of the
+            client opening the connection
 
     Returns:
         The socketio module
@@ -225,7 +229,7 @@ def _load_socketio() -> ModuleType:
     except ImportError as e:
         raise VolumioWebSocketError(
             "Reaching the Volumio host over WebSocket needs the python-socketio package: "
-            "install it with 'pip install volumito[websocket]'"
+            f"install it with 'pip install volumito[{extra}]'"
         ) from e
 
     # python-socketio ships no type stubs, as paramiko does not either

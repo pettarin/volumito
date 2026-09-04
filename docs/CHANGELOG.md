@@ -9,6 +9,42 @@ All notable changes to this project will be documented in this file.
 > [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.4.0] - 2026-09-04
+
+### Added
+
+- [Issue #7](https://github.com/pettarin/volumito/issues/7):
+  global option `-C/--api-client` to select the API client
+  the `volumito` CLI tool must use,
+  with the corresponding configuration key
+- Global options `--allow-fallback-to-rest-api`,
+  `-W/--websocket-port` and `--websocket-timeout`,
+  with the corresponding configuration keys
+- Method `offset` on `BrowseResults` in the WebSocket API clients
+- Install extra `volumito[async_websocket]`,
+  required by `VolumioAsyncWebSocketClient`
+- `VolumioRESTAPIClient` and `VolumioAsyncRESTAPIClient` accept
+  the HTTP session to send their requests through,
+  and `VolumioRESTAPIClient` can be used as a context manager
+
+### Changed
+
+- Renamed the global option `--rest-api-retries-on-unexpected-state` to
+  `--retries-on-unexpected-state` and `--rest-api-sleep-before-next-call` to
+  `--sleep-before-next-api-call` (and the corresponding configuration keys)
+- The `websocket` extra provides only what `VolumioWebSocketClient` needs
+  for the synchronous operations; use the added `async_websocket` extra
+  for the asynchronous operations of `VolumioAsyncWebSocketClient`
+- `VolumioRESTAPIClient` sends its requests through one HTTP session, opened on
+  the first request and closed by `close()` or by leaving its `with` block
+
+### Fixed
+
+- `VolumioAsyncWebSocketClient` now reports a clear error if
+  the `aiohttp` dependency is not installed,
+  instead of waiting until the timeout elapsed
+
+
 ## [0.3.0] - 2026-08-28
 
 ### Added

@@ -349,7 +349,10 @@ SECTION_KEYS: dict[str, list[str]] = {
     "volumio": [
         "host",
         "scheme",
+        "api-client",
+        "allow-fallback-to-rest-api",
         "rest-api-port",
+        "websocket-port",
         "mpd-port",
         "ssh-password",
         "ssh-port",
@@ -358,9 +361,10 @@ SECTION_KEYS: dict[str, list[str]] = {
     "timeouts": [
         "rest-api-timeout",
         "rest-api-timeout-slow-endpoints",
+        "websocket-timeout",
         "mpd-timeout",
-        "rest-api-sleep-before-next-call",
-        "rest-api-retries-on-unexpected-state",
+        "sleep-before-next-api-call",
+        "retries-on-unexpected-state",
     ],
     "miscellaneous": list(MISCELLANEOUS_KEY_PATHS),
 }

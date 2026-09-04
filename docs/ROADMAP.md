@@ -28,7 +28,8 @@ Rough plan, broken down by milestone:
 
 ## v0.4.0
 
-- CLI: allow choosing any of the implemented clients
+- Released
+  - CLI: allow choosing any of the implemented clients
 
 ## v1.0.0
 

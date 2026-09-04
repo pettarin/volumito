@@ -105,7 +105,7 @@ from volumito.clients import (
 # CLI installs its own), the records go nowhere, silently
 logging.getLogger("volumito").addHandler(logging.NullHandler())
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
