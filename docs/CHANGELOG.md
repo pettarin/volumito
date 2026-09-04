@@ -23,14 +23,11 @@ All notable changes to this project will be documented in this file.
 - Method `offset` on `BrowseResults` in the WebSocket API clients
 - Install extra `volumito[async_websocket]`,
   required by `VolumioAsyncWebSocketClient`
-- `VolumioRESTAPIClient` and `VolumioAsyncRESTAPIClient` accept the HTTP session
-  to send their requests through, and `VolumioRESTAPIClient` can be used as a
-  context manager
+- `VolumioRESTAPIClient` and `VolumioAsyncRESTAPIClient` accept
+  the HTTP session to send their requests through,
+  and `VolumioRESTAPIClient` can be used as a context manager
 
 ### Changed
-
-- `VolumioRESTAPIClient` sends its requests through one HTTP session, opened on
-  the first request and closed by `close()` or by leaving its `with` block
 
 - Renamed the global option `--rest-api-retries-on-unexpected-state` to
   `--retries-on-unexpected-state` and `--rest-api-sleep-before-next-call` to
@@ -38,6 +35,8 @@ All notable changes to this project will be documented in this file.
 - The `websocket` extra provides only what `VolumioWebSocketClient` needs
   for the synchronous operations; use the added `async_websocket` extra
   for the asynchronous operations of `VolumioAsyncWebSocketClient`
+- `VolumioRESTAPIClient` sends its requests through one HTTP session, opened on
+  the first request and closed by `close()` or by leaving its `with` block
 
 ### Fixed
 
