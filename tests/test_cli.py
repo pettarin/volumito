@@ -2005,8 +2005,8 @@ class TestCLICommands:
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
         assert "--pager" in result.output
-        assert "--rest-api-retries-on-unexpected-state" in result.output
-        assert "--rest-api-sleep-before-next-call" in result.output
+        assert "--retries-on-unexpected-state" in result.output
+        assert "--sleep-before-next-api-call" in result.output
         assert "--strict-parsing-configuration-file" in result.output
         assert "--websocket-port" in result.output
         assert "--websocket-timeout" in result.output
@@ -11267,11 +11267,11 @@ class TestQueueActions:
         assert mock_sleep.call_count == 5
 
     def test_clear_respects_the_retries_option(self, runner: CliRunner, mocker: MockerFixture):
-        """--rest-api-retries-on-unexpected-state bounds the re-reads."""
+        """--retries-on-unexpected-state bounds the re-reads."""
         mock_client, mock_sleep = self._mock_client_with_states(mocker, ["play"] * 3)
 
         result = runner.invoke(
-            main, ["--rest-api-retries-on-unexpected-state", "1", "queue", "clear"]
+            main, ["--retries-on-unexpected-state", "1", "queue", "clear"]
         )
 
         assert result.exit_code == 0
@@ -12048,11 +12048,11 @@ class TestPrintResultingState:
         mock_sleep.assert_called_once_with(2.0)
 
     def test_custom_sleep_before_next_call(self, runner: CliRunner, mocker: MockerFixture):
-        """--rest-api-sleep-before-next-call sets the pause before the resulting-status fetch."""
+        """--sleep-before-next-api-call sets the pause before the resulting-status fetch."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
         result = runner.invoke(
-            main, ["--rest-api-sleep-before-next-call", "0.5", "playback", "pause"]
+            main, ["--sleep-before-next-api-call", "0.5", "playback", "pause"]
         )
 
         assert result.exit_code == 0
@@ -13434,8 +13434,8 @@ class TestConfigurationCommands:
                     "rest-api-timeout-slow-endpoints": 60.0,
                     "websocket-timeout": 5.0,
                     "mpd-timeout": 5.0,
-                    "rest-api-sleep-before-next-call": 2.0,
-                    "rest-api-retries-on-unexpected-state": 3,
+                    "sleep-before-next-api-call": 2.0,
+                    "retries-on-unexpected-state": 3,
                 },
                 "miscellaneous": {
                     "add-cover-and-metadata": True,

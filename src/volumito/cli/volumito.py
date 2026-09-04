@@ -103,7 +103,7 @@ from volumito.cli.click_helpers import (
     resolve_output_conflict,
     resolve_story_album_entities,
     resolve_story_entity,
-    rest_api_sleep,
+    sleep_between_api_calls,
     write_queue_log,
 )
 from volumito.cli.configuration import (
@@ -206,13 +206,7 @@ from volumito.clients import (
     type=APIClientParamType(),
     default=DEFAULT_API_CLIENT,
     show_default=True,
-    help=(
-        "API client used to talk to the Volumio instance "
-        "(asynchronous_rest needs the 'async' extra installed, "
-        "the websocket ones the 'websocket' extra); "
-        "the short forms sync_rest/sr, async_rest/ar, sync_websocket/sw, "
-        "and async_websocket/aw are accepted too."
-    ),
+    help="API client used to talk to the Volumio instance.",
 )
 @click.option(
     "--color/--no-color",
@@ -301,26 +295,6 @@ from volumito.clients import (
     help="REST API port of the Volumio instance.",
 )
 @click.option(
-    "--rest-api-retries-on-unexpected-state",
-    type=int,
-    default=3,
-    show_default=True,
-    help=(
-        "When a command expects the playback status to reach a given state, "
-        "re-read the status up to this many times."
-    ),
-)
-@click.option(
-    "--rest-api-sleep-before-next-call",
-    type=float,
-    default=2.0,
-    show_default=True,
-    help=(
-        "When making multiple API calls, "
-        "sleep these many seconds between two consecutive calls."
-    ),
-)
-@click.option(
     "--rest-api-timeout",
     type=float,
     default=5.0,
@@ -338,11 +312,31 @@ from volumito.clients import (
     ),
 )
 @click.option(
+    "--retries-on-unexpected-state",
+    type=int,
+    default=3,
+    show_default=True,
+    help=(
+        "When a command expects the playback status to reach a given state, "
+        "re-read the status up to this many times."
+    ),
+)
+@click.option(
     "--scheme",
     type=SchemeParamType(),
     default="http",
     show_default=True,
     help="URL scheme for connecting to the Volumio instance.",
+)
+@click.option(
+    "--sleep-before-next-api-call",
+    type=float,
+    default=2.0,
+    show_default=True,
+    help=(
+        "When making multiple API calls, "
+        "sleep these many seconds between two consecutive calls."
+    ),
 )
 @click.option(
     "--ssh-password",
@@ -408,11 +402,11 @@ def main(
     pager: bool,
     position_starting_at_one: bool,
     rest_api_port: int,
-    rest_api_retries_on_unexpected_state: int,
-    rest_api_sleep_before_next_call: float,
     rest_api_timeout: float,
     rest_api_timeout_slow_endpoints: float,
+    retries_on_unexpected_state: int,
     scheme: Scheme,
+    sleep_before_next_api_call: float,
     ssh_password: str | None,
     ssh_port: int,
     ssh_username: str,
@@ -444,8 +438,8 @@ def main(
     ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["websocket_timeout"] = websocket_timeout
     ctx.obj["mpd_timeout"] = mpd_timeout
-    ctx.obj["rest_api_retries_on_unexpected_state"] = rest_api_retries_on_unexpected_state
-    ctx.obj["rest_api_sleep_before_next_call"] = rest_api_sleep_before_next_call
+    ctx.obj["retries_on_unexpected_state"] = retries_on_unexpected_state
+    ctx.obj["sleep_before_next_api_call"] = sleep_before_next_api_call
     ctx.obj["verbose"] = verbose
     ctx.obj["machine_readable"] = machine_readable
     ctx.obj["pager"] = pager
@@ -1519,9 +1513,9 @@ def queue_download(
                     attempt = 0
                     while True:
                         client.play(tracks[index])
-                        rest_api_sleep(ctx)
+                        sleep_between_api_calls(ctx)
                         client.pause()
-                        rest_api_sleep(ctx)
+                        sleep_between_api_calls(ctx)
                         state = client.state
                         uri = mpd_client.get_track_uri()
                         if not check_next_track or queue_track_metadata_current(
@@ -1644,7 +1638,7 @@ def queue_download(
 
         # Leave the player stopped at the first track
         client.play(0)
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         client.stop()
 
         if machine_readable:
@@ -1681,7 +1675,7 @@ def queue_download(
 def clear(ctx: click.Context, print_resulting_status: bool) -> None:
     """Clear the playback queue."""
     execute_command(ctx, "clear", lambda c: c.clear())
-    rest_api_sleep(ctx)
+    sleep_between_api_calls(ctx)
     debug(
         "Sending a stop as a workaround for a Volumio-side issue: without it, the host "
         "keeps reporting the cleared track as playing (consume-mode services, e.g. qobuz)"
@@ -1749,7 +1743,7 @@ def replace(
         execute_command(ctx, "replace", lambda c: c.replace_queue_and_play(uri, index))
     else:
         execute_command(ctx, "clear", lambda c: c.clear())
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -2167,11 +2161,11 @@ def playlist_download(
         debug("Clearing the queue...")
         client.clear()
         debug("Clearing the queue... done")
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         debug(f'Playing playlist "{name}"...')
         client.play_playlist(name)
         debug(f'Playing playlist "{name}"... done')
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
         sys.exit(1)

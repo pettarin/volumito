@@ -1167,9 +1167,9 @@ def execute_conditionally(
             number of retries, until it matches this value before invoking the command
     """
     if enabled:
-        rest_api_sleep(ctx)
+        sleep_between_api_calls(ctx)
         if expected_status is not None:
-            retries = ctx.obj["rest_api_retries_on_unexpected_state"]
+            retries = ctx.obj["retries_on_unexpected_state"]
             attempt = 0
             status = fetch_state_or_exit(ctx).status
             while status != expected_status and attempt < retries:
@@ -1178,7 +1178,7 @@ def execute_conditionally(
                     f"Playback status '{status}' does not match the expected "
                     f"'{expected_status}', retrying ({attempt}/{retries})"
                 )
-                rest_api_sleep(ctx)
+                sleep_between_api_calls(ctx)
                 status = fetch_state_or_exit(ctx).status
             if status != expected_status:
                 warning(
@@ -2425,13 +2425,13 @@ def resolve_command_path(
     return command if command is not root else None
 
 
-def rest_api_sleep(ctx: click.Context) -> None:
+def sleep_between_api_calls(ctx: click.Context) -> None:
     """Sleep for the configured delay before making the next API call.
 
     Args:
         ctx: Click context object holding the shared options
     """
-    time.sleep(ctx.obj["rest_api_sleep_before_next_call"])
+    time.sleep(ctx.obj["sleep_before_next_api_call"])
 
 
 def write_download_manifest(
