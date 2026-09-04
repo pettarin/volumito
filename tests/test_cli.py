@@ -8,7 +8,7 @@ import json
 import os
 import re
 from datetime import UTC, datetime
-from unittest.mock import Mock, PropertyMock
+from unittest.mock import AsyncMock, Mock, PropertyMock
 
 import click
 import pytest
@@ -18,6 +18,12 @@ from click.testing import CliRunner
 from pytest_mock import MockerFixture
 
 from volumito import __version__
+from volumito.cli.api_client import (
+    RESTAsyncAPIClient,
+    RESTSyncAPIClient,
+    WebSocketAsyncAPIClient,
+    WebSocketSyncAPIClient,
+)
 from volumito.cli.click_helpers import (
     OnOffParamType,
     ResultKindsParamType,
@@ -79,7 +85,12 @@ from volumito.clients import (
     SearchResults,
     VolumioHostConfiguration,
 )
-from volumito.clients.errors import VolumioSCPError, VolumioSSHError
+from volumito.clients.errors import (
+    VolumioAsyncError,
+    VolumioSCPError,
+    VolumioSSHError,
+    VolumioWebSocketError,
+)
 from volumito.clients.models import (
     CollectionStatistics,
     Notifications,
@@ -1579,6 +1590,298 @@ class TestCreateClient:
 
         assert client.logger is LOGGER
 
+    @pytest.mark.parametrize(
+        ("api_client", "adapter_class"),
+        [
+            ("rest_synchronous", RESTSyncAPIClient),
+            ("rest_asynchronous", RESTAsyncAPIClient),
+            ("websocket_synchronous", WebSocketSyncAPIClient),
+            ("websocket_asynchronous", WebSocketAsyncAPIClient),
+        ],
+    )
+    def test_each_choice_builds_its_adapter(self, api_client, adapter_class):
+        """Each -C/--api-client value builds the adapter of its client, logging to the console."""
+        host_configuration = VolumioHostConfiguration()
+
+        client = create_client(host_configuration, 5.0, api_client=api_client)
+
+        assert isinstance(client, adapter_class)
+        assert client.host_configuration is host_configuration
+        assert client.logger is LOGGER
+
+    def test_an_unknown_choice_is_rejected(self):
+        """A name outside the accepted values is an error."""
+        with pytest.raises(ValueError, match="Unknown API client 'nope'"):
+            create_client(VolumioHostConfiguration(), 5.0, api_client="nope")
+
+
+class TestAPIClientOption:
+    """Test cases for the -C/--api-client option and the options accompanying it."""
+
+    _CLIENT_CLASSES = {
+        "rest_synchronous": "VolumioRESTAPIClient",
+        "rest_asynchronous": "VolumioAsyncRESTAPIClient",
+        "websocket_synchronous": "VolumioWebSocketClient",
+        "websocket_asynchronous": "VolumioAsyncWebSocketClient",
+    }
+    """The client class the CLI instantiates for each -C/--api-client value."""
+
+    _STORY_ENVELOPE = {"success": True, "data": {"type": "story", "value": "A long story."}}
+    """A successful story query answer."""
+
+    _URLS = ["http://192.168.1.100/receiver", "http://192.168.1.101/other"]
+    """The notification URLs the mocked REST API client reports."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture, api_client: str):
+        """Patch the client class of an -C/--api-client value, answering pings.
+
+        Returns:
+            The mocked class, and the instance it returns
+        """
+        instance = mocker.Mock()
+        # The adapters log through the logger of their client: the console one
+        instance.logger = LOGGER
+        if api_client.endswith("asynchronous"):
+            for name in ("connect", "disconnect", "close"):
+                setattr(instance, name, AsyncMock())
+            instance.ping = AsyncMock(return_value="pong")
+            instance.pause = AsyncMock(return_value=None)
+        else:
+            instance.ping.return_value = "pong"
+            instance.pause.return_value = None
+        mock_class = mocker.patch(
+            f"volumito.cli.click_helpers.{self._CLIENT_CLASSES[api_client]}",
+            return_value=instance,
+        )
+        return mock_class, instance
+
+    def _mock_story(self, mocker: MockerFixture, api_client: str):
+        """Patch the REST API client class of a value, answering the story queries."""
+        mock_class, instance = self._mock_client(mocker, api_client)
+        story = Story.from_envelope(self._STORY_ENVELOPE)
+        if api_client.endswith("asynchronous"):
+            instance.get_story = AsyncMock(return_value=story)
+        else:
+            instance.get_story.return_value = story
+        return mock_class, instance
+
+    def _write_configuration(self, tmp_path, content: str) -> str:
+        """Write a configuration file with the given content, returning its path."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text(content)
+        return str(config)
+
+    @pytest.mark.parametrize("api_client", list(_CLIENT_CLASSES))
+    def test_each_choice_reaches_its_client(self, runner, mocker, api_client):
+        """Each value builds its client with the host configuration, timeouts, and logger."""
+        mock_class, instance = self._mock_client(mocker, api_client)
+
+        result = runner.invoke(main, ["-C", api_client, "system", "ping"])
+
+        assert result.exit_code == 0
+        assert "pong" in result.output
+        if api_client.startswith("websocket"):
+            mock_class.assert_called_once_with(VolumioHostConfiguration(), 5.0, LOGGER)
+            instance.connect.assert_called_once_with()
+            instance.disconnect.assert_called_once_with()
+        else:
+            mock_class.assert_called_once_with(VolumioHostConfiguration(), 5.0, 60.0, LOGGER)
+        if api_client == "rest_asynchronous":
+            instance.close.assert_awaited_once_with()
+
+    def test_the_websocket_port_and_timeout_reach_the_client(self, runner, mocker):
+        """-W/--websocket-port and --websocket-timeout configure the WebSocket API client."""
+        mock_class, _ = self._mock_client(mocker, "websocket_synchronous")
+
+        result = runner.invoke(
+            main,
+            [
+                "-v",
+                "-C", "websocket_synchronous",
+                "-W", "4000",
+                "--websocket-timeout", "7",
+                "system", "ping",
+            ],
+        )
+
+        assert result.exit_code == 0
+        host_configuration, timeout, _ = mock_class.call_args[0]
+        assert host_configuration.websocket_port == 4000
+        assert timeout == 7.0
+        assert "Using the synchronous WebSocket API client" in result.output
+        assert "Connecting to http://volumio.local:4000... done" in result.output
+
+    def test_the_client_is_shared_by_the_calls_of_an_invocation(self, runner, mocker):
+        """The resulting status of a playback command reuses the connection of the command."""
+        mock_class, instance = self._mock_client(mocker, "websocket_synchronous")
+        _attach_property(instance, "state", return_value={"title": "Test Song", "status": "pause"})
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+
+        result = runner.invoke(main, ["-C", "websocket_synchronous", "playback", "pause"])
+
+        assert result.exit_code == 0
+        assert "Command 'pause' executed successfully" in result.output
+        assert "Test Song" in result.output
+        mock_class.assert_called_once()
+        instance.connect.assert_called_once_with()
+        instance.disconnect.assert_called_once_with()
+        instance.pause.assert_called_once_with()
+        instance.state_property.assert_called_once()
+
+    def test_the_configuration_file_keys_are_honored(self, runner, mocker, tmp_path):
+        """The API client, WebSocket port, and WebSocket timeout can come from the file."""
+        mock_class, _ = self._mock_client(mocker, "websocket_asynchronous")
+        config = self._write_configuration(
+            tmp_path,
+            "volumio:\n"
+            "  api-client: websocket_asynchronous\n"
+            "  websocket-port: 4000\n"
+            "timeouts:\n"
+            "  websocket-timeout: 9\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "system", "ping"])
+
+        assert result.exit_code == 0
+        host_configuration, timeout, _ = mock_class.call_args[0]
+        assert host_configuration.websocket_port == 4000
+        assert timeout == 9.0
+
+    def test_an_invalid_api_client_in_the_configuration_file(self, runner, tmp_path):
+        """A value outside the accepted ones in the file is rejected like on the command line."""
+        config = self._write_configuration(tmp_path, "volumio:\n  api-client: nope\n")
+
+        result = runner.invoke(main, ["-c", config, "system", "ping"])
+
+        assert result.exit_code == 2
+        assert "Invalid value for" in result.output
+        assert "'--api-client'" in result.output
+
+    def test_the_fallback_switch_from_the_configuration_file(self, runner, mocker, tmp_path):
+        """The fallback to the REST API client can be allowed from the file."""
+        self._mock_client(mocker, "websocket_synchronous")
+        rest_class, _ = self._mock_story(mocker, "rest_synchronous")
+        config = self._write_configuration(
+            tmp_path,
+            "volumio:\n"
+            "  api-client: websocket_synchronous\n"
+            "  allow-fallback-to-rest-api: true\n",
+        )
+
+        result = runner.invoke(main, ["-c", config, "story", "artist", "Mango"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.stdout)["data"]["value"] == "A long story."
+        rest_class.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["system", "ping"],
+            ["playback", "pause"],
+            ["track", "audio"],
+            ["track", "albumart"],
+            ["queue", "list"],
+            ["queue", "download", "-d", "{tmp_path}"],
+            ["playlist", "download", "--no-check-playlist-name", "X", "-d", "{tmp_path}"],
+        ],
+    )
+    def test_a_client_that_cannot_open_fails_the_command(
+        self, runner, mocker, tmp_path, arguments
+    ):
+        """A client failing to open (e.g., its extra missing) fails the command with exit 1."""
+        _, instance = self._mock_client(mocker, "websocket_synchronous")
+        instance.connect.side_effect = VolumioWebSocketError("needs python-socketio")
+        arguments = [argument.replace("{tmp_path}", str(tmp_path)) for argument in arguments]
+
+        result = runner.invoke(main, ["-C", "websocket_synchronous", *arguments])
+
+        assert result.exit_code == 1
+        assert "API client error: needs python-socketio" in result.output
+
+    def test_an_asynchronous_client_error_fails_the_command(self, runner, mocker):
+        """The failure of an asynchronous client (e.g., its extra missing) exits 1."""
+        _, instance = self._mock_client(mocker, "rest_asynchronous")
+        instance.ping = AsyncMock(side_effect=VolumioAsyncError("needs aiohttp"))
+
+        result = runner.invoke(main, ["-C", "rest_asynchronous", "system", "ping"])
+
+        assert result.exit_code == 1
+        assert "API client error: needs aiohttp" in result.output
+
+    @pytest.mark.parametrize(
+        ("arguments", "operation"),
+        [
+            (["story", "artist", "Mango"], "the story queries"),
+            (["notification", "list"], "the notification URLs"),
+        ],
+    )
+    def test_the_websocket_gaps_fail_without_the_fallback(
+        self, runner, mocker, arguments, operation
+    ):
+        """The commands the WebSocket API does not offer fail, naming the remedies."""
+        self._mock_client(mocker, "websocket_synchronous")
+
+        result = runner.invoke(main, ["-C", "websocket_synchronous", *arguments])
+
+        assert result.exit_code == 1
+        assert (
+            "API client error: The synchronous WebSocket API client does not offer "
+            f"{operation}: use --api-client rest_synchronous or rest_asynchronous, "
+            "or --allow-fallback-to-rest-api"
+        ) in result.output
+
+    @pytest.mark.parametrize(
+        ("api_client", "rest_api_client"),
+        [
+            ("websocket_synchronous", "rest_synchronous"),
+            ("websocket_asynchronous", "rest_asynchronous"),
+        ],
+    )
+    def test_the_websocket_gaps_fall_back_to_the_rest_api_client(
+        self, runner, mocker, api_client, rest_api_client
+    ):
+        """With the fallback allowed, the REST API client of the same kind serves them."""
+        _, instance = self._mock_client(mocker, api_client)
+        rest_class, rest = self._mock_story(mocker, rest_api_client)
+
+        result = runner.invoke(
+            main, ["-C", api_client, "--allow-fallback-to-rest-api", "story", "artist", "Mango"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.stdout)["data"]["value"] == "A long story."
+        assert "Falling back to the REST API client for the story queries" in result.output
+        rest_class.assert_called_once()
+        instance.disconnect.assert_called_once_with()
+        if rest_api_client == "rest_asynchronous":
+            rest.close.assert_awaited_once_with()
+
+    def test_the_fallback_client_serves_every_operation_of_an_invocation(
+        self, runner, mocker
+    ):
+        """The REST API client is built once, however many operations fall back to it."""
+        self._mock_client(mocker, "websocket_synchronous")
+        rest_class, rest = self._mock_client(mocker, "rest_synchronous")
+        _attach_property(rest, "notifications", return_value=self._URLS)
+        rest.unregister_notification.return_value = SuccessResponse.from_raw({"success": True})
+
+        result = runner.invoke(
+            main,
+            ["-C", "websocket_synchronous", "--allow-fallback-to-rest-api", "notification",
+             "unregister", "--all"],
+        )
+
+        assert result.exit_code == 0
+        rest_class.assert_called_once()
+        assert rest.unregister_notification.call_count == 2
+        assert result.output.count("Falling back to the REST API client") == 3
+
 
 class TestCLICommands:
     """Test cases for CLI commands using CliRunner."""
@@ -1626,6 +1929,8 @@ class TestCLICommands:
         assert "volumito" in result.output
         assert "info" in result.output
         assert "version" in result.output
+        assert "--allow-fallback-to-rest-api" in result.output
+        assert "--api-client" in result.output
         assert "--machine-readable" in result.output
         assert "--rest-api-timeout" in result.output
         assert "--mpd-timeout" in result.output
@@ -1633,25 +1938,29 @@ class TestCLICommands:
         assert "--rest-api-retries-on-unexpected-state" in result.output
         assert "--rest-api-sleep-before-next-call" in result.output
         assert "--strict-parsing-configuration-file" in result.output
+        assert "--websocket-port" in result.output
+        assert "--websocket-timeout" in result.output
         # Short options
+        assert "-C" in result.output
         assert "-G" in result.output
         assert "-H" in result.output
         assert "-M" in result.output
         assert "-P" in result.output
+        assert "-W" in result.output
 
     def test_version_command(self, runner: CliRunner):
         """Test the version subcommand."""
         result = runner.invoke(main, ["version"])
 
         assert result.exit_code == 0
-        assert "volumito, version 0.3.0" in result.output
+        assert "volumito, version 0.4.0" in result.output
 
     def test_version_command_machine_readable(self, runner: CliRunner):
         """Test --machine-readable version prints the quoted version string."""
         result = runner.invoke(main, ["--machine-readable", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.3.0"'
+        assert result.output.strip() == '"0.4.0"'
         assert "volumito" not in result.output
         assert "version" not in result.output
 
@@ -1660,7 +1969,7 @@ class TestCLICommands:
         result = runner.invoke(main, ["-m", "version"])
 
         assert result.exit_code == 0
-        assert result.output.strip() == '"0.3.0"'
+        assert result.output.strip() == '"0.4.0"'
 
     def test_info_help(self, runner: CliRunner):
         """The top-level info command is an alias for system info (minimal surface)."""
@@ -8171,9 +8480,8 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", self._MBID])
 
         assert result.exit_code == 0
-        mock_client.get_story.assert_called_once_with(
-            album=Album(self._MBID, is_mbid=True), artist=None
-        )
+        # The adapter passes the client only the entities given
+        mock_client.get_story.assert_called_once_with(album=Album(self._MBID, is_mbid=True))
 
     def test_album_explicit_mbid_type(self, runner: CliRunner, mocker: MockerFixture):
         """story album -T mbid takes the single argument verbatim."""
@@ -8182,9 +8490,7 @@ class TestStoryCommands:
         result = runner.invoke(main, ["story", "album", "-T", "mbid", "not-a-uuid"])
 
         assert result.exit_code == 0
-        mock_client.get_story.assert_called_once_with(
-            album=Album("not-a-uuid", is_mbid=True), artist=None
-        )
+        mock_client.get_story.assert_called_once_with(album=Album("not-a-uuid", is_mbid=True))
 
     def test_album_explicit_name_type(self, runner: CliRunner, mocker: MockerFixture):
         """story album -T name keeps a UUID-shaped first argument as the artist."""
@@ -13044,7 +13350,10 @@ class TestConfigurationCommands:
                 "volumio": {
                     "host": "volumio.local",
                     "scheme": "http",
+                    "api-client": "rest_synchronous",
+                    "allow-fallback-to-rest-api": False,
                     "rest-api-port": 3000,
+                    "websocket-port": 3000,
                     "mpd-port": 6600,
                     "ssh-password": None,
                     "ssh-port": 22,
@@ -13053,6 +13362,7 @@ class TestConfigurationCommands:
                 "timeouts": {
                     "rest-api-timeout": 5.0,
                     "rest-api-timeout-slow-endpoints": 60.0,
+                    "websocket-timeout": 5.0,
                     "mpd-timeout": 5.0,
                     "rest-api-sleep-before-next-call": 2.0,
                     "rest-api-retries-on-unexpected-state": 3,

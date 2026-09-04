@@ -362,7 +362,7 @@ timeouts:
   # Times to re-read the playback status until it reaches the expected state
   rest-api-retries-on-unexpected-state: 3
 
-  # Seconds to sleep before the next REST API call
+  # Seconds to sleep before the next API call
   rest-api-sleep-before-next-call: 2.0
 
   # REST API request timeout, in seconds
@@ -372,8 +372,24 @@ timeouts:
   # (e.g., replaceAndPlay, addToQueue)
   rest-api-timeout-slow-endpoints: 60.0
 
+  # WebSocket API request timeout, in seconds
+  websocket-timeout: 5.0
+
 
 volumio:
+  # If a Websocket API client is selected,
+  # and a command (e.g., story or notification) cannot be satisfied by it:
+  # - true: allow using a REST API client (with a warning);
+  # - false: error out
+  allow-fallback-to-rest-api: false
+
+  # API client used to talk to the Volumio host, one of:
+  # - rest_synchronous (default)
+  # - rest_asynchronous (required extra: async)
+  # - websocket_synchronous (required extra: websocket)
+  # - websocket_asynchronous (required extra: websocket)
+  api-client: rest_synchronous
+
   # Hostname or IP address of the Volumio host
   host: volumio.local
 
@@ -400,3 +416,6 @@ volumio:
 
   # SSH user name on the Volumio host
   ssh-username: volumio
+
+  # WebSocket API port of the Volumio host
+  websocket-port: 3000

@@ -472,7 +472,10 @@ class TestDefaultConfigurationTemplate:
             "volumio": {
                 "host": "volumio.local",
                 "scheme": "http",
+                "api-client": "rest_synchronous",
+                "allow-fallback-to-rest-api": False,
                 "rest-api-port": 3000,
+                "websocket-port": 3000,
                 "mpd-port": 6600,
                 "ssh-password": None,
                 "ssh-port": 22,
@@ -481,6 +484,7 @@ class TestDefaultConfigurationTemplate:
             "timeouts": {
                 "rest-api-timeout": 5.0,
                 "rest-api-timeout-slow-endpoints": 60.0,
+                "websocket-timeout": 5.0,
                 "mpd-timeout": 5.0,
                 "rest-api-sleep-before-next-call": 2.0,
                 "rest-api-retries-on-unexpected-state": 3,

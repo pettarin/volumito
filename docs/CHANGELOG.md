@@ -9,6 +9,20 @@ All notable changes to this project will be documented in this file.
 > [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.4.0] - 2026-09-04
+
+### Added
+
+- [Issue #7](https://github.com/pettarin/volumito/issues/7):
+  global option `-C/--api-client` to select the API client
+  the `volumito` CLI tool must use,
+  with the corresponding configuration key
+- Global options `--allow-fallback-to-rest-api`,
+  `-W/--websocket-port` and `--websocket-timeout`,
+  with the corresponding configuration keys
+- Method `offset` on `BrowseResults` in the WebSocket API clients
+
+
 ## [0.3.0] - 2026-08-28
 
 ### Added

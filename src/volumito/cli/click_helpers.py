@@ -20,6 +20,14 @@ from click.core import ParameterSource
 from packaging.version import InvalidVersion, Version
 
 from volumito import __version__
+from volumito.cli.api_client import (
+    APIClient,
+    RESTAsyncAPIClient,
+    RESTSyncAPIClient,
+    UnsupportedOperationError,
+    WebSocketAsyncAPIClient,
+    WebSocketSyncAPIClient,
+)
 from volumito.cli.configuration import (
     build_click_default_map,
     load_configuration_with_errors,
@@ -27,6 +35,12 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, warning
 from volumito.cli.constants import (
+    API_CLIENT_REST_ASYNCHRONOUS,
+    API_CLIENT_REST_SYNCHRONOUS,
+    API_CLIENT_WEBSOCKET_ASYNCHRONOUS,
+    API_CLIENT_WEBSOCKET_SYNCHRONOUS,
+    API_CLIENTS_WEBSOCKET,
+    DEFAULT_API_CLIENT,
     DEFAULT_MANIFEST_FILE,
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
     DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES,
@@ -74,11 +88,16 @@ from volumito.clients import (
     Artist,
     Scheme,
     VolumioAPIError,
+    VolumioAsyncError,
+    VolumioAsyncRESTAPIClient,
+    VolumioAsyncWebSocketClient,
     VolumioConnectionError,
     VolumioHostConfiguration,
     VolumioRESTAPIClient,
     VolumioSSHError,
     VolumioStoryError,
+    VolumioWebSocketClient,
+    VolumioWebSocketError,
     copy_from_host,
     is_local_file_uri,
     remote_music_path,
@@ -588,6 +607,21 @@ def command_nodes_flattened(
     return flat
 
 
+def connection_url(ctx: click.Context) -> str:
+    """Return the URL of the API endpoint the selected API client connects to.
+
+    Args:
+        ctx: Click context object holding the shared options
+
+    Returns:
+        The WebSocket base URL for the WebSocket API clients, the REST one otherwise
+    """
+    host_configuration: VolumioHostConfiguration = ctx.obj["host_configuration"]
+    if ctx.obj["api_client"] in API_CLIENTS_WEBSOCKET:
+        return host_configuration.websocket_base_url
+    return host_configuration.rest_base_url
+
+
 def correct_audio_extension(destination: str, overwrite: bool) -> str:
     """Rename a downloaded audio file to the extension its own content calls for.
 
@@ -623,21 +657,65 @@ def correct_audio_extension(destination: str, overwrite: bool) -> str:
 
 def create_client(
     host_configuration: VolumioHostConfiguration,
-    timeout: float,
-    timeout_slow_endpoints: float = 60.0,
-) -> VolumioRESTAPIClient:
-    """Create a VolumioRESTAPIClient with the given host configuration.
+    rest_api_timeout: float,
+    rest_api_timeout_slow_endpoints: float = 60.0,
+    *,
+    websocket_timeout: float = 5.0,
+    api_client: str = DEFAULT_API_CLIENT,
+    allow_fallback_to_rest_api: bool = False,
+) -> APIClient:
+    """Create the API client the -C/--api-client option selects, not yet open.
+
+    Every client logs to the CLI console. A WebSocket API client gets a REST API client
+    of the same kind (synchronous or asynchronous) to fall back to, when allowed, for
+    the operations the WebSocket API does not offer.
 
     Args:
         host_configuration: The host configuration (scheme, host, and ports)
-        timeout: Request timeout in seconds
-        timeout_slow_endpoints: Request timeout, in seconds, for the endpoints that
-            can take long, like replacing the queue
+        rest_api_timeout: REST API request timeout, in seconds
+        rest_api_timeout_slow_endpoints: REST API request timeout, in seconds, for the
+            endpoints that can take long, like replacing the queue
+        websocket_timeout: The seconds a WebSocket API read waits for its answer
+        api_client: The name of the API client, one of the -C/--api-client values
+        allow_fallback_to_rest_api: Whether a WebSocket API client falls back to a REST
+            API client for the operations the WebSocket API does not offer
 
     Returns:
-        A configured VolumioRESTAPIClient instance, logging to the CLI console
+        The API client, to be opened before its first use
+
+    Raises:
+        ValueError: If the name is not one of the -C/--api-client values
     """
-    return VolumioRESTAPIClient(host_configuration, timeout, timeout_slow_endpoints, LOGGER)
+
+    def rest_asynchronous() -> APIClient:
+        return RESTAsyncAPIClient(
+            VolumioAsyncRESTAPIClient(
+                host_configuration, rest_api_timeout, rest_api_timeout_slow_endpoints, LOGGER
+            )
+        )
+
+    def rest_synchronous() -> APIClient:
+        return RESTSyncAPIClient(
+            VolumioRESTAPIClient(
+                host_configuration, rest_api_timeout, rest_api_timeout_slow_endpoints, LOGGER
+            )
+        )
+
+    if api_client == API_CLIENT_REST_SYNCHRONOUS:
+        return rest_synchronous()
+    if api_client == API_CLIENT_REST_ASYNCHRONOUS:
+        return rest_asynchronous()
+    if api_client == API_CLIENT_WEBSOCKET_SYNCHRONOUS:
+        return WebSocketSyncAPIClient(
+            VolumioWebSocketClient(host_configuration, websocket_timeout, LOGGER),
+            fallback=rest_synchronous if allow_fallback_to_rest_api else None,
+        )
+    if api_client == API_CLIENT_WEBSOCKET_ASYNCHRONOUS:
+        return WebSocketAsyncAPIClient(
+            VolumioAsyncWebSocketClient(host_configuration, websocket_timeout, LOGGER),
+            fallback=rest_asynchronous if allow_fallback_to_rest_api else None,
+        )
+    raise ValueError(f"Unknown API client {api_client!r}")
 
 
 def download_queue_albumart(
@@ -1003,28 +1081,26 @@ def embed_track_tags(
 def execute_command(
     ctx: click.Context,
     command_name: str,
-    command_func: Callable[[VolumioRESTAPIClient], object],
+    command_func: Callable[[APIClient], object],
 ) -> None:
     """Execute a playback control command.
 
     Args:
         ctx: Click context object containing shared options
         command_name: Name of the command (for messages)
-        command_func: Function to call on the VolumioRESTAPIClient
+        command_func: Function to call on the API client
     """
-    host_configuration = ctx.obj["host_configuration"]
-    rest_api_timeout = ctx.obj["rest_api_timeout"]
+    url = connection_url(ctx)
 
-    debug(f"Connecting to {host_configuration.rest_base_url}...")
+    debug(f"Connecting to {url}...")
 
     try:
-        client = create_client(
-            host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
-        )
+        client = get_client(ctx)
         response = command_func(client)
 
-        debug(f"Connecting to {host_configuration.rest_base_url}... done")
-        debug(f"Response: {response}")
+        debug(f"Connecting to {url}... done")
+        if response is not None:
+            debug(f"Response: {response}")
 
         info(f"Command '{command_name}' executed successfully")
 
@@ -1033,6 +1109,9 @@ def execute_command(
         sys.exit(1)
     except VolumioAPIError as e:
         error(f"API error: {e}")
+        sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
@@ -1123,29 +1202,26 @@ def fetch_cover(
 
 def fetch_or_exit[T](
     ctx: click.Context,
-    fetch: Callable[[VolumioRESTAPIClient], T],
+    fetch: Callable[[APIClient], T],
 ) -> T:
     """Fetch data from the Volumio instance, printing errors and exiting (1) on failure.
 
     Args:
         ctx: Click context object containing shared options
-        fetch: Function to call on the VolumioRESTAPIClient, returning the payload
+        fetch: Function to call on the API client, returning the payload
 
     Returns:
         Whatever ``fetch`` returns (a response model for the JSON endpoints, text
         for ping)
     """
-    host_configuration = ctx.obj["host_configuration"]
-    rest_api_timeout = ctx.obj["rest_api_timeout"]
+    url = connection_url(ctx)
 
-    debug(f"Connecting to {host_configuration.rest_base_url}...")
+    debug(f"Connecting to {url}...")
 
     try:
-        client = create_client(
-            host_configuration, rest_api_timeout, ctx.obj["rest_api_timeout_slow_endpoints"]
-        )
+        client = get_client(ctx)
         fetched = fetch(client)
-        debug(f"Connecting to {host_configuration.rest_base_url}... done")
+        debug(f"Connecting to {url}... done")
         return fetched
     except VolumioConnectionError as e:
         error(f"Connection error: {e}")
@@ -1155,6 +1231,9 @@ def fetch_or_exit[T](
         sys.exit(1)
     except VolumioAPIError as e:
         error(f"API error: {e}")
+        sys.exit(1)
+    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
+        error(f"API client error: {e}")
         sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
@@ -1207,6 +1286,37 @@ def fetch_uri_to_file(
     with open(destination, "wb") as f:
         for chunk in response.iter_content(chunk_size=FILE_WRITE_CHUNK_SIZE):
             f.write(chunk)
+
+
+def get_client(ctx: click.Context) -> APIClient:
+    """Return the API client of this invocation, created and opened on the first call.
+
+    The client is kept in the context object, so every command and helper of the
+    invocation shares it, and closed when the root context closes, that is when the
+    tool exits, however it exits. A client that fails to open is not kept, so the
+    next call tries again.
+
+    Args:
+        ctx: Click context object holding the shared options
+
+    Returns:
+        The open API client
+    """
+    client: APIClient | None = ctx.obj.get("client")
+    if client is None:
+        client = create_client(
+            ctx.obj["host_configuration"],
+            ctx.obj["rest_api_timeout"],
+            ctx.obj["rest_api_timeout_slow_endpoints"],
+            websocket_timeout=ctx.obj["websocket_timeout"],
+            api_client=ctx.obj["api_client"],
+            allow_fallback_to_rest_api=ctx.obj["allow_fallback_to_rest_api"],
+        )
+        debug(f"Using the {client.description}")
+        client.open()
+        ctx.obj["client"] = client
+        ctx.find_root().call_on_close(client.close)
+    return client
 
 
 def ignore_configuration_file_callback(
@@ -2092,7 +2202,7 @@ def render_state(
 
 def render_story(
     ctx: click.Context,
-    fetch: Callable[[VolumioRESTAPIClient], Story],
+    fetch: Callable[[APIClient], Story],
     fields: str,
     output_format: str,
     heading: str,
@@ -2283,7 +2393,7 @@ def resolve_command_path(
 
 
 def rest_api_sleep(ctx: click.Context) -> None:
-    """Sleep for the configured delay before making the next REST API call.
+    """Sleep for the configured delay before making the next API call.
 
     Args:
         ctx: Click context object holding the shared options

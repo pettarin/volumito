@@ -1593,6 +1593,20 @@ class BrowseResults(VolumioModel):
         """
         return self.model_copy(update={"lists": _lists_with_first_items(self.lists, count)})
 
+    def offset(self, count: int) -> "BrowseResults":
+        """Return the content without the first items of each list.
+
+        The items skipped are the first ones of each list, in the order the host reported
+        them. The lists left without items are dropped, and the raw payload is preserved.
+
+        Args:
+            count: The number of items to skip in each list
+
+        Returns:
+            The offset content, holding the original payload in its ``raw`` attribute
+        """
+        return self.model_copy(update={"lists": _lists_without_first_items(self.lists, count)})
+
 
 class Share(VolumioModel):
     """A network share mounted by a Volumio instance."""

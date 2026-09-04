@@ -29,6 +29,7 @@ you might need to add:
 
 - `-M / --mpd-port INTEGER` (default: `6600`)
 - `-P / --rest-api-port INTEGER` (default: `3000`)
+- `-W / --websocket-port INTEGER` (default: `3000`)
 - `--scheme [http|https]` (default: `http`).
 
 > [!NOTE]
@@ -40,4 +41,18 @@ whose REST API is proxied to port 4567:
 ```bash
 volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 ```
+
+By default, the commands talk to the Volumio host through its REST API, synchronously.
+The `-C / --api-client` option selects another of the clients of the `volumito` library:
+`rest_asynchronous` (requiring the `async` extra),
+`websocket_synchronous`, or `websocket_asynchronous` (both requiring the `websocket` extra).
+For example, to issue the `info` command over the WebSocket API:
+
+```bash
+volumito -C websocket_synchronous info
+```
+
+The WebSocket API offers neither the `story` nor the `notification` commands:
+with a WebSocket client selected, they fail,
+unless the `--allow-fallback-to-rest-api` option lets them use a REST API client.
 
