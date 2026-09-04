@@ -255,6 +255,22 @@ Usage: volumito [OPTIONS] COMMAND [ARGS]...
   volumito - CLI tool for Volumio.
 
 Options:
+  --allow-fallback-to-rest-api / --no-allow-fallback-to-rest-api
+                                  When a WebSocket API client is selected,
+                                  serve the commands the WebSocket API does
+                                  not offer (the story and notification ones)
+                                  through a REST API client, instead of
+                                  failing them.  [default: no-allow-fallback-
+                                  to-rest-api]
+  -C, --api-client [synchronous_rest|asynchronous_rest|synchronous_websocket|asynchronous_websocket]
+                                  API client used to talk to the Volumio
+                                  instance (asynchronous_rest needs the
+                                  'async' extra installed, the websocket ones
+                                  the 'websocket' extra); the short forms
+                                  sync_rest/sr, async_rest/ar,
+                                  sync_websocket/sw, and async_websocket/aw
+                                  are accepted too.  [default:
+                                  synchronous_rest]
   --color / --no-color            Color the messages of the tool (when the
                                   terminal supports it).  [default: color]
   -c, --configuration-file TEXT   Path to a YAML configuration file defining
@@ -286,9 +302,9 @@ Options:
                                   to reach a given state, re-read the status
                                   up to this many times.  [default: 3]
   --rest-api-sleep-before-next-call FLOAT
-                                  When making multiple REST API calls, sleep
-                                  these many seconds between two consecutive
-                                  calls.  [default: 2.0]
+                                  When making multiple API calls, sleep these
+                                  many seconds between two consecutive calls.
+                                  [default: 2.0]
   --rest-api-timeout FLOAT        REST API request timeout, in seconds.
                                   [default: 5.0]
   --rest-api-timeout-slow-endpoints FLOAT
@@ -309,6 +325,10 @@ Options:
                                   errors (or warn and continue).  [default:
                                   no-strict-parsing-configuration-file]
   -v, --verbose                   Enable verbose output.
+  -W, --websocket-port INTEGER    WebSocket API port of the Volumio instance.
+                                  [default: 3000]
+  --websocket-timeout FLOAT       WebSocket API request timeout, in seconds.
+                                  [default: 5.0]
   --help                          Show this message and exit.
 
 Commands:
