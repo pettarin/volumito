@@ -60,13 +60,15 @@ $ micromamba activate volumito_env
 >   for the REST API of Volumio
 >   (including when using the `volumito` CLI tool with
 >   `--api-client asynchronous_rest`);
+> - `async_websocket`: required by the asynchronous client `VolumioAsyncWebSocketClient`
+>   for the WebSocket API of Volumio
+>   (including when using the `volumito` CLI tool with
+>   `--api-client asynchronous_websocket`);
 > - `scp`: required by the `volumito scp` and `volumito system execute`
 >   (advanced and potentially dangerous) commands;
-> - `websocket`: required by both the synchronous `VolumioWebSocketClient`
->   and asynchronous `VolumioAsyncWebSocketClient` clients
->   of the WebSocket API of Volumio
+> - `websocket`: required by the synchronous client `VolumioWebSocketClient`
+>   for the WebSocket API of Volumio
 >   (including when using the `volumito` CLI tool with
->   `--api-client asynchronous_websocket` or
 >   `--api-client synchronous_websocket`).
 
 > [!TIP]
@@ -125,13 +127,14 @@ $ micromamba activate volumito_env
 > - `async`: required by the asynchronous client `VolumioAsyncRESTAPIClient`
 >   for the REST API of Volumio, and by the `volumito` CLI tool
 >   when run with `--api-client asynchronous_rest`;
+> - `async_websocket`: required by the asynchronous client `VolumioAsyncWebSocketClient`
+>   for the WebSocket API of Volumio, and by the `volumito` CLI tool
+>   when run with `--api-client asynchronous_websocket`;
 > - `scp`: required by the `volumito scp` and `volumito system execute`
 >   (advanced and potentially dangerous) commands;
-> - `websocket`: required by both the synchronous `VolumioWebSocketClient`
->   and asynchronous `VolumioAsyncWebSocketClient` clients
->   of the WebSocket API of Volumio, and by the `volumito` CLI tool
->   when run with `--api-client synchronous_websocket`
->   or `--api-client asynchronous_websocket`.
+> - `websocket`: required by the synchronous client `VolumioWebSocketClient`
+>   for the WebSocket API of Volumio, and by the `volumito` CLI tool
+>   when run with `--api-client synchronous_websocket`.
 
 > [!TIP]
 > The `all` extra installs all of them:
@@ -483,8 +486,9 @@ asyncio.run(main())
 ```
 
 The same API is also available over Volumio's WebSocket API,
-provided the `websocket` extra is installed
-(`pip install volumito[websocket]`).
+provided the `websocket` or `async_websocket` extra is installed
+(`pip install volumito[websocket]` for the synchronous version,
+or `pip install volumito[async_websocket]` for the asynchronous version).
 Its clients hold one open connection, and can listen to what the host pushes:
 
 ```python
@@ -508,7 +512,9 @@ with VolumioWebSocketClient(host) as client:
     client.wait()
 ```
 
-An asynchronous counterpart `VolumioAsyncWebSocketClient` is also available.
+An asynchronous counterpart `VolumioAsyncWebSocketClient` is also available,
+provided the `async_websocket` extra is installed
+(`pip install volumito[async_websocket]`).
 
 Beyond the members the REST clients also offer,
 the WebSocket clients reach the functionalities that the REST API of Volumio does not

@@ -12,6 +12,7 @@
 	install-e-this \
 	install-e-this-all \
 	install-e-this-async \
+	install-e-this-async-websocket \
 	install-e-this-dev \
 	install-e-this-scp \
 	install-e-this-websocket \
@@ -28,6 +29,7 @@
 	reinstall-e-this \
 	reinstall-e-this-all \
 	reinstall-e-this-async \
+	reinstall-e-this-async-websocket \
 	reinstall-e-this-dev \
 	reinstall-e-this-dev-test \
 	reinstall-e-this-scp \
@@ -53,6 +55,7 @@ help:
 	@echo "  install-e-this             - Install package in editable mode"
 	@echo "  install-e-this-all         - Install package in editable mode with all optional dependencies"
 	@echo "  install-e-this-async       - Install package in editable mode with async dependencies"
+	@echo "  install-e-this-async-websocket - Install package in editable mode with async_websocket dependencies"
 	@echo "  install-e-this-dev         - Install package in editable mode with dev dependencies"
 	@echo "  install-e-this-scp         - Install package in editable mode with scp dependencies"
 	@echo "  install-e-this-websocket   - Install package in editable mode with websocket dependencies"
@@ -60,6 +63,7 @@ help:
 	@echo "  reinstall-e-this           - Install package in editable mode"
 	@echo "  reinstall-e-this-all       - Install package in editable mode with all optional dependencies"
 	@echo "  reinstall-e-this-async     - Install package in editable mode with async dependencies"
+	@echo "  reinstall-e-this-async-websocket - Install package in editable mode with async_websocket dependencies"
 	@echo "  reinstall-e-this-dev       - Install package in editable mode with dev dependencies"
 	@echo "  reinstall-e-this-dev-test  - Install package in editable mode with dev dependencies and run all tests"
 	@echo "  reinstall-e-this-scp       - Install package in editable mode with scp dependencies"
@@ -77,6 +81,9 @@ install-e-this-all:
 
 install-e-this-async:
 	pip install -e .[async]
+
+install-e-this-async-websocket:
+	pip install -e .[async_websocket]
 
 install-e-this-dev:
 	pip install -e .[dev]
@@ -101,6 +108,10 @@ reinstall-e-this-all: \
 reinstall-e-this-async: \
 	uninstall-this \
 	install-e-this-async
+
+reinstall-e-this-async-websocket: \
+	uninstall-this \
+	install-e-this-async-websocket
 
 reinstall-e-this-dev: \
 	uninstall-this \

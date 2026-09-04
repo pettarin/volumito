@@ -225,7 +225,7 @@ def _load_aiohttp() -> ModuleType:
     except ImportError as e:
         raise VolumioWebSocketError(
             "Reaching the Volumio host over WebSocket asynchronously needs the aiohttp "
-            "package: install it with 'pip install volumito[websocket]'"
+            "package: install it with 'pip install volumito[async_websocket]'"
         ) from e
 
     return aiohttp
@@ -743,7 +743,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             return
         # python-socketio only logs a missing aiohttp, and connects to nothing
         _load_aiohttp()
-        sio: Any = _load_socketio()
+        sio: Any = _load_socketio("async_websocket")
         url = self.host_configuration.websocket_base_url
         self._log_debug(f'Connecting to the Volumio WebSocket API at "{url}"...')
         self._client = sio.AsyncClient(reconnection=False)

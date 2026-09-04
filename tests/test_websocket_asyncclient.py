@@ -194,7 +194,19 @@ class TestVolumioAsyncWebSocketClientLifecycle:
             _load_aiohttp()
 
         assert "needs the aiohttp package" in str(excinfo.value)
-        assert "pip install volumito[websocket]" in str(excinfo.value)
+        assert "pip install volumito[async_websocket]" in str(excinfo.value)
+
+    async def test_connect_without_socketio_names_the_async_extra(self, mocker: MockerFixture):
+        """Without python-socketio, connecting names the extra of the asynchronous client."""
+        client, _ = await _client(mocker, connect=False)
+        mocker.patch.dict(sys.modules, {"socketio": None})
+
+        with pytest.raises(VolumioWebSocketError) as excinfo:
+            await client.connect()
+
+        assert "needs the python-socketio package" in str(excinfo.value)
+        assert "pip install volumito[async_websocket]" in str(excinfo.value)
+        assert client._connected is False
 
     async def test_connect_without_aiohttp_raises(self, mocker: MockerFixture):
         """Without aiohttp, connecting fails at once, before python-socketio is involved."""

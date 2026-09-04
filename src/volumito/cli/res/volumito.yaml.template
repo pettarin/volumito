@@ -387,7 +387,7 @@ volumio:
   # - synchronous_rest (default; short forms: sync_rest, sr)
   # - asynchronous_rest (required extra: async; short forms: async_rest, ar)
   # - synchronous_websocket (required extra: websocket; short forms: sync_websocket, sw)
-  # - asynchronous_websocket (required extra: websocket; short forms: async_websocket, aw)
+  # - asynchronous_websocket (required extra: async_websocket; short forms: async_websocket, aw)
   api-client: synchronous_rest
 
   # Hostname or IP address of the Volumio host

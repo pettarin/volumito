@@ -49,15 +49,22 @@ to the Volumio host through its REST API, synchronously.
 The `-C / --api-client` option allows you to select
 another of the clients of the `volumito` library:
 
-| Client                  | Value                    | Short Forms             | Required Extra |
-| ----------------------- | ------------------------ | ----------------------- | -------------- |
-| Asynchronous REST       | `asynchronous_rest`      | `async_rest`, `ar`      | `async`        |
-| Asynchronous WebSocket  | `asynchronous_websocket` | `async_websocket`, `aw` | `websocket`    |
-| Synchronous REST        | `synchronous_rest`       | `sync_rest`, `sr`       | None           |
-| Synchronous WebSocket   | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`    |
+| Client                     | Value                    | Short Forms             | Required Extra    |
+| -------------------------- | ------------------------ | ----------------------- | ----------------- |
+| Asynchronous REST          | `asynchronous_rest`      | `async_rest`, `ar`      | `async`           |
+| Asynchronous WebSocket     | `asynchronous_websocket` | `async_websocket`, `aw` | `async_websocket` |
+| Synchronous REST (default) | `synchronous_rest`       | `sync_rest`, `sr`       | None              |
+| Synchronous WebSocket      | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`       |
 
-For example, to issue the `info` command
-over the WebSocket API, asynchronously:
+> [!NOTE]
+> To use any of the non-default clients,
+> you need to install `volumito` with the required extra
+> indicated in the above table, or the `all` extra.
+>
+> For example, `pip install volumito[async_websocket]`
+> to run the next example.
+
+To issue the `info` command over the WebSocket API, asynchronously:
 
 ```bash
 volumito -C asynchronous_websocket info

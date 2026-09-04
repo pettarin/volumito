@@ -21,12 +21,17 @@ All notable changes to this project will be documented in this file.
   `-W/--websocket-port` and `--websocket-timeout`,
   with the corresponding configuration keys
 - Method `offset` on `BrowseResults` in the WebSocket API clients
+- Install extra `volumito[async_websocket]`,
+  required by `VolumioAsyncWebSocketClient`
 
 ### Changed
 
 - Renamed the global option `--rest-api-retries-on-unexpected-state` to
   `--retries-on-unexpected-state` and `--rest-api-sleep-before-next-call` to
   `--sleep-before-next-api-call` (and the corresponding configuration keys)
+- The `websocket` extra provides only what `VolumioWebSocketClient` needs
+  for the synchronous operations; use the added `async_websocket` extra
+  for the asynchronous operations of `VolumioAsyncWebSocketClient`
 
 ### Fixed
 

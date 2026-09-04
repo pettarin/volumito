@@ -344,14 +344,17 @@ connect to the
 [WebSocket API](https://developers.volumio.com/api/websocket-api)
 of Volumio.
 
-They need `volumito` to be installed with the `websocket` extra:
+They need `volumito` to be installed with the `websocket` extra
+(`VolumioWebSocketClient`) or the `async_websocket` extra
+(`VolumioAsyncWebSocketClient`):
 
 ```bash
 pip install volumito[websocket]
+pip install volumito[async_websocket]
 ```
 
 > [!TIP]
-> The `all` extra installs the `websocket` extra too.
+> The `all` extra installs both extras too.
 
 Unlike the REST clients, which open a connection per request,
 a WebSocket client holds one open connection:
@@ -709,7 +712,8 @@ asyncio.run(main())
 `VolumioConnectionError` is raised for a host that cannot be reached, for an event
 that cannot be sent, and for a read the host does not answer in time.
 `VolumioWebSocketError` is raised instead when the
-`python-socketio` package is not installed.
+`python-socketio` package is not installed
+(or, for the asynchronous client, the `aiohttp` package it needs).
 
 
 ## Response Models

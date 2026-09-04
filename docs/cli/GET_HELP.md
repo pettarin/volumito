@@ -21,13 +21,7 @@ Options:
                                   to-rest-api]
   -C, --api-client [synchronous_rest|asynchronous_rest|synchronous_websocket|asynchronous_websocket]
                                   API client used to talk to the Volumio
-                                  instance (asynchronous_rest needs the
-                                  'async' extra installed, the websocket ones
-                                  the 'websocket' extra); the short forms
-                                  sync_rest/sr, async_rest/ar,
-                                  sync_websocket/sw, and async_websocket/aw
-                                  are accepted too.  [default:
-                                  synchronous_rest]
+                                  instance.  [default: synchronous_rest]
   --color / --no-color            Color the messages of the tool (when the
                                   terminal supports it).  [default: color]
   -c, --configuration-file TEXT   Path to a YAML configuration file defining
@@ -54,22 +48,22 @@ Options:
                                   zero).  [default: position-starting-at-one]
   -P, --rest-api-port INTEGER     REST API port of the Volumio instance.
                                   [default: 3000]
-  --rest-api-retries-on-unexpected-state INTEGER
-                                  When a command expects the playback status
-                                  to reach a given state, re-read the status
-                                  up to this many times.  [default: 3]
-  --rest-api-sleep-before-next-call FLOAT
-                                  When making multiple API calls, sleep these
-                                  many seconds between two consecutive calls.
-                                  [default: 2.0]
   --rest-api-timeout FLOAT        REST API request timeout, in seconds.
                                   [default: 5.0]
   --rest-api-timeout-slow-endpoints FLOAT
                                   REST API request timeout for the endpoints
                                   that can take long (e.g., replacing the
                                   queue), in seconds.  [default: 60.0]
+  --retries-on-unexpected-state INTEGER
+                                  When a command expects the playback status
+                                  to reach a given state, re-read the status
+                                  up to this many times.  [default: 3]
   --scheme [http|https]           URL scheme for connecting to the Volumio
                                   instance.  [default: http]
+  --sleep-before-next-api-call FLOAT
+                                  When making multiple API calls, sleep these
+                                  many seconds between two consecutive calls.
+                                  [default: 2.0]
   --ssh-password TEXT             SSH password of the Volumio instance; it
                                   stays in the shell history, so a private key
                                   authorized on the host is preferable.
