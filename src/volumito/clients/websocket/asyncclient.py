@@ -14,9 +14,10 @@ import logging
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
-from types import TracebackType
+from types import ModuleType, TracebackType
 from typing import Any, Self
 
+from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
     Alarm,
@@ -205,6 +206,29 @@ from volumito.clients.websocket.common import (
     VOLUME_UP,
     VolumioWebSocketCommon,
 )
+
+
+def _load_aiohttp() -> ModuleType:
+    """Import the HTTP package python-socketio needs, when a connection is about to be opened.
+
+    python-socketio itself only logs a missing aiohttp and connects to nothing, leaving
+    every request to wait for an answer that never comes: checking here fails at once.
+
+    Returns:
+        The aiohttp module
+
+    Raises:
+        VolumioWebSocketError: If the package is not installed
+    """
+    try:
+        import aiohttp
+    except ImportError as e:
+        raise VolumioWebSocketError(
+            "Reaching the Volumio host over WebSocket asynchronously needs the aiohttp "
+            "package: install it with 'pip install volumito[websocket]'"
+        ) from e
+
+    return aiohttp
 
 
 class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
@@ -710,12 +734,15 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         Connecting an already connected client does nothing.
 
         Raises:
-            VolumioWebSocketError: If the python-socketio package is not installed
+            VolumioWebSocketError: If the python-socketio or the aiohttp package is not
+                installed
             VolumioConnectionError: If the connection cannot be opened
         """
         if self._connected:
             self._log_debug("Already connected to the Volumio WebSocket API")
             return
+        # python-socketio only logs a missing aiohttp, and connects to nothing
+        _load_aiohttp()
         sio: Any = _load_socketio()
         url = self.host_configuration.websocket_base_url
         self._log_debug(f'Connecting to the Volumio WebSocket API at "{url}"...')

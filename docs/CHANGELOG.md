@@ -22,6 +22,18 @@ All notable changes to this project will be documented in this file.
   with the corresponding configuration keys
 - Method `offset` on `BrowseResults` in the WebSocket API clients
 
+### Changed
+
+- Renamed the global option `--rest-api-retries-on-unexpected-state` to
+  `--retries-on-unexpected-state` and `--rest-api-sleep-before-next-call` to
+  `--sleep-before-next-api-call` (and the corresponding configuration keys)
+
+### Fixed
+
+- `VolumioAsyncWebSocketClient` now reports a clear error if
+  the `aiohttp` dependency is not installed,
+  instead of waiting until the timeout elapsed
+
 
 ## [0.3.0] - 2026-08-28
 
