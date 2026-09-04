@@ -75,7 +75,7 @@ to the Volumio host through its REST API, synchronously.
 The `-C / --api-client` option allows you to select
 another of the clients of the `volumito` library:
 
-| Client                  | Value                    | Synonyms                | Required Extra |
+| Client                  | Value                    | Short Forms             | Required Extra |
 | ----------------------- | ------------------------ | ----------------------- | -------------- |
 | Asynchronous REST       | `asynchronous_rest`      | `async_rest`, `ar`      | `async`        |
 | Asynchronous WebSocket  | `asynchronous_websocket` | `async_websocket`, `aw` | `websocket`    |
