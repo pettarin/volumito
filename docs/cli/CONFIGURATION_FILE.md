@@ -29,7 +29,7 @@ file that looks like this:
 ```yaml
 # volumito CLI configuration file
 #
-# Generated with default values for version 0.1.0: edit as needed (and remove this comment)
+# Generated with default values for version 0.4.0: edit as needed (and remove this comment)
 
 aliases:
   # Aliases/shorthands for existing command paths (groups, commands, subcommands).
@@ -391,7 +391,7 @@ timeouts:
   # Times to re-read the playback status until it reaches the expected state
   rest-api-retries-on-unexpected-state: 3
 
-  # Seconds to sleep before the next REST API call
+  # Seconds to sleep before the next API call
   rest-api-sleep-before-next-call: 2.0
 
   # REST API request timeout, in seconds
@@ -401,8 +401,24 @@ timeouts:
   # (e.g., replaceAndPlay, addToQueue)
   rest-api-timeout-slow-endpoints: 60.0
 
+  # WebSocket API request timeout, in seconds
+  websocket-timeout: 5.0
+
 
 volumio:
+  # If a Websocket API client is selected,
+  # and a command (e.g., story or notification) cannot be satisfied by it:
+  # - true: allow using a REST API client (with a warning);
+  # - false: error out
+  allow-fallback-to-rest-api: false
+
+  # API client used to talk to the Volumio host, one of:
+  # - synchronous_rest (default; short forms: sync_rest, sr)
+  # - asynchronous_rest (required extra: async; short forms: async_rest, ar)
+  # - synchronous_websocket (required extra: websocket; short forms: sync_websocket, sw)
+  # - asynchronous_websocket (required extra: websocket; short forms: async_websocket, aw)
+  api-client: synchronous_rest
+
   # Hostname or IP address of the Volumio host
   host: volumio.local
 
@@ -429,6 +445,9 @@ volumio:
 
   # SSH user name on the Volumio host
   ssh-username: volumio
+
+  # WebSocket API port of the Volumio host
+  websocket-port: 3000
 ```
 
 The keys in the file correspond to many of the options
@@ -535,7 +554,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T13:26:57.325Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-04T12:41:15.885Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -545,7 +564,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-08-13T13:26:57.771Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-04T12:41:16.396Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -560,7 +579,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-08-13T13:26:58.218Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-09-04T12:41:16.922Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -685,6 +704,9 @@ timeouts.rest-api-retries-on-unexpected-state = 3
 timeouts.rest-api-sleep-before-next-call = 2.0
 timeouts.rest-api-timeout = 5.0
 timeouts.rest-api-timeout-slow-endpoints = 60.0
+timeouts.websocket-timeout = 5.0
+volumio.allow-fallback-to-rest-api = False
+volumio.api-client = synchronous_rest
 volumio.host = volumio.local
 volumio.mpd-port = 6600
 volumio.rest-api-port = 3000
@@ -692,7 +714,8 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T13:26:58.674Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+volumio.websocket-port = 3000
+[2026-09-04T12:41:17.449Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -756,6 +779,9 @@ timeouts.rest-api-retries-on-unexpected-state = 3
 timeouts.rest-api-sleep-before-next-call = 2.0
 timeouts.rest-api-timeout = 5.0
 timeouts.rest-api-timeout-slow-endpoints = 60.0
+timeouts.websocket-timeout = 5.0
+volumio.allow-fallback-to-rest-api = False
+volumio.api-client = synchronous_rest
 volumio.host = volumio.local
 volumio.mpd-port = 6600
 volumio.rest-api-port = 3000
@@ -763,7 +789,8 @@ volumio.scheme = http
 volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
-[2026-08-13T13:26:59.127Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+volumio.websocket-port = 3000
+[2026-09-04T12:41:17.976Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -777,19 +804,19 @@ To achieve that, the `-i / --ignore-configuration-file` global option is availab
 ```bash
 volumito -i -H volumio3b.local playback status
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Stonata",
+    "artist": "Giorgia",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 3,
-    "samplerate": "44 KHz",
-    "seek": "00:03:49.563",
-    "status": "play",
-    "title": "La Vie En Rouge",
+    "position": 12,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.503",
+    "status": "pause",
+    "title": "Vieni Fuori",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 50
 }
 ```
 
@@ -798,57 +825,59 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "900",
+    "artist": "Paolo Conte",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:03:47",
     "mute": false,
-    "position": 3,
+    "position": 6,
     "samplerate": "44 KHz",
-    "seek": "00:03:50.065",
+    "seek": "00:02:29.474",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Per Quel Che Vale",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 87
 }
-[2026-08-13T13:27:00.032Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-08-13T13:27:00.032Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-08-13T13:27:00.033Z] [DEBU] Initializing the REST API client...
-[2026-08-13T13:27:00.033Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T13:27:00.033Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-08-13T13:27:00.047Z] [DEBU] Response status: 200
-[2026-08-13T13:27:00.047Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-08-13T13:27:00.050Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-08-13T13:27:00.050Z] [DEBU] Successfully retrieved state
+[2026-09-04T12:41:19.012Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-09-04T12:41:19.013Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-04T12:41:19.013Z] [DEBU] Initializing the REST API client...
+[2026-09-04T12:41:19.013Z] [DEBU] Initializing the REST API client... done
+[2026-09-04T12:41:19.013Z] [DEBU] Using the synchronous REST API client
+[2026-09-04T12:41:19.013Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-04T12:41:19.034Z] [DEBU] Response status: 200
+[2026-09-04T12:41:19.034Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-04T12:41:19.036Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-04T12:41:19.036Z] [DEBU] Successfully retrieved state
 ```
 
 ```bash
 volumito -v -i -H volumio3b.local playback status
 {
-    "album": "La Vie En Rouge",
-    "artist": "Enrico Ruggeri",
+    "album": "Stonata",
+    "artist": "Giorgia",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:03:28",
     "mute": false,
-    "position": 3,
-    "samplerate": "44 KHz",
-    "seek": "00:03:50.564",
-    "status": "play",
-    "title": "La Vie En Rouge",
+    "position": 12,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.503",
+    "status": "pause",
+    "title": "Vieni Fuori",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 50
 }
-[2026-08-13T13:27:00.492Z] [DEBU] Ignoring configuration files
-[2026-08-13T13:27:00.492Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-08-13T13:27:00.493Z] [DEBU] Initializing the REST API client...
-[2026-08-13T13:27:00.493Z] [DEBU] Initializing the REST API client... done
-[2026-08-13T13:27:00.493Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-08-13T13:27:00.507Z] [DEBU] Response status: 200
-[2026-08-13T13:27:00.507Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-08-13T13:27:00.509Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-08-13T13:27:00.509Z] [DEBU] Successfully retrieved state
+[2026-09-04T12:41:19.538Z] [DEBU] Ignoring configuration files
+[2026-09-04T12:41:19.539Z] [DEBU] Connecting to http://volumio3b.local:3000...
+[2026-09-04T12:41:19.539Z] [DEBU] Initializing the REST API client...
+[2026-09-04T12:41:19.539Z] [DEBU] Initializing the REST API client... done
+[2026-09-04T12:41:19.539Z] [DEBU] Using the synchronous REST API client
+[2026-09-04T12:41:19.539Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
+[2026-09-04T12:41:19.550Z] [DEBU] Response status: 200
+[2026-09-04T12:41:19.550Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
+[2026-09-04T12:41:19.553Z] [DEBU] Connecting to http://volumio3b.local:3000... done
+[2026-09-04T12:41:19.553Z] [DEBU] Successfully retrieved state
 ```
 
 #### Priority

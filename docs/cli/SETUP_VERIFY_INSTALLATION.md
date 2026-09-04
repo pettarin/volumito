@@ -8,12 +8,13 @@ in the main
 [README](https://github.com/pettarin/volumito/blob/main/README.md)
 to install `volumito`.
 
-If the installation went well, you should be able to run the `version` command,
+If the installation went well,
+you should be able to run the `version` command,
 printing the version of the `volumito` tool itself:
 
 ```bash
 volumito version
-volumito, version 0.1.0
+volumito, version 0.4.0
 ```
 
 Check that you can connect to the Volumio host by issuing the `info` command:
@@ -32,12 +33,12 @@ volumito --host volumio.local info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/24/49/0035627404924_600.jpg",
-        "artist": "Francesco De Gregori",
+        "albumart": "https://static.qobuz.com/images/covers/32/58/0060253735832_600.jpg",
+        "artist": "Paolo Conte",
         "mute": false,
         "status": "play",
-        "track": "Belli capelli",
-        "volume": 20
+        "track": "La Donna Della Tua Vita",
+        "volume": 87
     },
     "systemversion": "4.119",
     "type": "device",
@@ -55,14 +56,36 @@ you might need to add:
 
 - `-M / --mpd-port INTEGER` (default: `6600`)
 - `-P / --rest-api-port INTEGER` (default: `3000`)
+- `-W / --websocket-port INTEGER` (default: `3000`)
 - `--scheme [http|https]` (default: `http`).
 
 > [!NOTE]
 > The MPD port is `6600` in Volumio >= 4, and `6599` in Volumio < 4.
 
-For example, to connect to a Volumio 3 instance at local IP address `192.168.1.3`
+For example, to connect to a Volumio 3 instance
+at local IP address `192.168.1.3`
 whose REST API is proxied to port 4567:
 
 ```bash
 volumito -H 192.168.1.3 -M 6599 -P 4567 ...
+```
+
+By default, the `volumito` CLI tool talks
+to the Volumio host through its REST API, synchronously.
+The `-C / --api-client` option allows you to select
+another of the clients of the `volumito` library:
+
+| Client                  | Value                    | Synonyms                | Required Extra |
+| ----------------------- | ------------------------ | ----------------------- | -------------- |
+| Asynchronous REST       | `asynchronous_rest`      | `async_rest`, `ar`      | `async`        |
+| Asynchronous WebSocket  | `asynchronous_websocket` | `async_websocket`, `aw` | `websocket`    |
+| Synchronous REST        | `synchronous_rest`       | `sync_rest`, `sr`       | None           |
+| Synchronous WebSocket   | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`    |
+
+For example, to issue the `info` command
+over the WebSocket API, asynchronously:
+
+```bash
+volumito -C asynchronous_websocket info
+volumito -C aw info
 ```
