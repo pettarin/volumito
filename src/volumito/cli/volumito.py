@@ -25,6 +25,7 @@ from volumito.cli.click_helpers import (
     VolumioVersionParamType,
     alias_problems,
     aliases_by_command_path,
+    api_position,
     command_nodes,
     command_nodes_flattened,
     configuration_file_callback,
@@ -52,10 +53,12 @@ from volumito.cli.click_helpers import (
     option_audio_file_name_template,
     option_autocompose_url,
     option_best_result_only,
+    option_by_uid,
     option_check_next_track,
     option_check_playlist_name,
     option_count,
     option_create_download_manifest,
+    option_cue_track,
     option_current_track,
     option_endpoint,
     option_fields,
@@ -63,8 +66,11 @@ from volumito.cli.click_helpers import (
     option_format,
     option_format_table,
     option_idle_timeout,
+    option_item_album,
+    option_item_title,
     option_limit,
     option_manifest_file,
+    option_next,
     option_number_retries_next_track,
     option_offset,
     option_only_tracks,
@@ -72,6 +78,7 @@ from volumito.cli.click_helpers import (
     option_output_file,
     option_overwrite_existing_files,
     option_play,
+    option_play_added,
     option_playlist,
     option_playlists_only,
     option_port,
@@ -87,6 +94,7 @@ from volumito.cli.click_helpers import (
     option_replace_characters_in_file_names_with,
     option_result_kinds,
     option_service,
+    option_service_of_uri,
     option_story_type,
     option_timeout,
     option_track,
@@ -131,7 +139,12 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PROGRAM_NAME,
+    QUEUE_ADD_ARGUMENTS_ERROR,
+    QUEUE_ADD_MODES_ERROR,
+    QUEUE_ADD_NEXT_OPTIONS_ERROR,
+    QUEUE_CUE_TRACK_SERVICE_ERROR,
     REGISTER_ARGUMENT_ERROR,
+    REPLACE_CUE_TRACK_ERROR,
     REPLACE_POSITION_ERROR,
     SEARCH_ARGUMENT_ERROR,
     SEARCH_KINDS_ERROR,
@@ -786,13 +799,8 @@ def play(ctx: click.Context, position: int | None, print_resulting_status: bool)
     to --position-starting-at-one/--position-starting-at-zero).
     """
     if position is not None:
-        starting_at_one = ctx.obj["position_starting_at_one"]
-        minimum = 1 if starting_at_one else 0
-        if position < minimum:
-            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
-        if starting_at_one:
-            position -= 1
-        execute_command(ctx, "play", lambda c: c.play(position))
+        index = api_position(ctx, position)
+        execute_command(ctx, "play", lambda c: c.play(index))
     else:
         execute_command(ctx, "play", lambda c: c.play())
     execute_conditionally(ctx, print_resulting_status, playback_status)
@@ -979,9 +987,32 @@ def is_stopped(ctx: click.Context) -> None:
 
 @main.group()
 @click.pass_context
-def track(ctx: click.Context) -> None:
-    """Query the current track (information, audio, album art)."""
+def queue(ctx: click.Context) -> None:
+    """Manage the playback queue and its current track."""
     pass
+
+
+@queue.group("track")
+@click.pass_context
+def track(ctx: click.Context) -> None:
+    """Query the current track of the queue (information, audio, album art)."""
+    pass
+
+
+@track.command("has_next")
+@click.pass_context
+def track_has_next(ctx: click.Context) -> None:
+    """Print whether the current track has a next track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_next)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@track.command("has_previous")
+@click.pass_context
+def track_has_previous(ctx: click.Context) -> None:
+    """Print whether the current track has a previous track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_previous)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
 
 
 @track.command("info")
@@ -1204,29 +1235,6 @@ def albumart(
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
-
-
-@main.group()
-@click.pass_context
-def queue(ctx: click.Context) -> None:
-    """Manage the playback queue."""
-    pass
-
-
-@queue.command("has_next")
-@click.pass_context
-def queue_has_next(ctx: click.Context) -> None:
-    """Print whether the current track has a next track in the queue."""
-    value = fetch_or_exit(ctx, lambda c: c.has_next)
-    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
-
-
-@queue.command("has_previous")
-@click.pass_context
-def queue_has_previous(ctx: click.Context) -> None:
-    """Print whether the current track has a previous track in the queue."""
-    value = fetch_or_exit(ctx, lambda c: c.has_previous)
-    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
 
 
 @queue.command("status")
@@ -1728,36 +1736,178 @@ def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bo
 
 @queue.command()
 @click.pass_context
+@click.argument("uris", nargs=-1, required=True, metavar="URI...")
+@option_item_album
+@option_by_uid
+@option_cue_track
+@option_next
+@option_play_added
+@option_print_resulting_status
+@option_service_of_uri
+@option_item_title
+def add(
+    ctx: click.Context,
+    uris: tuple[str, ...],
+    album: str | None,
+    by_uid: bool,
+    cue_track: int | None,
+    play_next: bool,
+    play: bool,
+    print_resulting_status: bool,
+    service: str | None,
+    title: str | None,
+) -> None:
+    """Add the content of URI to the end of the queue, leaving the playback alone.
+
+    A URI comes from "collection browse" or "collection search". With --play, the
+    added content starts playing. With --next, URI is queued as a single item right
+    after the current track, shown with the --title and --album given. With
+    --cue-track NUMBER, URI is a cue sheet, whose track at that position is queued
+    and played (--service names its music service when the URI does not tell).
+    With --by-uid, the arguments are identifiers of local library items, not a URI.
+    These four ways are mutually exclusive, and need a WebSocket API client; the
+    plain form works with any API client.
+    """
+    if sum([by_uid, cue_track is not None, play_next, play]) > 1:
+        raise click.UsageError(QUEUE_ADD_MODES_ERROR)
+    if (album is not None or title is not None) and not play_next:
+        raise click.UsageError(QUEUE_ADD_NEXT_OPTIONS_ERROR)
+    if service is not None and cue_track is None:
+        raise click.UsageError(QUEUE_CUE_TRACK_SERVICE_ERROR)
+    if by_uid:
+        uids = list(uris)
+        execute_command(ctx, "add", lambda c: c.add_uids_to_queue(uids))
+    else:
+        if len(uris) != 1:
+            raise click.UsageError(QUEUE_ADD_ARGUMENTS_ERROR)
+        uri = uris[0]
+        if cue_track is not None:
+            number = cue_track
+            execute_command(ctx, "add", lambda c: c.add_cue_track(uri, number, service))
+        elif play_next:
+            execute_command(ctx, "add", lambda c: c.play_next(uri, title, album))
+        elif play:
+            execute_command(ctx, "add", lambda c: c.add_and_play(uri))
+        else:
+            execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=OnOffParamType())
+@option_print_resulting_status
+def consume(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
+    """Set or toggle the consume mode, dropping each track from the queue once played.
+
+    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
+    or "off"/"false"/"no"/"0".
+
+    Needs a WebSocket API client.
+    """
+    if value is None:
+        # The API only sets the mode: toggling it means reading the current one first
+        mode = not fetch_state_or_exit(ctx).consume
+        label = "consume"
+    else:
+        mode = value
+        label = f"consume {'on' if value else 'off'}"
+    execute_command(ctx, label, lambda c: c.consume(mode))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("source", type=int)
+@click.argument("target", type=int)
+@option_print_resulting_status
+def move(ctx: click.Context, source: int, target: int, print_resulting_status: bool) -> None:
+    """Move the track at SOURCE to TARGET in the queue.
+
+    Both positions are indexed according to
+    --position-starting-at-one/--position-starting-at-zero.
+
+    Needs a WebSocket API client.
+    """
+    source_index = api_position(ctx, source, "source")
+    target_index = api_position(ctx, target, "target")
+    execute_command(ctx, "move", lambda c: c.move_in_queue(source_index, target_index))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("position", type=int)
+@option_print_resulting_status
+def remove(ctx: click.Context, position: int, print_resulting_status: bool) -> None:
+    """Remove the track at POSITION from the queue.
+
+    POSITION is indexed according to
+    --position-starting-at-one/--position-starting-at-zero.
+
+    Needs a WebSocket API client.
+    """
+    index = api_position(ctx, position)
+    execute_command(ctx, "remove", lambda c: c.remove_from_queue(index))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
 @click.argument("uri", type=str)
+@option_cue_track
 @option_play
 @option_position
 @option_print_resulting_status
+@option_service_of_uri
 def replace(
     ctx: click.Context,
     uri: str,
+    cue_track: int | None,
     play: bool,
     position: int | None,
     print_resulting_status: bool,
+    service: str | None,
 ) -> None:
     """Replace the queue with the content of URI, playing it unless --no-play.
 
     A URI comes from "collection browse" or "collection search". With -p/--position,
     the item at that position among those URI lists plays first (indexed according
     to --position-starting-at-one/--position-starting-at-zero); without, the first.
+    With --cue-track NUMBER, URI is a cue sheet, and the queue is replaced with its
+    track at that position, which plays (--service names its music service when the
+    URI does not tell); this needs a WebSocket API client.
     """
+    if cue_track is not None and (position is not None or not play):
+        raise click.UsageError(REPLACE_CUE_TRACK_ERROR)
+    if service is not None and cue_track is None:
+        raise click.UsageError(QUEUE_CUE_TRACK_SERVICE_ERROR)
     if position is not None and not play:
         raise click.UsageError(REPLACE_POSITION_ERROR)
-    if play:
-        minimum = 1 if ctx.obj["position_starting_at_one"] else 0
-        if position is not None and position < minimum:
-            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
-        index = position - minimum if position is not None else 0
+    if cue_track is not None:
+        number = cue_track
+        execute_command(
+            ctx, "replace", lambda c: c.replace_queue_with_cue_track(uri, number, service)
+        )
+    elif play:
+        index = api_position(ctx, position) if position is not None else 0
         execute_command(ctx, "replace", lambda c: c.replace_queue_and_play(uri, index))
     else:
         execute_command(ctx, "clear", lambda c: c.clear())
         sleep_between_api_calls(ctx)
         execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
     execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("name", type=str)
+def save(ctx: click.Context, name: str) -> None:
+    """Save the current queue as the playlist NAME.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, "save", lambda c: c.save_queue_as_playlist(name))
 
 
 @main.group()
@@ -2705,6 +2855,8 @@ def scp_put(
 
 # "info" is a top-level synonym for "system info"
 main.add_command(system_info, name="info")
+# "track" is a top-level synonym for "queue track"
+main.add_command(track, name="track")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -522,6 +522,29 @@ def alias_problems(
     return problems
 
 
+def api_position(ctx: click.Context, position: int, name: str = "position") -> int:
+    """Convert a queue position as the user gives it to the 0-based one of the API.
+
+    The user indexes the positions according to
+    ``--position-starting-at-one``/``--position-starting-at-zero``.
+
+    Args:
+        ctx: Click context object holding the shared options
+        position: The position as the user gave it
+        name: How the usage error names the position
+
+    Returns:
+        The 0-based position
+
+    Raises:
+        click.UsageError: If the position is below the minimum of the indexing in use
+    """
+    minimum = 1 if ctx.obj["position_starting_at_one"] else 0
+    if position < minimum:
+        raise click.UsageError(f"{name} must be {minimum} or greater, got {position}")
+    return position - minimum
+
+
 def configuration_file_callback(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:
@@ -1514,6 +1537,16 @@ def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_by_uid(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--by-uid`` option to the queue add subcommand."""
+    return click.option(
+        "--by-uid",
+        is_flag=True,
+        default=False,
+        help="Read the arguments as identifiers of local library items, instead of a URI.",
+    )(func)
+
+
 def option_check_next_track(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--check-next-track`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1552,6 +1585,20 @@ def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., 
         default=True,
         show_default=True,
         help="Write a JSON manifest next to the downloaded file (e.g., out.flac.json).",
+    )(func)
+
+
+def option_cue_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--cue-track`` option to the queue add and replace subcommands."""
+    return click.option(
+        "--cue-track",
+        type=int,
+        default=None,
+        metavar="NUMBER",
+        help=(
+            "Read URI as a cue sheet, queue the track at this position of it, and play it "
+            "(needs a WebSocket API client)."
+        ),
     )(func)
 
 
@@ -1640,6 +1687,26 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_item_album(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--album`` option to the subcommands queuing a single item."""
+    return click.option(
+        "--album",
+        type=str,
+        default=None,
+        help="The album to show for the queued item, when known (only with --next).",
+    )(func)
+
+
+def option_item_title(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--title`` option to the subcommands queuing a single item."""
+    return click.option(
+        "--title",
+        type=str,
+        default=None,
+        help="The title to show for the queued item, when known (only with --next).",
+    )(func)
+
+
 def option_limit(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-l``/``--limit`` option to the collection search subcommand."""
     return click.option(
@@ -1660,6 +1727,17 @@ def option_manifest_file(func: Callable[..., None]) -> Callable[..., None]:
         show_default=True,
         help="Write the download manifest to this file path; {output_directory} is "
         "replaced with the output directory, {timestamp} with the current UTC time.",
+    )(func)
+
+
+def option_next(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--next`` option to the queue add subcommand."""
+    return click.option(
+        "--next",
+        "play_next",
+        is_flag=True,
+        default=False,
+        help="Queue URI as a single item right after the current track, without browsing it.",
     )(func)
 
 
@@ -1743,6 +1821,16 @@ def option_play(func: Callable[..., None]) -> Callable[..., None]:
         default=True,
         show_default=True,
         help="Start playing the replaced queue (from the -p/--position item), or only replace it.",
+    )(func)
+
+
+def option_play_added(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--play`` option to the queue add subcommand."""
+    return click.option(
+        "--play",
+        is_flag=True,
+        default=False,
+        help="Start playing the added content.",
     )(func)
 
 
@@ -1916,6 +2004,16 @@ def option_service(func: Callable[..., None]) -> Callable[..., None]:
         type=click.Choice(SEARCH_SERVICES, case_sensitive=True),
         default=None,
         help="Keep the results of this source only.",
+    )(func)
+
+
+def option_service_of_uri(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--service`` option to the subcommands taking the URI of a music service."""
+    return click.option(
+        "--service",
+        type=str,
+        default=None,
+        help="The music service the URI belongs to, derived from the URI when not given.",
     )(func)
 
 

@@ -36,9 +36,14 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
     [
         ["queue", name]
         for name in (
+            "add",
             "clear",
+            "consume",
+            "move",
             "randomize",
+            "remove",
             "repeat",
+            "replace",
         )
     ]
 )
@@ -159,6 +164,7 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["system", "version"],
     ],
     "track-info": [
+        ["queue", "track", "info"],
         ["track", "info"],
     ],
 }
@@ -225,9 +231,11 @@ DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["queue", "download"],
     ],
     "track-albumart": [
+        ["queue", "track", "albumart"],
         ["track", "albumart"],
     ],
     "track-audio": [
+        ["queue", "track", "audio"],
         ["track", "audio"],
     ],
 }
@@ -319,11 +327,13 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "add-cover-and-metadata": [
         ["playlist", "download"],
         ["queue", "download"],
+        ["queue", "track", "audio"],
         ["track", "audio"],
     ],
     "allow-local-file-rename": [
         ["playlist", "download"],
         ["queue", "download"],
+        ["queue", "track", "audio"],
         ["track", "audio"],
     ],
     "check-next-track": [

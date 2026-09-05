@@ -1948,8 +1948,8 @@ class TestAPIClientOption:
         [
             ["system", "ping"],
             ["playback", "pause"],
-            ["track", "audio"],
-            ["track", "albumart"],
+            ["queue", "track", "audio"],
+            ["queue", "track", "albumart"],
             ["queue", "list"],
             ["queue", "download", "-d", "{tmp_path}"],
             ["playlist", "download", "--no-check-playlist-name", "X", "-d", "{tmp_path}"],
@@ -3187,7 +3187,7 @@ class TestCLICommands:
 
     def test_track_info_help(self, runner: CliRunner):
         """Test track info command with --help."""
-        result = runner.invoke(main, ["track", "info", "--help"])
+        result = runner.invoke(main, ["queue", "track", "info", "--help"])
 
         assert result.exit_code == 0
         assert "--fields" in result.output
@@ -3212,7 +3212,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info"])
+        result = runner.invoke(main, ["queue", "track", "info"])
 
         assert result.exit_code == 0
         assert "Test Song" in result.output
@@ -3236,7 +3236,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info", "--format", "json"])
+        result = runner.invoke(main, ["queue", "track", "info", "--format", "json"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3263,7 +3263,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info", "-L", "ALL"])
+        result = runner.invoke(main, ["queue", "track", "info", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3287,7 +3287,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info", "-F", "table"])
+        result = runner.invoke(main, ["queue", "track", "info", "-F", "table"])
 
         assert result.exit_code == 0
         # Heading is "Track Info", not the playback's "Volumio Status"
@@ -3314,7 +3314,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "info", "-F", "raw"])
+        result = runner.invoke(main, ["queue", "track", "info", "-F", "raw"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -3344,7 +3344,7 @@ class TestCLICommands:
 
     def test_audio_help(self, runner: CliRunner):
         """Test audio command with --help."""
-        result = runner.invoke(main, ["track", "audio", "--help"])
+        result = runner.invoke(main, ["queue", "track", "audio", "--help"])
 
         assert result.exit_code == 0
         assert "audio" in result.output.lower()
@@ -3367,7 +3367,7 @@ class TestCLICommands:
 
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 0
         assert "http://volumio.local:8000/music/test.flac" in result.output
@@ -3390,7 +3390,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace 127.0.0.1 with the actual host
         self._mock_mpd_client(mocker, track_uri="http://192.168.1.100:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--host", "192.168.1.100", "track", "audio"])
+        result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "track", "audio"])
 
         assert result.exit_code == 0
         host_configuration = mock_client_class.call_args[0][0]
@@ -3412,7 +3412,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace localhost with volumio.local (default host)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--mpd-port", "6600", "track", "audio"])
+        result = runner.invoke(main, ["--mpd-port", "6600", "queue", "track", "audio"])
 
         assert result.exit_code == 0
 
@@ -3436,7 +3436,7 @@ class TestCLICommands:
 
         result = runner.invoke(
             main,
-            ["--rest-api-timeout", "10", "--mpd-timeout", "3", "track", "audio"],
+            ["--rest-api-timeout", "10", "--mpd-timeout", "3", "queue", "track", "audio"],
         )
 
         assert result.exit_code == 0
@@ -3458,7 +3458,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace localhost with myhost.local
         self._mock_mpd_client(mocker, track_uri="http://myhost.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--host", "myhost.local", "track", "audio"])
+        result = runner.invoke(main, ["--host", "myhost.local", "queue", "track", "audio"])
 
         assert result.exit_code == 0
         assert "myhost.local" in result.output
@@ -3477,7 +3477,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace 127.0.0.1 with myhost.local
         self._mock_mpd_client(mocker, track_uri="http://myhost.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--host", "myhost.local", "track", "audio"])
+        result = runner.invoke(main, ["--host", "myhost.local", "queue", "track", "audio"])
 
         assert result.exit_code == 0
         assert "myhost.local" in result.output
@@ -3496,7 +3496,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace localhost with volumio.local (default host)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--verbose", "track", "audio"])
+        result = runner.invoke(main, ["--verbose", "queue", "track", "audio"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -3517,7 +3517,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace localhost with volumio.local (default host)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["--machine-readable", "track", "audio"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "track", "audio"])
 
         assert result.exit_code == 0
         # In machine-readable mode, only the quoted URI should be printed
@@ -3537,7 +3537,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -3552,7 +3552,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -3576,7 +3576,7 @@ class TestCLICommands:
         mock_mpd_client_class.return_value.__exit__ = mocker.Mock(return_value=None)
         mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mock_mpd_client_class)
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert "Connection refused to MPD" in result.output
@@ -3600,7 +3600,7 @@ class TestCLICommands:
         mock_mpd_client_class.return_value.__exit__ = mocker.Mock(return_value=None)
         mocker.patch("volumito.cli.volumito.VolumioMPDClient", new=mock_mpd_client_class)
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert "MPD connection error" in result.output
@@ -3620,7 +3620,7 @@ class TestCLICommands:
             side_effect=VolumioConnectionError("No track currently playing")
         )
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert "No track currently playing" in result.output
@@ -3639,7 +3639,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "track", "audio"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert result.output == ""
@@ -3659,7 +3659,7 @@ class TestCLICommands:
         # The MPD client's get_track_uri() would replace localhost with volumio.local (default host)
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 0
         # Should still print the URI even without metadata fields
@@ -3680,7 +3680,7 @@ class TestCLICommands:
             side_effect=VolumioConnectionError("MPD error: MPD protocol error")
         )
 
-        result = runner.invoke(main, ["track", "audio"])
+        result = runner.invoke(main, ["queue", "track", "audio"])
 
         assert result.exit_code == 1
         assert "MPD error" in result.output
@@ -3702,7 +3702,7 @@ class TestCLICommands:
             side_effect=VolumioConnectionError("MPD error: Unexpected MPD response")
         )
 
-        result = runner.invoke(main, ["--machine-readable", "track", "audio"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "track", "audio"])
 
         assert result.exit_code == 1
         # Error should be suppressed in machine-readable mode
@@ -3791,7 +3791,9 @@ class TestCLICommands:
         )
         self._mock_mpd_client(mocker, track_uri="http://volumio.local:8000/music/test.flac")
 
-        result = runner.invoke(main, ["track", "audio", "-d", "/tmp/music", "-f", "{unknown}"])
+        result = runner.invoke(
+            main, ["queue", "track", "audio", "-d", "/tmp/music", "-f", "{unknown}"]
+        )
 
         assert result.exit_code == 2
         assert "Invalid --file-name-template" in result.output
@@ -3800,7 +3802,7 @@ class TestCLICommands:
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """Test audio command rejects combining -o and -d."""
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/a.flac", "-d", "/tmp"])
+        result = runner.invoke(main, ["queue", "track", "audio", "-o", "/tmp/a.flac", "-d", "/tmp"])
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
@@ -3824,7 +3826,7 @@ class TestCLICommands:
         mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(main, ["queue", "track", "audio", "-o", "/tmp/track.flac"])
 
         assert result.exit_code == 1
         assert 'File already exists: "/tmp/track.flac"' in result.output
@@ -3931,7 +3933,7 @@ class TestCLICommands:
         # test-managed directory
         destination = str(tmp_path / "track.flac")
 
-        result = runner.invoke(main, ["track", "audio", "-o", destination])
+        result = runner.invoke(main, ["queue", "track", "audio", "-o", destination])
 
         assert result.exit_code == 0
         assert f'successfully downloaded to "{destination}"' in result.output
@@ -3956,7 +3958,7 @@ class TestCLICommands:
         copy = mocker.patch("volumito.cli.click_helpers.copy_from_host")
         embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
 
-        result = runner.invoke(main, ["--verbose", "track", "audio", "-d", str(tmp_path)])
+        result = runner.invoke(main, ["--verbose", "queue", "track", "audio", "-d", str(tmp_path)])
 
         assert result.exit_code == 0
         assert copy.call_args.args[2] == str(tmp_path / "08-Luiza.mp3")
@@ -4015,7 +4017,7 @@ class TestCLICommands:
         embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
 
         result = runner.invoke(
-            main, ["track", "audio", "-d", str(tmp_path), "-f", "{title}.{extension}"]
+            main, ["queue", "track", "audio", "-d", str(tmp_path), "-f", "{title}.{extension}"]
         )
 
         assert result.exit_code == 0
@@ -4039,7 +4041,7 @@ class TestCLICommands:
         embed = mocker.patch("volumito.cli.volumito.embed_track_tags")
 
         result = runner.invoke(
-            main, ["track", "audio", "-d", str(tmp_path), "-f", "{title}.{extension}"]
+            main, ["queue", "track", "audio", "-d", str(tmp_path), "-f", "{title}.{extension}"]
         )
 
         assert result.exit_code == 0
@@ -4068,7 +4070,7 @@ class TestCLICommands:
 
         result = runner.invoke(
             main,
-            ["track", "audio", "-o", str(destination), "--no-create-download-manifest"],
+            ["queue", "track", "audio", "-o", str(destination), "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -4092,7 +4094,7 @@ class TestCLICommands:
         )
 
         result = runner.invoke(
-            main, ["track", "audio", "-o", str(tmp_path / "track.flac")]
+            main, ["queue", "track", "audio", "-o", str(tmp_path / "track.flac")]
         )
 
         assert result.exit_code == 1
@@ -4159,7 +4161,9 @@ class TestCLICommands:
         # Mock file operations
         mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["--verbose", "track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(
+            main, ["--verbose", "queue", "track", "audio", "-o", "/tmp/track.flac"]
+        )
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -4188,7 +4192,7 @@ class TestCLICommands:
         # Mock open to raise OSError
         mocker.patch("builtins.open", side_effect=OSError("Permission denied"))
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(main, ["queue", "track", "audio", "-o", "/tmp/track.flac"])
 
         assert result.exit_code == 1
         assert "File write error" in result.output
@@ -4213,14 +4217,14 @@ class TestCLICommands:
             side_effect=requests.exceptions.RequestException("Download failed"),
         )
 
-        result = runner.invoke(main, ["track", "audio", "-o", "/tmp/track.flac"])
+        result = runner.invoke(main, ["queue", "track", "audio", "-o", "/tmp/track.flac"])
 
         assert result.exit_code == 1
         assert "Download error" in result.output
 
     def test_albumart_help(self, runner: CliRunner):
         """Test albumart command with --help."""
-        result = runner.invoke(main, ["track", "albumart", "--help"])
+        result = runner.invoke(main, ["queue", "track", "albumart", "--help"])
 
         assert result.exit_code == 0
         assert "albumart" in result.output.lower()
@@ -4238,7 +4242,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart"])
+        result = runner.invoke(main, ["queue", "track", "albumart"])
 
         assert result.exit_code == 0
         assert "http://volumio.local:3000/albumart?path=image.jpg" in result.output
@@ -4257,7 +4261,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--host", "192.168.1.100", "track", "albumart"])
+        result = runner.invoke(main, ["--host", "192.168.1.100", "queue", "track", "albumart"])
 
         assert result.exit_code == 0
         host_configuration = mock_client_class.call_args[0][0]
@@ -4276,7 +4280,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart"])
+        result = runner.invoke(main, ["queue", "track", "albumart"])
 
         assert result.exit_code == 0
         assert "http://example.com/albumart.jpg" in result.output
@@ -4293,7 +4297,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart"])
+        result = runner.invoke(main, ["queue", "track", "albumart"])
 
         assert result.exit_code == 0
         # Should prepend scheme://host:port
@@ -4322,7 +4326,9 @@ class TestCLICommands:
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
         result = runner.invoke(
-            main, ["track", "albumart", "-o", "/tmp/albumart.jpg", "--no-create-download-manifest"]
+            main,
+            ["queue", "track", "albumart", "-o", "/tmp/albumart.jpg",
+             "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -4343,7 +4349,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart"])
+        result = runner.invoke(main, ["queue", "track", "albumart"])
 
         assert result.exit_code == 1
         assert "No album art URI found" in result.output
@@ -4360,7 +4366,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--verbose", "track", "albumart"])
+        result = runner.invoke(main, ["--verbose", "queue", "track", "albumart"])
 
         assert result.exit_code == 0
         assert "Connecting to" in result.output
@@ -4379,7 +4385,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "track", "albumart"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "track", "albumart"])
 
         assert result.exit_code == 0
         # In machine-readable mode, only the quoted URI should be printed
@@ -4398,7 +4404,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart"])
+        result = runner.invoke(main, ["queue", "track", "albumart"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
@@ -4413,7 +4419,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart"])
+        result = runner.invoke(main, ["queue", "track", "albumart"])
 
         assert result.exit_code == 1
         assert "API error" in result.output
@@ -4436,7 +4442,7 @@ class TestCLICommands:
             side_effect=requests.exceptions.RequestException("Download failed"),
         )
 
-        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/albumart.jpg"])
+        result = runner.invoke(main, ["queue", "track", "albumart", "-o", "/tmp/albumart.jpg"])
 
         assert result.exit_code == 1
         assert "Download error" in result.output
@@ -4461,7 +4467,7 @@ class TestCLICommands:
         # Mock open to raise OSError
         mocker.patch("builtins.open", side_effect=OSError("Permission denied"))
 
-        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/albumart.jpg"])
+        result = runner.invoke(main, ["queue", "track", "albumart", "-o", "/tmp/albumart.jpg"])
 
         assert result.exit_code == 1
         assert "File write error" in result.output
@@ -4480,7 +4486,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["--machine-readable", "track", "albumart"])
+        result = runner.invoke(main, ["--machine-readable", "queue", "track", "albumart"])
 
         assert result.exit_code == 1
         # Error should be suppressed in machine-readable mode
@@ -4509,7 +4515,8 @@ class TestCLICommands:
         mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
-            main, ["track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"]
+            main,
+            ["queue", "track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -4538,7 +4545,8 @@ class TestCLICommands:
         mocker.patch("volumito.cli.click_helpers.os.makedirs")
 
         result = runner.invoke(
-            main, ["track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"]
+            main,
+            ["queue", "track", "albumart", "-d", "/tmp/covers", "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -4742,7 +4750,9 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers", "-f", "{unknown}"])
+        result = runner.invoke(
+            main, ["queue", "track", "albumart", "-d", "/tmp/covers", "-f", "{unknown}"]
+        )
 
         assert result.exit_code == 2
         assert "Invalid --file-name-template" in result.output
@@ -4761,7 +4771,7 @@ class TestCLICommands:
             return_value=mock_client,
         )
 
-        result = runner.invoke(main, ["track", "albumart", "-d", "/tmp/covers"])
+        result = runner.invoke(main, ["queue", "track", "albumart", "-d", "/tmp/covers"])
 
         assert result.exit_code == 1
         assert "Cannot determine a file name" in result.output
@@ -4770,7 +4780,9 @@ class TestCLICommands:
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """Test albumart command rejects combining -o and -d."""
-        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/a.jpg", "-d", "/tmp"])
+        result = runner.invoke(
+            main, ["queue", "track", "albumart", "-o", "/tmp/a.jpg", "-d", "/tmp"]
+        )
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
@@ -4795,7 +4807,7 @@ class TestCLICommands:
         mock_get = mocker.patch("volumito.cli.click_helpers.requests.get")
         mock_open = mocker.patch("builtins.open", mocker.mock_open())
 
-        result = runner.invoke(main, ["track", "albumart", "-o", "/tmp/cover.jpg"])
+        result = runner.invoke(main, ["queue", "track", "albumart", "-o", "/tmp/cover.jpg"])
 
         assert result.exit_code == 1
         assert 'File already exists: "/tmp/cover.jpg"' in result.output
@@ -4905,7 +4917,7 @@ class TestCLICommands:
 
         out = tmp_path / "cover.jpg"
         # No explicit flag: the manifest is created because the default is on
-        result = runner.invoke(main, ["track", "albumart", "-o", str(out)])
+        result = runner.invoke(main, ["queue", "track", "albumart", "-o", str(out)])
 
         assert result.exit_code == 0
         assert "Manifest written to" not in result.output
@@ -4981,7 +4993,8 @@ class TestCLICommands:
         out = tmp_path / "song.flac"
         result = runner.invoke(
             main,
-            ["--verbose", "track", "audio", "-o", str(out), "--no-create-download-manifest"],
+            ["--verbose", "queue", "track", "audio", "-o", str(out),
+             "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -5028,7 +5041,7 @@ class TestCLICommands:
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
-            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+            main, ["queue", "track", "audio", "-o", str(out), "--no-create-download-manifest"]
         )
 
         assert result.exit_code == 0
@@ -5062,7 +5075,7 @@ class TestCLICommands:
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
-            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+            main, ["queue", "track", "audio", "-o", str(out), "--no-create-download-manifest"]
         )
 
         assert result.exit_code == 0
@@ -5077,7 +5090,7 @@ class TestCLICommands:
 
         out = tmp_path / "song.ogg"
         result = runner.invoke(
-            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+            main, ["queue", "track", "audio", "-o", str(out), "--no-create-download-manifest"]
         )
 
         assert result.exit_code == 0
@@ -5096,7 +5109,7 @@ class TestCLICommands:
 
         out = tmp_path / "song.flac"
         result = runner.invoke(
-            main, ["track", "audio", "-o", str(out), "--no-create-download-manifest"]
+            main, ["queue", "track", "audio", "-o", str(out), "--no-create-download-manifest"]
         )
 
         assert result.exit_code == 0
@@ -11493,7 +11506,7 @@ class TestQueueActions:
 
 
 class TestQueueNavigationFlags:
-    """Test cases for the queue has_previous/has_next commands."""
+    """Test cases for the queue track has_previous/has_next commands."""
 
     @pytest.fixture
     def runner(self):
@@ -11515,10 +11528,10 @@ class TestQueueNavigationFlags:
     def test_the_flag_is_printed(
         self, runner: CliRunner, mocker: MockerFixture, command: str, value: bool
     ):
-        """queue has_next/has_previous print the flag read from the client."""
+        """queue track has_next/has_previous print the flag read from the client."""
         mock_client = self._mock_client(mocker, command, value)
 
-        result = runner.invoke(main, ["queue", command])
+        result = runner.invoke(main, ["queue", "track", command])
 
         assert result.exit_code == 0
         assert result.output.strip() == str(value)
@@ -11531,7 +11544,7 @@ class TestQueueNavigationFlags:
         """In machine-readable mode the flag is printed as a JSON boolean."""
         self._mock_client(mocker, command, True)
 
-        result = runner.invoke(main, ["-m", "queue", command])
+        result = runner.invoke(main, ["-m", "queue", "track", command])
 
         assert result.exit_code == 0
         assert result.output.strip() == "true"
@@ -11633,6 +11646,58 @@ class TestQueueNavigationFlags:
         assert "Volumio Queue Status" in result.output
 
 
+class TestQueueTrackGroup:
+    """Test cases for the queue track group and its top-level synonym."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient answering the state reads."""
+        mock_client = mocker.Mock()
+        _attach_property(
+            mock_client, "state", return_value={"title": "Test Song", "artist": "Test Artist"}
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    @pytest.mark.parametrize("path", [["queue", "track"], ["track"]])
+    def test_the_synonym_reaches_the_same_command(self, runner: CliRunner, mocker, path):
+        """The top-level track group stands in for queue track."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, [*path, "info", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["title"] == "Test Song"
+
+    @pytest.mark.parametrize("command", ["has_next", "has_previous"])
+    def test_the_predicates_left_the_queue_group(self, runner: CliRunner, command: str):
+        """queue has_next and queue has_previous no longer exist, without synonyms."""
+        result = runner.invoke(main, ["-i", "queue", command])
+
+        assert result.exit_code == 2
+        assert f"No such command '{command}'" in result.output
+
+    def test_the_command_list_shows_the_group_under_queue_and_at_the_top(
+        self, runner: CliRunner
+    ):
+        """The tree lists the track group under queue and, as the synonym, at the top level."""
+        result = runner.invoke(main, ["-i", "command", "list"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "        track" in lines
+        assert "            has_next" in lines
+        assert "    track" in lines
+        assert "        has_next" in lines
+
+
 class TestQueueReplace:
     """Test cases for the queue replace command."""
 
@@ -11718,6 +11783,71 @@ class TestQueueReplace:
         assert "position must be 1 or greater" in result.output
         mock_client.replace_queue_and_play.assert_not_called()
 
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient, the one the cue track replacement needs."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    @pytest.mark.parametrize(("options", "service"), [([], None), (["--service", "mpd"], "mpd")])
+    def test_replaces_with_a_cue_track(
+        self, runner: CliRunner, mocker: MockerFixture, options, service
+    ):
+        """--cue-track replaces the queue with one track of the cue sheet."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            ["-C", "sw", "queue", "replace", self.URI, "--cue-track", "3", *options,
+             "--no-print-resulting-status"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'replace' executed successfully" in result.output
+        mock_client.replace_queue_with_cue_track.assert_called_once_with(self.URI, 3, service)
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    @pytest.mark.parametrize("options", [["-p", "1"], ["--no-play"]])
+    def test_a_cue_track_with_a_position_or_without_playing(
+        self, runner: CliRunner, mocker: MockerFixture, options
+    ):
+        """A cue track always plays alone: a position or --no-play is a usage error."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "--cue-track", "3", *options])
+
+        assert result.exit_code == 2
+        assert "Expected the --cue-track option only together with --play" in result.output
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    def test_a_service_without_a_cue_track(self, runner: CliRunner, mocker: MockerFixture):
+        """--service only qualifies a cue track."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "--service", "mpd"])
+
+        assert result.exit_code == 2
+        assert "Expected the --service option only together with --cue-track" in result.output
+        mock_client.replace_queue_and_play.assert_not_called()
+
+    def test_a_rest_client_refuses_a_cue_track(self, runner: CliRunner, mocker: MockerFixture):
+        """Without the WebSocket API, a cue track replacement fails naming the remedies."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "replace", self.URI, "--cue-track", "3"])
+
+        assert result.exit_code == 1
+        assert (
+            "API client error: The synchronous REST API client does not offer the queue edits: "
+            "use --api-client synchronous_websocket or asynchronous_websocket, "
+            "or --allow-fallback-to-websocket-api"
+        ) in result.output
+        mock_client.replace_queue_and_play.assert_not_called()
+
     def test_no_play_replaces_without_playing(self, runner: CliRunner, mocker: MockerFixture):
         """--no-play clears the queue and adds the URI, never replaceAndPlay."""
         mock_client, mock_sleep = self._mock_client(mocker)
@@ -11791,6 +11921,348 @@ class TestQueueReplace:
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
+
+
+class TestQueueEditing:
+    """Test cases for the queue add/consume/move/remove/save commands."""
+
+    URI = "albums://Paolo%20Conte/Aguaplano"
+    """A URI of the kind a browse or a search prints."""
+
+    _NO_STATUS = ["--no-print-resulting-status"]
+    """The option skipping the resulting status print."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the queue edits: "
+        "use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for a queue edit, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client, answering the state reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(
+            mock_client, "state", return_value={"title": "Test Song", "consume": False}
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture, consume: bool | None = False):
+        """Mock VolumioWebSocketClient answering the state reads; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(
+            mock_client,
+            "state",
+            return_value={
+                "title": "Test Song",
+                "artist": "StatusMarkerArtist",
+                "consume": consume,
+            },
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client
+
+    def test_add(self, runner: CliRunner, mocker: MockerFixture):
+        """queue add appends the content of the URI, leaving the playback alone."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "queue", "add", self.URI, *self._NO_STATUS]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add' executed successfully" in result.output
+        mock_client.add_to_queue.assert_called_once_with(self.URI)
+        mock_client.add_and_play.assert_not_called()
+        mock_client.state_property.assert_not_called()
+
+    def test_add_prints_the_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
+        """By default the resulting playback status is printed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "add", self.URI])
+
+        assert result.exit_code == 0
+        assert "StatusMarkerArtist" in result.output
+        mock_client.add_to_queue.assert_called_once_with(self.URI)
+        mock_client.state_property.assert_called_once()
+
+    def test_add_and_play(self, runner: CliRunner, mocker: MockerFixture):
+        """--play appends the content and starts playing it."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "queue", "add", self.URI, "--play", *self._NO_STATUS]
+        )
+
+        assert result.exit_code == 0
+        mock_client.add_and_play.assert_called_once_with(self.URI)
+        mock_client.add_to_queue.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("options", "title", "album"),
+        [([], None, None), (["--title", "T", "--album", "A"], "T", "A")],
+    )
+    def test_add_next(self, runner: CliRunner, mocker: MockerFixture, options, title, album):
+        """--next queues the URI as one item after the current track, with its details."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "queue", "add", self.URI, "--next", *options, *self._NO_STATUS],
+        )
+
+        assert result.exit_code == 0
+        mock_client.play_next.assert_called_once_with(self.URI, title, album)
+
+    @pytest.mark.parametrize(("options", "service"), [([], None), (["--service", "mpd"], "mpd")])
+    def test_add_cue_track(self, runner: CliRunner, mocker: MockerFixture, options, service):
+        """--cue-track queues one track of the cue sheet, of the given service."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "queue", "add", self.URI, "--cue-track", "3", *options,
+             *self._NO_STATUS],
+        )
+
+        assert result.exit_code == 0
+        mock_client.add_cue_track.assert_called_once_with(self.URI, 3, service)
+
+    def test_add_by_uid(self, runner: CliRunner, mocker: MockerFixture):
+        """--by-uid reads every argument as a local library identifier."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "queue", "add", "12", "34", "--by-uid", *self._NO_STATUS]
+        )
+
+        assert result.exit_code == 0
+        mock_client.add_uids_to_queue.assert_called_once_with(["12", "34"])
+
+    def test_add_several_uris(self, runner: CliRunner, mocker: MockerFixture):
+        """Without --by-uid, a single URI is expected."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "add", self.URI, self.URI])
+
+        assert result.exit_code == 2
+        assert "Expected a single URI argument" in result.output
+        mock_client.add_to_queue.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "options",
+        [
+            ["--play", "--next"],
+            ["--play", "--cue-track", "1"],
+            ["--next", "--by-uid"],
+            ["--cue-track", "1", "--by-uid"],
+        ],
+    )
+    def test_add_in_two_ways(self, runner: CliRunner, mocker: MockerFixture, options):
+        """The ways of adding are mutually exclusive."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "add", self.URI, *options])
+
+        assert result.exit_code == 2
+        assert "Expected at most one of the --by-uid, --cue-track, --next, and --play" in (
+            result.output
+        )
+
+    @pytest.mark.parametrize("options", [["--title", "T"], ["--album", "A"]])
+    def test_add_details_without_next(self, runner: CliRunner, mocker: MockerFixture, options):
+        """The item details only qualify --next."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "add", self.URI, *options])
+
+        assert result.exit_code == 2
+        assert "Expected the --album and --title options only together with --next" in (
+            result.output
+        )
+
+    def test_add_service_without_cue_track(self, runner: CliRunner, mocker: MockerFixture):
+        """--service only qualifies a cue track."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "queue", "add", self.URI, "--service", "mpd"]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the --service option only together with --cue-track" in result.output
+
+    @pytest.mark.parametrize(("spelling", "expected"), [("on", True), ("off", False)])
+    def test_consume_with_value(
+        self, runner: CliRunner, mocker: MockerFixture, spelling, expected
+    ):
+        """queue consume on/off sets the mode without reading the state."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "queue", "consume", spelling, *self._NO_STATUS]
+        )
+
+        assert result.exit_code == 0
+        assert f"Command 'consume {spelling}' executed successfully" in result.output
+        mock_client.consume.assert_called_once_with(expected)
+        mock_client.state_property.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("current", "expected"), [(True, False), (False, True), (None, True)]
+    )
+    def test_consume_toggles_after_reading_the_state(
+        self, runner: CliRunner, mocker: MockerFixture, current, expected
+    ):
+        """Without a value, the mode read from the state is inverted."""
+        mock_client = self._mock_websocket_client(mocker, consume=current)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "consume", *self._NO_STATUS])
+
+        assert result.exit_code == 0
+        assert "Command 'consume' executed successfully" in result.output
+        mock_client.consume.assert_called_once_with(expected)
+        mock_client.state_property.assert_called_once()
+
+    def test_move_positions_starting_at_one(self, runner: CliRunner, mocker: MockerFixture):
+        """The one-based positions of the user reach the client 0-based."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "queue", "move", "3", "1", *self._NO_STATUS]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'move' executed successfully" in result.output
+        mock_client.move_in_queue.assert_called_once_with(2, 0)
+
+    def test_move_positions_starting_at_zero(self, runner: CliRunner, mocker: MockerFixture):
+        """Under the zero-based convention the positions are the indexes."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            ["--position-starting-at-zero", *self._WEBSOCKET, "queue", "move", "3", "0",
+             *self._NO_STATUS],
+        )
+
+        assert result.exit_code == 0
+        mock_client.move_in_queue.assert_called_once_with(3, 0)
+
+    @pytest.mark.parametrize(
+        ("arguments", "name"), [(["0", "1"], "source"), (["1", "0"], "target")]
+    )
+    def test_move_below_the_minimum(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, name
+    ):
+        """A position below the convention minimum is a usage error naming it."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "move", *arguments])
+
+        assert result.exit_code == 2
+        assert f"{name} must be 1 or greater, got 0" in result.output
+        mock_client.move_in_queue.assert_not_called()
+
+    def test_remove(self, runner: CliRunner, mocker: MockerFixture):
+        """The one-based position of the user reaches the client 0-based."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "remove", "2", *self._NO_STATUS])
+
+        assert result.exit_code == 0
+        assert "Command 'remove' executed successfully" in result.output
+        mock_client.remove_from_queue.assert_called_once_with(1)
+
+    def test_remove_below_the_minimum(self, runner: CliRunner, mocker: MockerFixture):
+        """A position below the convention minimum is a usage error."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "remove", "0"])
+
+        assert result.exit_code == 2
+        assert "position must be 1 or greater, got 0" in result.output
+        mock_client.remove_from_queue.assert_not_called()
+
+    def test_save(self, runner: CliRunner, mocker: MockerFixture):
+        """queue save stores the queue under the given name."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "save", "My Queue"])
+
+        assert result.exit_code == 0
+        assert "Command 'save' executed successfully" in result.output
+        mock_client.save_queue_as_playlist.assert_called_once_with("My Queue")
+
+    def test_the_plain_add_works_with_a_rest_client(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Adding without options is the one queue edit the REST API offers too."""
+        mock_client = self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["queue", "add", self.URI, *self._NO_STATUS])
+
+        assert result.exit_code == 0
+        assert "Command 'add' executed successfully" in result.output
+        mock_client.add_to_queue.assert_called_once_with(self.URI)
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["add", URI, "--play", "--no-print-resulting-status"],
+            ["add", URI, "--next", "--no-print-resulting-status"],
+            ["add", URI, "--cue-track", "1", "--no-print-resulting-status"],
+            ["add", "12", "--by-uid", "--no-print-resulting-status"],
+            ["consume", "on", "--no-print-resulting-status"],
+            ["move", "1", "2", "--no-print-resulting-status"],
+            ["remove", "1", "--no-print-resulting-status"],
+            ["save", "name"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["queue", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "queue", "save", "My Queue"]
+        )
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the queue edits" in result.output
+        websocket.save_queue_as_playlist.assert_called_once_with("My Queue")
+        websocket.connect.assert_called_once_with()
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
 
 
 class TestSeekCommand:
@@ -12500,7 +12972,7 @@ class TestPositionIndexing:
         self._mock_state_client(mocker)
 
         zero_based = runner.invoke(
-            main, ["--position-starting-at-zero", "track", "info", "-F", "pretty"]
+            main, ["--position-starting-at-zero", "queue", "track", "info", "-F", "pretty"]
         )
 
         assert json.loads(zero_based.output)["position"] == 1
@@ -13031,7 +13503,7 @@ class TestConfigurationFile:
         # playback-status subsection -> table for `playback status`.
         state_result = runner.invoke(main, ["-c", config, "playback", "status"])
         # track-info subsection -> json (not a table).
-        track_result = runner.invoke(main, ["-c", config, "track", "info"])
+        track_result = runner.invoke(main, ["-c", config, "queue", "track", "info"])
 
         assert state_result.exit_code == 0
         assert "Volumio Status" in state_result.output
@@ -13154,7 +13626,7 @@ class TestConfigurationFile:
         config = self._write_config(tmp_path, "downloads:\n  output-directory: /covers\n")
 
         result = runner.invoke(
-            main, ["-c", config, "track", "albumart", "--no-create-download-manifest"]
+            main, ["-c", config, "queue", "track", "albumart", "--no-create-download-manifest"]
         )
 
         assert result.exit_code == 0
@@ -13179,7 +13651,8 @@ class TestConfigurationFile:
 
         result = runner.invoke(
             main,
-            ["-c", config, "track", "albumart", "-o", str(out), "--no-create-download-manifest"],
+            ["-c", config, "queue", "track", "albumart", "-o", str(out),
+             "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -13245,7 +13718,8 @@ class TestConfigurationFile:
 
         result = runner.invoke(
             main,
-            ["-c", config, "track", "albumart", "-d", str(out), "--no-create-download-manifest"],
+            ["-c", config, "queue", "track", "albumart", "-d", str(out),
+             "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0
@@ -13261,7 +13735,7 @@ class TestConfigurationFile:
             "downloads:\n  output-directory: /covers\n  output-file: /tmp/out.jpg\n",
         )
 
-        result = runner.invoke(main, ["-c", config, "track", "albumart"])
+        result = runner.invoke(main, ["-c", config, "queue", "track", "albumart"])
 
         assert result.exit_code == 2
         assert "mutually exclusive" in result.output
@@ -13284,7 +13758,7 @@ class TestConfigurationFile:
 
         out = tmp_path / "cover.jpg"
         # The default is on, but the config turns it off, so no manifest is written
-        result = runner.invoke(main, ["-c", config, "track", "albumart", "-o", str(out)])
+        result = runner.invoke(main, ["-c", config, "queue", "track", "albumart", "-o", str(out)])
 
         assert result.exit_code == 0
         assert out.exists()
@@ -13355,7 +13829,9 @@ class TestConfigurationFile:
         out = tmp_path / "song.flac"
         # The default is on, but the config turns it off, so no embedding happens
         result = runner.invoke(
-            main, ["-c", config, "track", "audio", "-o", str(out), "--no-create-download-manifest"]
+            main,
+            ["-c", config, "queue", "track", "audio", "-o", str(out),
+             "--no-create-download-manifest"],
         )
 
         assert result.exit_code == 0

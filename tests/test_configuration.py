@@ -776,8 +776,9 @@ class TestBuildClickDefaultMap:
         assert result == {
             # "command list" takes neither fields nor format, so nothing reaches it
             "playback": {"status": formatting},
+            # "track" is the top-level synonym of "queue track"
             "track": {"info": formatting},
-            "queue": {"list": formatting, "status": formatting},
+            "queue": {"list": formatting, "status": formatting, "track": {"info": formatting}},
             "notification": {"list": format_only, "listen": format_only},
             "playlist": {"list": format_only},
             "multiroom": {"zones": formatting},
@@ -854,6 +855,7 @@ class TestBuildClickDefaultMap:
 
         # playback-status override reaches the playback.status command.
         assert result["playback"]["status"] == {"output_format": "table"}
+        assert result["queue"]["track"]["info"] == {"output_format": "json"}
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-list has no override, so it keeps the shared value.
         assert result["queue"]["list"] == {"output_format": "pretty"}
@@ -923,9 +925,14 @@ class TestBuildClickDefaultMap:
                 "unmute": {"print_resulting_status": False},
             },
             "queue": {
+                "add": {"print_resulting_status": False},
                 "clear": {"print_resulting_status": False},
-                "repeat": {"print_resulting_status": False},
+                "consume": {"print_resulting_status": False},
+                "move": {"print_resulting_status": False},
                 "randomize": {"print_resulting_status": False},
+                "remove": {"print_resulting_status": False},
+                "repeat": {"print_resulting_status": False},
+                "replace": {"print_resulting_status": False},
             },
             "playlist": {
                 "download": {"print_resulting_status": False},
@@ -937,13 +944,15 @@ class TestBuildClickDefaultMap:
         """A shared downloads key applies to every download command."""
         result = build_click_default_map({"downloads": {"overwrite-existing-files": True}})
 
+        track = {
+            "audio": {"overwrite_existing_files": True},
+            "albumart": {"overwrite_existing_files": True},
+        }
         assert result == {
             "playlist": {"download": {"overwrite_existing_files": True}},
-            "queue": {"download": {"overwrite_existing_files": True}},
-            "track": {
-                "audio": {"overwrite_existing_files": True},
-                "albumart": {"overwrite_existing_files": True},
-            },
+            "queue": {"download": {"overwrite_existing_files": True}, "track": track},
+            # "track" is the top-level synonym of "queue track"
+            "track": track,
         }
 
     def test_downloads_per_command_overrides_shared(self):
@@ -969,6 +978,7 @@ class TestBuildClickDefaultMap:
             "output_directory": "/shared",
             "file_name_template": "{title}.{extension}",
         }
+        assert result["queue"]["track"] == result["track"]
 
     def test_empty_config_no_nesting(self):
         """An empty config yields an empty default_map."""

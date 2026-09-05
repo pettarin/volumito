@@ -48,11 +48,16 @@ aliases:
   # pu: playback unmute
   # pv: playback volume
   # q: queue
+  # qa: queue add
   # qc: queue clear
+  # qco: queue consume
   # qd: queue download
   # ql: queue list
+  # qm: queue move
   # qr: queue replace
+  # qrm: queue remove
   # qs: queue status
+  # qsv: queue save
   # s: story
   # salb: story album
   # sart: story artist
@@ -66,10 +71,10 @@ aliases:
   # sysi: system info
   # sysp: system ping
   # sysv: system version
-  # t: track
-  # ta: track audio
-  # tc: track albumart
-  # ti: track info
+  # t: queue track
+  # ta: queue track audio
+  # tc: queue track albumart
+  # ti: queue track info
   # toggle: playback toggle
   # unmute: playback unmute
   # vol: playback volume

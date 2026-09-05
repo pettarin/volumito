@@ -18,6 +18,15 @@ All notable changes to this project will be documented in this file.
   offers on top of the REST API
 - Global option `--allow-fallback-to-websocket-api`,
   with the corresponding configuration key
+- Commands `queue add`, `queue consume`, `queue move`, `queue remove`,
+  and `queue save`, and option `--cue-track` of `queue replace`
+  (all needing a WebSocket API client, except the plain `queue add URI`)
+
+### Changed
+
+- Command group `track` is now `queue track` (`track` is kept as a synonym),
+  and commands `queue has_next` and `queue has_previous` are now
+  `queue track has_next` and `queue track has_previous` (no synonyms)
 
 
 ## [0.4.0] - 2026-09-04

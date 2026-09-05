@@ -146,8 +146,29 @@ OUTPUT_FORMATS = [
 PROGRAM_NAME = "volumito"
 """Name of the CLI tool, heading the command tree."""
 
+QUEUE_ADD_ARGUMENTS_ERROR = (
+    "Expected a single URI argument (several are accepted only with --by-uid)."
+)
+"""Error message when "queue add" is given several arguments without --by-uid."""
+
+QUEUE_ADD_MODES_ERROR = (
+    "Expected at most one of the --by-uid, --cue-track, --next, and --play options."
+)
+"""Error message when "queue add" is asked to add in two ways at once."""
+
+QUEUE_ADD_NEXT_OPTIONS_ERROR = "Expected the --album and --title options only together with --next."
+"""Error message when "queue add" is given the item details without --next."""
+
+QUEUE_CUE_TRACK_SERVICE_ERROR = "Expected the --service option only together with --cue-track."
+"""Error message when a "queue" subcommand is given a service without a cue track."""
+
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notification register" is given neither a URL nor --autocompose-url."""
+
+REPLACE_CUE_TRACK_ERROR = (
+    "Expected the --cue-track option only together with --play, and without -p/--position."
+)
+"""Error message when "queue replace" combines a cue track with a position or --no-play."""
 
 REPLACE_POSITION_ERROR = "Expected the -p/--position option only together with --play."
 """Error message when "queue replace" is asked for a position without playing."""
@@ -260,7 +281,7 @@ SHORT_FORMAT_FIELDS_TRACK_INFO = [
     "bitdepth",
     "channels",
 ]
-"""Short fields list for the "track info" command."""
+"""Short fields list for the "queue track info" command."""
 
 STORY_ARGUMENT_TYPES = [
     "autodetect",
