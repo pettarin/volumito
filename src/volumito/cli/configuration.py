@@ -31,6 +31,7 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
     ] +
     [
         ["playlist", "download"],
+        ["playlist", "enqueue"],
         ["playlist", "play"],
     ] +
     [
@@ -83,6 +84,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
     "queue-status": DISPLAY_KEYS,
+    "playlist-content": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,
@@ -128,6 +130,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "playback-status": [
         ["playback", "status"],
+    ],
+    "playlist-content": [
+        ["playlist", "content"],
     ],
     "playlist-list": [
         ["playlist", "list"],
@@ -341,8 +346,13 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
         ["queue", "download"],
     ],
     "check-playlist-name": [
+        ["playlist", "add"],
+        ["playlist", "content"],
+        ["playlist", "delete"],
         ["playlist", "download"],
+        ["playlist", "enqueue"],
         ["playlist", "play"],
+        ["playlist", "remove"],
     ],
     "check-seek-position": [
         ["playback", "seek"],

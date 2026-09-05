@@ -780,7 +780,7 @@ class TestBuildClickDefaultMap:
             "track": {"info": formatting},
             "queue": {"list": formatting, "status": formatting, "track": {"info": formatting}},
             "notification": {"list": format_only, "listen": format_only},
-            "playlist": {"list": format_only},
+            "playlist": {"content": formatting, "list": format_only},
             "multiroom": {"zones": formatting},
             "system": {
                 "execute": format_only,
@@ -901,8 +901,13 @@ class TestBuildClickDefaultMap:
 
         assert result == {
             "playlist": {
+                "add": {"check_playlist_name": False},
+                "content": {"check_playlist_name": False},
+                "delete": {"check_playlist_name": False},
                 "download": {"check_playlist_name": False},
+                "enqueue": {"check_playlist_name": False},
                 "play": {"check_playlist_name": False},
+                "remove": {"check_playlist_name": False},
             },
             "playback": {"seek": {"check_seek_position": False}},
         }
@@ -936,6 +941,7 @@ class TestBuildClickDefaultMap:
             },
             "playlist": {
                 "download": {"print_resulting_status": False},
+                "enqueue": {"print_resulting_status": False},
                 "play": {"print_resulting_status": False},
             },
         }

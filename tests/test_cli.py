@@ -98,6 +98,7 @@ from volumito.clients.models import (
     CollectionStatistics,
     Notifications,
     PlayerState,
+    PlaylistContent,
     Playlists,
     PushNotification,
     Queue,
@@ -7328,9 +7329,49 @@ class TestMultiroomCommands:
 
 
 class TestPlaylistCommands:
-    """Test cases for the playlist list and playlist play commands."""
+    """Test cases for the playlist commands."""
 
     PLAYLISTS = ["Rock", "Jazz Classics", "Ambient"]
+
+    _CONTENT = {
+        "name": "Rock",
+        "lists": [
+            [
+                {
+                    "title": "Song A",
+                    "artist": "Artist A",
+                    "album": "Album X",
+                    "duration": 61,
+                    "service": "mpd",
+                    "uri": "music-library/a.flac",
+                }
+            ],
+            [
+                {
+                    "name": "Song B",
+                    "artist": "Artist B",
+                    "album": "Album Y",
+                    "duration": 125,
+                    "service": "qobuz",
+                    "uri": "qobuz://track/2",
+                }
+            ],
+        ],
+    }
+    """The content of a playlist as a Volumio host answers it: one list per source."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the playlist edits: "
+        "use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for a playlist edit, without the fallback."""
+
+    _URI = "qobuz://track/3"
+    """A URI of the kind a browse or a search prints."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the editing commands need."""
 
     @pytest.fixture
     def runner(self):
@@ -7528,6 +7569,321 @@ class TestPlaylistCommands:
         for name in self.PLAYLISTS:
             assert f'  "{name}"' in result.output
         mock_client.play_playlist.assert_not_called()
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient with the playlists, a content, and the state."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "playlists", return_value=self.PLAYLISTS)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            self._CONTENT
+        )
+        _attach_property(
+            mock_client,
+            "state",
+            return_value={"title": "Test Song", "artist": "StatusMarkerArtist"},
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client
+
+    def test_group_help_lists_the_editing_commands(self, runner: CliRunner):
+        """The playlist group lists the editing commands beside the original ones."""
+        result = runner.invoke(main, ["playlist", "--help"])
+
+        assert result.exit_code == 0
+        for command in ("add", "content", "create", "delete", "enqueue", "import", "remove"):
+            assert f"  {command} " in result.output
+
+    @pytest.mark.parametrize(
+        ("options", "service"), [([], None), (["--service", "qobuz"], "qobuz")]
+    )
+    def test_add(self, runner: CliRunner, mocker: MockerFixture, options, service):
+        """playlist add checks the name, then adds the URI, of the given service."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "add", "Rock", self._URI, *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add to playlist \"Rock\"' executed successfully" in result.output
+        mock_client.playlists_property.assert_called_once()
+        mock_client.add_to_playlist.assert_called_once_with("Rock", self._URI, service)
+
+    def test_add_to_a_new_playlist_without_the_check(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """--no-check-playlist-name lets the host create the playlist."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "add", "New", self._URI, "--no-check-playlist-name"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.playlists_property.assert_not_called()
+        mock_client.add_to_playlist.assert_called_once_with("New", self._URI, None)
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["add", "Nope", _URI],
+            ["content", "Nope"],
+            ["delete", "Nope", "-y"],
+            ["enqueue", "Nope"],
+            ["remove", "Nope", _URI],
+        ],
+    )
+    def test_an_unknown_name(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """An unknown playlist name exits 1, listing the available names, before any edit."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", *arguments])
+
+        assert result.exit_code == 1
+        assert 'Playlist not found: "Nope"' in result.output
+        assert "Available playlists:" in result.output
+        for name in (
+            "add_to_playlist",
+            "delete_playlist",
+            "enqueue_playlist",
+            "get_playlist_content",
+            "remove_from_playlist",
+        ):
+            getattr(mock_client, name).assert_not_called()
+
+    def test_content_default_pretty(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist content prints the tracks as pretty JSON, one-based, durations formatted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "content", "Rock"])
+
+        assert result.exit_code == 0
+        tracks = json.loads(result.output)
+        assert [track["position"] for track in tracks] == [1, 2]
+        assert tracks[0]["title"] == "Song A"
+        assert tracks[0]["duration"] == "00:01:01"
+        # The local files report their title under "name"
+        assert tracks[1]["name"] == "Song B"
+        mock_client.playlists_property.assert_called_once()
+        mock_client.get_playlist_content.assert_called_once_with("Rock")
+
+    def test_content_json(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist content -F json keeps the durations in seconds."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "content", "Rock", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        tracks = json.loads(result.output)
+        assert tracks[0]["position"] == 1
+        assert tracks[0]["duration"] == 61
+
+    def test_content_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """-L keeps the listed fields of each track."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "content", "Rock", "-L", "title,uri"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == [
+            {"title": "Song A", "uri": "music-library/a.flac"},
+            {"uri": "qobuz://track/2"},
+        ]
+
+    def test_content_table(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table heads the tracks with the name of the playlist."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "content", "Rock", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert 'Volumio Playlist "Rock"' in lines
+        assert "1. Song A" in lines
+        assert "2. Song B" in lines
+
+    def test_content_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """-F raw prints the answer of the host as it is."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["-m", *self._WEBSOCKET, "playlist", "content", "Rock", "-F", "raw"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self._CONTENT
+
+    def test_content_without_the_check(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-check-playlist-name skips the lookup of the name."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "content", "Rock", "--no-check-playlist-name"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.playlists_property.assert_not_called()
+        mock_client.get_playlist_content.assert_called_once_with("Rock")
+
+    def test_content_format_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The playlist-content subsection of the configuration sets the default format."""
+        self._mock_websocket_client(mocker)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  playlist-content:\n    format: table\n")
+
+        result = runner.invoke(
+            main, ["-c", str(config), *self._WEBSOCKET, "playlist", "content", "Rock"]
+        )
+
+        assert result.exit_code == 0
+        assert 'Volumio Playlist "Rock"' in result.output
+
+    def test_create(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist create makes an empty playlist."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "create", "New"])
+
+        assert result.exit_code == 0
+        assert "Command 'create playlist \"New\"' executed successfully" in result.output
+        mock_client.create_playlist.assert_called_once_with("New")
+
+    def test_delete_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is deleted, nor looked up."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "delete", "Rock"])
+
+        assert result.exit_code == 1
+        assert 'Refusing to delete the playlist without -y/--yes: "Rock"' in result.output
+        mock_client.playlists_property.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
+    def test_delete(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the playlist is deleted, after the name check."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "delete", "Rock", "-y"])
+
+        assert result.exit_code == 0
+        assert "Command 'delete playlist \"Rock\"' executed successfully" in result.output
+        mock_client.playlists_property.assert_called_once()
+        mock_client.delete_playlist.assert_called_once_with("Rock")
+
+    def test_delete_without_the_check(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-check-playlist-name deletes without looking the name up."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "delete", "Gone", "-y", "--no-check-playlist-name"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.playlists_property.assert_not_called()
+        mock_client.delete_playlist.assert_called_once_with("Gone")
+
+    def test_enqueue(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist enqueue appends the playlist to the queue."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "enqueue", "Rock", "--no-print-resulting-status"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'enqueue playlist \"Rock\"' executed successfully" in result.output
+        mock_client.playlists_property.assert_called_once()
+        mock_client.enqueue_playlist.assert_called_once_with("Rock")
+        mock_client.state_property.assert_not_called()
+
+    def test_enqueue_prints_the_resulting_status(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """By default the resulting playback status is printed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "enqueue", "Rock"])
+
+        assert result.exit_code == 0
+        assert "StatusMarkerArtist" in result.output
+        mock_client.state_property.assert_called_once()
+
+    def test_import(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist import asks the host to import the playlists of its services."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "import"])
+
+        assert result.exit_code == 0
+        assert "Command 'import playlists' executed successfully" in result.output
+        mock_client.import_service_playlists.assert_called_once_with()
+
+    @pytest.mark.parametrize(
+        ("options", "service"), [([], None), (["--service", "qobuz"], "qobuz")]
+    )
+    def test_remove(self, runner: CliRunner, mocker: MockerFixture, options, service):
+        """playlist remove checks the name, then removes the URI, of the given service."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", self._URI, *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'remove from playlist \"Rock\"' executed successfully" in result.output
+        mock_client.playlists_property.assert_called_once()
+        mock_client.remove_from_playlist.assert_called_once_with("Rock", self._URI, service)
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["add", "Rock", _URI],
+            ["content", "Rock"],
+            ["create", "New"],
+            ["delete", "Rock", "-y"],
+            ["enqueue", "Rock"],
+            ["import"],
+            ["remove", "Rock", _URI],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the edits fail naming the remedies."""
+        mock_client, _ = self._mock_client(mocker)
+
+        result = runner.invoke(main, ["playlist", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+        mock_client.play_playlist.assert_not_called()
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the edit through a WebSocket one."""
+        rest, _ = self._mock_client(mocker)
+        rest.logger = LOGGER
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, ["--allow-fallback-to-websocket-api", "playlist", "import"])
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the playlist edits" in result.output
+        websocket.import_service_playlists.assert_called_once_with()
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
 
     def test_play_unknown_name_is_case_sensitive(
         self, runner: CliRunner, mocker: MockerFixture
@@ -14056,6 +14412,7 @@ class TestConfigurationCommands:
                     "notification-list": None,
                     "notification-listen": None,
                     "playback-status": None,
+                    "playlist-content": None,
                     "playlist-list": None,
                     "queue-list": None,
                     "queue-status": None,

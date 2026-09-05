@@ -549,17 +549,18 @@ def format_notification_as_line(item: str | None, data: object, timestamp: str) 
     return f"[{timestamp}] {item or '?':<8} {summary}"
 
 
-def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
-    """Format the queue as a readable table.
+def format_queue_as_table(tracks: list[dict[str, Any]], heading: str = "Volumio Queue") -> str:
+    """Format the queue, or another list of tracks, as a readable table.
 
     Args:
         tracks: List of (potentially filtered) queue item dictionaries
+        heading: The heading of the table
 
     Returns:
         A formatted string representation of the queue
     """
     lines = []
-    lines.append("Volumio Queue")
+    lines.append(heading)
     lines.append("=" * 50)
 
     if not tracks:

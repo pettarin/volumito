@@ -26,6 +26,7 @@ from volumito.cli.click_helpers import (
     alias_problems,
     aliases_by_command_path,
     api_position,
+    check_playlist_name_or_exit,
     command_nodes,
     command_nodes_flattened,
     configuration_file_callback,
@@ -108,6 +109,7 @@ from volumito.cli.click_helpers import (
     render_payload,
     render_state,
     render_story,
+    render_tracks,
     resolve_output_conflict,
     resolve_story_album_entities,
     resolve_story_entity,
@@ -158,14 +160,12 @@ from volumito.cli.pure_helpers import (
     display_position,
     expand_manifest_file,
     expand_timestamp_placeholder,
-    filter_queue_fields,
     filter_zones_fields,
     format_browse_results_as_table,
     format_command_nodes,
     format_duration,
     format_names_as_table,
     format_notification_as_line,
-    format_queue_as_table,
     format_search_results_as_table,
     format_seek,
     format_termination_conditions,
@@ -174,7 +174,6 @@ from volumito.cli.pure_helpers import (
     preserve_local_file_name,
     queue_album_volumes,
     queue_track_metadata_current,
-    rebase_queue_positions,
     resolve_albumart_uri,
 )
 from volumito.clients import (
@@ -1259,58 +1258,11 @@ def queue_list(
     output_format: str,
 ) -> None:
     """Print the playback queue."""
-    position_starting_at_one = ctx.obj["position_starting_at_one"]
-
-    debug(f"Connecting to {connection_url(ctx)}...")
-
-    try:
-        client = get_client(ctx)
-        queue_data = client.queue.raw
-
-        debug(f"Connecting to {connection_url(ctx)}... done")
-        debug("Successfully retrieved queue")
-
-        # Determine output format
-        if output_format == "raw":
-            # Raw JSON without formatting (ignores fields filter)
-            output = json.dumps(queue_data)
-        else:
-            # Apply fields filter for all formatted outputs
-            tracks = filter_queue_fields(queue_data, fields)
-
-            # Map output format to formatting function
-            if output_format == "json":
-                output = json.dumps(tracks, indent=2)
-            elif output_format == "pretty":
-                # Format durations as HH:MM:SS for pretty output
-                pretty_tracks = []
-                for track in rebase_queue_positions(tracks, position_starting_at_one):
-                    pretty_track = track.copy()
-                    if "duration" in pretty_track and isinstance(pretty_track["duration"], int):
-                        pretty_track["duration"] = format_duration(pretty_track["duration"])
-                    pretty_tracks.append(pretty_track)
-                output = json.dumps(pretty_tracks, indent=4, sort_keys=True, ensure_ascii=False)
-            elif output_format == "table":
-                output = format_queue_as_table(
-                    rebase_queue_positions(tracks, position_starting_at_one)
-                )
-            else:  # pragma: no cover
-                output = json.dumps(tracks, indent=2)
-
-        echo_data(ctx, output)
-
-    except VolumioConnectionError as e:
-        error(f"Connection error: {e}")
-        sys.exit(1)
-    except VolumioAPIError as e:
-        error(f"API error: {e}")
-        sys.exit(1)
-    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
-        error(f"API client error: {e}")
-        sys.exit(1)
-    except Exception as e:  # pragma: no cover
-        error(f"Unexpected error: {e}")
-        sys.exit(1)
+    queue_data = fetch_or_exit(ctx, lambda c: c.queue.raw)
+    debug("Successfully retrieved queue")
+    render_tracks(
+        ctx, queue_data, queue_data.get("queue", []), fields, output_format, "Volumio Queue"
+    )
 
 
 def _download_summary(entries: list[dict[str, Any]], selected: set[int], errors: int) -> str:
@@ -2216,8 +2168,130 @@ def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None
 @main.group()
 @click.pass_context
 def playlist(ctx: click.Context) -> None:
-    """Query, play, and download the saved playlists."""
+    """Query, play, edit, and download the saved playlists."""
     pass
+
+
+@playlist.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("uri", type=str)
+@option_check_playlist_name
+@option_service_of_uri
+def playlist_add(
+    ctx: click.Context,
+    name: str,
+    uri: str,
+    check_playlist_name: bool,
+    service: str | None,
+) -> None:
+    """Add the item at URI to the playlist NAME.
+
+    A URI comes from "collection browse" or "collection search". The Volumio host
+    creates the playlist when it does not exist, which --no-check-playlist-name allows.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    execute_command(
+        ctx, f'add to playlist "{name}"', lambda c: c.add_to_playlist(name, uri, service)
+    )
+
+
+@playlist.command("content")
+@click.pass_context
+@click.argument("name", type=str)
+@option_check_playlist_name
+@option_fields
+@option_format
+def playlist_content(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+) -> None:
+    """Print the tracks of the playlist NAME.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    content = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name))
+    render_tracks(
+        ctx,
+        content.raw,
+        [track.raw for track in content.tracks],
+        fields,
+        output_format,
+        f'Volumio Playlist "{name}"',
+    )
+
+
+@playlist.command("create")
+@click.pass_context
+@click.argument("name", type=str)
+def playlist_create(ctx: click.Context, name: str) -> None:
+    """Create the empty playlist NAME.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'create playlist "{name}"', lambda c: c.create_playlist(name))
+
+
+@playlist.command("delete")
+@click.pass_context
+@click.argument("name", type=str)
+@option_check_playlist_name
+@option_yes
+def playlist_delete(ctx: click.Context, name: str, check_playlist_name: bool, yes: bool) -> None:
+    """Delete the playlist NAME.
+
+    IMPORTANT: the playlist cannot be recovered; it is deleted only when -y/--yes is
+    given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to delete the playlist without -y/--yes: "{name}"')
+        sys.exit(1)
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    execute_command(ctx, f'delete playlist "{name}"', lambda c: c.delete_playlist(name))
+
+
+@playlist.command("enqueue")
+@click.pass_context
+@click.argument("name", type=str)
+@option_check_playlist_name
+@option_print_resulting_status
+def playlist_enqueue(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    print_resulting_status: bool,
+) -> None:
+    """Append the playlist NAME to the queue, leaving the playback alone.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    execute_command(ctx, f'enqueue playlist "{name}"', lambda c: c.enqueue_playlist(name))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@playlist.command("import")
+@click.pass_context
+def playlist_import(ctx: click.Context) -> None:
+    """Import the playlists the music services of the Volumio host expose.
+
+    The imported playlists appear in "playlist list" afterwards.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, "import playlists", lambda c: c.import_service_playlists())
 
 
 @playlist.command("list")
@@ -2252,18 +2326,38 @@ def playlist_play(
 ) -> None:
     """Start playback of the playlist specified by NAME."""
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-        if name not in names:
-            error(f'Playlist not found: "{name}"')
-            error("Available playlists:")
-            for available in names:
-                error(f'  "{available}"')
-            if not names:
-                error("  (none)")
-            sys.exit(1)
+        check_playlist_name_or_exit(ctx, name)
 
     execute_command(ctx, f'playplaylist "{name}"', lambda c: c.play_playlist(name))
     execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@playlist.command("remove")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("uri", type=str)
+@option_check_playlist_name
+@option_service_of_uri
+def playlist_remove(
+    ctx: click.Context,
+    name: str,
+    uri: str,
+    check_playlist_name: bool,
+    service: str | None,
+) -> None:
+    """Remove the item at URI from the playlist NAME.
+
+    A URI comes from "playlist content".
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    execute_command(
+        ctx,
+        f'remove from playlist "{name}"',
+        lambda c: c.remove_from_playlist(name, uri, service),
+    )
 
 
 @playlist.command("download")
@@ -2308,15 +2402,7 @@ def playlist_download(
     """Download every track of the playlist specified by NAME."""
 
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-        if name not in names:
-            error(f'Playlist not found: "{name}"')
-            error("Available playlists:")
-            for available in names:
-                error(f'  "{available}"')
-            if not names:
-                error("  (none)")
-            sys.exit(1)
+        check_playlist_name_or_exit(ctx, name)
 
     try:
         client = get_client(ctx)

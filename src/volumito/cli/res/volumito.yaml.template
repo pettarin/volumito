@@ -31,10 +31,17 @@ aliases:
   # pause: playback pause
   # ping: system ping
   # pl: playlist
+  # pla: playlist add
   # play: playback play
+  # plc: playlist content
+  # plcr: playlist create
   # pld: playlist download
+  # pldel: playlist delete
+  # ple: playlist enqueue
+  # pli: playlist import
   # pll: playlist list
   # plp: playlist play
+  # plr: playlist remove
   # pm: playback mute
   # pnext: playback next
   # ppause: playback pause
@@ -185,7 +192,7 @@ miscellaneous:
   # Check that each queue-download track's metadata are current before downloading it
   check-next-track: true
 
-  # Check that the playlist name exists before playing it
+  # Check that the playlist name exists before using it
   check-playlist-name: true
 
   # Check that the seek position is within the duration of the current track
@@ -237,6 +244,7 @@ output:
   # - notification-list
   # - notification-listen
   # - playback-status
+  # - playlist-content
   # - playlist-list
   # - queue-list
   # - queue-status
@@ -320,6 +328,9 @@ output:
     # Add your own overrides here
 
   playback-status:
+    # Add your own overrides here
+
+  playlist-content:
     # Add your own overrides here
 
   playlist-list:

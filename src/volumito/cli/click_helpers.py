@@ -72,14 +72,17 @@ from volumito.cli.pure_helpers import (
     expand_timestamp_placeholder,
     extract_filename_from_uri,
     filter_fields,
+    filter_queue_fields,
     format_as_json,
     format_as_pretty,
     format_as_table,
     format_duration,
+    format_queue_as_table,
     parse_result_kinds,
     parse_time_to_seconds,
     parse_track_selection,
     preserve_local_file_name,
+    rebase_queue_positions,
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
@@ -543,6 +546,24 @@ def api_position(ctx: click.Context, position: int, name: str = "position") -> i
     if position < minimum:
         raise click.UsageError(f"{name} must be {minimum} or greater, got {position}")
     return position - minimum
+
+
+def check_playlist_name_or_exit(ctx: click.Context, name: str) -> None:
+    """Check that a playlist exists, printing the available names and exiting (1) otherwise.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist
+    """
+    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+    if name not in names:
+        error(f'Playlist not found: "{name}"')
+        error("Available playlists:")
+        for available in names:
+            error(f'  "{available}"')
+        if not names:
+            error("  (none)")
+        sys.exit(1)
 
 
 def configuration_file_callback(
@@ -1563,7 +1584,7 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
         "--check-playlist-name/--no-check-playlist-name",
         default=True,
         show_default=True,
-        help="Check that the playlist name exists before playing it.",
+        help="Check that the playlist name exists before using it.",
     )(func)
 
 
@@ -2520,6 +2541,52 @@ def resolve_story_entity[E: MusicEntity](
         raise click.UsageError(STORY_ARTIST_ARGUMENT_ERROR)
     kind, values = reference
     return entity_class(values[0], is_mbid=kind == "mbid")
+
+
+def render_tracks(
+    ctx: click.Context,
+    payload: dict[str, Any],
+    tracks: list[dict[str, Any]],
+    fields: str,
+    output_format: str,
+    heading: str,
+) -> None:
+    """Print a list of tracks (queue items) in the requested format.
+
+    The raw format prints the payload the tracks came from, as it is. The other
+    formats keep the selected fields of each track, adding its position (which the
+    pretty and table formats display according to
+    ``--position-starting-at-one``/``--position-starting-at-zero``), and the pretty
+    format shows the durations as HH:MM:SS.
+
+    Args:
+        ctx: Click context object holding the shared options
+        payload: The payload the tracks came from, printed by the raw format
+        tracks: The tracks, as the Volumio instance reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+        heading: The heading of the table format
+    """
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
+    if output_format == "raw":
+        output = json.dumps(payload)
+    else:
+        filtered = filter_queue_fields({"queue": tracks}, fields)
+        if output_format == "json":
+            output = json.dumps(filtered, indent=2)
+        elif output_format == "pretty":
+            pretty_tracks = []
+            for track in rebase_queue_positions(filtered, position_starting_at_one):
+                pretty_track = track.copy()
+                if isinstance(pretty_track.get("duration"), int):
+                    pretty_track["duration"] = format_duration(pretty_track["duration"])
+                pretty_tracks.append(pretty_track)
+            output = json.dumps(pretty_tracks, indent=4, sort_keys=True, ensure_ascii=False)
+        else:  # table
+            output = format_queue_as_table(
+                rebase_queue_positions(filtered, position_starting_at_one), heading
+            )
+    echo_data(ctx, output)
 
 
 def resolve_command_path(
