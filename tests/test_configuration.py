@@ -775,7 +775,7 @@ class TestBuildClickDefaultMap:
         format_only = {"output_format": "table"}
         assert result == {
             # "command list" takes neither fields nor format, so nothing reaches it
-            "playback": {"status": formatting},
+            "playback": {"infinity": format_only, "sleep": format_only, "status": formatting},
             # "track" is the top-level synonym of "queue track"
             "track": {"info": formatting},
             "queue": {"list": formatting, "status": formatting, "track": {"info": formatting}},

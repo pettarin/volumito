@@ -8,7 +8,7 @@ import http.client
 import json
 import os
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, NoReturn
 
 import click
@@ -21,6 +21,7 @@ from volumito.cli.click_helpers import (
     OnOffParamType,
     SchemeParamType,
     SeekParamType,
+    SleepTimerParamType,
     VolumeParamType,
     VolumioVersionParamType,
     alias_problems,
@@ -101,6 +102,7 @@ from volumito.cli.click_helpers import (
     option_track,
     option_tracks_only,
     option_unregister_url_on_exit,
+    option_volatile,
     option_with_albumart,
     option_yes,
     read_queue_log,
@@ -140,6 +142,7 @@ from volumito.cli.constants import (
     NOTIFICATION_TIMESTAMP_FORMAT,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
+    PLAY_VOLATILE_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
     QUEUE_ADD_MODES_ERROR,
@@ -791,15 +794,25 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     type=int,
 )
 @option_print_resulting_status
-def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
+@option_volatile
+def play(
+    ctx: click.Context, position: int | None, print_resulting_status: bool, volatile: bool
+) -> None:
     """Start playback.
 
     With POSITION, play the track at that position of the queue (indexed according
-    to --position-starting-at-one/--position-starting-at-zero).
+    to --position-starting-at-one/--position-starting-at-zero). With --volatile,
+    POSITION is a position of the volatile source (e.g., Spotify Connect) to start
+    instead, which needs a WebSocket API client.
     """
+    if volatile and position is None:
+        raise click.UsageError(PLAY_VOLATILE_ERROR)
     if position is not None:
         index = api_position(ctx, position)
-        execute_command(ctx, "play", lambda c: c.play(index))
+        if volatile:
+            execute_command(ctx, "play volatile", lambda c: c.play_volatile(index))
+        else:
+            execute_command(ctx, "play", lambda c: c.play(index))
     else:
         execute_command(ctx, "play", lambda c: c.play())
     execute_conditionally(ctx, print_resulting_status, playback_status)
@@ -950,6 +963,60 @@ def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     """Unmute the volume."""
     execute_command(ctx, "volume unmute", lambda c: c.unmute())
     execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@playback.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=OnOffParamType())
+@option_format
+def infinity(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the infinity playback mode.
+
+    Without VALUE, print whether infinity playback is available and enabled.
+    Otherwise VALUE is "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0".
+
+    Needs a WebSocket API client.
+    """
+    if value is None:
+        setting = fetch_or_exit(ctx, lambda c: c.infinity_playback)
+        render_payload(ctx, setting.raw, output_format, heading="Volumio Infinity Playback")
+        return
+    enabled = value
+    execute_command(
+        ctx, f"infinity {'on' if enabled else 'off'}", lambda c: c.set_infinity_playback(enabled)
+    )
+
+
+@playback.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=SleepTimerParamType())
+@option_format
+def sleep(ctx: click.Context, value: timedelta | str | None, output_format: str) -> None:
+    """Print, arm, or disarm the sleep timer.
+
+    Without VALUE, print the sleep timer: whether it is armed, and the delay left
+    before the Volumio host stops. Otherwise VALUE is the delay from now (not a
+    clock time) after which the host stops, as a number of minutes or as H:MM, or
+    "off" to disarm the timer.
+
+    The timer comes from the alarm-clock plugin. Needs a WebSocket API client.
+    """
+    if value is None:
+        timer = fetch_or_exit(ctx, lambda c: c.sleep_timer)
+        if output_format == "raw":
+            data = timer.raw
+        else:
+            delay = timer.delay
+            data = {
+                "enabled": timer.enabled,
+                "time": timer.time,
+                "minutes": int(delay.total_seconds() // 60) if delay is not None else None,
+            }
+        render_payload(ctx, data, output_format, heading="Volumio Sleep Timer")
+        return
+    delay = value if isinstance(value, timedelta) else None
+    label = "sleep off" if delay is None else f"sleep {int(delay.total_seconds() // 60)}"
+    execute_command(ctx, label, lambda c: c.set_sleep_timer(delay))
 
 
 @playback.command("is_muted")

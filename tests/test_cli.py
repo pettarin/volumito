@@ -7,7 +7,7 @@
 import json
 import os
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, PropertyMock
 
 import click
@@ -31,6 +31,7 @@ from volumito.cli.click_helpers import (
     ResultKindsParamType,
     SchemeParamType,
     SeekParamType,
+    SleepTimerParamType,
     VolumeParamType,
     correct_audio_extension,
     create_client,
@@ -96,6 +97,7 @@ from volumito.clients.errors import (
 )
 from volumito.clients.models import (
     CollectionStatistics,
+    InfinityPlayback,
     Notifications,
     PlayerState,
     PlaylistContent,
@@ -104,6 +106,7 @@ from volumito.clients.models import (
     Queue,
     QueueTrack,
     SearchResultItemKind,
+    SleepTimer,
     Story,
     SuccessResponse,
     SystemInfo,
@@ -141,9 +144,11 @@ def _isolate_config_probing(mocker: MockerFixture):
 
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "collection_statistics": CollectionStatistics,
+    "infinity_playback": InfinityPlayback,
     "notifications": Notifications,
     "playlists": Playlists,
     "queue": Queue,
+    "sleep_timer": SleepTimer,
     "state": PlayerState,
     "system_info": SystemInfo,
     "system_version": SystemVersion,
@@ -1444,6 +1449,41 @@ class TestSeekParamType:
         """A negative position is a usage error."""
         with pytest.raises(click.exceptions.BadParameter):
             SeekParamType().convert(value, None, None)
+
+
+class TestSleepTimerParamType:
+    """Test cases for the SleepTimerParamType Click parameter type."""
+
+    def test_convert_already_timedelta(self):
+        """An already-converted delay passes through unchanged."""
+        delay = timedelta(minutes=30)
+
+        assert SleepTimerParamType().convert(delay, None, None) is delay
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            ("0", timedelta()),
+            ("30", timedelta(minutes=30)),
+            ("90", timedelta(minutes=90)),
+            ("1:30", timedelta(hours=1, minutes=30)),
+            ("0:05", timedelta(minutes=5)),
+            ("12:00", timedelta(hours=12)),
+        ],
+    )
+    def test_convert_delay(self, text: str, expected: timedelta):
+        """A number of minutes, or a H:MM delay, is converted to a timedelta."""
+        assert SleepTimerParamType().convert(text, None, None) == expected
+
+    def test_convert_off(self):
+        """The off spelling is returned as it is, to disarm the timer."""
+        assert SleepTimerParamType().convert("off", None, None) == "off"
+
+    @pytest.mark.parametrize("value", ["bogus", "OFF", "-5", "1:60", "1:2:3", "30m", ""])
+    def test_convert_invalid_rejected(self, value: str):
+        """A value that is neither a number of minutes, a H:MM delay, nor off is an error."""
+        with pytest.raises(click.exceptions.BadParameter, match="must be a number of minutes"):
+            SleepTimerParamType().convert(value, None, None)
 
 
 class TestVolumeParamType:
@@ -12002,6 +12042,255 @@ class TestQueueNavigationFlags:
         assert "Volumio Queue Status" in result.output
 
 
+class TestPlaybackExtras:
+    """Test cases for playback infinity, playback sleep, and playback play --volatile."""
+
+    _SLEEP_TIMER = {"enabled": True, "time": "1:30", "action": {"type": "stop"}}
+    """An armed sleep timer, as a Volumio host answers it."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client, answering the state reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "state", return_value={"title": "Test Song"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture, sleep_timer=None):
+        """Mock VolumioWebSocketClient answering the reads; patch out the sleep."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(
+            mock_client,
+            "sleep_timer",
+            return_value=self._SLEEP_TIMER if sleep_timer is None else sleep_timer,
+        )
+        _attach_property(
+            mock_client, "infinity_playback", return_value={"available": True, "enabled": False}
+        )
+        _attach_property(
+            mock_client,
+            "state",
+            return_value={"title": "Test Song", "artist": "StatusMarkerArtist"},
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client
+
+    def test_sleep_prints_the_timer(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a value, the timer is printed with the delay left in minutes."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"enabled": True, "time": "1:30", "minutes": 90}
+        mock_client.sleep_timer_property.assert_called_once()
+        mock_client.set_sleep_timer.assert_not_called()
+
+    def test_sleep_prints_a_disarmed_timer(self, runner: CliRunner, mocker: MockerFixture):
+        """A timer without a readable delay prints no minutes."""
+        self._mock_websocket_client(mocker, sleep_timer={"enabled": False})
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"enabled": False, "time": None, "minutes": None}
+
+    def test_sleep_prints_the_timer_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """-F raw prints the answer of the host as it is."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep", "-F", "raw"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self._SLEEP_TIMER
+
+    def test_sleep_prints_the_timer_as_a_table(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table heads the timer fields."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Sleep Timer" in result.output
+        assert "Minutes" in result.output
+        assert "90" in result.output
+
+    def test_sleep_format_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The playback-sleep subsection of the configuration sets the default format."""
+        self._mock_websocket_client(mocker)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  playback-sleep:\n    format: table\n")
+
+        result = runner.invoke(main, ["-c", str(config), *self._WEBSOCKET, "playback", "sleep"])
+
+        assert result.exit_code == 0
+        assert "Volumio Sleep Timer" in result.output
+
+    @pytest.mark.parametrize(
+        ("value", "delay", "label"),
+        [
+            ("30", timedelta(minutes=30), "sleep 30"),
+            ("1:30", timedelta(hours=1, minutes=30), "sleep 90"),
+            ("off", None, "sleep off"),
+        ],
+    )
+    def test_sleep_arms_or_disarms_the_timer(
+        self, runner: CliRunner, mocker: MockerFixture, value, delay, label
+    ):
+        """A value arms the timer with the delay, or disarms it."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep", value])
+
+        assert result.exit_code == 0
+        assert f"Command '{label}' executed successfully" in result.output
+        mock_client.set_sleep_timer.assert_called_once_with(delay)
+        mock_client.sleep_timer_property.assert_not_called()
+
+    def test_sleep_invalid_value(self, runner: CliRunner, mocker: MockerFixture):
+        """A value that is not a delay nor off is a usage error."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep", "tomorrow"])
+
+        assert result.exit_code == 2
+        assert "must be a number of minutes, a H:MM delay, or off" in result.output
+        mock_client.set_sleep_timer.assert_not_called()
+
+    def test_infinity_prints_the_setting(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a value, the infinity playback setting is printed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "infinity"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"available": True, "enabled": False}
+        mock_client.infinity_playback_property.assert_called_once()
+        mock_client.set_infinity_playback.assert_not_called()
+
+    def test_infinity_prints_the_setting_as_a_table(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F table heads the setting fields."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "infinity", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Infinity Playback" in result.output
+        assert "Available" in result.output
+
+    @pytest.mark.parametrize(("spelling", "expected"), [("on", True), ("off", False)])
+    def test_infinity_sets_the_mode(
+        self, runner: CliRunner, mocker: MockerFixture, spelling, expected
+    ):
+        """A value turns infinity playback on or off."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "infinity", spelling])
+
+        assert result.exit_code == 0
+        assert f"Command 'infinity {spelling}' executed successfully" in result.output
+        mock_client.set_infinity_playback.assert_called_once_with(expected)
+        mock_client.infinity_playback_property.assert_not_called()
+
+    def test_infinity_invalid_value(self, runner: CliRunner, mocker: MockerFixture):
+        """A value that is not an on/off spelling is a usage error."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "infinity", "maybe"])
+
+        assert result.exit_code == 2
+        assert "must be one of" in result.output
+        mock_client.set_infinity_playback.assert_not_called()
+
+    def test_play_volatile(self, runner: CliRunner, mocker: MockerFixture):
+        """--volatile starts the volatile source at the 0-based position."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playback", "play", "3", "--volatile",
+             "--no-print-resulting-status"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'play volatile' executed successfully" in result.output
+        mock_client.play_volatile.assert_called_once_with(2)
+        mock_client.play.assert_not_called()
+
+    def test_play_volatile_without_a_position(self, runner: CliRunner, mocker: MockerFixture):
+        """--volatile needs the position to start at."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playback", "play", "--volatile"])
+
+        assert result.exit_code == 2
+        assert "Expected a POSITION argument together with --volatile" in result.output
+        mock_client.play_volatile.assert_not_called()
+        mock_client.play.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("arguments", "operation"),
+        [
+            (["infinity"], "the playback extras"),
+            (["infinity", "on"], "the playback extras"),
+            (["play", "1", "--volatile", "--no-print-resulting-status"], "the playback extras"),
+            (["sleep"], "the sleep timer and the alarms"),
+            (["sleep", "30"], "the sleep timer and the alarms"),
+        ],
+    )
+    def test_a_rest_client_refuses(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, operation
+    ):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["playback", *arguments])
+
+        assert result.exit_code == 1
+        assert (
+            f"API client error: The synchronous REST API client does not offer {operation}: "
+            "use --api-client synchronous_websocket or asynchronous_websocket, "
+            "or --allow-fallback-to-websocket-api"
+        ) in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "playback", "sleep", "off"]
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "Falling back to the WebSocket API client for the sleep timer and the alarms"
+        ) in result.output
+        websocket.set_sleep_timer.assert_called_once_with(None)
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
+
 class TestQueueTrackGroup:
     """Test cases for the queue track group and its top-level synonym."""
 
@@ -14411,6 +14700,8 @@ class TestConfigurationCommands:
                     "command-list": None,
                     "notification-list": None,
                     "notification-listen": None,
+                    "playback-infinity": None,
+                    "playback-sleep": None,
                     "playback-status": None,
                     "playlist-content": None,
                     "playlist-list": None,

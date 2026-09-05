@@ -24,6 +24,9 @@ All notable changes to this project will be documented in this file.
 - Commands `playlist add`, `playlist content`, `playlist create`,
   `playlist delete`, `playlist enqueue`, `playlist import`,
   and `playlist remove` (all needing a WebSocket API client)
+- Commands `playback infinity` and `playback sleep`,
+  and option `--volatile` of `playback play`
+  (all needing a WebSocket API client)
 
 ### Changed
 

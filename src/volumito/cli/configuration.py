@@ -80,6 +80,8 @@ FORMAT_KEYS: list[str] = [
 
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "command-list": COMMAND_LIST_KEYS,
+    "playback-infinity": FORMAT_KEYS,
+    "playback-sleep": FORMAT_KEYS,
     "playback-status": DISPLAY_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
@@ -127,6 +129,12 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "notification-listen": [
         ["notification", "listen"],
+    ],
+    "playback-infinity": [
+        ["playback", "infinity"],
+    ],
+    "playback-sleep": [
+        ["playback", "sleep"],
     ],
     "playback-status": [
         ["playback", "status"],

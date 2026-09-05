@@ -10,7 +10,7 @@ import shutil
 import sys
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from string import Formatter
 from typing import Any, get_args, overload
 
@@ -304,6 +304,39 @@ class SeekParamType(click.ParamType):
         if seconds < 0:
             self.fail(f"seek position must be 0 or greater, got {seconds}", param, ctx)
         return seconds
+
+
+class SleepTimerParamType(click.ParamType):
+    """Click parameter type for the sleep timer value.
+
+    Accepts a non-negative integer number of minutes, a ``H:MM`` delay (with the
+    minutes below 60), both converted to a ``timedelta``, or ``"off"``, returned as it
+    is; anything else is a usage error.
+    """
+
+    name = "sleep"
+
+    OFF = "off"
+    """The spelling disarming the timer."""
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> timedelta | str:
+        if isinstance(value, timedelta):
+            return value
+        text = str(value)
+        if text == self.OFF:
+            return text
+        hours, separator, minutes = text.partition(":")
+        if separator:
+            if hours.isdigit() and minutes.isdigit() and int(minutes) < 60:
+                return timedelta(hours=int(hours), minutes=int(minutes))
+        elif text.isdigit():
+            return timedelta(minutes=int(text))
+        self.fail(f"{text!r} must be a number of minutes, a H:MM delay, or {self.OFF}", param, ctx)
 
 
 class TrackSelectionParamType(click.ParamType):
@@ -2093,6 +2126,19 @@ def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., No
         default=True,
         show_default=True,
         help="On exit, unregister the URL registered by this run.",
+    )(func)
+
+
+def option_volatile(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--volatile`` option to the playback play subcommand."""
+    return click.option(
+        "--volatile",
+        is_flag=True,
+        default=False,
+        help=(
+            "Start the volatile source (e.g., Spotify Connect) at POSITION, instead of the "
+            "queue (needs a WebSocket API client)."
+        ),
     )(func)
 
 

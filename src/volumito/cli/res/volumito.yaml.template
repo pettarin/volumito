@@ -29,6 +29,7 @@ aliases:
   # notu: notification unregister
   # p: playback
   # pause: playback pause
+  # pinf: playback infinity
   # ping: system ping
   # pl: playlist
   # pla: playlist add
@@ -50,6 +51,7 @@ aliases:
   # prev: playback previous
   # ps: playback status
   # pseek: playback seek
+  # psl: playback sleep
   # pstop: playback stop
   # pt: playback toggle
   # pu: playback unmute
@@ -243,6 +245,8 @@ output:
   # - multiroom-zones
   # - notification-list
   # - notification-listen
+  # - playback-infinity
+  # - playback-sleep
   # - playback-status
   # - playlist-content
   # - playlist-list
@@ -325,6 +329,12 @@ output:
     # Add your own overrides here
 
   notification-listen:
+    # Add your own overrides here
+
+  playback-infinity:
+    # Add your own overrides here
+
+  playback-sleep:
     # Add your own overrides here
 
   playback-status:
