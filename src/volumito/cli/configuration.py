@@ -102,9 +102,15 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
+    "system-network-info": DISPLAY_KEYS,
+    "system-network-wireless": DISPLAY_KEYS,
     "system-power-modes": FORMAT_KEYS,
+    "system-share-discover": FORMAT_KEYS,
+    "system-share-info": FORMAT_KEYS,
+    "system-share-list": DISPLAY_KEYS,
     "system-timezone-list": FORMAT_KEYS,
     "system-update-channel-list": FORMAT_KEYS,
+    "system-usb-list": DISPLAY_KEYS,
     "collection-browse": FORMAT_KEYS,
     "collection-favourite-list": FORMAT_KEYS,
     "collection-goto": FORMAT_KEYS,
@@ -215,14 +221,32 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["system", "info"],
         ["info"],
     ],
+    "system-network-info": [
+        ["system", "network", "info"],
+    ],
+    "system-network-wireless": [
+        ["system", "network", "wireless"],
+    ],
     "system-power-modes": [
         ["system", "power", "modes"],
+    ],
+    "system-share-discover": [
+        ["system", "share", "discover"],
+    ],
+    "system-share-info": [
+        ["system", "share", "info"],
+    ],
+    "system-share-list": [
+        ["system", "share", "list"],
     ],
     "system-timezone-list": [
         ["system", "timezone", "list"],
     ],
     "system-update-channel-list": [
         ["system", "update", "channel", "list"],
+    ],
+    "system-usb-list": [
+        ["system", "usb", "list"],
     ],
     "system-version": [
         ["system", "version"],

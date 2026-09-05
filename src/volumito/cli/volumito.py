@@ -109,8 +109,15 @@ from volumito.cli.click_helpers import (
     option_rescan,
     option_result_kinds,
     option_root,
+    option_scan,
     option_service,
     option_service_of_uri,
+    option_share_fstype,
+    option_share_name,
+    option_share_options,
+    option_share_password,
+    option_share_path,
+    option_share_username,
     option_story_type,
     option_super,
     option_thumbnails,
@@ -120,6 +127,7 @@ from volumito.cli.click_helpers import (
     option_tracks_only,
     option_unregister_url_on_exit,
     option_volatile,
+    option_wireless_password,
     option_with_albumart,
     option_yes,
     read_queue_log,
@@ -182,10 +190,15 @@ from volumito.cli.constants import (
     SEARCH_ARGUMENT_ERROR,
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
+    SHARE_EDIT_FIELDS_ERROR,
     SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
     SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
+    SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
+    SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
+    SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
+    SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
     URI_FAVOURITES,
@@ -2514,6 +2527,264 @@ def system_update_install(ctx: click.Context, ignore_integrity_check: bool, yes:
         error("Refusing to install the update without -y/--yes")
         sys.exit(1)
     execute_command(ctx, "update install", lambda c: c.update(ignore_integrity_check))
+
+
+@system.group("network")
+@click.pass_context
+def system_network(ctx: click.Context) -> None:
+    """Query the network of the Volumio host, and join a wireless network."""
+    pass
+
+
+@system_network.command("info")
+@click.pass_context
+@option_fields
+@option_format
+def system_network_info(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the network interfaces of the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.network_info.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("interfaces", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
+        "Volumio Network Interfaces",
+        name_key="type",
+    )
+
+
+@system_network.command("join")
+@click.pass_context
+@click.argument("ssid", type=str)
+@option_wireless_password
+@option_yes
+def system_network_join(ctx: click.Context, ssid: str, password: str | None, yes: bool) -> None:
+    """Join the wireless network SSID with the Volumio host.
+
+    IMPORTANT: the host may leave the network this tool reaches it on; the network is
+    joined only when -y/--yes is given. The password stays in the shell history.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to join the wireless network without -y/--yes: "{ssid}"')
+        sys.exit(1)
+    secret = password or ""
+    execute_command(
+        ctx, f'join "{ssid}"', lambda c: c.save_wireless_settings(ssid, secret)
+    )
+
+
+@system_network.command("wireless")
+@click.pass_context
+@option_fields
+@option_format
+@option_scan
+def system_network_wireless(
+    ctx: click.Context, fields: str, output_format: str, scan: bool
+) -> None:
+    """Print the wireless networks the Volumio host saw last, or scans for with --scan.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(
+        ctx, lambda c: (c.wireless_networks if scan else c.wireless_networks_cache).raw
+    )
+    render_items(
+        ctx,
+        data,
+        data.get("available", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
+        "Volumio Wireless Networks",
+        name_key="ssid",
+    )
+
+
+@system.group("share")
+@click.pass_context
+def system_share(ctx: click.Context) -> None:
+    """Manage the network shares mounted by the Volumio host."""
+    pass
+
+
+@system_share.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("path", type=str)
+@click.argument("fstype", type=str)
+@option_share_options
+@option_share_password
+@option_share_username
+def system_share_add(
+    ctx: click.Context,
+    name: str,
+    path: str,
+    fstype: str,
+    options: str | None,
+    password: str | None,
+    username: str | None,
+) -> None:
+    """Mount the share at PATH of kind FSTYPE (e.g., cifs, nfs) under NAME.
+
+    Needs a WebSocket API client.
+    """
+    given = {
+        key: value
+        for key, value in (("username", username), ("password", password), ("options", options))
+        if value is not None
+    }
+    execute_command(
+        ctx, f'add share "{name}"', lambda c: c.add_share(name, path, fstype, **given)
+    )
+
+
+@system_share.command("discover")
+@click.pass_context
+@option_format
+def system_share_discover(ctx: click.Context, output_format: str) -> None:
+    """Print the network shares reachable from the Volumio host, as it reports them.
+
+    Needs a WebSocket API client.
+    """
+    shares = fetch_or_exit(ctx, lambda c: c.discover_network_shares())
+    render_payload(ctx, shares, output_format, heading="Volumio Network Shares Discovered")
+
+
+@system_share.command("edit")
+@click.pass_context
+@click.argument("share_id", type=str)
+@option_share_fstype
+@option_share_name
+@option_share_options
+@option_share_password
+@option_share_path
+@option_share_username
+def system_share_edit(
+    ctx: click.Context,
+    share_id: str,
+    fstype: str | None,
+    name: str | None,
+    options: str | None,
+    password: str | None,
+    path: str | None,
+    username: str | None,
+) -> None:
+    """Change the share SHARE_ID, as "system share list" names it: the fields given.
+
+    Needs a WebSocket API client.
+    """
+    given = {
+        key: value
+        for key, value in (
+            ("name", name),
+            ("path", path),
+            ("fstype", fstype),
+            ("username", username),
+            ("password", password),
+            ("options", options),
+        )
+        if value is not None
+    }
+    if not given:
+        raise click.UsageError(SHARE_EDIT_FIELDS_ERROR)
+    execute_command(ctx, f'edit share "{share_id}"', lambda c: c.edit_share(share_id, **given))
+
+
+@system_share.command("info")
+@click.pass_context
+@click.argument("share_id", type=str)
+@option_format
+def system_share_info(ctx: click.Context, share_id: str, output_format: str) -> None:
+    """Print the details of the share SHARE_ID, as "system share list" names it.
+
+    Needs a WebSocket API client.
+    """
+    share = fetch_or_exit(ctx, lambda c: c.get_share(share_id))
+    render_payload(ctx, share.raw, output_format, heading=f'Volumio Network Share "{share_id}"')
+
+
+@system_share.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_share_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the network shares mounted by the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.shares.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("shares", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
+        "Volumio Network Shares",
+    )
+
+
+@system_share.command("remove")
+@click.pass_context
+@click.argument("share_id", type=str)
+@option_yes
+def system_share_remove(ctx: click.Context, share_id: str, yes: bool) -> None:
+    """Unmount the share SHARE_ID, as "system share list" names it.
+
+    IMPORTANT: the share is unmounted only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to unmount the share without -y/--yes: "{share_id}"')
+        sys.exit(1)
+    execute_command(ctx, f'remove share "{share_id}"', lambda c: c.delete_share(share_id))
+
+
+@system.group("usb")
+@click.pass_context
+def system_usb(ctx: click.Context) -> None:
+    """Manage the USB drives attached to the Volumio host."""
+    pass
+
+
+@system_usb.command("eject")
+@click.pass_context
+@click.argument("name", type=str)
+def system_usb_eject(ctx: click.Context, name: str) -> None:
+    """Unmount the USB drive NAME, as "system usb list" names it, before unplugging it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'eject "{name}"', lambda c: c.safe_remove_drive(name))
+
+
+@system_usb.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_usb_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the USB drives attached to the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.usb_drives.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("drives", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
+        "Volumio USB Drives",
+    )
 
 
 @main.group()

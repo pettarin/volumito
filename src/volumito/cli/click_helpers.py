@@ -2220,6 +2220,19 @@ def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_scan(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--scan`` option to the system network wireless subcommand."""
+    return click.option(
+        "--scan",
+        is_flag=True,
+        default=False,
+        help=(
+            "Scan for the networks anew, instead of printing the ones seen last "
+            "(slow, and a host without a wireless interface never answers)."
+        ),
+    )(func)
+
+
 def option_service(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-s``/``--service`` option to the collection search subcommand."""
     return click.option(
@@ -2251,6 +2264,66 @@ def option_root(func: Callable[..., None]) -> Callable[..., None]:
             "Print the browse sources, the roots the URIs descend from, instead of "
             "browsing (needs a WebSocket API client)."
         ),
+    )(func)
+
+
+def option_share_fstype(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--fstype`` option to the system share edit subcommand."""
+    return click.option(
+        "--fstype",
+        type=str,
+        default=None,
+        help='The kind of the share (e.g., "cifs", "nfs").',
+    )(func)
+
+
+def option_share_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--name`` option to the system share edit subcommand."""
+    return click.option(
+        "--name",
+        type=str,
+        default=None,
+        help="The name the share is mounted under.",
+    )(func)
+
+
+def option_share_options(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--options`` option to the system share subcommands."""
+    return click.option(
+        "--options",
+        type=str,
+        default=None,
+        help="The mount options of the share.",
+    )(func)
+
+
+def option_share_password(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--password`` option to the system share subcommands."""
+    return click.option(
+        "--password",
+        type=str,
+        default=None,
+        help="The password the share is mounted with; it stays in the shell history.",
+    )(func)
+
+
+def option_share_path(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--path`` option to the system share edit subcommand."""
+    return click.option(
+        "--path",
+        type=str,
+        default=None,
+        help='The path of the share on its host (e.g., "192.168.1.2/Music").',
+    )(func)
+
+
+def option_share_username(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--username`` option to the system share subcommands."""
+    return click.option(
+        "--username",
+        type=str,
+        default=None,
+        help="The user the share is mounted as.",
     )(func)
 
 
@@ -2356,6 +2429,19 @@ def option_volatile(func: Callable[..., None]) -> Callable[..., None]:
         help=(
             "Start the volatile source (e.g., Spotify Connect) at POSITION, instead of the "
             "queue (needs a WebSocket API client)."
+        ),
+    )(func)
+
+
+def option_wireless_password(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--password`` option to the system network join subcommand."""
+    return click.option(
+        "--password",
+        type=str,
+        default=None,
+        help=(
+            "The password of the wireless network, none for an open one; it stays in the "
+            "shell history."
         ),
     )(func)
 
@@ -2492,6 +2578,7 @@ def render_items(
     output_format: str,
     short_fields: list[str],
     heading: str,
+    name_key: str = "name",
 ) -> None:
     """Print a list of named items (e.g., the music sources) in the requested format.
 
@@ -2506,6 +2593,7 @@ def render_items(
         output_format: The -F/--format option value
         short_fields: The keys the SHORT keyword keeps
         heading: The heading of the table format
+        name_key: The key holding the name heading the block of each item in the table
     """
     if output_format == "raw":
         output = json.dumps(payload)
@@ -2514,7 +2602,7 @@ def render_items(
         if output_format == "json":
             output = json.dumps(filtered, indent=2)
         elif output_format == "table":
-            output = format_items_as_table(filtered, heading)
+            output = format_items_as_table(filtered, heading, name_key)
         else:  # pretty
             output = json.dumps(filtered, indent=4, sort_keys=True, ensure_ascii=False)
     echo_data(ctx, output)

@@ -44,6 +44,9 @@ All notable changes to this project will be documented in this file.
   `system timezone` (`list`, `set`), and `system update` (`automatic`,
   `channel` with `list` and `set`, `check`, `install`),
   all needing a WebSocket API client
+- Command groups `system network` (`info`, `join`, `wireless`),
+  `system share` (`add`, `discover`, `edit`, `info`, `list`, `remove`),
+  and `system usb` (`eject`, `list`), all needing a WebSocket API client
 
 ### Changed
 

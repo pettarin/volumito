@@ -702,7 +702,9 @@ def format_termination_conditions(
     return f"Terminate as soon as: {', '.join(conditions)}"
 
 
-def format_items_as_table(items: list[dict[str, Any]], heading: str) -> str:
+def format_items_as_table(
+    items: list[dict[str, Any]], heading: str, name_key: str = "name"
+) -> str:
     """Format a list of named items (e.g., the zones, the music sources) as a table.
 
     Each item is printed as a numbered block headed by its name, whose key/value lines
@@ -712,6 +714,7 @@ def format_items_as_table(items: list[dict[str, Any]], heading: str) -> str:
     Args:
         items: List of (potentially filtered) item dictionaries
         heading: The heading of the table
+        name_key: The key holding the name heading the block of each item
 
     Returns:
         A formatted string representation of the items
@@ -728,9 +731,9 @@ def format_items_as_table(items: list[dict[str, Any]], heading: str) -> str:
     indent = " " * (width + 2)
 
     for index, item in enumerate(items, start=1):
-        lines.append(f"\n{index:>{width}}. {item.get('name', 'Unknown')}")
+        lines.append(f"\n{index:>{width}}. {item.get(name_key, 'Unknown')}")
         for key, value in item.items():
-            if key == "name":
+            if key == name_key:
                 # The name is already the heading of the block
                 continue
             label = split_camel_case(key)

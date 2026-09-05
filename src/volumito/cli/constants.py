@@ -247,6 +247,12 @@ verified is the name its plugin registers itself with, or a guess where the plug
 public.
 """
 
+SHARE_EDIT_FIELDS_ERROR = (
+    "Expected at least one of the --fstype, --name, --options, --password, --path, "
+    "and --username options."
+)
+"""Error message when "system share edit" is given nothing to change."""
+
 SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST = [
     "name",
     "prettyName",
@@ -326,6 +332,41 @@ SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS = [
     "volume",
 ]
 """Short fields list for the "system audio outputs" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO = [
+    "type",
+    "ip",
+    "status",
+    "speed",
+]
+"""Short fields list for the "system network info" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS = [
+    "ssid",
+    "signal",
+    "security",
+    "configured",
+]
+"""Short fields list for the "system network wireless" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST = [
+    "id",
+    "name",
+    "path",
+    "fstype",
+    "size",
+    "username",
+    "options",
+]
+"""Short fields list for the "system share list" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST = [
+    "name",
+    "device",
+    "mountpoint",
+    "size",
+]
+"""Short fields list for the "system usb list" command."""
 
 SHORT_FORMAT_FIELDS_STORY = [
     "data.value",

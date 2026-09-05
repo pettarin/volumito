@@ -102,6 +102,7 @@ from volumito.clients.models import (
     InfinityPlayback,
     InputSources,
     MusicSources,
+    NetworkInfo,
     Notifications,
     OutputDevices,
     PlayerState,
@@ -112,6 +113,8 @@ from volumito.clients.models import (
     Queue,
     QueueTrack,
     SearchResultItemKind,
+    Share,
+    Shares,
     SleepTimer,
     Story,
     SuccessResponse,
@@ -120,7 +123,9 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UpdaterChannel,
+    UsbDrives,
     VolumioModel,
+    WirelessNetworks,
     Zones,
 )
 from volumito.clients.rest import (
@@ -160,15 +165,20 @@ _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "infinity_playback": InfinityPlayback,
     "input_sources": InputSources,
     "music_sources": MusicSources,
+    "network_info": NetworkInfo,
     "notifications": Notifications,
     "playlists": Playlists,
     "power_modes": PowerModes,
     "queue": Queue,
+    "shares": Shares,
     "sleep_timer": SleepTimer,
     "state": PlayerState,
     "system_info": SystemInfo,
     "system_version": SystemVersion,
     "updater_channel": UpdaterChannel,
+    "usb_drives": UsbDrives,
+    "wireless_networks": WirelessNetworks,
+    "wireless_networks_cache": WirelessNetworks,
     "zones": Zones,
 }
 """The response model each mocked client property returns, keyed by property name."""
@@ -6946,6 +6956,382 @@ class TestSystemSettings:
             result.output
         )
         assert result.stdout.strip() == "Living Room"
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
+
+class TestSystemNetworkShareUsb:
+    """Test cases for the system network, system share, and system usb subgroups."""
+
+    INTERFACES = {
+        "interfaces": [
+            {"type": "Wired", "ip": "192.168.1.10", "status": "connected", "speed": "1Gb/s"},
+            {"type": "Wireless", "ip": "", "status": "disconnected", "speed": "", "mac": "a"},
+        ]
+    }
+    """The network interfaces, as a Volumio host answers them."""
+
+    NETWORKS = {
+        "available": [
+            {"ssid": "Home", "signal": 70, "security": "wpa", "configured": True},
+            {"ssid": "Guest", "signal": 40, "security": "", "configured": False},
+        ]
+    }
+    """The wireless networks seen last, as a Volumio host answers them."""
+
+    SCANNED = {"available": [{"ssid": "Cafe", "signal": 20, "security": "wpa"}]}
+    """The wireless networks a scan finds."""
+
+    SHARE = {"id": "s1", "name": "Music", "path": "192.168.1.2/Music", "fstype": "cifs"}
+    """The details of one share."""
+
+    SHARES = {
+        "shares": [
+            {
+                "id": "s1",
+                "name": "Music",
+                "path": "192.168.1.2/Music",
+                "fstype": "cifs",
+                "size": "1.2 TB",
+                "username": "guest",
+                "options": "vers=2.0",
+                "mounted": True,
+            },
+            {"id": "s2", "name": "Films", "path": "nas/films", "fstype": "nfs"},
+        ]
+    }
+    """The mounted shares, as a Volumio host answers them."""
+
+    DRIVES = {
+        "drives": [
+            {
+                "name": "USB Stick",
+                "device": "/dev/sda1",
+                "mountpoint": "/mnt/USB/sda1",
+                "size": "32G",
+            },
+        ]
+    }
+    """The USB drives, as a Volumio host answers them."""
+
+    DISCOVERED = {"192.168.1.2": ["Music", "Films"]}
+    """The shares a discovery finds."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    @staticmethod
+    def _refusal(operation: str) -> str:
+        """The error of a REST API client asked for an operation, without the fallback."""
+        return (
+            f"API client error: The synchronous REST API client does not offer {operation}: "
+            "use --api-client synchronous_websocket or asynchronous_websocket, "
+            "or --allow-fallback-to-websocket-api"
+        )
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the network, share, and USB reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "network_info", return_value=self.INTERFACES)
+        _attach_property(mock_client, "wireless_networks_cache", return_value=self.NETWORKS)
+        _attach_property(mock_client, "wireless_networks", return_value=self.SCANNED)
+        _attach_property(mock_client, "shares", return_value=self.SHARES)
+        _attach_property(mock_client, "usb_drives", return_value=self.DRIVES)
+        mock_client.discover_network_shares.return_value = self.DISCOVERED
+        mock_client.get_share.return_value = Share.from_raw(self.SHARE)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_network_info(self, runner: CliRunner, mocker: MockerFixture):
+        """system network info prints the short fields of each interface."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "network", "info"])
+
+        assert result.exit_code == 0
+        interfaces = json.loads(result.output)
+        assert [interface["type"] for interface in interfaces] == ["Wired", "Wireless"]
+        assert interfaces[0]["ip"] == "192.168.1.10"
+        assert "mac" not in interfaces[1]
+
+    def test_network_info_table_heads_each_block_with_the_type(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F table names each interface by its type."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "network", "info", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "Volumio Network Interfaces" in lines
+        assert "1. Wired" in lines
+        assert "   Ip               : 192.168.1.10" in lines
+        assert "2. Wireless" in lines
+
+    def test_network_wireless_prints_the_cache(self, runner: CliRunner, mocker: MockerFixture):
+        """Without --scan, the networks seen last are printed, named by their SSID."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "network", "wireless", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "Volumio Wireless Networks" in lines
+        assert "1. Home" in lines
+        assert "   Signal           : 70" in lines
+        assert "2. Guest" in lines
+        mock_client.wireless_networks_cache_property.assert_called_once()
+        mock_client.wireless_networks_property.assert_not_called()
+
+    def test_network_wireless_scans(self, runner: CliRunner, mocker: MockerFixture):
+        """--scan asks the host to scan anew."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "network", "wireless", "--scan", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        assert [network["ssid"] for network in json.loads(result.output)] == ["Cafe"]
+        mock_client.wireless_networks_property.assert_called_once()
+        mock_client.wireless_networks_cache_property.assert_not_called()
+
+    def test_network_join_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes no network is joined."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "network", "join", "Home"])
+
+        assert result.exit_code == 1
+        assert 'Refusing to join the wireless network without -y/--yes: "Home"' in result.output
+        mock_client.save_wireless_settings.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("options", "password"), [([], ""), (["--password", "secret"], "secret")]
+    )
+    def test_network_join(self, runner: CliRunner, mocker: MockerFixture, options, password):
+        """With -y/--yes the network is joined, with the password given or none."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "network", "join", "Home", "-y", *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'join \"Home\"' executed successfully" in result.output
+        mock_client.save_wireless_settings.assert_called_once_with("Home", password)
+
+    @pytest.mark.parametrize(
+        ("options", "given"),
+        [
+            ([], {}),
+            (
+                ["--username", "guest", "--password", "pw", "--options", "vers=2.0"],
+                {"username": "guest", "password": "pw", "options": "vers=2.0"},
+            ),
+        ],
+    )
+    def test_share_add(self, runner: CliRunner, mocker: MockerFixture, options, given):
+        """system share add mounts the share, with the fields given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "share", "add", "Music", "192.168.1.2/Music", "cifs",
+             *options],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add share \"Music\"' executed successfully" in result.output
+        mock_client.add_share.assert_called_once_with("Music", "192.168.1.2/Music", "cifs", **given)
+
+    def test_share_discover(self, runner: CliRunner, mocker: MockerFixture):
+        """system share discover prints what the host found, as it reports it."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "share", "discover"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.DISCOVERED
+
+    def test_share_edit(self, runner: CliRunner, mocker: MockerFixture):
+        """system share edit changes the fields given of the share."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "share", "edit", "s1", "--name", "Tunes", "--path",
+             "nas/tunes", "--fstype", "nfs", "--username", "u", "--password", "p",
+             "--options", "ro"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'edit share \"s1\"' executed successfully" in result.output
+        mock_client.edit_share.assert_called_once_with(
+            "s1", name="Tunes", path="nas/tunes", fstype="nfs", username="u", password="p",
+            options="ro",
+        )
+
+    def test_share_edit_nothing(self, runner: CliRunner, mocker: MockerFixture):
+        """Editing nothing is a usage error."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "share", "edit", "s1"])
+
+        assert result.exit_code == 2
+        assert "Expected at least one of the --fstype, --name, --options" in result.output
+        mock_client.edit_share.assert_not_called()
+
+    def test_share_info(self, runner: CliRunner, mocker: MockerFixture):
+        """system share info prints the details of the share."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "share", "info", "s1", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        assert 'Volumio Network Share "s1"' in result.output
+        assert "192.168.1.2/Music" in result.output
+        mock_client.get_share.assert_called_once_with("s1")
+
+    def test_share_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system share list prints the short fields of each share."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "share", "list"])
+
+        assert result.exit_code == 0
+        shares = json.loads(result.output)
+        assert [share["name"] for share in shares] == ["Music", "Films"]
+        assert shares[0]["options"] == "vers=2.0"
+        assert "mounted" not in shares[0]
+
+    def test_share_list_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """-F raw prints the answer of the host as it is."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["-m", *self._WEBSOCKET, "system", "share", "list", "-F", "raw"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.SHARES
+
+    def test_share_remove_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes no share is unmounted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "share", "remove", "s1"])
+
+        assert result.exit_code == 1
+        assert 'Refusing to unmount the share without -y/--yes: "s1"' in result.output
+        mock_client.delete_share.assert_not_called()
+
+    def test_share_remove(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the share is unmounted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "share", "remove", "s1", "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'remove share \"s1\"' executed successfully" in result.output
+        mock_client.delete_share.assert_called_once_with("s1")
+
+    def test_usb_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system usb list prints the drives, as a table too."""
+        self._mock_websocket_client(mocker)
+
+        pretty = runner.invoke(main, [*self._WEBSOCKET, "system", "usb", "list"])
+        table = runner.invoke(main, [*self._WEBSOCKET, "system", "usb", "list", "-F", "table"])
+
+        assert pretty.exit_code == 0
+        assert json.loads(pretty.output) == self.DRIVES["drives"]
+        assert table.exit_code == 0
+        assert "Volumio USB Drives" in table.output
+        assert "1. USB Stick" in table.output
+
+    def test_usb_eject(self, runner: CliRunner, mocker: MockerFixture):
+        """system usb eject unmounts the drive."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "usb", "eject", "USB Stick"])
+
+        assert result.exit_code == 0
+        assert "Command 'eject \"USB Stick\"' executed successfully" in result.output
+        mock_client.safe_remove_drive.assert_called_once_with("USB Stick")
+
+    @pytest.mark.parametrize(
+        ("arguments", "operation"),
+        [
+            (["network", "info"], "the network settings"),
+            (["network", "join", "Home", "-y"], "the network settings"),
+            (["network", "wireless"], "the network settings"),
+            (["network", "wireless", "--scan"], "the network settings"),
+            (
+                ["share", "add", "Music", "nas/music", "nfs"],
+                "the network shares and the USB drives",
+            ),
+            (["share", "discover"], "the network shares and the USB drives"),
+            (["share", "edit", "s1", "--name", "X"], "the network shares and the USB drives"),
+            (["share", "info", "s1"], "the network shares and the USB drives"),
+            (["share", "list"], "the network shares and the USB drives"),
+            (["share", "remove", "s1", "-y"], "the network shares and the USB drives"),
+            (["usb", "eject", "USB Stick"], "the network shares and the USB drives"),
+            (["usb", "list"], "the network shares and the USB drives"),
+        ],
+    )
+    def test_a_rest_client_refuses(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, operation
+    ):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["system", *arguments])
+
+        assert result.exit_code == 1
+        assert self._refusal(operation) in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "system", "usb", "list", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "Falling back to the WebSocket API client for the network shares and the USB drives"
+        ) in result.output
+        assert json.loads(result.stdout) == self.DRIVES["drives"]
         websocket.disconnect.assert_called_once_with()
         rest.close.assert_called_once_with()
 
@@ -16464,9 +16850,15 @@ class TestConfigurationCommands:
                     "system-audio-outputs": None,
                     "system-backup-create": None,
                     "system-execute": None,
+                    "system-network-info": None,
+                    "system-network-wireless": None,
                     "system-power-modes": None,
+                    "system-share-discover": None,
+                    "system-share-info": None,
+                    "system-share-list": None,
                     "system-timezone-list": None,
                     "system-update-channel-list": None,
+                    "system-usb-list": None,
                     "system-info": None,
                     "system-version": None,
                     "track-info": None,

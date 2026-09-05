@@ -796,9 +796,12 @@ class TestBuildClickDefaultMap:
                 "execute": format_only,
                 "version": format_only,
                 "info": format_only,
+                "network": {"info": formatting, "wireless": formatting},
                 "power": {"modes": format_only},
+                "share": {"discover": format_only, "info": format_only, "list": formatting},
                 "timezone": {"list": format_only},
                 "update": {"channel": {"list": format_only}},
+                "usb": {"list": formatting},
             },
             "collection": {
                 "browse": format_only,

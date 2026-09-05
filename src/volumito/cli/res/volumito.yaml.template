@@ -103,10 +103,13 @@ aliases:
   # syse: system execute
   # sysi: system info
   # sysn: system name
+  # sysnet: system network
   # sysp: system ping
   # syspw: system power
+  # syssh: system share
   # syst: system timezone
   # sysu: system update
+  # sysusb: system usb
   # sysv: system version
   # t: queue track
   # ta: queue track audio
@@ -296,9 +299,15 @@ output:
   # - system-backup-create
   # - system-execute
   # - system-info
+  # - system-network-info
+  # - system-network-wireless
   # - system-power-modes
+  # - system-share-discover
+  # - system-share-info
+  # - system-share-list
   # - system-timezone-list
   # - system-update-channel-list
+  # - system-usb-list
   # - system-version
   # - track-info
 
@@ -449,13 +458,31 @@ output:
   system-info:
     # Add your own overrides here
 
+  system-network-info:
+    # Add your own overrides here
+
+  system-network-wireless:
+    # Add your own overrides here
+
   system-power-modes:
+    # Add your own overrides here
+
+  system-share-discover:
+    # Add your own overrides here
+
+  system-share-info:
+    # Add your own overrides here
+
+  system-share-list:
     # Add your own overrides here
 
   system-timezone-list:
     # Add your own overrides here
 
   system-update-channel-list:
+    # Add your own overrides here
+
+  system-usb-list:
     # Add your own overrides here
 
   system-version:
