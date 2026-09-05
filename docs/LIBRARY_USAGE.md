@@ -499,7 +499,9 @@ grouped by functionality.
 > so read `alarms` first and send back the list you want to keep.
 > `add_alarm`, `remove_alarm`, `enable_alarm`, and `disable_alarm`
 > do exactly that for one alarm, keeping the others as they are;
-> `add_alarm` numbers the new alarm after the highest identifier in use.
+> `add_alarm` numbers the new alarm by its position, as the host does,
+> and sends its time of day as the date-time the host reads in its own time zone;
+> the host stores that date-time, which is what `Alarm.time` holds.
 
 ```python
 from datetime import timedelta

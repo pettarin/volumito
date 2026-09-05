@@ -179,7 +179,7 @@ class Alarm(VolumioModel):
     """Whether the alarm is armed."""
 
     id: int | None = None
-    """The identifier of the alarm."""
+    """The identifier of the alarm: its position in the set, which the host assigns."""
 
     name: str | None = None
     """The name of the alarm."""
@@ -188,7 +188,9 @@ class Alarm(VolumioModel):
     """The name of the playlist the alarm plays."""
 
     time: str | None = None
-    """The time the alarm goes off, as ``"HH:MM"``."""
+    """The time the alarm goes off, as the host stores it: an ISO 8601 date-time, of
+    which only the hour and the minute count, read in the time zone of the host when
+    it carries no offset."""
 
 
 class Alarms(VolumioModel):

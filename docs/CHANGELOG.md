@@ -69,6 +69,11 @@ All notable changes to this project will be documented in this file.
 - Renamed the command `multiroom zones` to `multiroom info`
   (and the corresponding configuration key); no synonym is kept
 
+### Fixed
+
+- `VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` wait for
+  the events emitted right before disconnecting to be sent
+
 
 ## [0.4.0] - 2026-09-04
 

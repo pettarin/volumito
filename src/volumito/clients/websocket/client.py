@@ -11,7 +11,9 @@ all -- reaches the handlers registered with :meth:`VolumioWebSocketClient.on`.
 """
 
 import logging
+import queue
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
@@ -201,6 +203,7 @@ from volumito.clients.websocket.common import (
     EVENT_VOLATILE_PLAY,
     EVENT_VOLUME,
     EVENT_WRITE_MULTIROOM,
+    PENDING_PACKETS_POLL_INTERVAL,
     RESPONSE_EVENTS,
     VOLUME_DOWN,
     VOLUME_UP,
@@ -479,11 +482,31 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             self._log_debug(f'Requesting "{event}", waiting for "{awaited}"... done')
             return answer
 
+    def _wait_for_pending_packets(self) -> None:
+        """Wait until the packets emitted so far were written to the connection.
+
+        The socket.io client writes its packets from a background thread, and closes
+        the connection without draining them: an event emitted right before
+        disconnecting would be lost. The wait gives up after the timeout of the client.
+        """
+        pending = cast(
+            "queue.Queue[object] | None",
+            getattr(getattr(self._client, "eio", None), "queue", None),
+        )
+        if pending is None:
+            return
+        deadline = time.monotonic() + self.timeout
+        while pending.unfinished_tasks and time.monotonic() < deadline:
+            time.sleep(PENDING_PACKETS_POLL_INTERVAL)
+        if pending.unfinished_tasks:
+            self._log_warning("Disconnecting with packets still to be written")
+
     def add_alarm(self, name: str, time: str, playlist: str, enabled: bool = True) -> Alarm:
         """Add an alarm to the Volumio instance, keeping the others.
 
         The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
-        the set back with one more, numbered after the highest identifier in use.
+        the set back with one more, numbered by its position as the host numbers them.
+        The time is sent as the date-time the host reads in its own time zone.
 
         Args:
             name: The name of the alarm
@@ -1077,6 +1100,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         if self._connected:
             self._log_debug("Disconnecting from the Volumio WebSocket API...")
+            self._wait_for_pending_packets()
             try:
                 self._client.disconnect()
             except Exception as e:

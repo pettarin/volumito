@@ -24,6 +24,9 @@ from volumito.clients.common import VolumioCommon
 from volumito.clients.errors import VolumioConnectionError
 from volumito.clients.models import Alarm, Playlist, QueueTrack
 
+ALARM_TIME_DATE = "2000-01-01"
+"""The date the alarm times are rendered on: the host schedules by the time of day alone."""
+
 EVENT_ADD_PLAY = "addPlay"
 """The event appending items to the queue and playing them."""
 
@@ -618,6 +621,9 @@ EVENT_VOLUME = "volume"
 EVENT_WRITE_MULTIROOM = "writeMultiroom"
 """The event writing the multiroom configuration of the host."""
 
+PENDING_PACKETS_POLL_INTERVAL = 0.01
+"""Seconds between two looks at the packets still to be written while disconnecting."""
+
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
@@ -697,23 +703,22 @@ class VolumioWebSocketCommon(VolumioCommon):
     def _alarm_added(
         self, alarms: list[Alarm], name: str, time: str, playlist: str, enabled: bool
     ) -> tuple[list[Alarm], Alarm]:
-        """Build the set of alarms with one more, numbered after the highest in use.
+        """Build the set of alarms with one more, numbered by its position as the host does.
 
         Args:
             alarms: The alarms the host holds
             name: The name of the alarm
-            time: The time of day it goes off, as ``"HH:MM"``, already checked
+            time: The time it goes off, as :meth:`_alarm_time` rendered it
             playlist: The name of the playlist it plays
             enabled: Whether the alarm is armed
 
         Returns:
-            The alarms to send back, and the one added (with identifier 1 when the host
+            The alarms to send back, and the one added (with identifier 0 when the host
             held none)
         """
-        identifiers = [alarm.id for alarm in alarms if alarm.id is not None]
         alarm = Alarm.from_raw(
             {
-                "id": max(identifiers, default=0) + 1,
+                "id": len(alarms),
                 "name": name,
                 "enabled": enabled,
                 "time": time,
@@ -741,13 +746,17 @@ class VolumioWebSocketCommon(VolumioCommon):
         return kept
 
     def _alarm_time(self, time: str) -> str:
-        """Check that a time is a time of day as ``"HH:MM"``.
+        """Check a time of day as ``"HH:MM"``, and render it as the host reads it.
+
+        A Volumio host reads the time of an alarm as a date-time, keeping its hour and
+        minute in its own time zone: the time is rendered on a fixed date as an ISO
+        date-time without offset, which the host takes as its local time.
 
         Args:
             time: The time to check
 
         Returns:
-            The time, as given
+            The time, as the alarm payload carries it
 
         Raises:
             ValueError: If the time is not a time of day as ``"HH:MM"``
@@ -764,7 +773,7 @@ class VolumioWebSocketCommon(VolumioCommon):
         if not valid:
             self._log_warning(f'Refusing the alarm time "{time}"')
             raise ValueError(f'The alarm time must be a time of day as "HH:MM", got "{time}"')
-        return time
+        return f"{ALARM_TIME_DATE}T{int(hours):02d}:{minutes}:00"
 
     def _alarm_toggled(self, alarms: list[Alarm], alarm_id: int, enabled: bool) -> list[Alarm]:
         """Build the set of alarms with one armed or disarmed.

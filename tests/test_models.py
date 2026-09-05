@@ -1286,6 +1286,12 @@ class TestAlarms:
         """A host reporting no alarm is an empty collection."""
         assert len(Alarms.from_raw({"alarms": []})) == 0
 
+    def test_an_identifier_given_as_text(self):
+        """A host numbers the alarms by position, as text: the identifier reads as an integer."""
+        alarms = Alarms.from_raw({"alarms": [{"id": "0", "enabled": True}]})
+
+        assert alarms[0].id == 0
+
 
 class TestAudioOutputs:
     """Test cases for the AudioOutputs and AudioOutput models."""

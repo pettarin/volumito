@@ -4,10 +4,12 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import asyncio
 import logging
 import sys
 from dataclasses import dataclass, field
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock
 
@@ -267,6 +269,38 @@ class TestVolumioAsyncWebSocketClientLifecycle:
         assert fake.connected is False
         assert client._connected is False
         assert client._client is None
+
+    async def test_disconnect_waits_for_the_pending_packets(self, mocker: MockerFixture):
+        """The packets still to be written are sent before the connection closes."""
+        client, fake = await _client(mocker)
+        pending: asyncio.Queue[str] = asyncio.Queue()
+        pending.put_nowait("an event")
+        fake.eio = SimpleNamespace(queue=pending)
+
+        async def write() -> None:
+            await asyncio.sleep(0.05)
+            pending.task_done()
+
+        writer = asyncio.get_running_loop().create_task(write())
+
+        await client.disconnect()
+
+        await writer
+        await asyncio.wait_for(pending.join(), 0.1)
+        assert fake.connected is False
+
+    async def test_disconnect_gives_up_on_stuck_packets(self, mocker: MockerFixture):
+        """A packet that is never written is given up after the timeout, with a warning."""
+        logger = Mock()
+        client, fake = await _client(mocker, logger=logger, timeout=0.05)
+        pending: asyncio.Queue[str] = asyncio.Queue()
+        pending.put_nowait("stuck")
+        fake.eio = SimpleNamespace(queue=pending)
+
+        await client.disconnect()
+
+        assert fake.connected is False
+        assert "packets still to be written" in logger.warning.call_args.args[0]
 
     async def test_disconnect_when_not_connected(self, mocker: MockerFixture):
         """Disconnecting a client that never connected is a no-op."""
@@ -1429,8 +1463,8 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
         assert len(await client.get_alarms()) == 0
 
     _ALARMS = [
-        {"id": 3, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"},
-        {"id": 5, "name": "Weekend", "enabled": False, "time": "09:00", "playlist": "rock"},
+        {"id": 0, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"},
+        {"id": 1, "name": "Weekend", "enabled": False, "time": "09:00", "playlist": "rock"},
     ]
     """Two alarms, as a Volumio host answers them."""
 
@@ -1441,28 +1475,40 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
         )
 
     async def test_add_alarm(self, mocker: MockerFixture):
-        """The set is read and sent back with one more alarm, numbered after the highest."""
+        """The set is read and sent back with one more alarm, numbered by its position."""
         client, fake = await _client(mocker, self._fake_with_alarms())
 
         added = await client.add_alarm("Nap", "14:15", "ambient", enabled=False)
 
-        assert added.id == 6
+        assert added.id == 2
         assert added.enabled is False
         assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
         assert fake.calls[1].payload == [
             *self._ALARMS,
-            {"id": 6, "name": "Nap", "enabled": False, "time": "14:15", "playlist": "ambient"},
+            {
+                "id": 2,
+                "name": "Nap",
+                "enabled": False,
+                "time": "2000-01-01T14:15:00",
+                "playlist": "ambient",
+            },
         ]
 
     async def test_add_alarm_to_an_empty_set(self, mocker: MockerFixture):
-        """The first alarm of a host gets the identifier 1."""
+        """The first alarm of a host gets the identifier 0."""
         client, fake = await _client(mocker, self._fake_with_alarms([]))
 
         added = await client.add_alarm("Weekday", "07:30", "jazz")
 
-        assert added.id == 1
+        assert added.id == 0
         assert fake.calls[1].payload == [
-            {"id": 1, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"}
+            {
+                "id": 0,
+                "name": "Weekday",
+                "enabled": True,
+                "time": "2000-01-01T07:30:00",
+                "playlist": "jazz",
+            }
         ]
 
     async def test_add_alarm_refuses_a_bad_time(self, mocker: MockerFixture):
@@ -1480,7 +1526,7 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
         """The set is read and sent back without the alarm."""
         client, fake = await _client(mocker, self._fake_with_alarms())
 
-        await client.remove_alarm(3)
+        await client.remove_alarm(0)
 
         assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
         assert fake.calls[1].payload == [self._ALARMS[1]]
@@ -1493,7 +1539,7 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
         client, fake = await _client(mocker, self._fake_with_alarms())
 
         # Arming the disarmed alarm, or disarming the armed one, leaves both alike
-        await getattr(client, method)(5 if enabled else 3)
+        await getattr(client, method)(1 if enabled else 0)
 
         assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
         assert fake.calls[1].payload == [

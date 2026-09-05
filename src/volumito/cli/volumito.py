@@ -1990,7 +1990,7 @@ def replace(
 @click.pass_context
 @click.argument("name", type=str)
 def save(ctx: click.Context, name: str) -> None:
-    """Save the current queue as the playlist NAME.
+    """Save the current queue as the playlist NAME, replacing it if it exists.
 
     Needs a WebSocket API client.
     """
@@ -2096,7 +2096,8 @@ def system_alarm_add(
 ) -> None:
     """Add an alarm playing a playlist at a time of day, armed unless --disabled.
 
-    Needs a WebSocket API client.
+    The host numbers the alarm by its position, and reads the time in its own time
+    zone. Needs a WebSocket API client.
     """
     execute_command(
         ctx, f'add alarm "{name}"', lambda c: c.add_alarm(name, time, playlist, not disabled)
@@ -2149,7 +2150,8 @@ def system_alarm_enable(ctx: click.Context, alarm_id: int) -> None:
 def system_alarm_list(ctx: click.Context, fields: str, output_format: str) -> None:
     """Print the alarms set on the Volumio host.
 
-    Needs a WebSocket API client.
+    The time of an alarm is the date-time the host stores, of which only the hour and
+    the minute count. Needs a WebSocket API client.
     """
     data = fetch_or_exit(ctx, lambda c: c.alarms.raw)
     render_items(

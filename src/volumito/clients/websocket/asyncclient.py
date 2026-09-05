@@ -15,7 +15,7 @@ import uuid
 from collections.abc import Callable
 from datetime import timedelta
 from types import ModuleType, TracebackType
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
@@ -488,13 +488,32 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             self._log_debug(f'Requesting "{event}", waiting for "{awaited}"... done')
             return answer
 
+    async def _wait_for_pending_packets(self) -> None:
+        """Wait until the packets emitted so far were written to the connection.
+
+        The socket.io client writes its packets from a background task, and closes the
+        connection without draining them: an event emitted right before disconnecting
+        would be lost. The wait gives up after the timeout of the client.
+        """
+        pending = cast(
+            "asyncio.Queue[object] | None",
+            getattr(getattr(self._client, "eio", None), "queue", None),
+        )
+        if pending is None:
+            return
+        try:
+            await asyncio.wait_for(pending.join(), self.timeout)
+        except TimeoutError:
+            self._log_warning("Disconnecting with packets still to be written")
+
     async def add_alarm(
         self, name: str, time: str, playlist: str, enabled: bool = True
     ) -> Alarm:
         """Add an alarm to the Volumio instance, keeping the others.
 
         The Volumio API takes the alarms as a set: this reads :meth:`get_alarms` and
-        sends the set back with one more, numbered after the highest identifier in use.
+        sends the set back with one more, numbered by its position as the host numbers
+        them. The time is sent as the date-time the host reads in its own time zone.
 
         Args:
             name: The name of the alarm
@@ -930,6 +949,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         if self._connected:
             self._log_debug("Disconnecting from the Volumio WebSocket API...")
+            await self._wait_for_pending_packets()
             try:
                 await self._client.disconnect()
             except Exception as e:
