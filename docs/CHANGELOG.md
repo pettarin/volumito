@@ -9,6 +9,15 @@ All notable changes to this project will be documented in this file.
 > [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.5.0] - 2026-09-06
+
+### Added
+
+- [Issue #15](https://github.com/pettarin/volumito/issues/15):
+  CLI commands for the functionality the WebSocket API
+  offers on top of the REST API
+
+
 ## [0.4.0] - 2026-09-04
 
 ### Added
