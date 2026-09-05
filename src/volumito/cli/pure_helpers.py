@@ -275,6 +275,25 @@ def filter_queue_fields(
     return filtered_queue
 
 
+def filter_items_fields(
+    items: list[dict[str, Any]], fields: str, short_fields: list[str]
+) -> list[dict[str, Any]]:
+    """Filter a list of items (e.g., the music sources) based on the fields option.
+
+    Args:
+        items: The items, as the Volumio API reports them
+        fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
+        short_fields: The keys the ``SHORT`` keyword keeps
+
+    Returns:
+        A list of copies of the items, holding the selected fields in the requested order
+    """
+    selected = resolve_output_fields(fields, short_fields)
+    if selected is None:  # ALL
+        return [item.copy() for item in items]
+    return [{key: item[key] for key in selected if key in item} for item in items]
+
+
 def filter_zones_fields(
     zones_data: dict[str, Any], fields: str
 ) -> list[dict[str, Any]]:
@@ -683,32 +702,34 @@ def format_termination_conditions(
     return f"Terminate as soon as: {', '.join(conditions)}"
 
 
-def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
-    """Format the zones as a readable table.
+def format_items_as_table(items: list[dict[str, Any]], heading: str) -> str:
+    """Format a list of named items (e.g., the zones, the music sources) as a table.
 
-    Each zone is printed as a numbered block whose key/value lines are indented to
-    start at the same column as the zone name.
+    Each item is printed as a numbered block headed by its name, whose key/value lines
+    are indented to start at the same column as the name; a value that is itself a
+    mapping is printed one key/value per line, indented further.
 
     Args:
-        zones: List of (potentially filtered) zone dictionaries
+        items: List of (potentially filtered) item dictionaries
+        heading: The heading of the table
 
     Returns:
-        A formatted string representation of the zones
+        A formatted string representation of the items
     """
     lines = []
-    lines.append("Volumio Multiroom Zones")
+    lines.append(heading)
     lines.append("=" * 50)
 
-    if not zones:
+    if not items:
         lines.append("(empty)")
         return "\n".join(lines)
 
-    width = number_prefix_width([str(index) for index in range(1, len(zones) + 1)])
+    width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
     indent = " " * (width + 2)
 
-    for index, zone in enumerate(zones, start=1):
-        lines.append(f"\n{index:>{width}}. {zone.get('name', 'Unknown')}")
-        for key, value in zone.items():
+    for index, item in enumerate(items, start=1):
+        lines.append(f"\n{index:>{width}}. {item.get('name', 'Unknown')}")
+        for key, value in item.items():
             if key == "name":
                 # The name is already the heading of the block
                 continue
@@ -721,6 +742,18 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
                 lines.append(f"{indent}{label:17}: {value}")
 
     return "\n".join(lines)
+
+
+def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
+    """Format the zones as a readable table.
+
+    Args:
+        zones: List of (potentially filtered) zone dictionaries
+
+    Returns:
+        A formatted string representation of the zones
+    """
+    return format_items_as_table(zones, "Volumio Multiroom Zones")
 
 
 def is_mbid(text: str) -> bool:

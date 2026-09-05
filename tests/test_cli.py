@@ -96,8 +96,10 @@ from volumito.clients.errors import (
     VolumioWebSocketError,
 )
 from volumito.clients.models import (
+    BrowseSources,
     CollectionStatistics,
     InfinityPlayback,
+    MusicSources,
     Notifications,
     PlayerState,
     PlaylistContent,
@@ -143,8 +145,10 @@ def _isolate_config_probing(mocker: MockerFixture):
 
 
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
+    "browse_sources": BrowseSources,
     "collection_statistics": CollectionStatistics,
     "infinity_playback": InfinityPlayback,
+    "music_sources": MusicSources,
     "notifications": Notifications,
     "playlists": Playlists,
     "queue": Queue,
@@ -6596,6 +6600,152 @@ class TestCollectionBrowse:
         assert "[ERRO] Connection error" in result.output
 
 
+class TestCollectionBrowseLastAndRoot:
+    """Test cases for the --last and --root options of collection browse."""
+
+    SOURCES = [
+        {
+            "name": "Music Library",
+            "uri": "music-library",
+            "plugin_type": "music_service",
+            "plugin_name": "mpd",
+            "albumart": "/albumart?sourceicon=music_service/mpd/musiclibraryicon.png",
+        },
+        {
+            "name": "Web Radio",
+            "uri": "radio",
+            "plugin_type": "music_service",
+            "plugin_name": "webradio",
+        },
+    ]
+    """The browse sources, as a Volumio host answers them."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the collection "
+        "extras: use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for a collection extra, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the options need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the last browse and the sources."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(
+            mock_client,
+            "last_browse",
+            return_value=BrowseResults.from_envelope(TestCollectionBrowse.ALBUM_ENVELOPE),
+        )
+        _attach_property(mock_client, "browse_sources", return_value={"sources": self.SOURCES})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_last_prints_the_last_listing(self, runner: CliRunner, mocker: MockerFixture):
+        """--last prints the listing the host pushed last, without browsing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "browse", "--last", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        navigation = json.loads(result.output)
+        assert navigation["info"]["title"] == "Aguaplano"
+        assert len(navigation["lists"][0]["items"]) == 3
+        mock_client.last_browse_property.assert_called_once()
+        mock_client.browse.assert_not_called()
+
+    def test_last_with_a_kind_filter(self, runner: CliRunner, mocker: MockerFixture):
+        """The kind options act on the last listing too."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "browse", "--last", "-T", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        navigation = json.loads(result.output)
+        assert [item["title"] for item in navigation["lists"][0]["items"]] == [
+            "Aguaplano",
+            "Come Di",
+        ]
+
+    def test_root_prints_the_sources_like_the_root(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """--root prints the browse sources as the root listing prints them."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "browse", "--root"])
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "1. Music Library" in lines
+        assert "   music-library" in lines
+        assert "2. Web Radio" in lines
+        mock_client.browse_sources_property.assert_called_once()
+        mock_client.browse.assert_not_called()
+
+    def test_root_raw_prints_the_sources_as_answered(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F raw prints the answer of the host, not the listing built from it."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "browse", "--root", "-F", "raw"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"sources": self.SOURCES}
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["--last", "--root"],
+            ["--last", "music-library"],
+            ["--root", "music-library"],
+            ["--last", "-o", "1"],
+            ["--root", "-o", "1"],
+        ],
+    )
+    def test_last_and_root_take_nothing_else(
+        self, runner: CliRunner, mocker: MockerFixture, arguments
+    ):
+        """--last and --root refuse each other, the URI, and the offset."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "browse", *arguments])
+
+        assert result.exit_code == 2
+        assert "Expected the --last and --root options alone" in result.output
+        mock_client.browse.assert_not_called()
+
+    @pytest.mark.parametrize("option", ["--last", "--root"])
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, option):
+        """With the default REST API client, the options fail naming the remedies."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch("volumito.cli.click_helpers.VolumioRESTAPIClient", return_value=mock_client)
+
+        result = runner.invoke(main, ["collection", "browse", option])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+        mock_client.browse.assert_not_called()
+
+
 class TestCollectionCommands:
     """Test cases for the collection statistics command."""
 
@@ -6672,6 +6822,370 @@ class TestCollectionCommands:
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
+
+
+class TestCollectionExtras:
+    """Test cases for collection goto, update, folder, source, and search --super."""
+
+    MUSIC_SOURCES = {
+        "plugins": [
+            {
+                "name": "mpd",
+                "prettyName": "Music Library",
+                "category": "music_service",
+                "active": True,
+                "enabled": True,
+                "hasConfiguration": True,
+                "icon": "fa-music",
+            },
+            {
+                "name": "webradio",
+                "prettyName": "Web Radio",
+                "category": "music_service",
+                "active": False,
+                "enabled": False,
+                "hasConfiguration": False,
+                "icon": "fa-microphone",
+            },
+        ]
+    }
+    """The music sources, as a Volumio host answers them."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the collection "
+        "extras: use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for a collection extra, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client, answering the state reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "state", return_value={"artist": "Paolo Conte"})
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture, state: dict | None = None):
+        """Mock VolumioWebSocketClient answering the goto, the sources, and the state."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mock_client.goto.return_value = BrowseResults.from_envelope(
+            TestCollectionBrowse.ALBUM_ENVELOPE
+        )
+        mock_client.super_search.return_value = SearchResults.from_envelope(
+            TestCollectionSearch.ENVELOPE
+        )
+        _attach_property(mock_client, "music_sources", return_value=self.MUSIC_SOURCES)
+        _attach_property(
+            mock_client,
+            "state",
+            return_value={"artist": "Paolo Conte", "album": "Aguaplano"} if state is None
+            else state,
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_goto_with_a_value(self, runner: CliRunner, mocker: MockerFixture):
+        """collection goto browses to the named artist, printed like a browse."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "goto", "artist", "Enzo Jannacci"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "1. Aguaplano - Paolo Conte" in lines
+        assert "   music-library/INTERNAL/music/001___Aguaplano.flac" in lines
+        mock_client.goto.assert_called_once_with("artist", "Enzo Jannacci")
+        mock_client.state_property.assert_not_called()
+
+    @pytest.mark.parametrize(("kind", "value"), [("artist", "Paolo Conte"), ("album", "Aguaplano")])
+    def test_goto_defaults_to_the_current_track(
+        self, runner: CliRunner, mocker: MockerFixture, kind, value
+    ):
+        """Without a value, the artist or the album of the current track is browsed to."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "goto", kind, "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["info"]["title"] == "Aguaplano"
+        mock_client.state_property.assert_called_once()
+        mock_client.goto.assert_called_once_with(kind, value)
+
+    def test_goto_without_the_metadata(self, runner: CliRunner, mocker: MockerFixture):
+        """A current track without the album cannot be browsed to."""
+        mock_client = self._mock_websocket_client(mocker, state={"title": "A stream"})
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "goto", "album"])
+
+        assert result.exit_code == 1
+        assert "The current track does not provide the album to go to" in result.output
+        mock_client.goto.assert_not_called()
+
+    def test_goto_with_the_browse_options(self, runner: CliRunner, mocker: MockerFixture):
+        """The kind and limit options act on the listing, like in a browse."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "goto", "album", "Aguaplano", "-T", "-l", "1",
+             "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert [item["title"] for item in json.loads(result.output)["lists"][0]["items"]] == [
+            "Aguaplano"
+        ]
+
+    def test_goto_rejects_an_unknown_kind(self, runner: CliRunner, mocker: MockerFixture):
+        """KIND is artist or album."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "goto", "label", "X"])
+
+        assert result.exit_code == 2
+        mock_client.goto.assert_not_called()
+
+    def test_goto_rejects_two_limits(self, runner: CliRunner, mocker: MockerFixture):
+        """The best result only and a limit are two limits, like in a browse."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "goto", "artist", "X", "-1", "-l", "2"]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the -1/--best-result-only or the -l/--limit option" in result.output
+        mock_client.goto.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("arguments", "member", "called_with", "label"),
+        [
+            ([], "update_library", (None,), "update library"),
+            (["music-library"], "update_library", ("music-library",), "update library"),
+            (["--metadata"], "update_all_metadata", (), "update metadata"),
+            (["--rescan"], "rescan_library", (), "rescan library"),
+            (["--thumbnails"], "regenerate_thumbnails", (), "regenerate thumbnails"),
+            (
+                ["--tracklist", "qobuz"],
+                "update_service_tracklist",
+                ("qobuz",),
+                'update tracklist "qobuz"',
+            ),
+        ],
+    )
+    def test_update(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, member, called_with, label
+    ):
+        """collection update refreshes the collection the way its options ask."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "update", *arguments])
+
+        assert result.exit_code == 0
+        assert f"Command '{label}' executed successfully" in result.output
+        getattr(mock_client, member).assert_called_once_with(*called_with)
+
+    @pytest.mark.parametrize(
+        "arguments", [["--metadata", "--rescan"], ["--thumbnails", "--tracklist", "qobuz"]]
+    )
+    def test_update_in_two_ways(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """The refreshes are mutually exclusive."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "update", *arguments])
+
+        assert result.exit_code == 2
+        assert "Expected at most one of the --metadata, --rescan, --thumbnails" in result.output
+        mock_client.update_library.assert_not_called()
+
+    def test_update_a_uri_with_a_refresh(self, runner: CliRunner, mocker: MockerFixture):
+        """Only the plain update takes a URI."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "update", "music-library", "--rescan"]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the URI argument only without" in result.output
+        mock_client.rescan_library.assert_not_called()
+
+    def test_folder_delete_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is deleted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "folder", "delete", "INTERNAL/old"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Refusing to delete the folder without -y/--yes: "INTERNAL/old"' in result.output
+        mock_client.delete_folder.assert_not_called()
+
+    def test_folder_delete(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the folder is deleted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "folder", "delete", "INTERNAL/old", "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'delete folder \"INTERNAL/old\"' executed successfully" in result.output
+        mock_client.delete_folder.assert_called_once_with("INTERNAL/old")
+
+    def test_source_list_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """collection source list prints the short fields of each source as pretty JSON."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "source", "list"])
+
+        assert result.exit_code == 0
+        sources = json.loads(result.output)
+        assert [source["name"] for source in sources] == ["mpd", "webradio"]
+        assert sources[0]["prettyName"] == "Music Library"
+        assert sources[0]["enabled"] is True
+        assert "icon" not in sources[0]
+
+    def test_source_list_all_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """-L ALL keeps every field of each source."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "source", "list", "-L", "ALL", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)[0]["icon"] == "fa-music"
+
+    def test_source_list_table(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table numbers the sources under the heading, with their fields."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "source", "list", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "Volumio Music Sources" in lines
+        assert "1. mpd" in lines
+        assert "   Pretty Name      : Music Library" in lines
+        assert "2. webradio" in lines
+
+    def test_source_list_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """-F raw prints the answer of the host as it is."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["-m", *self._WEBSOCKET, "collection", "source", "list", "-F", "raw"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.MUSIC_SOURCES
+
+    def test_source_list_fields_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The collection-source-list subsection sets the default fields."""
+        self._mock_websocket_client(mocker)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  collection-source-list:\n    fields: name\n")
+
+        result = runner.invoke(
+            main, ["-c", str(config), *self._WEBSOCKET, "collection", "source", "list"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == [{"name": "mpd"}, {"name": "webradio"}]
+
+    @pytest.mark.parametrize(("command", "enabled"), [("enable", True), ("disable", False)])
+    def test_source_enable_and_disable(
+        self, runner: CliRunner, mocker: MockerFixture, command, enabled
+    ):
+        """collection source enable/disable set the flag of the named source."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "source", command, "qobuz"])
+
+        assert result.exit_code == 0
+        assert f"Command '{command} source \"qobuz\"' executed successfully" in result.output
+        mock_client.set_music_source_enabled.assert_called_once_with("qobuz", enabled)
+
+    def test_search_super(self, runner: CliRunner, mocker: MockerFixture):
+        """--super searches every source at once, keeping the other options."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "search", "paolo conte", "--super", "-A",
+             "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        lists = json.loads(result.output)
+        assert [item["title"] for result_list in lists for item in result_list["items"]] == [
+            "Paolo Conte"
+        ]
+        mock_client.super_search.assert_called_once_with("paolo conte")
+        mock_client.search.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["goto", "artist", "Paolo Conte"],
+            ["goto", "artist"],
+            ["update"],
+            ["update", "--rescan"],
+            ["folder", "delete", "INTERNAL/old", "-y"],
+            ["source", "list"],
+            ["source", "enable", "qobuz"],
+            ["search", "paolo conte", "--super"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["collection", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "collection", "update", "--thumbnails"]
+        )
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the collection extras" in (
+            result.output
+        )
+        websocket.regenerate_thumbnails.assert_called_once_with()
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
 
 
 class TestCollectionFavouriteAndRadio:
@@ -15092,8 +15606,10 @@ class TestConfigurationCommands:
                     # except the two collection ones pinning their table format.
                     "collection-browse": {"format": "table"},
                     "collection-favourite-list": {"format": "table"},
+                    "collection-goto": {"format": "table"},
                     "collection-radio-list": {"format": "table"},
                     "collection-search": {"format": "table"},
+                    "collection-source-list": None,
                     "collection-statistics": None,
                     "command-list": None,
                     "notification-list": None,
@@ -15275,7 +15791,7 @@ class TestConfigurationCommands:
     def test_create_overwrite(self, runner: CliRunner, tmp_path):
         """With --overwrite-existing-files, create replaces an existing file."""
         target = tmp_path / "volumito.yaml"
-        target.write_text("old\n")
+        target.write_text("previous-content-marker\n")
 
         result = runner.invoke(
             main,
@@ -15283,7 +15799,7 @@ class TestConfigurationCommands:
         )
 
         assert result.exit_code == 0
-        assert "old" not in target.read_text()
+        assert "previous-content-marker" not in target.read_text()
 
     def test_create_write_error(self, runner: CliRunner, tmp_path, mocker: MockerFixture):
         """An OSError while writing is reported and exits 1."""

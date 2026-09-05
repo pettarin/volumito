@@ -99,8 +99,10 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-info": FORMAT_KEYS,
     "collection-browse": FORMAT_KEYS,
     "collection-favourite-list": FORMAT_KEYS,
+    "collection-goto": FORMAT_KEYS,
     "collection-radio-list": FORMAT_KEYS,
     "collection-search": FORMAT_KEYS,
+    "collection-source-list": DISPLAY_KEYS,
     "collection-statistics": FORMAT_KEYS,
     "story-album": DISPLAY_KEYS,
     "story-artist": DISPLAY_KEYS,
@@ -120,11 +122,17 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "collection-favourite-list": [
         ["collection", "favourite", "list"],
     ],
+    "collection-goto": [
+        ["collection", "goto"],
+    ],
     "collection-radio-list": [
         ["collection", "radio", "list"],
     ],
     "collection-search": [
         ["collection", "search"],
+    ],
+    "collection-source-list": [
+        ["collection", "source", "list"],
     ],
     "collection-statistics": [
         ["collection", "statistics"],

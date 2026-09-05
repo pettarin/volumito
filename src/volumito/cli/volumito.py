@@ -27,6 +27,7 @@ from volumito.cli.click_helpers import (
     alias_problems,
     aliases_by_command_path,
     api_position,
+    browse_kinds,
     check_playlist_name_or_exit,
     command_nodes,
     command_nodes_flattened,
@@ -71,8 +72,10 @@ from volumito.cli.click_helpers import (
     option_item_album,
     option_item_albumart,
     option_item_title,
+    option_last,
     option_limit,
     option_manifest_file,
+    option_metadata,
     option_next,
     option_number_retries_next_track,
     option_offset,
@@ -97,12 +100,17 @@ from volumito.cli.click_helpers import (
     option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_rescan,
     option_result_kinds,
+    option_root,
     option_service,
     option_service_of_uri,
     option_story_type,
+    option_super,
+    option_thumbnails,
     option_timeout,
     option_track,
+    option_tracklist,
     option_tracks_only,
     option_unregister_url_on_exit,
     option_volatile,
@@ -111,6 +119,7 @@ from volumito.cli.click_helpers import (
     read_queue_log,
     render_browse_results,
     render_fields,
+    render_items,
     render_output_filename,
     render_payload,
     render_state,
@@ -133,12 +142,16 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
-    BROWSE_KINDS_ERROR,
+    BROWSE_LAST_ROOT_ERROR,
+    COLLECTION_UPDATE_MODES_ERROR,
+    COLLECTION_UPDATE_URI_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
     FAVOURITE_NAME_OPTION_ERROR,
     FAVOURITE_RADIO_NAME_ERROR,
     FAVOURITE_RADIO_OPTIONS_ERROR,
+    GOTO_KINDS,
+    GOTO_METADATA_ERROR,
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -161,6 +174,7 @@ from volumito.cli.constants import (
     SEARCH_ARGUMENT_ERROR,
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
+    SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
@@ -190,6 +204,7 @@ from volumito.cli.pure_helpers import (
 )
 from volumito.clients import (
     Artist,
+    BrowseResults,
     Label,
     NotificationListener,
     Place,
@@ -2033,11 +2048,13 @@ def collection(ctx: click.Context) -> None:
 @option_artists_only
 @option_best_result_only
 @option_format_table
+@option_last
 @option_limit
 @option_offset
 @option_playlists_only
 @option_print_uri_toggle
 @option_result_kinds
+@option_root
 @option_tracks_only
 def collection_browse(
     ctx: click.Context,
@@ -2046,11 +2063,13 @@ def collection_browse(
     artists_only: bool,
     best_result_only: bool,
     output_format: str,
+    last: bool,
     limit: int | None,
     offset: int | None,
     playlists_only: bool,
     print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
+    root: bool,
     tracks_only: bool,
 ) -> None:
     """Browse the content that URI lists in the collection of the Volumio host.
@@ -2060,33 +2079,166 @@ def collection_browse(
     themselves, printed unless --no-print-uri is given, and from the -u/--print-uri
     option of "collection search". The -o/--offset skip is applied by the host to
     each list, before the kind options act, and not at the root; the WebSocket API
-    clients apply it themselves, the root included."""
+    clients apply it themselves, the root included.
+
+    With --last, the listing the host pushed last to any of its clients is printed
+    instead; with --root, the browse sources are, as the root lists them. Both take
+    neither URI nor -o/--offset, and need a WebSocket API client."""
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
-    asked = [
-        kinds
-        for kinds, wanted in (
-            (result_kinds or set(), result_kinds is not None),
-            ({SearchResultItemKind.ALBUM}, albums_only),
-            ({SearchResultItemKind.ARTIST}, artists_only),
-            ({SearchResultItemKind.PLAYLIST}, playlists_only),
-            ({SearchResultItemKind.TRACK}, tracks_only),
+    if (last or root) and (last and root or uri is not None or offset is not None):
+        raise click.UsageError(BROWSE_LAST_ROOT_ERROR)
+    kinds = browse_kinds(result_kinds, albums_only, artists_only, playlists_only, tracks_only)
+
+    if root:
+        sources = fetch_or_exit(ctx, lambda c: c.browse_sources)
+        if ctx.obj["machine_readable"] or output_format == "raw":
+            echo_data(ctx, json.dumps(sources.raw))
+            return
+        # The sources are the items the root lists: print them the same way
+        results = BrowseResults.from_envelope(
+            {"navigation": {"lists": [source.raw for source in sources]}}
         )
-        if wanted
-    ]
-    if len(asked) > 1:
-        raise click.UsageError(BROWSE_KINDS_ERROR)
+    elif last:
+        results = fetch_or_exit(ctx, lambda c: c.last_browse)
+    else:
+        results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
 
-    results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
-
-    if asked:
-        results = results.filtered(kinds=asked[0])
+    if kinds is not None:
+        results = results.filtered(kinds=kinds)
 
     kept = 1 if best_result_only else limit
     if kept is not None:
         results = results.limited(kept)
 
     render_browse_results(ctx, results, output_format, print_uri)
+
+
+@collection.group("folder")
+@click.pass_context
+def folder(ctx: click.Context) -> None:
+    """Manage the folders of the collection."""
+    pass
+
+
+@folder.command("delete")
+@click.pass_context
+@click.argument("path", type=str)
+@option_yes
+def folder_delete(ctx: click.Context, path: str, yes: bool) -> None:
+    """Delete the folder at PATH from the collection of the Volumio host.
+
+    IMPORTANT: the files of the folder are deleted from the host and cannot be
+    recovered; the folder is deleted only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to delete the folder without -y/--yes: "{path}"')
+        sys.exit(1)
+    execute_command(ctx, f'delete folder "{path}"', lambda c: c.delete_folder(path))
+
+
+@collection.command("goto")
+@click.pass_context
+@click.argument("kind", type=click.Choice(GOTO_KINDS, case_sensitive=True))
+@click.argument("value", required=False, default=None, type=str)
+@option_albums_only
+@option_artists_only
+@option_best_result_only
+@option_format_table
+@option_limit
+@option_playlists_only
+@option_print_uri_toggle
+@option_result_kinds
+@option_tracks_only
+def collection_goto(
+    ctx: click.Context,
+    kind: str,
+    value: str | None,
+    albums_only: bool,
+    artists_only: bool,
+    best_result_only: bool,
+    output_format: str,
+    limit: int | None,
+    playlists_only: bool,
+    print_uri: bool,
+    result_kinds: set[SearchResultItemKind] | None,
+    tracks_only: bool,
+) -> None:
+    """Browse to the artist or the album named VALUE, printed like "collection browse".
+
+    KIND is "artist" or "album". Without VALUE, the artist or the album of the
+    current track is browsed to.
+
+    Needs a WebSocket API client.
+    """
+    if best_result_only and limit is not None:
+        raise click.UsageError(SEARCH_LIMIT_ERROR)
+    kinds = browse_kinds(result_kinds, albums_only, artists_only, playlists_only, tracks_only)
+
+    if value is None:
+        state = fetch_state_or_exit(ctx)
+        value = state.artist if kind == "artist" else state.album
+        if not value:
+            error(GOTO_METADATA_ERROR.format(kind=kind))
+            sys.exit(1)
+    target = value
+
+    results = fetch_or_exit(ctx, lambda c: c.goto(kind, target))
+
+    if kinds is not None:
+        results = results.filtered(kinds=kinds)
+
+    kept = 1 if best_result_only else limit
+    if kept is not None:
+        results = results.limited(kept)
+
+    render_browse_results(ctx, results, output_format, print_uri)
+
+
+@collection.command("update")
+@click.pass_context
+@click.argument("uri", required=False, default=None, type=str)
+@option_metadata
+@option_rescan
+@option_thumbnails
+@option_tracklist
+def collection_update(
+    ctx: click.Context,
+    uri: str | None,
+    metadata: bool,
+    rescan: bool,
+    thumbnails: bool,
+    tracklist: str | None,
+) -> None:
+    """Update the collection of the Volumio host, looking for changes.
+
+    With URI, only its content is updated. The options select another refresh
+    instead, and take no URI: --metadata refreshes the metadata of the whole
+    collection, --rescan rescans it from scratch (slow on a large collection),
+    --thumbnails rebuilds the thumbnails of the album art, and --tracklist SERVICE
+    refreshes the tracks a music service offers. They are mutually exclusive.
+
+    Needs a WebSocket API client.
+    """
+    if sum([metadata, rescan, thumbnails, tracklist is not None]) > 1:
+        raise click.UsageError(COLLECTION_UPDATE_MODES_ERROR)
+    if uri is not None and (metadata or rescan or thumbnails or tracklist is not None):
+        raise click.UsageError(COLLECTION_UPDATE_URI_ERROR)
+    if metadata:
+        execute_command(ctx, "update metadata", lambda c: c.update_all_metadata())
+    elif rescan:
+        execute_command(ctx, "rescan library", lambda c: c.rescan_library())
+    elif thumbnails:
+        execute_command(ctx, "regenerate thumbnails", lambda c: c.regenerate_thumbnails())
+    elif tracklist is not None:
+        service = tracklist
+        execute_command(
+            ctx, f'update tracklist "{service}"', lambda c: c.update_service_tracklist(service)
+        )
+    else:
+        execute_command(ctx, "update library", lambda c: c.update_library(uri))
 
 
 @collection.group("favourite")
@@ -2287,6 +2439,7 @@ def radio_remove(ctx: click.Context, name: str) -> None:
 @option_print_uri
 @option_result_kinds
 @option_service
+@option_super
 @option_track
 @option_tracks_only
 def collection_search(
@@ -2305,6 +2458,7 @@ def collection_search(
     print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
     service: str | None,
+    super_search: bool,
     track: str | None,
     tracks_only: bool,
 ) -> None:
@@ -2314,7 +2468,9 @@ def collection_search(
     is searched for; --album, --artist, and --track also keep the matching results
     only. With --result-kinds, or one of --albums-only, --artists-only, --playlist,
     --playlists-only, and --tracks-only, the results of the kinds asked for are all
-    kept, and the other options only say what to search for."""
+    kept, and the other options only say what to search for. With --super, every
+    source is searched at once through the metavolumio plugin (Volumio Premium), which
+    needs a WebSocket API client."""
     machine_readable = ctx.obj["machine_readable"]
     terms = [term for term in (artist, album, track, playlist) if term]
     searched = query or " ".join(terms)
@@ -2336,7 +2492,9 @@ def collection_search(
     if len(asked) > 1:
         raise click.UsageError(SEARCH_KINDS_ERROR)
 
-    results = fetch_or_exit(ctx, lambda c: c.search(searched))
+    results = fetch_or_exit(
+        ctx, lambda c: c.super_search(searched) if super_search else c.search(searched)
+    )
 
     if asked:
         # The kinds are asked for, so the other options only feed the query, and the
@@ -2366,6 +2524,60 @@ def collection_search(
             output = json.dumps(lists, indent=4, sort_keys=True, ensure_ascii=False)
 
     echo_data(ctx, output)
+
+
+@collection.group("source")
+@click.pass_context
+def source(ctx: click.Context) -> None:
+    """Manage the music sources (plugins) of the Volumio host."""
+    pass
+
+
+@source.command("disable")
+@click.pass_context
+@click.argument("name", type=str)
+def source_disable(ctx: click.Context, name: str) -> None:
+    """Disable the music source NAME, as "collection source list" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'disable source "{name}"', lambda c: c.set_music_source_enabled(name, False)
+    )
+
+
+@source.command("enable")
+@click.pass_context
+@click.argument("name", type=str)
+def source_enable(ctx: click.Context, name: str) -> None:
+    """Enable the music source NAME, as "collection source list" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'enable source "{name}"', lambda c: c.set_music_source_enabled(name, True)
+    )
+
+
+@source.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def source_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the music sources of the Volumio host, with their enabled and active flags.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.music_sources.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("plugins", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
+        "Volumio Music Sources",
+    )
 
 
 @collection.command("statistics")

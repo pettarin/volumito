@@ -42,6 +42,7 @@ from volumito.cli.constants import (
     API_CLIENT_SYNCHRONOUS_WEBSOCKET,
     API_CLIENTS,
     API_CLIENTS_WEBSOCKET,
+    BROWSE_KINDS_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_MANIFEST_FILE,
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
@@ -72,12 +73,14 @@ from volumito.cli.pure_helpers import (
     expand_timestamp_placeholder,
     extract_filename_from_uri,
     filter_fields,
+    filter_items_fields,
     filter_queue_fields,
     format_as_json,
     format_as_pretty,
     format_as_table,
     format_browse_results_as_table,
     format_duration,
+    format_items_as_table,
     format_queue_as_table,
     parse_result_kinds,
     parse_time_to_seconds,
@@ -580,6 +583,44 @@ def api_position(ctx: click.Context, position: int, name: str = "position") -> i
     if position < minimum:
         raise click.UsageError(f"{name} must be {minimum} or greater, got {position}")
     return position - minimum
+
+
+def browse_kinds(
+    result_kinds: set[SearchResultItemKind] | None,
+    albums_only: bool,
+    artists_only: bool,
+    playlists_only: bool,
+    tracks_only: bool,
+) -> set[SearchResultItemKind] | None:
+    """Resolve the kinds of result a browse keeps, from the options asking for them.
+
+    Args:
+        result_kinds: The kinds of the -k/--result-kinds option, when given
+        albums_only: Whether --albums-only was given
+        artists_only: Whether --artists-only was given
+        playlists_only: Whether --playlists-only was given
+        tracks_only: Whether --tracks-only was given
+
+    Returns:
+        The kinds to keep, or None to keep every result
+
+    Raises:
+        click.UsageError: If two of the options disagree on the kinds to keep
+    """
+    asked = [
+        kinds
+        for kinds, wanted in (
+            (result_kinds or set(), result_kinds is not None),
+            ({SearchResultItemKind.ALBUM}, albums_only),
+            ({SearchResultItemKind.ARTIST}, artists_only),
+            ({SearchResultItemKind.PLAYLIST}, playlists_only),
+            ({SearchResultItemKind.TRACK}, tracks_only),
+        )
+        if wanted
+    ]
+    if len(asked) > 1:
+        raise click.UsageError(BROWSE_KINDS_ERROR)
+    return asked[0] if asked else None
 
 
 def check_playlist_name_or_exit(ctx: click.Context, name: str) -> None:
@@ -1772,6 +1813,19 @@ def option_item_title(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_last(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--last`` option to the collection browse subcommand."""
+    return click.option(
+        "--last",
+        is_flag=True,
+        default=False,
+        help=(
+            "Print the listing the host pushed last, to any of its clients, instead of "
+            "browsing (needs a WebSocket API client)."
+        ),
+    )(func)
+
+
 def option_limit(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-l``/``--limit`` option to the collection search subcommand."""
     return click.option(
@@ -1792,6 +1846,16 @@ def option_manifest_file(func: Callable[..., None]) -> Callable[..., None]:
         show_default=True,
         help="Write the download manifest to this file path; {output_directory} is "
         "replaced with the output directory, {timestamp} with the current UTC time.",
+    )(func)
+
+
+def option_metadata(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--metadata`` option to the collection update subcommand."""
+    return click.option(
+        "--metadata",
+        is_flag=True,
+        default=False,
+        help="Refresh the metadata of the whole collection, instead of looking for changes.",
     )(func)
 
 
@@ -2067,6 +2131,19 @@ def option_replace_characters_in_file_names_with(
     )(func)
 
 
+def option_rescan(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--rescan`` option to the collection update subcommand."""
+    return click.option(
+        "--rescan",
+        is_flag=True,
+        default=False,
+        help=(
+            "Rescan the whole collection from scratch, instead of looking for changes "
+            "(slow on a large collection)."
+        ),
+    )(func)
+
+
 def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-k``/``--result-kinds`` option to the collection search subcommand."""
     return click.option(
@@ -2102,6 +2179,19 @@ def option_service_of_uri(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_root(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--root`` option to the collection browse subcommand."""
+    return click.option(
+        "--root",
+        is_flag=True,
+        default=False,
+        help=(
+            "Print the browse sources, the roots the URIs descend from, instead of "
+            "browsing (needs a WebSocket API client)."
+        ),
+    )(func)
+
+
 def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-T/--type`` option to a story subcommand."""
     return click.option(
@@ -2115,6 +2205,30 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
             "How to interpret the positional argument(s): "
             "autodetect, mbid, or name (free string)."
         ),
+    )(func)
+
+
+def option_super(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--super`` option to the collection search subcommand."""
+    return click.option(
+        "--super",
+        "super_search",
+        is_flag=True,
+        default=False,
+        help=(
+            "Search every source at once, through the metavolumio plugin (Volumio "
+            "Premium; needs a WebSocket API client)."
+        ),
+    )(func)
+
+
+def option_thumbnails(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--thumbnails`` option to the collection update subcommand."""
+    return click.option(
+        "--thumbnails",
+        is_flag=True,
+        default=False,
+        help="Rebuild the thumbnails of the album art, instead of looking for changes.",
     )(func)
 
 
@@ -2136,6 +2250,17 @@ def option_track(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="Keep the tracks with this title, and search for it when no query is given.",
+    )(func)
+
+
+def option_tracklist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--tracklist`` option to the collection update subcommand."""
+    return click.option(
+        "--tracklist",
+        type=str,
+        default=None,
+        metavar="SERVICE",
+        help="Refresh the tracks this music service offers, instead of looking for changes.",
     )(func)
 
 
@@ -2294,6 +2419,42 @@ def render_fields(
         else:  # pretty
             output = format_as_pretty(filtered, position_starting_at_one)
 
+    echo_data(ctx, output)
+
+
+def render_items(
+    ctx: click.Context,
+    payload: dict[str, Any],
+    items: list[dict[str, Any]],
+    fields: str,
+    output_format: str,
+    short_fields: list[str],
+    heading: str,
+) -> None:
+    """Print a list of named items (e.g., the music sources) in the requested format.
+
+    The raw format prints the payload the items came from, as it is; the other
+    formats keep the selected fields of each item.
+
+    Args:
+        ctx: Click context object holding the shared options
+        payload: The payload the items came from, printed by the raw format
+        items: The items, as the Volumio instance reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+        short_fields: The keys the SHORT keyword keeps
+        heading: The heading of the table format
+    """
+    if output_format == "raw":
+        output = json.dumps(payload)
+    else:
+        filtered = filter_items_fields(items, fields, short_fields)
+        if output_format == "json":
+            output = json.dumps(filtered, indent=2)
+        elif output_format == "table":
+            output = format_items_as_table(filtered, heading)
+        else:  # pretty
+            output = json.dumps(filtered, indent=4, sort_keys=True, ensure_ascii=False)
     echo_data(ctx, output)
 
 

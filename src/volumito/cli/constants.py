@@ -48,6 +48,23 @@ BROWSE_KINDS_ERROR = (
 )
 """Error message when "collection browse" is asked for two different kinds of result."""
 
+BROWSE_LAST_ROOT_ERROR = (
+    "Expected the --last and --root options alone: without each other, the URI argument, "
+    "and the -o/--offset option."
+)
+"""Error message when "collection browse" combines --last or --root with the other inputs."""
+
+COLLECTION_UPDATE_MODES_ERROR = (
+    "Expected at most one of the --metadata, --rescan, --thumbnails, and --tracklist options."
+)
+"""Error message when "collection update" is asked for two refreshes at once."""
+
+COLLECTION_UPDATE_URI_ERROR = (
+    "Expected the URI argument only without the --metadata, --rescan, --thumbnails, "
+    "and --tracklist options."
+)
+"""Error message when "collection update" is given a URI together with a refresh option."""
+
 DEFAULT_API_CLIENT = "synchronous_rest"
 """Default value of the -C/--api-client option."""
 
@@ -82,6 +99,15 @@ FAVOURITE_RADIO_OPTIONS_ERROR = (
 
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
+
+GOTO_KINDS = [
+    "album",
+    "artist",
+]
+"""Accepted values of the KIND argument of the "collection goto" command."""
+
+GOTO_METADATA_ERROR = "The current track does not provide the {kind} to go to."
+"""Error message when "collection goto" is given no value and the current track has none."""
 
 MAX_HTTP_HEADERS = 10000
 """Maximum number of headers accepted in an HTTP response (the Python default is 100)."""
@@ -217,6 +243,16 @@ Only "mpd", "qobuz", and "webradio" are verified against a host: each value mark
 verified is the name its plugin registers itself with, or a guess where the plugin is not
 public.
 """
+
+SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST = [
+    "name",
+    "prettyName",
+    "category",
+    "active",
+    "enabled",
+    "hasConfiguration",
+]
+"""Short fields list for the "collection source list" command."""
 
 SHORT_FORMAT_FIELDS_MULTIROOM_ZONES = [
     "host",
