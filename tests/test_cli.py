@@ -11254,6 +11254,342 @@ class TestScpCommands:
         assert result.output == ""
 
 
+class TestNotificationEvents:
+    """Test cases for the notification event subgroup."""
+
+    STATE = {"status": "play", "title": "Caterina", "artist": "Francesco De Gregori"}
+    """A playback state, as a pushState event carries it."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the events: "
+        "use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for an event member, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture, pushes: dict | None = None):
+        """Mock VolumioWebSocketClient pushing, on registration, the payload of each event.
+
+        Args:
+            mocker: The mocker fixture
+            pushes: The payload each event carries the moment its handler is registered,
+                keyed by event name; an event outside the mapping is never pushed
+        """
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        pushed = {} if pushes is None else pushes
+
+        def register(event, handler):
+            if event in pushed:
+                handler(pushed[event])
+
+        mock_client.on.side_effect = register
+        mock_client.request.return_value = {"answer": 42}
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_listen_prints_the_state_by_default(self, runner: CliRunner, mocker: MockerFixture):
+        """Without an event, pushState is listened for, and printed as pretty JSON."""
+        mock_client = self._mock_websocket_client(mocker, pushes={"pushState": self.STATE})
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "listen", "-n", "1"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert lines[0].endswith("[INFO] Listening for the events: pushState")
+        assert lines[1].endswith(
+            "[INFO] Terminate as soon as: CTRL+C is issued, or 1 notification received"
+        )
+        assert json.loads(result.stdout) == {"event": "pushState", "data": self.STATE}
+        mock_client.on.assert_called_once()
+        assert mock_client.on.call_args.args[0] == "pushState"
+        # The handler is unregistered on the way out
+        mock_client.off.assert_called_once_with("pushState", mock_client.on.call_args.args[1])
+
+    def test_listen_several_events(self, runner: CliRunner, mocker: MockerFixture):
+        """Each event named is listened for, and printed as it arrives."""
+        mock_client = self._mock_websocket_client(
+            mocker, pushes={"pushState": self.STATE, "pushQueue": [{"title": "Caterina"}]}
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "notification", "event", "listen", "pushState", "pushQueue",
+             "-n", "2", "-F", "raw"],
+        )
+
+        assert result.exit_code == 0
+        events = [json.loads(line) for line in result.stdout.splitlines()]
+        assert [event["event"] for event in events] == ["pushState", "pushQueue"]
+        assert events[1]["data"] == [{"title": "Caterina"}]
+        assert mock_client.off.call_count == 2
+
+    def test_listen_table_format(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table prints one line per event, named and timestamped."""
+        self._mock_websocket_client(mocker, pushes={"pushState": self.STATE})
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "listen", "-n", "1", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        line = result.stdout.strip()
+        assert line.startswith("[")
+        assert "pushState" in line
+        assert "Caterina" in line
+
+    def test_listen_json_and_machine_readable(self, runner: CliRunner, mocker: MockerFixture):
+        """-F json indents the event, the machine-readable mode prints it compact."""
+        self._mock_websocket_client(mocker, pushes={"pushState": self.STATE})
+
+        indented = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "listen", "-n", "1", "-F", "json"]
+        )
+        compact = runner.invoke(
+            main, ["-m", *self._WEBSOCKET, "notification", "event", "listen", "-n", "1"]
+        )
+
+        assert indented.exit_code == 0
+        assert '\n  "event": "pushState"' in indented.output
+        assert compact.exit_code == 0
+        assert compact.output.strip() == json.dumps({"event": "pushState", "data": self.STATE})
+
+    def test_listen_times_out(self, runner: CliRunner, mocker: MockerFixture):
+        """Without an event, --timeout ends the listening, failing when a count was asked."""
+        self._mock_websocket_client(mocker)
+
+        plain = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "listen", "--timeout", "0.05"]
+        )
+        counted = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "notification", "event", "listen", "--timeout", "0.05", "-n", "1"],
+        )
+
+        assert plain.exit_code == 0
+        assert "Timed out after 0.05 seconds" in plain.output
+        assert counted.exit_code == 1
+        assert "Timed out after 0.05 seconds" in counted.output
+
+    def test_listen_with_a_zero_timeout(self, runner: CliRunner, mocker: MockerFixture):
+        """A deadline already passed ends the listening before any wait."""
+        mock_client = self._mock_websocket_client(mocker, pushes={"pushState": self.STATE})
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "listen", "--timeout", "0"]
+        )
+
+        assert result.exit_code == 0
+        assert "Timed out after 0 seconds" in result.output
+        mock_client.off.assert_called_once()
+
+    def test_listen_idle_times_out(self, runner: CliRunner, mocker: MockerFixture):
+        """--idle-timeout ends the listening after a silence, counting what arrived."""
+        self._mock_websocket_client(mocker, pushes={"pushState": self.STATE})
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "notification", "event", "listen", "--idle-timeout", "0.05",
+             "-n", "2"],
+        )
+
+        assert result.exit_code == 1
+        assert json.loads(result.stdout) == {"event": "pushState", "data": self.STATE}
+        assert "Timed out after 0.05 seconds without events" in result.output
+
+    def test_listen_deadline_before_the_idle_timeout(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A deadline closer than the idle timeout is the one reported."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "notification", "event", "listen", "--timeout", "0.05",
+             "--idle-timeout", "10"],
+        )
+
+        assert result.exit_code == 0
+        assert "Timed out after 0.05 seconds" in result.output
+        assert "without events" not in result.output
+
+    def test_listen_interrupted(self, runner: CliRunner, mocker: MockerFixture):
+        """Ctrl-C ends the listening quietly, unregistering the handler."""
+        mock_client = self._mock_websocket_client(mocker)
+        mocker.patch("volumito.cli.volumito.Queue.get", side_effect=KeyboardInterrupt)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "notification", "event", "listen"])
+
+        assert result.exit_code == 0
+        assert "Timed out" not in result.output
+        mock_client.off.assert_called_once()
+
+    def test_emit_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is sent."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "emit", "rebuildAlbumart"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Refusing to emit the event without -y/--yes: "rebuildAlbumart"' in result.output
+        mock_client.emit.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("arguments", "payload"),
+        [([], None), (['{"uri": "music-library"}'], {"uri": "music-library"}), (["42"], 42)],
+    )
+    def test_emit(self, runner: CliRunner, mocker: MockerFixture, arguments, payload):
+        """With -y/--yes the event is sent, with the JSON payload given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "emit", "updateDb", *arguments, "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'emit \"updateDb\"' executed successfully" in result.output
+        mock_client.emit.assert_called_once_with("updateDb", payload)
+
+    def test_emit_with_a_bad_payload(self, runner: CliRunner, mocker: MockerFixture):
+        """A payload that is not JSON is a usage error, before the refusal."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "emit", "updateDb", "{oops"]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected PAYLOAD to be JSON" in result.output
+        mock_client.emit.assert_not_called()
+
+    def test_request(self, runner: CliRunner, mocker: MockerFixture):
+        """notification event request sends the event and prints the answer."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "notification", "event", "request", "getState", "-F", "table"],
+        )
+
+        assert result.exit_code == 0
+        assert 'Volumio Event "getState"' in result.output
+        assert "42" in result.output
+        mock_client.request.assert_called_once_with("getState", None, None, None)
+
+    def test_request_with_the_options(self, runner: CliRunner, mocker: MockerFixture):
+        """The payload, the answer event, and the timeout reach the client."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "notification", "event", "request", "getInfo", '{"a": 1}',
+             "--response-event", "pushInfo", "--timeout", "2.5", "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"answer": 42}
+        mock_client.request.assert_called_once_with("getInfo", "pushInfo", {"a": 1}, 2.5)
+
+    @pytest.mark.parametrize(
+        ("options", "expected"),
+        [
+            ([], "[\n    1,\n    2\n]"),
+            (["-F", "json"], "[\n  1,\n  2\n]"),
+            (["-F", "raw"], "[1, 2]"),
+            (["-F", "table"], "[1, 2]"),
+        ],
+    )
+    def test_request_answered_with_a_list(
+        self, runner: CliRunner, mocker: MockerFixture, options, expected
+    ):
+        """An answer that is not an object is printed as JSON, compact when not indentable."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.request.return_value = [1, 2]
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "request", "getList", *options]
+        )
+
+        assert result.exit_code == 0
+        assert result.output.strip() == expected
+
+    def test_request_without_a_known_answer(self, runner: CliRunner, mocker: MockerFixture):
+        """An event the client cannot wait for is reported as an invalid value."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.request.side_effect = ValueError(
+            "The Volumio API answers no 'rebuildAlbumart' event: emit it, or name the "
+            "event carrying its answer"
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "notification", "event", "request", "rebuildAlbumart"]
+        )
+
+        assert result.exit_code == 1
+        assert "Invalid value: The Volumio API answers no 'rebuildAlbumart' event" in (
+            result.output
+        )
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["emit", "updateDb", "-y"],
+            ["listen", "--timeout", "0.05"],
+            ["request", "getState"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["notification", "event", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            ["--allow-fallback-to-websocket-api", "notification", "event", "request", "getState",
+             "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the events" in result.output
+        assert json.loads(result.stdout) == {"answer": 42}
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
+
 class TestNotificationCommands:
     """Test cases for the notifications list, listen, register, and unregister commands."""
 
@@ -17733,6 +18069,11 @@ class TestConfigurationCommands:
                 "notification": {
                     "endpoint": "/volumionotifications",
                     "port": 3003,
+                    "event-listen": {
+                        "count": None,
+                        "idle-timeout": None,
+                        "timeout": None,
+                    },
                     "listen": {
                         "count": None,
                         "idle-timeout": None,
@@ -17762,6 +18103,8 @@ class TestConfigurationCommands:
                     "collection-source-list": None,
                     "collection-statistics": None,
                     "command-list": None,
+                    "notification-event-listen": None,
+                    "notification-event-request": None,
                     "notification-list": None,
                     "notification-listen": None,
                     "playback-infinity": None,

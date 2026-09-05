@@ -58,6 +58,8 @@ All notable changes to this project will be documented in this file.
 - Commands `multiroom client`, `multiroom server`, `multiroom set`,
   `multiroom single`, `multiroom status`, and `multiroom write`
   (all needing a WebSocket API client)
+- Command group `notification event` (`emit`, `listen`, `request`),
+  needing a WebSocket API client, with the corresponding configuration keys
 
 ### Changed
 

@@ -92,6 +92,9 @@ DEFAULT_STORY_ARGUMENT_TYPE = "autodetect"
 DEFAULT_VOLUMIO_VERSION = "4"
 """Default target Volumio version for the "configuration create" command."""
 
+EVENT_PAYLOAD_ERROR = "Expected PAYLOAD to be JSON."
+"""Error message when a "notification event" subcommand is given a payload that is not JSON."""
+
 EXPERIENCE_VALUES = [
     "advanced",
     "simple",

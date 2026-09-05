@@ -91,6 +91,8 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "queue-status": DISPLAY_KEYS,
     "playlist-content": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
+    "notification-event-listen": FORMAT_KEYS,
+    "notification-event-request": FORMAT_KEYS,
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,
     "multiroom-info": DISPLAY_KEYS,
@@ -176,6 +178,12 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "multiroom-status": [
         ["multiroom", "status"],
+    ],
+    "notification-event-listen": [
+        ["notification", "event", "listen"],
+    ],
+    "notification-event-request": [
+        ["notification", "event", "request"],
     ],
     "notification-list": [
         ["notification", "list"],
@@ -431,6 +439,13 @@ key -> the default_map path(s) of the command(s) it targets. The endpoint and th
 port describe one local listener, so they are not overridden per subcommand.
 """
 
+NOTIFICATION_EVENT_LISTEN_KEYS: list[str] = [
+    "count",
+    "idle-timeout",
+    "timeout",
+]
+"""The keys accepted by the "event-listen" subsection: the limits of "event listen"."""
+
 NOTIFICATION_LISTEN_KEYS: list[str] = [
     "count",
     "idle-timeout",
@@ -442,11 +457,15 @@ NOTIFICATION_LISTEN_KEYS: list[str] = [
 """The keys accepted by the "listen" subsection: the options only that command has."""
 
 NOTIFICATION_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "event-listen": NOTIFICATION_EVENT_LISTEN_KEYS,
     "listen": NOTIFICATION_LISTEN_KEYS,
 }
 """Each notification subsection mapped to the keys it accepts."""
 
 NOTIFICATION_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "event-listen": [
+        ["notification", "event", "listen"],
+    ],
     "listen": [
         ["notification", "listen"],
     ],

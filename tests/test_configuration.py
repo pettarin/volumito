@@ -501,6 +501,11 @@ class TestDefaultConfigurationTemplate:
             "notification": {
                 "endpoint": "/volumionotifications",
                 "port": 3003,
+                "event-listen": {
+                    "count": None,
+                    "idle-timeout": None,
+                    "timeout": None,
+                },
                 "listen": {
                     "count": None,
                     "idle-timeout": None,
@@ -782,7 +787,11 @@ class TestBuildClickDefaultMap:
             # "track" is the top-level synonym of "queue track"
             "track": {"info": formatting},
             "queue": {"list": formatting, "status": formatting, "track": {"info": formatting}},
-            "notification": {"list": format_only, "listen": format_only},
+            "notification": {
+                "event": {"listen": format_only, "request": format_only},
+                "list": format_only,
+                "listen": format_only,
+            },
             "playlist": {"content": formatting, "list": format_only},
             "multiroom": {"info": formatting, "set": format_only, "status": format_only},
             "system": {
@@ -862,6 +871,29 @@ class TestBuildClickDefaultMap:
             "register": {"endpoint": "/hook", "port": 9000},
             "unregister": {"endpoint": "/hook", "port": 9000},
         }
+
+    def test_notification_event_listen_keys_reach_their_command(self):
+        """The event-listen keys reach event listen alone, without the listener scalars."""
+        result = build_click_default_map(
+            {
+                "notification": {
+                    "endpoint": "/hook",
+                    "event-listen": {"count": 2, "timeout": 3.0},
+                }
+            }
+        )
+
+        assert result["notification"]["event"] == {"listen": {"count": 2, "timeout": 3.0}}
+        assert "event" not in result["notification"]["listen"]
+
+    def test_notification_event_listen_unknown_key_reported(self, tmp_path):
+        """A listener-only key under event-listen is unknown there."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("notification:\n  event-listen:\n    register-url: true\n")
+
+        _, errors = load_configuration_with_errors(str(config))
+
+        assert "unknown key 'register-url' in section 'notification.event-listen'" in errors[0]
 
     def test_format_only_subsection_overrides_shared(self):
         """A subsection of a format-only command overrides the shared format value."""

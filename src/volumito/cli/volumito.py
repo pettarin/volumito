@@ -8,7 +8,10 @@ import http.client
 import json
 import os
 import sys
+import time
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from queue import Empty, Queue
 from typing import Any, NoReturn
 
 import click
@@ -113,7 +116,9 @@ from volumito.cli.click_helpers import (
     option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_request_timeout,
     option_rescan,
+    option_response_event,
     option_result_kinds,
     option_root,
     option_scan,
@@ -171,6 +176,7 @@ from volumito.cli.constants import (
     COLLECTION_UPDATE_URI_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
+    EVENT_PAYLOAD_ERROR,
     EXPERIENCE_VALUES,
     FAVOURITE_NAME_OPTION_ERROR,
     FAVOURITE_RADIO_NAME_ERROR,
@@ -263,6 +269,7 @@ from volumito.clients import (
     is_local_file_uri,
     receiver_url,
 )
+from volumito.clients.websocket.common import EVENT_PUSH_STATE
 
 
 @click.group(cls=AliasedGroup)
@@ -4501,6 +4508,125 @@ def _listen_and_print(
         sys.exit(1)
 
 
+def _echo_event(ctx: click.Context, event: str, payload: object, output_format: str) -> None:
+    """Print an event the Volumio host pushed, per the format option.
+
+    Args:
+        ctx: Click context object containing shared options
+        event: The name of the event
+        payload: What the event carried
+        output_format: The output format ("json", "pretty", "raw", or "table")
+    """
+    received = {"event": event, "data": payload}
+    if ctx.obj["machine_readable"] or output_format == "raw":
+        output = json.dumps(received)
+    elif output_format == "json":
+        output = json.dumps(received, indent=2)
+    elif output_format == "table":
+        # The microseconds of the format are trimmed to milliseconds
+        when = f"{datetime.now(UTC).strftime(NOTIFICATION_TIMESTAMP_FORMAT)[:-3]}Z"
+        output = format_notification_as_line(event, payload, when)
+    else:  # pretty
+        output = json.dumps(received, indent=4, sort_keys=True, ensure_ascii=False)
+
+    click.echo(output)
+
+
+def _event_payload(text: str | None) -> object:
+    """Parse the payload given to an event subcommand.
+
+    Args:
+        text: The payload as JSON, or None when the event carries nothing
+
+    Returns:
+        The payload
+
+    Raises:
+        click.UsageError: If the text is not JSON
+    """
+    if text is None:
+        return None
+    try:
+        return json.loads(text)
+    except ValueError as e:
+        raise click.UsageError(f"{EVENT_PAYLOAD_ERROR} ({e})") from e
+
+
+def _listen_to_events(
+    ctx: click.Context,
+    events: list[str],
+    count: int | None,
+    timeout: float | None,
+    idle_timeout: float | None,
+    output_format: str,
+) -> None:
+    """Print the events the host pushes until a limit or an interruption.
+
+    The handlers registered with the client queue what arrives, and the loop below
+    prints it from the queue, ending as the listener of the push notifications does.
+
+    Args:
+        ctx: Click context object containing shared options
+        events: The names of the events to print
+        count: Number of events to print before returning, or None
+        timeout: Seconds to listen for in total, or None
+        idle_timeout: Seconds to wait for each event, or None
+        output_format: The output format ("json", "pretty", "raw", or "table")
+    """
+    received: Queue[tuple[str, object]] = Queue()
+
+    def handler_of(event: str) -> Callable[[object], None]:
+        def handle(payload: object) -> None:
+            received.put((event, payload))
+
+        return handle
+
+    handlers = {event: handler_of(event) for event in events}
+    fetch_or_exit(ctx, lambda c: [c.on(event, handler) for event, handler in handlers.items()])
+
+    info(f"Listening for the events: {', '.join(events)}")
+    info(format_termination_conditions(count, timeout, idle_timeout))
+
+    printed = 0
+    idle_timed_out = False
+    deadline = None if timeout is None else time.monotonic() + timeout
+    try:
+        while count is None or printed < count:
+            wait = idle_timeout
+            waiting_for_the_deadline = False
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                if wait is None or remaining < wait:
+                    waiting_for_the_deadline = True
+                    wait = remaining
+            try:
+                event, payload = received.get(timeout=wait)
+            except Empty:
+                idle_timed_out = not waiting_for_the_deadline
+                break
+            _echo_event(ctx, event, payload, output_format)
+            printed += 1
+    except KeyboardInterrupt:
+        return
+    finally:
+        fetch_or_exit(
+            ctx, lambda c: [c.off(event, handler) for event, handler in handlers.items()]
+        )
+
+    if count is not None and printed >= count:
+        return
+
+    # The loop only ends on its own by a timeout: the idle one, or the deadline
+    if idle_timed_out:
+        info(f"Timed out after {idle_timeout:g} seconds without events")
+    else:
+        info(f"Timed out after {timeout:g} seconds")
+    if count is not None:
+        sys.exit(1)
+
+
 def _compose_notification_url(ctx: click.Context, port: int, endpoint: str) -> str:
     """Return the URL of the local listener, as reachable by the Volumio host.
 
@@ -4524,8 +4650,110 @@ def _compose_notification_url(ctx: click.Context, port: int, endpoint: str) -> s
 @main.group()
 @click.pass_context
 def notification(ctx: click.Context) -> None:
-    """Manage the URLs receiving the push notifications."""
+    """Manage the URLs receiving the push notifications, and the WebSocket events."""
     pass
+
+
+@notification.group("event")
+@click.pass_context
+def notification_event(ctx: click.Context) -> None:
+    """Send and receive the events of the WebSocket API of the Volumio host.
+
+    The events are the push channel of the WebSocket API, as the notification URLs
+    are the one of the REST API; every event the host listens for can be sent, and
+    every one it pushes can be received, including the ones no other command covers.
+    This is a first implementation: the subgroup may move, or merge with
+    "notification listen", in a later release.
+
+    Needs a WebSocket API client.
+    """
+    pass
+
+
+@notification_event.command("emit")
+@click.pass_context
+@click.argument("event", type=str)
+@click.argument("payload", required=False, default=None, type=str)
+@option_yes
+def notification_event_emit(
+    ctx: click.Context, event: str, payload: str | None, yes: bool
+) -> None:
+    """Send EVENT to the Volumio host, carrying the JSON PAYLOAD when given.
+
+    Nothing is waited for: whatever the host pushes back is visible with
+    "notification event listen". IMPORTANT: any event can be sent, including the
+    ones the library refuses on purpose; the event is sent only when -y/--yes is
+    given.
+
+    Needs a WebSocket API client.
+    """
+    parsed = _event_payload(payload)
+    if not yes:
+        error(f'Refusing to emit the event without -y/--yes: "{event}"')
+        sys.exit(1)
+    execute_command(ctx, f'emit "{event}"', lambda c: c.emit(event, parsed))
+
+
+@notification_event.command("listen")
+@click.pass_context
+@click.argument("events", nargs=-1, type=str, metavar="[EVENT]...")
+@option_count
+@option_format
+@option_idle_timeout
+@option_timeout
+def notification_event_listen(
+    ctx: click.Context,
+    events: tuple[str, ...],
+    count: int | None,
+    output_format: str,
+    idle_timeout: float | None,
+    timeout: float | None,
+) -> None:
+    """Print the events the Volumio host pushes, EVENT by name (pushState when none).
+
+    The command keeps listening until it is interrupted with Ctrl-C, or until one
+    of -n/--count, --idle-timeout, and --timeout is reached. The table format prints
+    one line per event; the others print the event and what it carried.
+
+    Needs a WebSocket API client.
+    """
+    _listen_to_events(
+        ctx, list(events) or [EVENT_PUSH_STATE], count, timeout, idle_timeout, output_format
+    )
+
+
+@notification_event.command("request")
+@click.pass_context
+@click.argument("event", type=str)
+@click.argument("payload", required=False, default=None, type=str)
+@option_format
+@option_response_event
+@option_request_timeout
+def notification_event_request(
+    ctx: click.Context,
+    event: str,
+    payload: str | None,
+    output_format: str,
+    response_event: str | None,
+    timeout: float | None,
+) -> None:
+    """Send EVENT, carrying the JSON PAYLOAD when given, and print the answer.
+
+    The answer is the event the host pushes back: the WebSocket API clients know it
+    for the events they read through, and --response-event names it for the others.
+
+    Needs a WebSocket API client.
+    """
+    parsed = _event_payload(payload)
+    answer = fetch_or_exit(ctx, lambda c: c.request(event, response_event, parsed, timeout))
+    if isinstance(answer, dict):
+        render_payload(ctx, answer, output_format, heading=f'Volumio Event "{event}"')
+    elif ctx.obj["machine_readable"] or output_format in ("raw", "table"):
+        echo_data(ctx, json.dumps(answer))
+    elif output_format == "json":
+        echo_data(ctx, json.dumps(answer, indent=2))
+    else:  # pretty
+        echo_data(ctx, json.dumps(answer, indent=4, sort_keys=True, ensure_ascii=False))
 
 
 @notification.command("list")

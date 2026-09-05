@@ -44,6 +44,10 @@ aliases:
   # mute: playback mute
   # next: playback next
   # not: notification
+  # note: notification event
+  # notee: notification event emit
+  # notel: notification event listen
+  # noter: notification event request
   # notl: notification list
   # notlis: notification listen
   # notr: notification register
@@ -98,11 +102,11 @@ aliases:
   # stop: playback stop
   # sys: system
   # sysa: system audio
-  # sysal: system alarm
   # sysad: system audio device
   # sysadl: system audio device list
   # sysads: system audio device set
   # sysai: system audio inputs
+  # sysal: system alarm
   # sysao: system audio outputs
   # sysb: system backup
   # syse: system execute
@@ -245,13 +249,24 @@ miscellaneous:
 
 notification:
   # A key here applies to the listen, register, and unregister commands;
-  # the keys of the options only "listen" has are under its own section
+  # the keys of the options only "listen" and "event listen" have
+  # are under their own sections
 
   # Path served by the local notification listener
   endpoint: /volumionotifications
 
   # Port the local notification listener binds to
   port: 3003
+
+  event-listen:
+    # Stop after receiving this number of events
+    count: null
+
+    # Stop after this number of seconds without receiving an event
+    idle-timeout: null
+
+    # Stop after listening for this number of seconds
+    timeout: null
 
   listen:
     # Stop after receiving this number of notifications
@@ -287,6 +302,8 @@ output:
   # - multiroom-info
   # - multiroom-set
   # - multiroom-status
+  # - notification-event-listen
+  # - notification-event-request
   # - notification-list
   # - notification-listen
   # - playback-infinity
@@ -420,6 +437,12 @@ output:
     # Add your own overrides here
 
   multiroom-status:
+    # Add your own overrides here
+
+  notification-event-listen:
+    # Add your own overrides here
+
+  notification-event-request:
     # Add your own overrides here
 
   notification-list:

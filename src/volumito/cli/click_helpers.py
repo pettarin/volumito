@@ -1415,6 +1415,10 @@ def fetch_or_exit[T](
     except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
         error(f"API client error: {e}")
         sys.exit(1)
+    except ValueError as e:
+        # The clients refuse a value they cannot send before sending anything
+        error(f"Invalid value: {e}")
+        sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
@@ -2269,6 +2273,16 @@ def option_replace_characters_in_file_names_with(
     )(func)
 
 
+def option_request_timeout(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--timeout`` option to the notification event request subcommand."""
+    return click.option(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Seconds to wait for the answer; the WebSocket API timeout when not given.",
+    )(func)
+
+
 def option_rescan(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--rescan`` option to the collection update subcommand."""
     return click.option(
@@ -2278,6 +2292,20 @@ def option_rescan(func: Callable[..., None]) -> Callable[..., None]:
         help=(
             "Rescan the whole collection from scratch, instead of looking for changes "
             "(slow on a large collection)."
+        ),
+    )(func)
+
+
+def option_response_event(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--response-event`` option to the notification event request subcommand."""
+    return click.option(
+        "--response-event",
+        type=str,
+        default=None,
+        metavar="NAME",
+        help=(
+            "The event carrying the answer; needed for the events the WebSocket API "
+            "clients do not already know the answer of."
         ),
     )(func)
 
