@@ -52,6 +52,10 @@ aliases:
   # ql: queue list
   # qr: queue replace
   # qs: queue status
+  # qt: queue track
+  # qta: queue track audio
+  # qtc: queue track albumart
+  # qti: queue track info
   # s: story
   # salb: story album
   # sart: story artist
@@ -65,10 +69,6 @@ aliases:
   # sysi: system info
   # sysp: system ping
   # sysv: system version
-  # t: queue track
-  # ta: queue track audio
-  # tc: queue track albumart
-  # ti: queue track info
   # toggle: playback toggle
   # unmute: playback unmute
   # vol: playback volume
