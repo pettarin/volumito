@@ -792,9 +792,13 @@ class TestBuildClickDefaultMap:
                     "inputs": format_only,
                     "outputs": formatting,
                 },
+                "backup": {"create": format_only},
                 "execute": format_only,
                 "version": format_only,
                 "info": format_only,
+                "power": {"modes": format_only},
+                "timezone": {"list": format_only},
+                "update": {"channel": {"list": format_only}},
             },
             "collection": {
                 "browse": format_only,

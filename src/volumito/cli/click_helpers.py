@@ -81,6 +81,7 @@ from volumito.cli.pure_helpers import (
     format_browse_results_as_table,
     format_duration,
     format_items_as_table,
+    format_names_as_table,
     format_queue_as_table,
     parse_result_kinds,
     parse_time_to_seconds,
@@ -1622,6 +1623,17 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_backup_output_file(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-o``/``--output-file`` option to the system backup create subcommand."""
+    return click.option(
+        "-o",
+        "--output-file",
+        type=str,
+        default=None,
+        help="Write the backup to this file, instead of printing it.",
+    )(func)
+
+
 def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-1``/``--best-result-only`` option to the collection search subcommand."""
     return click.option(
@@ -1643,6 +1655,16 @@ def option_by_uid(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_cached(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--cached`` option to the system update check subcommand."""
+    return click.option(
+        "--cached",
+        is_flag=True,
+        default=False,
+        help="Check the update information the host cached, instead of asking it to check anew.",
+    )(func)
+
+
 def option_check_next_track(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--check-next-track`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1660,6 +1682,16 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
         default=True,
         show_default=True,
         help="Check that the playlist name exists before using it.",
+    )(func)
+
+
+def option_config(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--config`` option to the system backup restore subcommand."""
+    return click.option(
+        "--config",
+        is_flag=True,
+        default=False,
+        help="Restore the configuration of the plugins, instead of a backup file.",
     )(func)
 
 
@@ -1790,6 +1822,16 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
         type=float,
         default=None,
         help="Stop after this number of seconds without receiving a notification.",
+    )(func)
+
+
+def option_ignore_integrity_check(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--ignore-integrity-check`` option to the system update install subcommand."""
+    return click.option(
+        "--ignore-integrity-check",
+        is_flag=True,
+        default=False,
+        help="Install the update even when its integrity check fails.",
     )(func)
 
 
@@ -2475,6 +2517,26 @@ def render_items(
             output = format_items_as_table(filtered, heading)
         else:  # pretty
             output = json.dumps(filtered, indent=4, sort_keys=True, ensure_ascii=False)
+    echo_data(ctx, output)
+
+
+def render_names(ctx: click.Context, names: list[Any], output_format: str, heading: str) -> None:
+    """Print a list of names (e.g., the playlists) in the requested format.
+
+    Args:
+        ctx: Click context object holding the shared options
+        names: The names to print
+        output_format: The -F/--format option value
+        heading: The heading of the table format
+    """
+    if output_format == "raw":
+        output = json.dumps(names)
+    elif output_format == "json":
+        output = json.dumps(names, indent=2)
+    elif output_format == "table":
+        output = format_names_as_table(names, heading)
+    else:  # pretty
+        output = json.dumps(names, indent=4, ensure_ascii=False)
     echo_data(ctx, output)
 
 

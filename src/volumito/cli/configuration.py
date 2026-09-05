@@ -98,9 +98,13 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-audio-dsp": FORMAT_KEYS,
     "system-audio-inputs": FORMAT_KEYS,
     "system-audio-outputs": DISPLAY_KEYS,
+    "system-backup-create": FORMAT_KEYS,
     "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
+    "system-power-modes": FORMAT_KEYS,
+    "system-timezone-list": FORMAT_KEYS,
+    "system-update-channel-list": FORMAT_KEYS,
     "collection-browse": FORMAT_KEYS,
     "collection-favourite-list": FORMAT_KEYS,
     "collection-goto": FORMAT_KEYS,
@@ -201,12 +205,24 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "system-audio-outputs": [
         ["system", "audio", "outputs"],
     ],
+    "system-backup-create": [
+        ["system", "backup", "create"],
+    ],
     "system-execute": [
         ["system", "execute"],
     ],
     "system-info": [
         ["system", "info"],
         ["info"],
+    ],
+    "system-power-modes": [
+        ["system", "power", "modes"],
+    ],
+    "system-timezone-list": [
+        ["system", "timezone", "list"],
+    ],
+    "system-update-channel-list": [
+        ["system", "update", "channel", "list"],
     ],
     "system-version": [
         ["system", "version"],

@@ -42,6 +42,9 @@ API_CLIENT_SYNCHRONOUS_REST = "synchronous_rest"
 API_CLIENT_SYNCHRONOUS_WEBSOCKET = "synchronous_websocket"
 """The -C/--api-client value selecting the synchronous WebSocket API client."""
 
+BACKUP_RESTORE_ARGUMENT_ERROR = "Expected a FILE argument, or the --config option, not both."
+"""Error message when "system backup restore" is given neither or both of its inputs."""
+
 BROWSE_KINDS_ERROR = (
     "Expected the --result-kinds, --albums-only, --artists-only, --playlists-only, "
     "and --tracks-only options to agree on the kinds to keep."

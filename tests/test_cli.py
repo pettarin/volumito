@@ -107,6 +107,7 @@ from volumito.clients.models import (
     PlayerState,
     PlaylistContent,
     Playlists,
+    PowerModes,
     PushNotification,
     Queue,
     QueueTrack,
@@ -116,7 +117,9 @@ from volumito.clients.models import (
     SuccessResponse,
     SystemInfo,
     SystemVersion,
+    Timezones,
     UiConfig,
+    UpdaterChannel,
     VolumioModel,
     Zones,
 )
@@ -150,6 +153,7 @@ def _isolate_config_probing(mocker: MockerFixture):
 
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "audio_outputs": AudioOutputs,
+    "available_timezones": Timezones,
     "browse_sources": BrowseSources,
     "collection_statistics": CollectionStatistics,
     "dsp_config": UiConfig,
@@ -158,11 +162,13 @@ _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "music_sources": MusicSources,
     "notifications": Notifications,
     "playlists": Playlists,
+    "power_modes": PowerModes,
     "queue": Queue,
     "sleep_timer": SleepTimer,
     "state": PlayerState,
     "system_info": SystemInfo,
     "system_version": SystemVersion,
+    "updater_channel": UpdaterChannel,
     "zones": Zones,
 }
 """The response model each mocked client property returns, keyed by property name."""
@@ -6406,6 +6412,540 @@ class TestSystemAudio:
             "Falling back to the WebSocket API client for the audio outputs and devices"
         ) in result.output
         assert json.loads(result.stdout) == self.INPUTS
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
+
+class TestSystemSettings:
+    """Test cases for system name, backup, power, timezone, and update."""
+
+    BACKUP = {"config": {"name": "volumio"}, "plugins": ["a", "b"]}
+    """A backup of the configuration, as a Volumio host answers it."""
+
+    CHANNEL = {"currentChannel": "stable", "availableChannels": ["stable", "test"]}
+    """The update channel, as a Volumio host answers it."""
+
+    POWER_MODES = {"hasPowerOffMode": True, "hasStandbyMode": False}
+    """The power modes of a host without a standby mode."""
+
+    TIMEZONES = ["Europe/Rome", "Europe/Paris", "UTC"]
+    """The time zones a Volumio host can be set to."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    @staticmethod
+    def _refusal(operation: str) -> str:
+        """The error of a REST API client asked for an operation, without the fallback."""
+        return (
+            f"API client error: The synchronous REST API client does not offer {operation}: "
+            "use --api-client synchronous_websocket or asynchronous_websocket, "
+            "or --allow-fallback-to-websocket-api"
+        )
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture, power_modes: dict | None = None):
+        """Mock VolumioWebSocketClient answering the system reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mock_client.backup.return_value = self.BACKUP
+        _attach_property(
+            mock_client, "available_timezones", return_value={"timezones": self.TIMEZONES}
+        )
+        _attach_property(mock_client, "automatic_update_enabled", return_value=True)
+        _attach_property(mock_client, "device_name", return_value="Living Room")
+        _attach_property(
+            mock_client,
+            "power_modes",
+            return_value=self.POWER_MODES if power_modes is None else power_modes,
+        )
+        _attach_property(mock_client, "timezone", return_value="Europe/Rome")
+        _attach_property(mock_client, "updater_channel", return_value=self.CHANNEL)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_name_prints_the_name(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a value, system name prints the name of the host."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "name"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "Living Room"
+        mock_client.device_name_property.assert_called_once_with()
+
+    def test_name_prints_a_missing_name(self, runner: CliRunner, mocker: MockerFixture):
+        """A host reporting no name prints an empty line, or null when machine-readable."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "device_name", return_value=None)
+
+        plain = runner.invoke(main, [*self._WEBSOCKET, "system", "name"])
+        machine = runner.invoke(main, ["-m", *self._WEBSOCKET, "system", "name"])
+
+        assert plain.exit_code == 0
+        assert plain.output == "\n"
+        assert machine.exit_code == 0
+        assert machine.output.strip() == "null"
+
+    def test_name_renames_the_host(self, runner: CliRunner, mocker: MockerFixture):
+        """With a value, system name renames the host."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "name", "Kitchen"])
+
+        assert result.exit_code == 0
+        assert "Command 'name \"Kitchen\"' executed successfully" in result.output
+        mock_client.device_name_property.assert_called_once_with("Kitchen")
+
+    def test_backup_create_prints_the_backup(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a file, system backup create prints the backup."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "create", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.BACKUP
+        mock_client.backup.assert_called_once_with()
+
+    def test_backup_create_writes_the_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """-o writes the backup as JSON to the file, and reports the path."""
+        self._mock_websocket_client(mocker)
+        target = tmp_path / "backup.json"
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "create", "-o", str(target)]
+        )
+
+        assert result.exit_code == 0
+        assert f'Created backup file "{target}"' in result.output
+        assert json.loads(target.read_text()) == self.BACKUP
+
+    def test_backup_create_machine_readable_prints_the_path(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """In machine-readable mode the written path is printed as a JSON string."""
+        self._mock_websocket_client(mocker)
+        target = tmp_path / "backup.json"
+
+        result = runner.invoke(
+            main, ["-m", *self._WEBSOCKET, "system", "backup", "create", "-o", str(target)]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == str(target)
+
+    def test_backup_create_refuses_to_overwrite(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """An existing file is kept unless --overwrite-existing-files is given."""
+        self._mock_websocket_client(mocker)
+        target = tmp_path / "backup.json"
+        target.write_text("{}")
+
+        kept = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "create", "-o", str(target)]
+        )
+        replaced = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "backup", "create", "-o", str(target),
+             "--overwrite-existing-files"],
+        )
+
+        assert kept.exit_code == 1
+        assert "File already exists" in kept.output
+        assert replaced.exit_code == 0
+        assert json.loads(target.read_text()) == self.BACKUP
+
+    def test_backup_create_cannot_write(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A file that cannot be written is an error."""
+        self._mock_websocket_client(mocker)
+        target = tmp_path / "missing" / "backup.json"
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "create", "-o", str(target)]
+        )
+
+        assert result.exit_code == 1
+        assert "Cannot write backup file" in result.output
+
+    def test_backup_restore_from_a_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """With -y/--yes the backup read from the file is restored."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "backup.json"
+        source.write_text(json.dumps(self.BACKUP))
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "restore", str(source), "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert f"Command 'restore backup \"{source}\"' executed successfully" in result.output
+        mock_client.restore_backup.assert_called_once_with(self.BACKUP)
+
+    def test_backup_restore_the_config(self, runner: CliRunner, mocker: MockerFixture):
+        """--config restores the configuration of the plugins."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "restore", "--config", "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'restore config' executed successfully" in result.output
+        mock_client.restore_config.assert_called_once_with()
+        mock_client.restore_backup.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("arguments", "message"),
+        [
+            (["backup.json"], 'Refusing to restore the backup without -y/--yes: "backup.json"'),
+            (["--config"], "Refusing to restore the configuration of the plugins without -y/--yes"),
+        ],
+    )
+    def test_backup_restore_refused_without_yes(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, message
+    ):
+        """Without -y/--yes nothing is restored."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "backup", "restore", *arguments])
+
+        assert result.exit_code == 1
+        assert message in result.output
+        mock_client.restore_backup.assert_not_called()
+        mock_client.restore_config.assert_not_called()
+
+    @pytest.mark.parametrize("arguments", [[], ["backup.json", "--config"]])
+    def test_backup_restore_takes_one_input(
+        self, runner: CliRunner, mocker: MockerFixture, arguments
+    ):
+        """A file or --config is expected, not both nor neither."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "restore", *arguments, "-y"]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected a FILE argument, or the --config option, not both" in result.output
+
+    @pytest.mark.parametrize("content", ["not json", None])
+    def test_backup_restore_unreadable_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path, content
+    ):
+        """A file that is missing, or is not JSON, is an error."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "backup.json"
+        if content is not None:
+            source.write_text(content)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "backup", "restore", str(source), "-y"]
+        )
+
+        assert result.exit_code == 1
+        assert "Cannot read backup file" in result.output
+        mock_client.restore_backup.assert_not_called()
+
+    def test_power_modes(self, runner: CliRunner, mocker: MockerFixture):
+        """system power modes prints the power modes of the host."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "power", "modes"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.POWER_MODES
+
+    @pytest.mark.parametrize(
+        ("command", "message"),
+        [
+            ("reboot", "Refusing to reboot the Volumio host without -y/--yes"),
+            ("shutdown", "Refusing to shut the Volumio host down without -y/--yes"),
+            ("standby", "Refusing to put the Volumio host on standby without -y/--yes"),
+        ],
+    )
+    def test_power_actions_refused_without_yes(
+        self, runner: CliRunner, mocker: MockerFixture, command, message
+    ):
+        """Without -y/--yes the host is left alone."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "power", command])
+
+        assert result.exit_code == 1
+        assert message in result.output
+        getattr(mock_client, command).assert_not_called()
+
+    @pytest.mark.parametrize("command", ["reboot", "shutdown"])
+    def test_power_actions(self, runner: CliRunner, mocker: MockerFixture, command):
+        """With -y/--yes the host reboots or shuts down."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "power", command, "-y"])
+
+        assert result.exit_code == 0
+        assert f"Command '{command}' executed successfully" in result.output
+        getattr(mock_client, command).assert_called_once_with()
+
+    @pytest.mark.parametrize(
+        ("has_standby_mode", "warned"), [(True, False), (False, True), (None, True)]
+    )
+    def test_power_standby(
+        self, runner: CliRunner, mocker: MockerFixture, has_standby_mode, warned
+    ):
+        """With -y/--yes the host goes on standby, warned about when it has no such mode."""
+        mock_client = self._mock_websocket_client(
+            mocker, power_modes={"hasPowerOffMode": True, "hasStandbyMode": has_standby_mode}
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "power", "standby", "-y"])
+
+        assert result.exit_code == 0
+        assert "Command 'standby' executed successfully" in result.output
+        assert ("reports no standby mode" in result.output) is warned
+        mock_client.standby.assert_called_once_with()
+
+    def test_timezone_prints_the_zone(self, runner: CliRunner, mocker: MockerFixture):
+        """system timezone alone prints the time zone of the host."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        plain = runner.invoke(main, [*self._WEBSOCKET, "system", "timezone"])
+        machine = runner.invoke(main, ["-m", *self._WEBSOCKET, "system", "timezone"])
+
+        assert plain.exit_code == 0
+        assert plain.output.strip() == "Europe/Rome"
+        assert machine.exit_code == 0
+        assert machine.output.strip() == '"Europe/Rome"'
+        assert mock_client.timezone_property.call_count == 2
+
+    def test_timezone_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system timezone list prints the zones the host can be set to."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "timezone", "list", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "Volumio Time Zones" in lines
+        assert "1. Europe/Rome" in lines
+        assert "3. UTC" in lines
+        # The group callback does not read the zone when a subcommand runs
+        mock_client.timezone_property.assert_not_called()
+
+    def test_timezone_set(self, runner: CliRunner, mocker: MockerFixture):
+        """system timezone set moves the host to a zone of the list."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "timezone", "set", "UTC"])
+
+        assert result.exit_code == 0
+        assert "Command 'timezone \"UTC\"' executed successfully" in result.output
+        mock_client.available_timezones_property.assert_called_once_with()
+        mock_client.timezone_property.assert_called_once_with("UTC")
+
+    def test_timezone_set_unknown(self, runner: CliRunner, mocker: MockerFixture):
+        """A zone outside the list is refused."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "timezone", "set", "Mars/Olympus"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Time zone not found: "Mars/Olympus"' in result.output
+        mock_client.timezone_property.assert_not_called()
+
+    def test_update_automatic(self, runner: CliRunner, mocker: MockerFixture):
+        """system update automatic prints whether the host updates itself."""
+        self._mock_websocket_client(mocker)
+
+        plain = runner.invoke(main, [*self._WEBSOCKET, "system", "update", "automatic"])
+        machine = runner.invoke(main, ["-m", *self._WEBSOCKET, "system", "update", "automatic"])
+
+        assert plain.exit_code == 0
+        assert plain.output.strip() == "True"
+        assert machine.exit_code == 0
+        assert machine.output.strip() == "true"
+
+    def test_update_channel_prints_the_channel(self, runner: CliRunner, mocker: MockerFixture):
+        """system update channel alone prints the channel in use."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "update", "channel"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "stable"
+
+    def test_update_channel_prints_a_missing_channel(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A host reporting no channel prints an empty line."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "updater_channel", return_value={"availableChannels": []})
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "update", "channel"])
+
+        assert result.exit_code == 0
+        assert result.output == "\n"
+
+    def test_update_channel_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system update channel list prints the channels the host can follow."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "channel", "list", "-F", "json"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == ["stable", "test"]
+
+    def test_update_channel_set(self, runner: CliRunner, mocker: MockerFixture):
+        """system update channel set moves the host to a channel of the list."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "channel", "set", "test"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'update channel \"test\"' executed successfully" in result.output
+        mock_client.updater_channel_property.assert_called_with("test")
+
+    @pytest.mark.parametrize("channels", [["stable", "test"], []])
+    def test_update_channel_set_unknown(
+        self, runner: CliRunner, mocker: MockerFixture, channels
+    ):
+        """A channel outside the list is refused, listing the available ones."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client, "updater_channel", return_value={"availableChannels": channels}
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "channel", "set", "nightly"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Update channel not found: "nightly"' in result.output
+        assert "Available update channels:" in result.output
+        assert ('  "stable"' in result.output) is bool(channels)
+        assert ("  (none)" in result.output) is not bool(channels)
+
+    @pytest.mark.parametrize(
+        ("options", "member", "label"),
+        [
+            ([], "check_for_update", "update check"),
+            (["--cached"], "check_update_cache", "update check cached"),
+        ],
+    )
+    def test_update_check(
+        self, runner: CliRunner, mocker: MockerFixture, options, member, label
+    ):
+        """system update check asks the host to check, anew or in its cache."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "update", "check", *options])
+
+        assert result.exit_code == 0
+        assert f"Command '{label}' executed successfully" in result.output
+        getattr(mock_client, member).assert_called_once_with()
+
+    def test_update_install_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is installed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "update", "install"])
+
+        assert result.exit_code == 1
+        assert "Refusing to install the update without -y/--yes" in result.output
+        mock_client.update.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("options", "ignore"), [([], False), (["--ignore-integrity-check"], True)]
+    )
+    def test_update_install(self, runner: CliRunner, mocker: MockerFixture, options, ignore):
+        """With -y/--yes the update is installed, checked unless told otherwise."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "install", "-y", *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'update install' executed successfully" in result.output
+        mock_client.update.assert_called_once_with(ignore)
+
+    @pytest.mark.parametrize(
+        ("arguments", "operation"),
+        [
+            (["name"], "the system settings"),
+            (["name", "Kitchen"], "the system settings"),
+            (["backup", "create"], "the system settings"),
+            (["backup", "restore", "--config", "-y"], "the system settings"),
+            (["power", "modes"], "the system settings"),
+            (["power", "reboot", "-y"], "the system settings"),
+            (["power", "shutdown", "-y"], "the system settings"),
+            (["power", "standby", "-y"], "the system settings"),
+            (["timezone"], "the system settings"),
+            (["timezone", "list"], "the system settings"),
+            (["timezone", "set", "UTC"], "the system settings"),
+            (["update", "automatic"], "the updates"),
+            (["update", "channel"], "the updates"),
+            (["update", "channel", "list"], "the updates"),
+            (["update", "channel", "set", "test"], "the updates"),
+            (["update", "check"], "the updates"),
+            (["update", "check", "--cached"], "the updates"),
+            (["update", "install", "-y"], "the updates"),
+        ],
+    )
+    def test_a_rest_client_refuses(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, operation
+    ):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["system", *arguments])
+
+        assert result.exit_code == 1
+        assert self._refusal(operation) in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, ["--allow-fallback-to-websocket-api", "system", "name"])
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the system settings" in (
+            result.output
+        )
+        assert result.stdout.strip() == "Living Room"
         websocket.disconnect.assert_called_once_with()
         rest.close.assert_called_once_with()
 
@@ -15922,7 +16462,11 @@ class TestConfigurationCommands:
                     "system-audio-dsp": None,
                     "system-audio-inputs": None,
                     "system-audio-outputs": None,
+                    "system-backup-create": None,
                     "system-execute": None,
+                    "system-power-modes": None,
+                    "system-timezone-list": None,
+                    "system-update-channel-list": None,
                     "system-info": None,
                     "system-version": None,
                     "track-info": None,

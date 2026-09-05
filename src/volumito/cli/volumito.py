@@ -55,10 +55,13 @@ from volumito.cli.click_helpers import (
     option_artists_only,
     option_audio_file_name_template,
     option_autocompose_url,
+    option_backup_output_file,
     option_best_result_only,
     option_by_uid,
+    option_cached,
     option_check_next_track,
     option_check_playlist_name,
+    option_config,
     option_count,
     option_create_download_manifest,
     option_cue_track,
@@ -70,6 +73,7 @@ from volumito.cli.click_helpers import (
     option_format,
     option_format_table,
     option_idle_timeout,
+    option_ignore_integrity_check,
     option_item_album,
     option_item_albumart,
     option_item_title,
@@ -122,6 +126,7 @@ from volumito.cli.click_helpers import (
     render_browse_results,
     render_fields,
     render_items,
+    render_names,
     render_output_filename,
     render_payload,
     render_state,
@@ -144,6 +149,7 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
+    BACKUP_RESTORE_ARGUMENT_ERROR,
     BROWSE_LAST_ROOT_ERROR,
     COLLECTION_UPDATE_MODES_ERROR,
     COLLECTION_UPDATE_URI_ERROR,
@@ -193,7 +199,6 @@ from volumito.cli.pure_helpers import (
     filter_zones_fields,
     format_command_nodes,
     format_duration,
-    format_names_as_table,
     format_notification_as_line,
     format_search_results_as_table,
     format_seek,
@@ -2193,6 +2198,324 @@ def audio_volume(ctx: click.Context, output_id: str, value: int) -> None:
     )
 
 
+@system.group("backup")
+@click.pass_context
+def system_backup(ctx: click.Context) -> None:
+    """Back up and restore the configuration of the Volumio host."""
+    pass
+
+
+@system_backup.command("create")
+@click.pass_context
+@option_format
+@option_backup_output_file
+@option_overwrite_existing_files
+def system_backup_create(
+    ctx: click.Context, output_format: str, output_file: str | None, overwrite_existing_files: bool
+) -> None:
+    """Read a backup of the configuration of the Volumio host, printing or saving it.
+
+    With -o/--output-file, the backup is written to FILE as JSON, which
+    "system backup restore" reads back, instead of being printed.
+
+    Needs a WebSocket API client.
+    """
+    backup = fetch_or_exit(ctx, lambda c: c.backup())
+    if output_file is None:
+        render_payload(ctx, backup, output_format, heading="Volumio Backup")
+        return
+    if not overwrite_existing_files and os.path.exists(output_file):
+        error(
+            f'File already exists: "{output_file}" (use --overwrite-existing-files to overwrite)'
+        )
+        sys.exit(1)
+    try:
+        with open(output_file, "w", encoding="utf-8") as backup_file:
+            json.dump(backup, backup_file, indent=2)
+    except OSError as e:
+        error(f'Cannot write backup file "{output_file}": {e}')
+        sys.exit(1)
+    if ctx.obj["machine_readable"]:
+        click.echo(json.dumps(output_file))
+    else:
+        info(f'Created backup file "{output_file}"')
+
+
+@system_backup.command("restore")
+@click.pass_context
+@click.argument("file", required=False, default=None, type=str)
+@option_config
+@option_yes
+def system_backup_restore(ctx: click.Context, file: str | None, config: bool, yes: bool) -> None:
+    """Restore the backup saved in FILE, or the configuration of the plugins with --config.
+
+    FILE is what "system backup create -o" wrote. IMPORTANT: the configuration of the
+    Volumio host is replaced; it is restored only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if (file is None) == (not config):
+        raise click.UsageError(BACKUP_RESTORE_ARGUMENT_ERROR)
+    if config:
+        if not yes:
+            error("Refusing to restore the configuration of the plugins without -y/--yes")
+            sys.exit(1)
+        execute_command(ctx, "restore config", lambda c: c.restore_config())
+        return
+    if not yes:
+        error(f'Refusing to restore the backup without -y/--yes: "{file}"')
+        sys.exit(1)
+    try:
+        with open(str(file), encoding="utf-8") as backup_file:
+            backup = json.load(backup_file)
+    except (OSError, ValueError) as e:
+        error(f'Cannot read backup file "{file}": {e}')
+        sys.exit(1)
+    execute_command(ctx, f'restore backup "{file}"', lambda c: c.restore_backup(backup))
+
+
+@system.command("name")
+@click.pass_context
+@click.argument("value", required=False, default=None, type=str)
+def system_name(ctx: click.Context, value: str | None) -> None:
+    """Print or set the name of the Volumio host.
+
+    Without VALUE, print the name. Otherwise rename the host to VALUE, which changes
+    what "system info" reports.
+
+    Needs a WebSocket API client.
+    """
+    if value is None:
+        name = fetch_or_exit(ctx, lambda c: c.device_name)
+        click.echo(json.dumps(name) if ctx.obj["machine_readable"] else name or "")
+        return
+    new_name = value
+
+    def set_name(client: APIClient) -> None:
+        client.device_name = new_name
+
+    execute_command(ctx, f'name "{new_name}"', set_name)
+
+
+@system.group("power")
+@click.pass_context
+def system_power(ctx: click.Context) -> None:
+    """Power the Volumio host down, or restart it."""
+    pass
+
+
+@system_power.command("modes")
+@click.pass_context
+@option_format
+def system_power_modes(ctx: click.Context, output_format: str) -> None:
+    """Print whether the Volumio host can be powered off and put on standby.
+
+    Needs a WebSocket API client.
+    """
+    modes = fetch_or_exit(ctx, lambda c: c.power_modes)
+    render_payload(ctx, modes.raw, output_format, heading="Volumio Power Modes")
+
+
+@system_power.command("reboot")
+@click.pass_context
+@option_yes
+def system_power_reboot(ctx: click.Context, yes: bool) -> None:
+    """Restart the Volumio host.
+
+    IMPORTANT: the host drops every connection as it goes down; it is restarted only
+    when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to reboot the Volumio host without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "reboot", lambda c: c.reboot())
+
+
+@system_power.command("shutdown")
+@click.pass_context
+@option_yes
+def system_power_shutdown(ctx: click.Context, yes: bool) -> None:
+    """Power the Volumio host off.
+
+    IMPORTANT: the host does not come back on its own; it is powered off only when
+    -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to shut the Volumio host down without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "shutdown", lambda c: c.shutdown())
+
+
+@system_power.command("standby")
+@click.pass_context
+@option_yes
+def system_power_standby(ctx: click.Context, yes: bool) -> None:
+    """Put the Volumio host on standby.
+
+    IMPORTANT: a host without a standby mode (see "system power modes") powers off
+    instead, and does not come back on its own; the host is put on standby only when
+    -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to put the Volumio host on standby without -y/--yes")
+        sys.exit(1)
+    modes = fetch_or_exit(ctx, lambda c: c.power_modes)
+    if not modes.has_standby_mode:
+        warning("The Volumio host reports no standby mode: it powers off instead")
+    execute_command(ctx, "standby", lambda c: c.standby())
+
+
+@system.group("timezone", invoke_without_command=True)
+@click.pass_context
+def system_timezone(ctx: click.Context) -> None:
+    """Print the time zone of the Volumio host, or manage it with the subcommands.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        zone = fetch_or_exit(ctx, lambda c: c.timezone)
+        click.echo(json.dumps(zone) if ctx.obj["machine_readable"] else zone)
+
+
+@system_timezone.command("list")
+@click.pass_context
+@option_format
+def system_timezone_list(ctx: click.Context, output_format: str) -> None:
+    """Print the time zones the Volumio host can be set to.
+
+    Needs a WebSocket API client.
+    """
+    zones = fetch_or_exit(ctx, lambda c: c.available_timezones)
+    render_names(ctx, list(zones), output_format, "Volumio Time Zones")
+
+
+@system_timezone.command("set")
+@click.pass_context
+@click.argument("value", type=str)
+def system_timezone_set(ctx: click.Context, value: str) -> None:
+    """Move the Volumio host to the time zone VALUE, one of "system timezone list".
+
+    Needs a WebSocket API client.
+    """
+    zones = fetch_or_exit(ctx, lambda c: c.available_timezones)
+    if value not in list(zones):
+        error(f'Time zone not found: "{value}" (see "system timezone list")')
+        sys.exit(1)
+
+    def set_timezone(client: APIClient) -> None:
+        client.timezone = value
+
+    execute_command(ctx, f'timezone "{value}"', set_timezone)
+
+
+@system.group("update")
+@click.pass_context
+def system_update(ctx: click.Context) -> None:
+    """Check for, and install, the updates of the Volumio host."""
+    pass
+
+
+@system_update.command("automatic")
+@click.pass_context
+def system_update_automatic(ctx: click.Context) -> None:
+    """Print whether the Volumio host updates itself.
+
+    Needs a WebSocket API client.
+    """
+    value = fetch_or_exit(ctx, lambda c: c.automatic_update_enabled)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@system_update.group("channel", invoke_without_command=True)
+@click.pass_context
+def system_update_channel(ctx: click.Context) -> None:
+    """Print the update channel of the Volumio host, or manage it with the subcommands.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        channel = fetch_or_exit(ctx, lambda c: c.updater_channel).current_channel
+        click.echo(json.dumps(channel) if ctx.obj["machine_readable"] else channel or "")
+
+
+@system_update_channel.command("list")
+@click.pass_context
+@option_format
+def system_update_channel_list(ctx: click.Context, output_format: str) -> None:
+    """Print the update channels the Volumio host can follow.
+
+    Needs a WebSocket API client.
+    """
+    channel = fetch_or_exit(ctx, lambda c: c.updater_channel)
+    render_names(ctx, channel.available_channels, output_format, "Volumio Update Channels")
+
+
+@system_update_channel.command("set")
+@click.pass_context
+@click.argument("value", type=str)
+def system_update_channel_set(ctx: click.Context, value: str) -> None:
+    """Move the Volumio host to the update channel VALUE, one of "system update channel list".
+
+    Needs a WebSocket API client.
+    """
+    channel = fetch_or_exit(ctx, lambda c: c.updater_channel)
+    if value not in channel.available_channels:
+        error(f'Update channel not found: "{value}"')
+        error("Available update channels:")
+        for available in channel.available_channels:
+            error(f'  "{available}"')
+        if not channel.available_channels:
+            error("  (none)")
+        sys.exit(1)
+
+    def set_channel(client: APIClient) -> None:
+        client.updater_channel = value
+
+    execute_command(ctx, f'update channel "{value}"', set_channel)
+
+
+@system_update.command("check")
+@click.pass_context
+@option_cached
+def system_update_check(ctx: click.Context, cached: bool) -> None:
+    """Ask the Volumio host to check whether an update is available.
+
+    The host answers through the events its user interface listens for, not to this
+    command, which exits once the check is asked for. With --cached, the host checks
+    the update information it cached instead.
+
+    Needs a WebSocket API client.
+    """
+    if cached:
+        execute_command(ctx, "update check cached", lambda c: c.check_update_cache())
+    else:
+        execute_command(ctx, "update check", lambda c: c.check_for_update())
+
+
+@system_update.command("install")
+@click.pass_context
+@option_ignore_integrity_check
+@option_yes
+def system_update_install(ctx: click.Context, ignore_integrity_check: bool, yes: bool) -> None:
+    """Install the update the Volumio host found.
+
+    IMPORTANT: the host restarts when done; the update is installed only when -y/--yes
+    is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to install the update without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "update install", lambda c: c.update(ignore_integrity_check))
+
+
 @main.group()
 @click.pass_context
 def collection(ctx: click.Context) -> None:
@@ -2913,17 +3236,7 @@ def playlist_import(ctx: click.Context) -> None:
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the Volumio playlists saved by the current user."""
     names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-
-    if output_format == "raw":
-        output = json.dumps(names)
-    elif output_format == "json":
-        output = json.dumps(names, indent=2)
-    elif output_format == "table":
-        output = format_names_as_table(names, "Volumio Playlists")
-    else:  # pretty
-        output = json.dumps(names, indent=4, ensure_ascii=False)
-
-    echo_data(ctx, output)
+    render_names(ctx, names, output_format, "Volumio Playlists")
 
 
 @playlist.command("play")
@@ -3350,17 +3663,7 @@ def notification(ctx: click.Context) -> None:
 def notification_list(ctx: click.Context, output_format: str) -> None:
     """List the URLs registered to receive the push notifications."""
     urls = fetch_or_exit(ctx, lambda c: c.notifications.urls)
-
-    if output_format == "raw":
-        output = json.dumps(urls)
-    elif output_format == "json":
-        output = json.dumps(urls, indent=2)
-    elif output_format == "table":
-        output = format_names_as_table(urls, "Volumio Notification URLs")
-    else:  # pretty
-        output = json.dumps(urls, indent=4, ensure_ascii=False)
-
-    echo_data(ctx, output)
+    render_names(ctx, urls, output_format, "Volumio Notification URLs")
 
 
 @notification.command("listen")
