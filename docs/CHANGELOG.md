@@ -16,6 +16,8 @@ All notable changes to this project will be documented in this file.
 - [Issue #15](https://github.com/pettarin/volumito/issues/15):
   CLI commands for the functionality the WebSocket API
   offers on top of the REST API
+- Global option `--allow-fallback-to-websocket-api`,
+  with the corresponding configuration key
 
 
 ## [0.4.0] - 2026-09-04

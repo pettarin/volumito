@@ -23,6 +23,7 @@ from volumito.cli.api_client import (
     AsyncWebSocketAPIClient,
     SyncRESTAPIClient,
     SyncWebSocketAPIClient,
+    UnsupportedOperationError,
 )
 from volumito.cli.click_helpers import (
     APIClientParamType,
@@ -1660,6 +1661,59 @@ class TestCreateClient:
         with pytest.raises(ValueError, match="Unknown API client 'nope'"):
             create_client(VolumioHostConfiguration(), 5.0, api_client="nope")
 
+    @pytest.mark.parametrize("api_client", ["synchronous_rest", "asynchronous_rest"])
+    def test_a_rest_adapter_refuses_the_websocket_members_by_default(self, api_client):
+        """Without the switch, a REST adapter fails the members needing the WebSocket API."""
+        client = create_client(VolumioHostConfiguration(), 5.0, api_client=api_client)
+        expected = (
+            f"The {client.description} does not offer the sleep timer and the alarms: use "
+            "--api-client synchronous_websocket or asynchronous_websocket, "
+            "or --allow-fallback-to-websocket-api"
+        )
+
+        with client, pytest.raises(UnsupportedOperationError) as excinfo:
+            _ = client.sleep_timer
+
+        assert str(excinfo.value) == expected
+
+    @pytest.mark.parametrize(
+        ("api_client", "websocket_class"),
+        [
+            ("synchronous_rest", "VolumioWebSocketClient"),
+            ("asynchronous_rest", "VolumioAsyncWebSocketClient"),
+        ],
+    )
+    def test_a_rest_adapter_falls_back_to_the_websocket_client_of_its_kind(
+        self, mocker, api_client, websocket_class
+    ):
+        """With the switch, a REST adapter serves those members through a WebSocket client."""
+        instance = mocker.Mock()
+        instance.logger = LOGGER
+        if api_client == "asynchronous_rest":
+            instance.connect = AsyncMock()
+            instance.disconnect = AsyncMock()
+            instance.get_sleep_timer = AsyncMock(return_value="timer")
+        else:
+            type(instance).sleep_timer = PropertyMock(return_value="timer")
+        mock_class = mocker.patch(
+            f"volumito.cli.click_helpers.{websocket_class}", return_value=instance
+        )
+        host_configuration = VolumioHostConfiguration()
+        client = create_client(
+            host_configuration,
+            5.0,
+            websocket_timeout=7.0,
+            api_client=api_client,
+            allow_fallback_to_websocket_api=True,
+        )
+
+        with client:
+            assert client.sleep_timer == "timer"
+
+        mock_class.assert_called_once_with(host_configuration, 7.0, LOGGER)
+        instance.connect.assert_called_once_with()
+        instance.disconnect.assert_called_once_with()
+
 
 class TestAPIClientOption:
     """Test cases for the -C/--api-client option and the options accompanying it."""
@@ -1836,6 +1890,42 @@ class TestAPIClientOption:
         assert "Invalid value for" in result.output
         assert "'--api-client'" in result.output
 
+    @pytest.mark.parametrize(
+        ("arguments", "allowed"),
+        [
+            ([], False),
+            (["--allow-fallback-to-websocket-api"], True),
+            (["--no-allow-fallback-to-websocket-api"], False),
+        ],
+    )
+    def test_the_websocket_fallback_switch_reaches_the_client(
+        self, runner, mocker, arguments, allowed
+    ):
+        """The switch allowing a REST API client to fall back is passed on, off by default."""
+        create = mocker.patch("volumito.cli.click_helpers.create_client")
+        create.return_value.ping.return_value = "pong"
+
+        result = runner.invoke(main, [*arguments, "system", "ping"])
+
+        assert result.exit_code == 0
+        assert "pong" in result.output
+        assert create.call_args.kwargs["allow_fallback_to_websocket_api"] is allowed
+
+    def test_the_websocket_fallback_switch_from_the_configuration_file(
+        self, runner, mocker, tmp_path
+    ):
+        """The fallback to a WebSocket API client can be allowed from the file."""
+        create = mocker.patch("volumito.cli.click_helpers.create_client")
+        create.return_value.ping.return_value = "pong"
+        config = self._write_configuration(
+            tmp_path, "volumio:\n  allow-fallback-to-websocket-api: true\n"
+        )
+
+        result = runner.invoke(main, ["-c", config, "system", "ping"])
+
+        assert result.exit_code == 0
+        assert create.call_args.kwargs["allow_fallback_to_websocket_api"] is True
+
     def test_the_fallback_switch_from_the_configuration_file(self, runner, mocker, tmp_path):
         """The fallback to the REST API client can be allowed from the file."""
         self._mock_client(mocker, "synchronous_websocket")
@@ -2004,6 +2094,7 @@ class TestCLICommands:
         assert "info" in result.output
         assert "version" in result.output
         assert "--allow-fallback-to-rest-api" in result.output
+        assert "--allow-fallback-to-websocket-api" in result.output
         assert "--api-client" in result.output
         assert "--machine-readable" in result.output
         assert "--rest-api-timeout" in result.output
@@ -13434,6 +13525,7 @@ class TestConfigurationCommands:
                     "scheme": "http",
                     "api-client": "synchronous_rest",
                     "allow-fallback-to-rest-api": False,
+                    "allow-fallback-to-websocket-api": False,
                     "rest-api-port": 3000,
                     "websocket-port": 3000,
                     "mpd-port": 6600,

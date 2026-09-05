@@ -6,12 +6,28 @@
 
 import asyncio
 import threading
+from datetime import timedelta
 from unittest.mock import AsyncMock, Mock, PropertyMock, call
 
 import pytest
 
 from volumito.cli.api_client import (
+    ALARM_OPERATION,
+    AUDIO_OPERATION,
+    COLLECTION_OPERATION,
     EVENT_LOOP_THREAD_NAME,
+    EVENT_OPERATION,
+    FAVOURITE_OPERATION,
+    MULTIROOM_OPERATION,
+    NETWORK_OPERATION,
+    PLAYBACK_OPERATION,
+    PLAYLIST_OPERATION,
+    PLUGIN_OPERATION,
+    QUEUE_OPERATION,
+    SHARE_OPERATION,
+    SYSTEM_OPERATION,
+    UI_OPERATION,
+    UPDATE_OPERATION,
     APIClient,
     AsyncAPIClient,
     AsyncRESTAPIClient,
@@ -97,6 +113,144 @@ UNSUPPORTED = [
 ]
 """The methods the WebSocket API does not offer, and how the messages name them."""
 
+WEBSOCKET_METHODS = [
+    ("add_and_play", ("uri",), {}, QUEUE_OPERATION),
+    ("add_cue_track", ("uri", 2, "mpd"), {}, QUEUE_OPERATION),
+    ("add_radio_favourite", ("uri",), {}, FAVOURITE_OPERATION),
+    ("add_share", ("name", "//host/share", "cifs"), {"username": "user"}, SHARE_OPERATION),
+    ("add_to_favourites", ("uri", "title", "mpd", "albumart"), {}, FAVOURITE_OPERATION),
+    ("add_to_playlist", ("name", "uri", "mpd"), {}, PLAYLIST_OPERATION),
+    ("add_uids_to_queue", (["1", "2"],), {}, QUEUE_OPERATION),
+    ("add_web_radio", ("name", "uri"), {}, FAVOURITE_OPERATION),
+    ("audio_output_pause", ("output",), {}, AUDIO_OPERATION),
+    ("audio_output_play", ("output",), {}, AUDIO_OPERATION),
+    ("backup", (), {}, SYSTEM_OPERATION),
+    ("call_plugin_method", ("music_service/mpd", "method", {"k": "v"}), {}, PLUGIN_OPERATION),
+    ("check_for_update", (), {}, UPDATE_OPERATION),
+    ("check_update_cache", (), {}, UPDATE_OPERATION),
+    ("consume", (True,), {}, QUEUE_OPERATION),
+    ("create_playlist", ("name",), {}, PLAYLIST_OPERATION),
+    ("delete_background", ("name",), {}, UI_OPERATION),
+    ("delete_folder", ("path",), {}, COLLECTION_OPERATION),
+    ("delete_playlist", ("name",), {}, PLAYLIST_OPERATION),
+    ("delete_share", ("share",), {}, SHARE_OPERATION),
+    ("disable_audio_output", ("output",), {}, AUDIO_OPERATION),
+    ("disable_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
+    ("discover_network_shares", (), {}, SHARE_OPERATION),
+    ("edit_share", ("share",), {"name": "new"}, SHARE_OPERATION),
+    ("emit", ("event", {"k": "v"}), {}, EVENT_OPERATION),
+    ("enable_audio_output", ("output",), {}, AUDIO_OPERATION),
+    ("enable_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
+    ("enqueue_playlist", ("name",), {}, PLAYLIST_OPERATION),
+    ("get_playlist_content", ("name",), {}, PLAYLIST_OPERATION),
+    ("get_plugin_config", ("page",), {}, PLUGIN_OPERATION),
+    ("get_share", ("share",), {}, SHARE_OPERATION),
+    ("goto", ("artist", "value"), {}, COLLECTION_OPERATION),
+    ("import_service_playlists", (), {}, PLAYLIST_OPERATION),
+    ("install_plugin", ("url",), {}, PLUGIN_OPERATION),
+    ("manage_plugin", ("enable", "category", "name"), {}, PLUGIN_OPERATION),
+    ("modify_plugin_status", ("category", "name", True), {}, PLUGIN_OPERATION),
+    ("move_in_queue", (1, 2), {}, QUEUE_OPERATION),
+    ("off", ("event", None), {}, EVENT_OPERATION),
+    ("on", ("event", print), {}, EVENT_OPERATION),
+    ("play_favourites", ("name",), {}, FAVOURITE_OPERATION),
+    ("play_next", ("uri", "title", "album"), {}, QUEUE_OPERATION),
+    ("play_radio_favourites", (), {}, FAVOURITE_OPERATION),
+    ("play_volatile", (2,), {}, PLAYBACK_OPERATION),
+    ("reboot", (), {}, SYSTEM_OPERATION),
+    ("regenerate_thumbnails", (), {}, COLLECTION_OPERATION),
+    ("remove_from_favourites", ("uri", "mpd"), {}, FAVOURITE_OPERATION),
+    ("remove_from_playlist", ("name", "uri", "mpd"), {}, PLAYLIST_OPERATION),
+    ("remove_from_queue", (3,), {}, QUEUE_OPERATION),
+    ("remove_radio_favourite", ("uri", "name"), {}, FAVOURITE_OPERATION),
+    ("remove_web_radio", ("name",), {}, FAVOURITE_OPERATION),
+    ("replace_queue_with_cue_track", ("uri", 2, "mpd"), {}, QUEUE_OPERATION),
+    ("request", ("event", "pushEvent", {"k": "v"}, 1.0), {}, EVENT_OPERATION),
+    ("rescan_library", (), {}, COLLECTION_OPERATION),
+    ("restore_backup", ({"k": "v"},), {}, SYSTEM_OPERATION),
+    ("restore_config", (), {}, SYSTEM_OPERATION),
+    ("safe_remove_drive", ("name",), {}, SHARE_OPERATION),
+    ("save_queue_as_playlist", ("name",), {}, QUEUE_OPERATION),
+    ("save_wireless_settings", ("ssid", "secret"), {}, NETWORK_OPERATION),
+    ("set_alarms", ([],), {}, ALARM_OPERATION),
+    ("set_as_multiroom_client", ("server",), {}, MULTIROOM_OPERATION),
+    ("set_as_multiroom_server", (), {}, MULTIROOM_OPERATION),
+    ("set_as_multiroom_single", (), {}, MULTIROOM_OPERATION),
+    ("set_audio_output_volume", ("output", 50), {}, AUDIO_OPERATION),
+    ("set_background", ("name", "path"), {}, UI_OPERATION),
+    ("set_experience_settings", (True,), {}, UI_OPERATION),
+    ("set_infinity_playback", (True,), {}, PLAYBACK_OPERATION),
+    ("set_language", ("en", "English"), {}, UI_OPERATION),
+    ("set_multiroom", ({"k": "v"},), {}, MULTIROOM_OPERATION),
+    ("set_music_source_enabled", ("name", True), {}, COLLECTION_OPERATION),
+    ("set_output_device", ("device", "mixer"), {}, AUDIO_OPERATION),
+    ("set_sleep_timer", (timedelta(minutes=5),), {}, ALARM_OPERATION),
+    ("shutdown", (), {}, SYSTEM_OPERATION),
+    ("standby", (), {}, SYSTEM_OPERATION),
+    ("super_search", ("query",), {}, COLLECTION_OPERATION),
+    ("uninstall_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
+    ("update", (True,), {}, UPDATE_OPERATION),
+    ("update_all_metadata", (), {}, COLLECTION_OPERATION),
+    ("update_library", ("uri",), {}, COLLECTION_OPERATION),
+    ("update_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
+    ("update_service_tracklist", ("service",), {}, COLLECTION_OPERATION),
+    ("write_multiroom", ({"k": "v"},), {}, MULTIROOM_OPERATION),
+]
+"""The methods the REST API does not offer: name, positional and keyword arguments, and
+how the messages name them. The WebSocket adapters forward them; the REST ones fall back."""
+
+WEBSOCKET_HANDLER_METHODS = ["off", "on"]
+"""The methods registering the event handlers, plain calls on the asynchronous client too."""
+
+WEBSOCKET_PROPERTIES = [
+    ("alarms", "get_alarms", ALARM_OPERATION),
+    ("audio_outputs", "get_audio_outputs", AUDIO_OPERATION),
+    ("automatic_update_enabled", "is_automatic_update_enabled", UPDATE_OPERATION),
+    ("available_timezones", "get_available_timezones", SYSTEM_OPERATION),
+    ("backgrounds", "get_backgrounds", UI_OPERATION),
+    ("browse_sources", "get_browse_sources", COLLECTION_OPERATION),
+    ("device_name", "get_device_name", SYSTEM_OPERATION),
+    ("dsp_config", "get_dsp_config", AUDIO_OPERATION),
+    ("experience_settings", "get_experience_settings", UI_OPERATION),
+    ("extended_output_devices", "get_extended_output_devices", AUDIO_OPERATION),
+    ("infinity_playback", "get_infinity_playback", PLAYBACK_OPERATION),
+    ("input_sources", "get_input_sources", AUDIO_OPERATION),
+    ("installed_plugins", "get_installed_plugins", PLUGIN_OPERATION),
+    ("languages", "get_languages", UI_OPERATION),
+    ("last_browse", "get_last_browse", COLLECTION_OPERATION),
+    ("menu_items", "get_menu_items", UI_OPERATION),
+    ("multiroom", "get_multiroom", MULTIROOM_OPERATION),
+    ("music_sources", "get_music_sources", COLLECTION_OPERATION),
+    ("network_info", "get_network_info", NETWORK_OPERATION),
+    ("output_devices", "get_output_devices", AUDIO_OPERATION),
+    ("power_modes", "get_power_modes", SYSTEM_OPERATION),
+    ("privacy_settings", "get_privacy_settings", UI_OPERATION),
+    ("shares", "get_shares", SHARE_OPERATION),
+    ("sleep_timer", "get_sleep_timer", ALARM_OPERATION),
+    ("timezone", "get_timezone", SYSTEM_OPERATION),
+    ("ui_settings", "get_ui_settings", UI_OPERATION),
+    ("updater_channel", "get_updater_channel", UPDATE_OPERATION),
+    ("usb_drives", "get_usb_drives", SHARE_OPERATION),
+    ("wireless_networks", "get_wireless_networks", NETWORK_OPERATION),
+    ("wireless_networks_cache", "get_wireless_networks_cache", NETWORK_OPERATION),
+]
+"""The read properties the REST API does not offer: the name, the coroutine of the
+asynchronous client, and how the messages name them."""
+
+WEBSOCKET_REMEDIES = (
+    "--api-client synchronous_websocket or asynchronous_websocket, "
+    "or --allow-fallback-to-websocket-api"
+)
+"""How the error message of a REST adapter names the ways of reaching the WebSocket API."""
+
+WEBSOCKET_SETTERS = [
+    ("device_name", "set_device_name", SYSTEM_OPERATION),
+    ("timezone", "set_timezone", SYSTEM_OPERATION),
+    ("updater_channel", "set_updater_channel", UPDATE_OPERATION),
+]
+"""The assignable properties the REST API does not offer: the name, the coroutine of the
+asynchronous client, and how the messages name them."""
+
 _ENVELOPE = {
     "navigation": {
         "lists": [
@@ -161,6 +315,33 @@ class TestSyncAdapters:
         setattr(adapter_class(client), name, 42)
 
         assert getattr(client, name) == 42
+
+    @pytest.mark.parametrize(("name", "args", "kwargs", "_operation"), WEBSOCKET_METHODS)
+    def test_websocket_method_forwarded(self, name, args, kwargs, _operation):
+        """The WebSocket adapter forwards the methods the REST API lacks as they are."""
+        client = Mock()
+        getattr(client, name).return_value = "outcome"
+
+        assert getattr(SyncWebSocketAPIClient(client), name)(*args, **kwargs) == "outcome"
+        getattr(client, name).assert_called_once_with(*args, **kwargs)
+
+    @pytest.mark.parametrize(("name", "_async_name", "_operation"), WEBSOCKET_PROPERTIES)
+    def test_websocket_property_forwarded(self, name, _async_name, _operation):
+        """The WebSocket adapter reads the properties the REST API lacks from the client."""
+        client = Mock()
+        prop = _property(client, name, "value")
+
+        assert getattr(SyncWebSocketAPIClient(client), name) == "value"
+        prop.assert_called_once_with()
+
+    @pytest.mark.parametrize(("name", "_async_name", "_operation"), WEBSOCKET_SETTERS)
+    def test_websocket_setter_forwarded(self, name, _async_name, _operation):
+        """Assigning a property the REST API lacks assigns the one of the client."""
+        client = Mock()
+
+        setattr(SyncWebSocketAPIClient(client), name, "new")
+
+        assert getattr(client, name) == "new"
 
     @pytest.mark.parametrize(("name", "args", "kwargs"), REST_ONLY_METHODS)
     def test_rest_only_method_forwarded(self, name, args, kwargs):
@@ -275,6 +456,51 @@ class TestAsyncAdapters:
         with adapter_class(client) as adapter:
             setattr(adapter, name, 42)
         getattr(client, async_name).assert_awaited_once_with(42)
+
+    @pytest.mark.parametrize(
+        ("name", "args", "kwargs", "_operation"),
+        [row for row in WEBSOCKET_METHODS if row[0] not in WEBSOCKET_HANDLER_METHODS],
+    )
+    def test_websocket_method_awaited(self, name, args, kwargs, _operation):
+        """The WebSocket adapter awaits the coroutines the REST API lacks as they are."""
+        client = _async_client()
+        setattr(client, name, AsyncMock(return_value="outcome"))
+
+        with AsyncWebSocketAPIClient(client) as adapter:
+            assert getattr(adapter, name)(*args, **kwargs) == "outcome"
+        getattr(client, name).assert_awaited_once_with(*args, **kwargs)
+
+    @pytest.mark.parametrize(
+        ("name", "args", "kwargs", "_operation"),
+        [row for row in WEBSOCKET_METHODS if row[0] in WEBSOCKET_HANDLER_METHODS],
+    )
+    def test_websocket_handler_registered_directly(self, name, args, kwargs, _operation):
+        """Registering a handler is a plain call on the client, needing no loop."""
+        client = _async_client()
+        getattr(client, name).return_value = "outcome"
+
+        assert getattr(AsyncWebSocketAPIClient(client), name)(*args, **kwargs) == "outcome"
+        getattr(client, name).assert_called_once_with(*args, **kwargs)
+
+    @pytest.mark.parametrize(("name", "async_name", "_operation"), WEBSOCKET_PROPERTIES)
+    def test_websocket_property_awaited(self, name, async_name, _operation):
+        """The WebSocket adapter awaits the reading coroutines the REST API lacks."""
+        client = _async_client()
+        setattr(client, async_name, AsyncMock(return_value="value"))
+
+        with AsyncWebSocketAPIClient(client) as adapter:
+            assert getattr(adapter, name) == "value"
+        getattr(client, async_name).assert_awaited_once_with()
+
+    @pytest.mark.parametrize(("name", "async_name", "_operation"), WEBSOCKET_SETTERS)
+    def test_websocket_setter_awaited(self, name, async_name, _operation):
+        """Assigning a property the REST API lacks awaits the setting coroutine."""
+        client = _async_client()
+        setattr(client, async_name, AsyncMock())
+
+        with AsyncWebSocketAPIClient(client) as adapter:
+            setattr(adapter, name, "new")
+        getattr(client, async_name).assert_awaited_once_with("new")
 
     @pytest.mark.parametrize(("name", "args", "kwargs"), REST_ONLY_METHODS)
     def test_rest_only_method_forwarded(self, name, args, kwargs):
@@ -524,6 +750,154 @@ class TestWebSocketFallback:
         """Closing an adapter that never fell back builds nothing."""
         factory = Mock()
         adapter, _ = self._adapter(SyncWebSocketAPIClient, fallback=factory)
+
+        adapter.close()
+
+        factory.assert_not_called()
+
+
+class TestRESTFallback:
+    """Test cases for the WebSocket API client the REST adapters fall back to."""
+
+    @staticmethod
+    def _adapter(adapter_class, fallback=None):
+        """Build a REST adapter over a mock client, opened."""
+        client = _async_client() if issubclass(adapter_class, AsyncAPIClient) else Mock()
+        adapter = adapter_class(client, fallback=fallback)
+        adapter.open()
+        return adapter, client
+
+    @staticmethod
+    def _unsupported(adapter, operation):
+        """The error message of an adapter lacking an operation, without a fallback."""
+        return f"The {adapter.description} does not offer {operation}: use {WEBSOCKET_REMEDIES}"
+
+    @staticmethod
+    def _falling_back(operation):
+        """The warning logged when an operation goes through the fallback."""
+        return (
+            f"Falling back to the WebSocket API client for {operation} "
+            "(the REST API does not offer them)"
+        )
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), WEBSOCKET_METHODS)
+    def test_unsupported_method_without_fallback(
+        self, adapter_class, name, args, kwargs, operation
+    ):
+        """Without a fallback, the methods the REST API lacks raise, naming the remedies."""
+        adapter, _ = self._adapter(adapter_class)
+
+        with pytest.raises(UnsupportedOperationError) as excinfo:
+            getattr(adapter, name)(*args, **kwargs)
+
+        assert str(excinfo.value) == self._unsupported(adapter, operation)
+        adapter.close()
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_PROPERTIES)
+    def test_unsupported_property_without_fallback(
+        self, adapter_class, name, _async_name, operation
+    ):
+        """Without a fallback, reading a property the REST API lacks raises."""
+        adapter, _ = self._adapter(adapter_class)
+
+        with pytest.raises(UnsupportedOperationError) as excinfo:
+            _ = getattr(adapter, name)
+
+        assert str(excinfo.value) == self._unsupported(adapter, operation)
+        adapter.close()
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_SETTERS)
+    def test_unsupported_setter_without_fallback(
+        self, adapter_class, name, _async_name, operation
+    ):
+        """Without a fallback, assigning a property the REST API lacks raises."""
+        adapter, _ = self._adapter(adapter_class)
+
+        with pytest.raises(UnsupportedOperationError) as excinfo:
+            setattr(adapter, name, "new")
+
+        assert str(excinfo.value) == self._unsupported(adapter, operation)
+        adapter.close()
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), WEBSOCKET_METHODS)
+    def test_method_delegated_to_the_fallback(
+        self, adapter_class, name, args, kwargs, operation
+    ):
+        """With a fallback, the methods the REST API lacks use the WebSocket API client."""
+        websocket = Mock()
+        getattr(websocket, name).return_value = "outcome"
+        factory = Mock(return_value=websocket)
+        adapter, client = self._adapter(adapter_class, fallback=factory)
+
+        assert getattr(adapter, name)(*args, **kwargs) == "outcome"
+
+        getattr(websocket, name).assert_called_once_with(*args, **kwargs)
+        websocket.open.assert_called_once_with()
+        client.logger.warning.assert_called_once_with(self._falling_back(operation))
+        adapter.close()
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_PROPERTIES)
+    def test_property_delegated_to_the_fallback(
+        self, adapter_class, name, _async_name, operation
+    ):
+        """With a fallback, the properties the REST API lacks read the WebSocket API client."""
+        websocket = Mock()
+        prop = _property(websocket, name, "value")
+        factory = Mock(return_value=websocket)
+        adapter, client = self._adapter(adapter_class, fallback=factory)
+
+        assert getattr(adapter, name) == "value"
+
+        prop.assert_called_once_with()
+        client.logger.warning.assert_called_once_with(self._falling_back(operation))
+        adapter.close()
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_SETTERS)
+    def test_setter_delegated_to_the_fallback(
+        self, adapter_class, name, _async_name, operation
+    ):
+        """With a fallback, assigning a property the REST API lacks assigns the client one."""
+        websocket = Mock()
+        factory = Mock(return_value=websocket)
+        adapter, client = self._adapter(adapter_class, fallback=factory)
+
+        setattr(adapter, name, "new")
+
+        assert getattr(websocket, name) == "new"
+        client.logger.warning.assert_called_once_with(self._falling_back(operation))
+        adapter.close()
+
+    @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
+    def test_the_fallback_is_built_once_and_closed_with_the_adapter(self, adapter_class):
+        """The WebSocket API client is built on the first operation, kept, and closed at the end."""
+        websocket = Mock()
+        _property(websocket, "sleep_timer", "timer")
+        websocket.backup.return_value = {"k": "v"}
+        factory = Mock(return_value=websocket)
+        adapter, client = self._adapter(adapter_class, fallback=factory)
+
+        assert adapter.sleep_timer == "timer"
+        assert adapter.backup() == {"k": "v"}
+        websocket.close.assert_not_called()
+        adapter.close()
+
+        factory.assert_called_once_with()
+        websocket.open.assert_called_once_with()
+        websocket.close.assert_called_once_with()
+        assert client.logger.warning.call_count == 2
+        # The session of the REST client is released after the fallback
+        client.close.assert_called_once_with()
+
+    def test_the_fallback_is_not_closed_when_never_built(self):
+        """Closing an adapter that never fell back builds nothing."""
+        factory = Mock()
+        adapter, _ = self._adapter(SyncRESTAPIClient, fallback=factory)
 
         adapter.close()
 

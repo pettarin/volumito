@@ -201,6 +201,16 @@ from volumito.clients import (
     ),
 )
 @click.option(
+    "--allow-fallback-to-websocket-api/--no-allow-fallback-to-websocket-api",
+    default=False,
+    show_default=True,
+    help=(
+        "When a REST API client is selected, serve the commands the REST API "
+        "does not offer (the ones needing a WebSocket API client) through a WebSocket "
+        "API client, instead of failing them."
+    ),
+)
+@click.option(
     "--api-client",
     "-C",
     type=APIClientParamType(),
@@ -393,6 +403,7 @@ from volumito.clients import (
 def main(
     ctx: click.Context,
     allow_fallback_to_rest_api: bool,
+    allow_fallback_to_websocket_api: bool,
     api_client: str,
     color: bool,
     host: str,
@@ -434,6 +445,7 @@ def main(
     )
     ctx.obj["api_client"] = api_client
     ctx.obj["allow_fallback_to_rest_api"] = allow_fallback_to_rest_api
+    ctx.obj["allow_fallback_to_websocket_api"] = allow_fallback_to_websocket_api
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["websocket_timeout"] = websocket_timeout

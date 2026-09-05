@@ -474,6 +474,7 @@ class TestDefaultConfigurationTemplate:
                 "scheme": "http",
                 "api-client": "synchronous_rest",
                 "allow-fallback-to-rest-api": False,
+                "allow-fallback-to-websocket-api": False,
                 "rest-api-port": 3000,
                 "websocket-port": 3000,
                 "mpd-port": 6600,

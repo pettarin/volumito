@@ -696,12 +696,15 @@ def create_client(
     websocket_timeout: float = 5.0,
     api_client: str = DEFAULT_API_CLIENT,
     allow_fallback_to_rest_api: bool = False,
+    allow_fallback_to_websocket_api: bool = False,
 ) -> APIClient:
     """Create the API client the -C/--api-client option selects, not yet open.
 
     Every client logs to the CLI console. A WebSocket API client gets a REST API client
     of the same kind (synchronous or asynchronous) to fall back to, when allowed, for
-    the operations the WebSocket API does not offer.
+    the operations the WebSocket API does not offer; a REST API client gets a WebSocket
+    API client of the same kind, when allowed, for the operations the REST API does not
+    offer. A client built to fall back to falls back to nothing itself.
 
     Args:
         host_configuration: The host configuration (scheme, host, and ports)
@@ -712,6 +715,8 @@ def create_client(
         api_client: The name of the API client, one of the -C/--api-client values
         allow_fallback_to_rest_api: Whether a WebSocket API client falls back to a REST
             API client for the operations the WebSocket API does not offer
+        allow_fallback_to_websocket_api: Whether a REST API client falls back to a
+            WebSocket API client for the operations the REST API does not offer
 
     Returns:
         The API client, to be opened before its first use
@@ -720,40 +725,52 @@ def create_client(
         ValueError: If the name is not one of the -C/--api-client values
     """
 
-    def asynchronous_rest() -> APIClient:
+    def asynchronous_rest(fallback: Callable[[], APIClient] | None = None) -> APIClient:
         return AsyncRESTAPIClient(
             VolumioAsyncRESTAPIClient(
                 host_configuration,
                 timeout=rest_api_timeout,
                 timeout_slow_endpoints=rest_api_timeout_slow_endpoints,
                 logger=LOGGER,
-            )
+            ),
+            fallback=fallback,
         )
 
-    def synchronous_rest() -> APIClient:
+    def asynchronous_websocket(fallback: Callable[[], APIClient] | None = None) -> APIClient:
+        return AsyncWebSocketAPIClient(
+            VolumioAsyncWebSocketClient(host_configuration, websocket_timeout, LOGGER),
+            fallback=fallback,
+        )
+
+    def synchronous_rest(fallback: Callable[[], APIClient] | None = None) -> APIClient:
         return SyncRESTAPIClient(
             VolumioRESTAPIClient(
                 host_configuration,
                 timeout=rest_api_timeout,
                 timeout_slow_endpoints=rest_api_timeout_slow_endpoints,
                 logger=LOGGER,
-            )
+            ),
+            fallback=fallback,
+        )
+
+    def synchronous_websocket(fallback: Callable[[], APIClient] | None = None) -> APIClient:
+        return SyncWebSocketAPIClient(
+            VolumioWebSocketClient(host_configuration, websocket_timeout, LOGGER),
+            fallback=fallback,
         )
 
     if api_client == API_CLIENT_SYNCHRONOUS_REST:
-        return synchronous_rest()
+        return synchronous_rest(
+            synchronous_websocket if allow_fallback_to_websocket_api else None
+        )
     if api_client == API_CLIENT_ASYNCHRONOUS_REST:
-        return asynchronous_rest()
+        return asynchronous_rest(
+            asynchronous_websocket if allow_fallback_to_websocket_api else None
+        )
     if api_client == API_CLIENT_SYNCHRONOUS_WEBSOCKET:
-        return SyncWebSocketAPIClient(
-            VolumioWebSocketClient(host_configuration, websocket_timeout, LOGGER),
-            fallback=synchronous_rest if allow_fallback_to_rest_api else None,
-        )
+        return synchronous_websocket(synchronous_rest if allow_fallback_to_rest_api else None)
     if api_client == API_CLIENT_ASYNCHRONOUS_WEBSOCKET:
-        return AsyncWebSocketAPIClient(
-            VolumioAsyncWebSocketClient(host_configuration, websocket_timeout, LOGGER),
-            fallback=asynchronous_rest if allow_fallback_to_rest_api else None,
-        )
+        return asynchronous_websocket(asynchronous_rest if allow_fallback_to_rest_api else None)
     raise ValueError(f"Unknown API client {api_client!r}")
 
 
@@ -1350,6 +1367,7 @@ def get_client(ctx: click.Context) -> APIClient:
             websocket_timeout=ctx.obj["websocket_timeout"],
             api_client=ctx.obj["api_client"],
             allow_fallback_to_rest_api=ctx.obj["allow_fallback_to_rest_api"],
+            allow_fallback_to_websocket_api=ctx.obj["allow_fallback_to_websocket_api"],
         )
         debug(f"Using the {client.description}")
         client.open()

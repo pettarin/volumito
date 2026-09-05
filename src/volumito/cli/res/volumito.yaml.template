@@ -383,6 +383,12 @@ volumio:
   # - false: error out
   allow-fallback-to-rest-api: false
 
+  # If a REST API client is selected,
+  # and a command that only the WebSocket API can satisfy is issued:
+  # - true: allow using a WebSocket API client (with a warning);
+  # - false: error out
+  allow-fallback-to-websocket-api: false
+
   # API client used to talk to the Volumio host, one of:
   # - synchronous_rest (default; short forms: sync_rest, sr)
   # - asynchronous_rest (required extra: async; short forms: async_rest, ar)

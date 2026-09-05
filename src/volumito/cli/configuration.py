@@ -351,6 +351,7 @@ SECTION_KEYS: dict[str, list[str]] = {
         "scheme",
         "api-client",
         "allow-fallback-to-rest-api",
+        "allow-fallback-to-websocket-api",
         "rest-api-port",
         "websocket-port",
         "mpd-port",
