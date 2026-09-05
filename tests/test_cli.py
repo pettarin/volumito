@@ -6521,21 +6521,16 @@ class TestSystemAudio:
         assert "Volumio Output Devices" in result.output
         assert "HiFiBerry DAC" in result.output
 
-    @pytest.mark.parametrize(
-        ("options", "mixer"), [([], None), (["--mixer", "Digital"], "Digital")]
-    )
-    def test_device_set(self, runner: CliRunner, mocker: MockerFixture, options, mixer):
-        """system audio device set chooses the device, with the mixer given."""
+
+    def test_device_set(self, runner: CliRunner, mocker: MockerFixture):
+        """system audio device set chooses the device."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "audio", "device", "set", "1", *options]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", "device", "set", "1"])
 
         assert result.exit_code == 0
         assert "Command 'set output device \"1\"' executed successfully" in result.output
-        mock_client.set_output_device.assert_called_once_with("1", mixer)
-
+        mock_client.set_output_device.assert_called_once_with("1")
     @pytest.mark.parametrize(
         ("command", "member"),
         [
@@ -7866,18 +7861,19 @@ class TestSystemPluginAndUi:
         assert "Command 'uninstall plugin \"music_service/mpd\"' executed" in result.output
         mock_client.uninstall_plugin.assert_called_once_with("music_service", "mpd")
 
+
     def test_plugin_update(self, runner: CliRunner, mocker: MockerFixture):
-        """system plugin update updates the plugin."""
+        """system plugin update updates the plugin from the package."""
         mock_client = self._mock_websocket_client(mocker)
+        url = "http://plugins/mpd.zip"
 
         result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "update", "music_service", "mpd"]
+            main, [*self._WEBSOCKET, "system", "plugin", "update", "music_service", "mpd", url]
         )
 
         assert result.exit_code == 0
         assert "Command 'update plugin \"music_service/mpd\"' executed" in result.output
-        mock_client.update_plugin.assert_called_once_with("music_service", "mpd")
-
+        mock_client.update_plugin.assert_called_once_with("music_service", "mpd", url)
     def test_ui_background_list(self, runner: CliRunner, mocker: MockerFixture):
         """system ui background list prints the backgrounds and the one in use."""
         self._mock_websocket_client(mocker)
@@ -8034,7 +8030,7 @@ class TestSystemPluginAndUi:
             (["plugin", "list"], "the plugins"),
             (["plugin", "manage", "restart", "a", "b"], "the plugins"),
             (["plugin", "uninstall", "a", "b", "-y"], "the plugins"),
-            (["plugin", "update", "a", "b"], "the plugins"),
+            (["plugin", "update", "a", "b", "http://p/b.zip"], "the plugins"),
             (["ui", "background", "delete", "x", "-y"], "the user interface settings"),
             (["ui", "background", "list"], "the user interface settings"),
             (["ui", "background", "set", "x"], "the user interface settings"),

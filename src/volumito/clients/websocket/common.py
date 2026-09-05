@@ -621,8 +621,17 @@ EVENT_VOLUME = "volume"
 EVENT_WRITE_MULTIROOM = "writeMultiroom"
 """The event writing the multiroom configuration of the host."""
 
+I2S_OUTPUT_DEVICE_VALUE = 1
+"""The sound card number sent beside an I2S DAC, as the setup wizard of the host sends it."""
+
 PENDING_PACKETS_POLL_INTERVAL = 0.01
 """Seconds between two looks at the packets still to be written while disconnecting."""
+
+PLUGIN_STATUS_STARTED = "START"
+"""The status starting a plugin, as the plugin status event reads it."""
+
+PLUGIN_STATUS_STOPPED = "STOP"
+"""The status stopping a plugin, as the plugin status event reads it."""
 
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
@@ -807,24 +816,54 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         return [alarm.model_dump(by_alias=True, exclude_none=True) for alarm in alarms]
 
-    def _audio_output_payload(self, output_id: str, volume: int | None = None) -> dict[str, Any]:
+
+    def _audio_output_listed(self, outputs: dict[str, Any], output_id: str) -> dict[str, Any]:
+        """Pick one audio output out of those the host lists.
+
+        The host acts on an output only when sent the entry it listed, kind and host
+        name included: the play, pause, and volume events carry that entry.
+
+        Args:
+            outputs: The audio outputs the host lists, as :attr:`audio_outputs` reads them
+            output_id: The identifier of the output
+
+        Returns:
+            The entry of the output, as the host listed it
+
+        Raises:
+            ValueError: If no output has the identifier
+        """
+        for output in outputs.get("availableOutputs") or []:
+            if isinstance(output, dict) and output.get("id") == output_id:
+                return dict(output)
+        self._fail_no_audio_output(output_id)
+
+    def _audio_output_payload(self, output_id: str) -> dict[str, str]:
         """Build the payload naming one audio output of the host.
 
         Args:
             output_id: The identifier of the output
-            volume: The volume level to set on it, when the event carries one
 
         Returns:
-            The payload the audio output events carry
-
-        Raises:
-            ValueError: If the volume level is out of range
+            The payload the enable and disable events carry
         """
-        payload: dict[str, Any] = {"id": output_id}
-        if volume is not None:
-            self._check_volume_level(volume)
-            payload["volume"] = volume
-        return payload
+        return {"id": output_id}
+
+    def _audio_output_volume_payload(self, output: dict[str, Any], volume: int) -> dict[str, Any]:
+        """Build the payload setting the volume of one audio output.
+
+        The host refuses the payload without a mute flag, and reads the kind and the
+        host name of the output: the payload carries what its user interface sends.
+
+        Args:
+            output: The entry of the output, as the host listed it
+            volume: The volume level to set on it, already checked
+
+        Returns:
+            The payload the volume event carries
+        """
+        payload = {key: output[key] for key in ("host", "id", "isSelf", "type") if key in output}
+        return {**payload, "mute": False, "volume": volume}
 
     def _browse_payload(self, uri: str | None) -> dict[str, str]:
         """Build the payload browsing a URI.
@@ -888,6 +927,43 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._log_warning(f"No alarm has the identifier {alarm_id}")
         raise ValueError(f"No alarm has the identifier {alarm_id}")
+
+
+    def _fail_no_audio_output(self, output_id: str) -> NoReturn:
+        """Refuse to act on an audio output the host does not list.
+
+        Args:
+            output_id: The identifier no output has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No audio output has the identifier "{output_id}"')
+        raise ValueError(f'No audio output has the identifier "{output_id}"')
+
+    def _fail_no_music_source(self, name: str) -> NoReturn:
+        """Refuse to act on a music source the host does not list.
+
+        Args:
+            name: The name no source has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No music source is named "{name}"')
+        raise ValueError(f'No music source is named "{name}"')
+
+    def _fail_no_output_device(self, device_id: str) -> NoReturn:
+        """Refuse to act on an output device the host does not list.
+
+        Args:
+            device_id: The identifier no device has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No output device has the identifier "{device_id}"')
+        raise ValueError(f'No output device has the identifier "{device_id}"')
 
     def _fail_no_response(self, event: str, response_event: str, waited: float) -> NoReturn:
         """Report that a Volumio instance did not answer an event in time.
@@ -1006,20 +1082,63 @@ class VolumioWebSocketCommon(VolumioCommon):
         self._check_play_index(target)
         return {"from": source, "to": target}
 
-    def _output_device_payload(self, device_id: str, mixer: str | None = None) -> dict[str, str]:
-        """Build the payload choosing the output device of the host.
+
+    def _music_source_toggled(
+        self, sources: list[Any], name: str, enabled: bool
+    ) -> dict[str, Any]:
+        """Build the payload enabling or disabling one music source.
+
+        The host reads the category and the kind of the source beside its name: the
+        payload is the entry the host listed, with the flag replaced.
 
         Args:
-            device_id: The identifier of the device
-            mixer: The mixer to drive its volume with, when one is chosen
+            sources: The music sources the host lists, as :attr:`music_sources` reads them
+            name: The name of the source
+            enabled: Whether the source is enabled
+
+        Returns:
+            The payload the event carries
+
+        Raises:
+            ValueError: If no source has the name
+        """
+        for source in sources:
+            if isinstance(source, dict) and source.get("name") == name:
+                return {**source, "enabled": enabled}
+        self._fail_no_music_source(name)
+
+    def _output_device_payload(self, devices: dict[str, Any], device_id: str) -> dict[str, Any]:
+        """Build the payload choosing the output device of the host.
+
+        The host reads the device as its setup wizard sends it: the identifier and the
+        name of a sound card, or those of an I2S DAC under their own key.
+
+        Args:
+            devices: The output devices the host lists, as :attr:`output_devices` reads them
+            device_id: The identifier of the device, a sound card or an I2S DAC
 
         Returns:
             The payload the output device event carries
+
+        Raises:
+            ValueError: If no device has the identifier
         """
-        payload = {"device": device_id}
-        if mixer is not None:
-            payload["mixer"] = mixer
-        return payload
+        cards = (devices.get("devices") or {}).get("available") or []
+        for card in cards:
+            if isinstance(card, dict) and card.get("id") == device_id:
+                return {
+                    "i2s": False,
+                    "output_device": {"value": device_id, "label": card.get("name")},
+                }
+        dacs = (devices.get("i2s") or {}).get("available") or []
+        for dac in dacs:
+            if isinstance(dac, dict) and dac.get("id") == device_id:
+                return {
+                    "i2s": True,
+                    "i2sid": {"value": device_id, "label": dac.get("name")},
+                    "output_device": {"value": I2S_OUTPUT_DEVICE_VALUE, "label": dac.get("name")},
+                }
+        self._fail_no_output_device(device_id)
 
     def _play_next_payload(
         self, uri: str, title: str | None = None, album: str | None = None
@@ -1106,6 +1225,28 @@ class VolumioWebSocketCommon(VolumioCommon):
             The payload the plugin events carry
         """
         return {"category": category, "name": name}
+
+
+    def _plugin_status_payload(
+        self, category: str, name: str, started: bool | None = None
+    ) -> dict[str, str]:
+        """Build the payload switching a plugin, as the switch events read it.
+
+        The enable, disable, and status events read the name of the plugin under
+        ``plugin``, unlike the other plugin events.
+
+        Args:
+            category: The category the plugin belongs to
+            name: The name of the plugin
+            started: Whether the plugin is started, when the event carries a status
+
+        Returns:
+            The payload the switch events carry
+        """
+        payload = {"category": category, "plugin": name}
+        if started is not None:
+            payload["status"] = PLUGIN_STATUS_STARTED if started else PLUGIN_STATUS_STOPPED
+        return payload
 
     def _response_event(self, event: str) -> str:
         """Return the event a read waits for after emitting one.

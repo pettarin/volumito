@@ -1991,16 +1991,6 @@ def option_metadata(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_mixer(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--mixer`` option to the system audio device set subcommand."""
-    return click.option(
-        "--mixer",
-        type=str,
-        default=None,
-        help="The mixer driving the volume of the device, left to the host when not given.",
-    )(func)
-
-
 def option_next(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--next`` option to the queue add subcommand."""
     return click.option(

@@ -91,7 +91,6 @@ from volumito.cli.click_helpers import (
     option_limit,
     option_manifest_file,
     option_metadata,
-    option_mixer,
     option_next,
     option_number_retries_next_track,
     option_offset,
@@ -2231,14 +2230,15 @@ def audio_device_list(ctx: click.Context, extended: bool, output_format: str) ->
 @system_audio_device.command("set")
 @click.pass_context
 @click.argument("device_id", type=str)
-@option_mixer
-def audio_device_set(ctx: click.Context, device_id: str, mixer: str | None) -> None:
+def audio_device_set(ctx: click.Context, device_id: str) -> None:
     """Make DEVICE_ID, as "system audio device list" names it, the output device.
+
+    DEVICE_ID names a sound card, or an I2S DAC, which may need a reboot of the host.
 
     Needs a WebSocket API client.
     """
     execute_command(
-        ctx, f'set output device "{device_id}"', lambda c: c.set_output_device(device_id, mixer)
+        ctx, f'set output device "{device_id}"', lambda c: c.set_output_device(device_id)
     )
 
 
@@ -2641,13 +2641,16 @@ def system_plugin_uninstall(ctx: click.Context, category: str, name: str, yes: b
 @click.pass_context
 @click.argument("category", type=str)
 @click.argument("name", type=str)
-def system_plugin_update(ctx: click.Context, category: str, name: str) -> None:
-    """Update the plugin NAME of CATEGORY.
+@click.argument("url", type=str)
+def system_plugin_update(ctx: click.Context, category: str, name: str, url: str) -> None:
+    """Update the plugin NAME of CATEGORY from the package at URL.
 
     Needs a WebSocket API client.
     """
     execute_command(
-        ctx, f'update plugin "{category}/{name}"', lambda c: c.update_plugin(category, name)
+        ctx,
+        f'update plugin "{category}/{name}"',
+        lambda c: c.update_plugin(category, name, url),
     )
 
 

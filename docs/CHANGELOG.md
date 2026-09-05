@@ -68,11 +68,18 @@ All notable changes to this project will be documented in this file.
   `queue track has_next` and `queue track has_previous` (no synonyms)
 - Renamed the command `multiroom zones` to `multiroom info`
   (and the corresponding configuration key); no synonym is kept
+- `set_output_device` of the WebSocket clients no longer takes a mixer
+- `modify_plugin_status` of the WebSocket clients starts or stops the plugin,
+  and `update_plugin` takes the URL of the package
 
 ### Fixed
 
 - `VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` wait for
   the events emitted right before disconnecting to be sent
+- `set_music_source_enabled`, `set_output_device`, `audio_output_play`,
+  `audio_output_pause`, `set_audio_output_volume`, `enable_plugin`,
+  `disable_plugin`, `modify_plugin_status`, and `update_plugin`
+  of the WebSocket clients send what the host reads
 
 
 ## [0.4.0] - 2026-09-04

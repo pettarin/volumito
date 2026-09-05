@@ -873,13 +873,13 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def modify_plugin_status(self, category: str, name: str, enabled: bool) -> None:
-        """Enable or disable an installed plugin in one call.
+    def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
+        """Start or stop an enabled plugin of the Volumio instance.
 
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
-            enabled: True to enable the plugin, False to disable it
+            started: True to start the plugin, False to stop it
         """
 
     @abstractmethod
@@ -1382,12 +1382,15 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
+    def set_output_device(self, device_id: str) -> None:
         """Choose the output device the Volumio instance plays through.
+
+        The device is read from :attr:`output_devices` first: the host reads it as its
+        setup wizard sends it, a sound card or an I2S DAC. Choosing an I2S DAC may need
+        a reboot of the host.
 
         Args:
             device_id: The identifier of the device, from :attr:`output_devices`
-            mixer: The mixer to drive its volume with, left to the host when not given
         """
 
     @abstractmethod
@@ -1547,12 +1550,13 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def update_plugin(self, category: str, name: str) -> None:
-        """Update an installed plugin of the Volumio instance.
+    def update_plugin(self, category: str, name: str, url: str) -> None:
+        """Update an installed plugin of the Volumio instance from a package.
 
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
+            url: The URL of the package, as the plugin store of the host lists it
         """
 
     @abstractmethod
@@ -1929,8 +1933,8 @@ class RESTAPIClient(APIClient):
     def menu_items(self) -> MenuItems:
         return self._fallback.client(UI_OPERATION).menu_items
 
-    def modify_plugin_status(self, category: str, name: str, enabled: bool) -> None:
-        return self._fallback.client(PLUGIN_OPERATION).modify_plugin_status(category, name, enabled)
+    def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
+        return self._fallback.client(PLUGIN_OPERATION).modify_plugin_status(category, name, started)
 
     def move_in_queue(self, source: int, target: int) -> None:
         return self._fallback.client(QUEUE_OPERATION).move_in_queue(source, target)
@@ -2078,8 +2082,8 @@ class RESTAPIClient(APIClient):
     def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         return self._fallback.client(COLLECTION_OPERATION).set_music_source_enabled(name, enabled)
 
-    def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
-        return self._fallback.client(AUDIO_OPERATION).set_output_device(device_id, mixer)
+    def set_output_device(self, device_id: str) -> None:
+        return self._fallback.client(AUDIO_OPERATION).set_output_device(device_id)
 
     def set_sleep_timer(self, delay: timedelta | None) -> None:
         return self._fallback.client(ALARM_OPERATION).set_sleep_timer(delay)
@@ -2125,8 +2129,8 @@ class RESTAPIClient(APIClient):
     def update_library(self, uri: str | None = None) -> None:
         return self._fallback.client(COLLECTION_OPERATION).update_library(uri)
 
-    def update_plugin(self, category: str, name: str) -> None:
-        return self._fallback.client(PLUGIN_OPERATION).update_plugin(category, name)
+    def update_plugin(self, category: str, name: str, url: str) -> None:
+        return self._fallback.client(PLUGIN_OPERATION).update_plugin(category, name, url)
 
     def update_service_tracklist(self, service: str) -> None:
         return self._fallback.client(COLLECTION_OPERATION).update_service_tracklist(service)
@@ -2611,8 +2615,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def menu_items(self) -> MenuItems:
         return self._client.menu_items
 
-    def modify_plugin_status(self, category: str, name: str, enabled: bool) -> None:
-        return self._client.modify_plugin_status(category, name, enabled)
+    def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
+        return self._client.modify_plugin_status(category, name, started)
 
     def move_in_queue(self, source: int, target: int) -> None:
         return self._client.move_in_queue(source, target)
@@ -2766,8 +2770,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         return self._client.set_music_source_enabled(name, enabled)
 
-    def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
-        return self._client.set_output_device(device_id, mixer)
+    def set_output_device(self, device_id: str) -> None:
+        return self._client.set_output_device(device_id)
 
     def set_sleep_timer(self, delay: timedelta | None) -> None:
         return self._client.set_sleep_timer(delay)
@@ -2816,8 +2820,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def update_library(self, uri: str | None = None) -> None:
         return self._client.update_library(uri)
 
-    def update_plugin(self, category: str, name: str) -> None:
-        return self._client.update_plugin(category, name)
+    def update_plugin(self, category: str, name: str, url: str) -> None:
+        return self._client.update_plugin(category, name, url)
 
     def update_service_tracklist(self, service: str) -> None:
         return self._client.update_service_tracklist(service)
@@ -3375,8 +3379,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def menu_items(self) -> MenuItems:
         return self._run(self._client.get_menu_items())
 
-    def modify_plugin_status(self, category: str, name: str, enabled: bool) -> None:
-        return self._run(self._client.modify_plugin_status(category, name, enabled))
+    def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
+        return self._run(self._client.modify_plugin_status(category, name, started))
 
     def move_in_queue(self, source: int, target: int) -> None:
         return self._run(self._client.move_in_queue(source, target))
@@ -3527,8 +3531,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         return self._run(self._client.set_music_source_enabled(name, enabled))
 
-    def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
-        return self._run(self._client.set_output_device(device_id, mixer))
+    def set_output_device(self, device_id: str) -> None:
+        return self._run(self._client.set_output_device(device_id))
 
     def set_sleep_timer(self, delay: timedelta | None) -> None:
         return self._run(self._client.set_sleep_timer(delay))
@@ -3577,8 +3581,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def update_library(self, uri: str | None = None) -> None:
         return self._run(self._client.update_library(uri))
 
-    def update_plugin(self, category: str, name: str) -> None:
-        return self._run(self._client.update_plugin(category, name))
+    def update_plugin(self, category: str, name: str, url: str) -> None:
+        return self._run(self._client.update_plugin(category, name, url))
 
     def update_service_tracklist(self, service: str) -> None:
         return self._run(self._client.update_service_tracklist(service))

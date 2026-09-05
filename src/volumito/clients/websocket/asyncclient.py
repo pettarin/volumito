@@ -676,27 +676,43 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_ADD_WEB_RADIO, self._web_radio_payload(name, uri))
 
+
     async def audio_output_pause(self, output_id: str) -> None:
         """Pause one audio output of the Volumio instance.
+
+        The output is read from :meth:`get_audio_outputs` first: the host acts on the entry
+        it listed.
 
         Args:
             output_id: The identifier of the output to pause
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no output has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        await self._emit(EVENT_AUDIO_OUTPUT_PAUSE, self._audio_output_payload(output_id))
+        outputs = await self._read_object(EVENT_GET_AUDIO_OUTPUTS)
+        await self._emit(EVENT_AUDIO_OUTPUT_PAUSE, self._audio_output_listed(outputs, output_id))
+
 
     async def audio_output_play(self, output_id: str) -> None:
         """Start one audio output of the Volumio instance.
+
+        The output is read from :meth:`get_audio_outputs` first: the host acts on the entry
+        it listed.
 
         Args:
             output_id: The identifier of the output to start
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no output has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        await self._emit(EVENT_AUDIO_OUTPUT_PLAY, self._audio_output_payload(output_id))
+        outputs = await self._read_object(EVENT_GET_AUDIO_OUTPUTS)
+        await self._emit(EVENT_AUDIO_OUTPUT_PLAY, self._audio_output_listed(outputs, output_id))
 
     async def backup(self) -> dict[str, Any]:
         """Read a backup of the configuration of the Volumio instance.
@@ -930,8 +946,12 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_DISABLE_AUDIO_OUTPUT, self._audio_output_payload(output_id))
 
+
     async def disable_plugin(self, category: str, name: str) -> None:
-        """Disable an installed plugin of the Volumio instance.
+        """Disable an installed plugin of the Volumio instance, without stopping it.
+
+        The plugin no longer starts with the host; :meth:`manage_plugin` with
+        ``"disable"`` also stops it right away.
 
         Args:
             category: The category the plugin belongs to
@@ -940,7 +960,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        await self._emit(EVENT_DISABLE_PLUGIN, self._plugin_payload(category, name))
+        await self._emit(EVENT_DISABLE_PLUGIN, self._plugin_status_payload(category, name))
 
     async def disconnect(self) -> None:
         """Close the connection to the Volumio WebSocket API.
@@ -1030,8 +1050,12 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_ENABLE_AUDIO_OUTPUT, self._audio_output_payload(output_id))
 
+
     async def enable_plugin(self, category: str, name: str) -> None:
-        """Enable an installed plugin of the Volumio instance.
+        """Enable an installed plugin of the Volumio instance, without starting it.
+
+        The plugin starts with the host from now on; :meth:`manage_plugin` with
+        ``"enable"`` also starts it right away.
 
         Args:
             category: The category the plugin belongs to
@@ -1040,7 +1064,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        await self._emit(EVENT_ENABLE_PLUGIN, self._plugin_payload(category, name))
+        await self._emit(EVENT_ENABLE_PLUGIN, self._plugin_status_payload(category, name))
 
     async def enqueue_playlist(self, name: str | Playlist) -> None:
         """Append a saved playlist to the queue, without touching the playback.
@@ -1827,18 +1851,19 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         plugins = await self._read_array(EVENT_PLUGIN_MANAGER, payload)
         return Plugins.from_raw({"plugins": plugins})
 
-    async def modify_plugin_status(self, category: str, name: str, enabled: bool) -> None:
-        """Enable or disable an installed plugin in one call.
+
+    async def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
+        """Start or stop an enabled plugin of the Volumio instance.
 
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
-            enabled: True to enable the plugin, False to disable it
+            started: True to start the plugin, False to stop it
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        payload = {**self._plugin_payload(category, name), "enabled": enabled}
+        payload = self._plugin_status_payload(category, name, started)
         await self._emit(EVENT_MODIFY_PLUGIN_STATUS, payload)
 
     async def move_in_queue(self, source: int, target: int) -> None:
@@ -2395,20 +2420,29 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_SET_AS_MULTIROOM_SINGLE)
 
+
     async def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         """Set the volume of one audio output of the Volumio instance.
 
-        This is the volume of one output; :meth:`get_volume` is the volume of the host.
+        This is the volume of one output; :meth:`get_volume` is the volume of the host. The
+        output is read from :meth:`get_audio_outputs` once the level is checked: the host
+        acts on the entry it listed.
 
         Args:
             output_id: The identifier of the output
             volume: The volume level, an integer between 0 and 100 (inclusive)
 
         Raises:
-            ValueError: If the volume level is out of range
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the volume level is out of range, or if no output has the
+                identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        payload = self._audio_output_payload(output_id, volume)
+        self._check_volume_level(volume)
+        outputs = await self._read_object(EVENT_GET_AUDIO_OUTPUTS)
+        output = self._audio_output_listed(outputs, output_id)
+        payload = self._audio_output_volume_payload(output, volume)
         await self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
 
     async def set_background(self, name: str, path: str | None = None) -> None:
@@ -2486,31 +2520,46 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         return Multiroom.from_raw(await self._read_object(EVENT_SET_MULTIROOM, settings))
 
+
     async def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         """Enable or disable one music source of the Volumio instance.
+
+        The source is read from :meth:`get_music_sources` first: the host acts on the entry
+        it listed, with the flag replaced.
 
         Args:
             name: The name of the source, from :meth:`get_music_sources`
             enabled: True to enable the source, False to disable it
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no source has the name
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
         """
-        payload = {"name": name, "enabled": enabled}
+        sources = await self._read_array(EVENT_GET_MY_MUSIC_PLUGINS)
+        payload = self._music_source_toggled(sources, name, enabled)
         await self._emit(EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN, payload)
 
-    async def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
+
+    async def set_output_device(self, device_id: str) -> None:
         """Choose the output device the Volumio instance plays through.
+
+        The device is read from :meth:`get_output_devices` first: the host reads it as its
+        setup wizard sends it, a sound card or an I2S DAC. Choosing an I2S DAC may need
+        a reboot of the host.
 
         Args:
             device_id: The identifier of the device, from :meth:`get_output_devices`
-            mixer: The mixer to drive its volume with, left to the host when not given
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no device has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        payload = self._output_device_payload(device_id, mixer)
-        await self._emit(EVENT_SET_OUTPUT_DEVICES, payload)
+        devices = await self._read_object(EVENT_GET_OUTPUT_DEVICES)
+        await self._emit(EVENT_SET_OUTPUT_DEVICES, self._output_device_payload(devices, device_id))
 
     async def set_seek(self, value: int) -> None:
         """Seek to an absolute position in the track currently playing.
@@ -2689,17 +2738,20 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_UPDATE_DB, uri)
 
-    async def update_plugin(self, category: str, name: str) -> None:
-        """Update an installed plugin of the Volumio instance.
+
+    async def update_plugin(self, category: str, name: str, url: str) -> None:
+        """Update an installed plugin of the Volumio instance from a package.
 
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
+            url: The URL of the package, as the plugin store of the host lists it
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        await self._emit(EVENT_UPDATE_PLUGIN, self._plugin_payload(category, name))
+        payload = {**self._plugin_payload(category, name), "url": url}
+        await self._emit(EVENT_UPDATE_PLUGIN, payload)
 
     async def update_service_tracklist(self, service: str) -> None:
         """Refresh the tracks one music service of the Volumio instance offers.

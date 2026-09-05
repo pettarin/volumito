@@ -531,6 +531,12 @@ with VolumioWebSocketClient(host) as client:
 - `set_audio_output_volume(output_id, volume)`
 - `set_output_device(device_id)`
 
+> `set_output_device` reads `output_devices` first, and sends the device
+> as the setup wizard of the host does: a sound card, or an I2S DAC,
+> which may need a reboot of the host.
+> `audio_output_play`, `audio_output_pause`, and `set_audio_output_volume`
+> read `audio_outputs` first: the host acts on the entries it listed.
+
 #### Browse
 
 - `browse_sources`
@@ -556,6 +562,9 @@ with VolumioWebSocketClient(host) as client:
 - `update_all_metadata()`
 - `update_library(uri)`
 - `update_service_tracklist(service)`
+
+> `set_music_source_enabled` reads `music_sources` first:
+> the host acts on the entry it listed.
 
 #### Miscellanea
 
@@ -587,7 +596,7 @@ system administration, and user interface preferences.
 - `installed_plugins`
 - `languages`
 - `manage_plugin(action, category, name)`
-- `modify_plugin_status(category, name, enabled)`
+- `modify_plugin_status(category, name, started)`
 - `multiroom`
 - `network_info`
 - `privacy_settings`
@@ -608,7 +617,7 @@ system administration, and user interface preferences.
 - `ui_settings`
 - `uninstall_plugin(category, name)`
 - `update()`
-- `update_plugin(category, name)`
+- `update_plugin(category, name, url)`
 - `updater_channel` (assignable)
 - `usb_drives`
 - `wireless_networks`

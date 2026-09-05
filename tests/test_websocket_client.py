@@ -1840,43 +1840,126 @@ class TestVolumioWebSocketClientAudioOutputs:
 
         assert client.input_sources.raw == {}
 
+
+    def _fake_with_output_devices(self):
+        """A fake host listing two sound cards and one I2S DAC."""
+        devices = {
+            "devices": {
+                "active": {"id": "0", "name": "HDMI Out"},
+                "available": [{"id": "0", "name": "HDMI Out"}, {"id": "1", "name": "Headphones"}],
+            },
+            "i2s": {
+                "enabled": False,
+                "available": [{"id": "allo-boss-dac", "name": "Allo BOSS"}],
+            },
+        }
+        return _FakeSocketIOClient(answers={"getOutputDevices": ("pushOutputDevices", devices)})
+
     def test_set_output_device(self, mocker: MockerFixture):
-        """The device is chosen by identifier, with the mixer only when given."""
-        client, fake = _client(mocker)
+        """The card is read from the list, and sent as the setup wizard of the host sends it."""
+        client, fake = _client(mocker, self._fake_with_output_devices())
 
         client.set_output_device("1")
-        client.set_output_device("1", mixer="Digital")
 
-        assert fake.calls == [
-            _Call("setOutputDevices", {"device": "1"}),
-            _Call("setOutputDevices", {"device": "1", "mixer": "Digital"}),
-        ]
+        assert [call.event for call in fake.calls] == ["getOutputDevices", "setOutputDevices"]
+        assert fake.calls[1].payload == {
+            "i2s": False,
+            "output_device": {"value": "1", "label": "Headphones"},
+        }
+
+    def test_set_output_device_to_an_i2s_dac(self, mocker: MockerFixture):
+        """A DAC goes under its own key, with the card number the wizard sends."""
+        client, fake = _client(mocker, self._fake_with_output_devices())
+
+        client.set_output_device("allo-boss-dac")
+
+        assert fake.calls[1].payload == {
+            "i2s": True,
+            "i2sid": {"value": "allo-boss-dac", "label": "Allo BOSS"},
+            "output_device": {"value": 1, "label": "Allo BOSS"},
+        }
+
+    def test_set_output_device_refuses_an_unknown_identifier(self, mocker: MockerFixture):
+        """An identifier the host does not list is refused after the read, with a warning."""
+        logger = Mock()
+        client, fake = _client(mocker, self._fake_with_output_devices(), logger=logger)
+
+        with pytest.raises(ValueError, match='No output device has the identifier "9"'):
+            client.set_output_device("9")
+
+        assert [call.event for call in fake.calls] == ["getOutputDevices"]
+        logger.warning.assert_called_once()
+
+    def _fake_with_audio_outputs(self):
+        """A fake host listing one audio output, a device of its own."""
+        output = {
+            "id": "0",
+            "name": "Living room",
+            "type": "device",
+            "host": "http://volumio.local",
+            "isSelf": True,
+            "plugin": "audio_interface/outputs",
+        }
+        return _FakeSocketIOClient(
+            answers={"getAudioOutputs": ("pushAudioOutputs", {"availableOutputs": [output]})}
+        )
 
     @pytest.mark.parametrize(
         ("method", "event"),
         [
-            ("audio_output_pause", "audioOutputPause"),
-            ("audio_output_play", "audioOutputPlay"),
             ("disable_audio_output", "disableAudioOutput"),
             ("enable_audio_output", "enableAudioOutput"),
         ],
     )
-    def test_the_audio_output_commands(self, mocker: MockerFixture, method, event):
-        """Each command names the output it acts on."""
+    def test_the_audio_output_switches(self, mocker: MockerFixture, method, event):
+        """Enabling and disabling name the output alone, as the user interface does."""
         client, fake = _client(mocker)
 
         getattr(client, method)("0")
 
         assert fake.calls == [_Call(event, {"id": "0"})]
 
+    @pytest.mark.parametrize(
+        ("method", "event"),
+        [
+            ("audio_output_pause", "audioOutputPause"),
+            ("audio_output_play", "audioOutputPlay"),
+        ],
+    )
+    def test_the_audio_output_transport_commands(self, mocker: MockerFixture, method, event):
+        """Playing and pausing send the entry the host listed, read first."""
+        client, fake = _client(mocker, self._fake_with_audio_outputs())
+
+        getattr(client, method)("0")
+
+        listed = fake.answers["getAudioOutputs"][1]["availableOutputs"][0]
+        assert fake.calls == [_Call("getAudioOutputs", None), _Call(event, listed)]
+
+    def test_an_unknown_audio_output(self, mocker: MockerFixture):
+        """An identifier the host does not list is refused after the read, with a warning."""
+        logger = Mock()
+        client, fake = _client(mocker, self._fake_with_audio_outputs(), logger=logger)
+
+        with pytest.raises(ValueError, match='No audio output has the identifier "9"'):
+            client.audio_output_play("9")
+
+        assert [call.event for call in fake.calls] == ["getAudioOutputs"]
+        logger.warning.assert_called_once()
     def test_set_audio_output_volume(self, mocker: MockerFixture):
-        """The volume of one output carries the identifier and the level."""
-        client, fake = _client(mocker)
+        """The volume carries the output as the user interface sends it, unmuted, and the level."""
+        client, fake = _client(mocker, self._fake_with_audio_outputs())
 
         client.set_audio_output_volume("0", 42)
 
-        assert fake.calls == [_Call("setAudioOutputVolume", {"id": "0", "volume": 42})]
-
+        assert [call.event for call in fake.calls] == ["getAudioOutputs", "setAudioOutputVolume"]
+        assert fake.calls[1].payload == {
+            "host": "http://volumio.local",
+            "id": "0",
+            "isSelf": True,
+            "type": "device",
+            "mute": False,
+            "volume": 42,
+        }
     @pytest.mark.parametrize("level", [-1, 101])
     def test_an_out_of_range_output_volume(self, mocker: MockerFixture, level):
         """A level outside 0..100 is refused before anything is sent."""
@@ -1908,16 +1991,42 @@ class TestVolumioWebSocketClientLibrary:
         assert [source.name for source in sources] == ["upnp"]
         assert sources[0].pretty_name == "UPNP Renderer"
 
+
+    def _fake_with_music_sources(self):
+        """A fake host listing one music source, disabled."""
+        source = {
+            "name": "upnp",
+            "prettyName": "UPNP Renderer",
+            "category": "audio_interface",
+            "enabled": False,
+            "active": False,
+        }
+        return _FakeSocketIOClient(
+            answers={"getMyMusicPlugins": ("pushMyMusicPlugins", [source])}
+        )
+
     def test_set_music_source_enabled(self, mocker: MockerFixture):
-        """A source is enabled or disabled by name."""
-        client, fake = _client(mocker)
+        """The source is read from the list, and sent back whole with the flag replaced."""
+        client, fake = _client(mocker, self._fake_with_music_sources())
 
         client.set_music_source_enabled("upnp", True)
 
+        listed = fake.answers["getMyMusicPlugins"][1][0]
         assert fake.calls == [
-            _Call("enableDisableMyMusicPlugin", {"name": "upnp", "enabled": True})
+            _Call("getMyMusicPlugins", None),
+            _Call("enableDisableMyMusicPlugin", {**listed, "enabled": True}),
         ]
 
+    def test_set_music_source_enabled_refuses_an_unknown_name(self, mocker: MockerFixture):
+        """A name the host does not list is refused after the read, with a warning."""
+        logger = Mock()
+        client, fake = _client(mocker, self._fake_with_music_sources(), logger=logger)
+
+        with pytest.raises(ValueError, match='No music source is named "spotify"'):
+            client.set_music_source_enabled("spotify", True)
+
+        assert [call.event for call in fake.calls] == ["getMyMusicPlugins"]
+        logger.warning.assert_called_once()
     def test_the_scan_commands(self, mocker: MockerFixture):
         """The scans carry nothing, or the URI or service they are scoped to."""
         client, fake = _client(mocker)
@@ -2097,36 +2206,57 @@ class TestVolumioWebSocketClientPlugins:
             )
         ]
 
+
+    def test_uninstall_plugin(self, mocker: MockerFixture):
+        """Uninstalling names the plugin by category and name."""
+        client, fake = _client(mocker)
+
+        client.uninstall_plugin("music_service", "spop")
+
+        assert fake.calls == [
+            _Call("unInstallPlugin", {"category": "music_service", "name": "spop"})
+        ]
+
     @pytest.mark.parametrize(
         ("method", "event"),
         [
             ("disable_plugin", "disablePlugin"),
             ("enable_plugin", "enablePlugin"),
-            ("uninstall_plugin", "unInstallPlugin"),
-            ("update_plugin", "updatePlugin"),
         ],
     )
-    def test_the_plugin_commands(self, mocker: MockerFixture, method, event):
-        """Each command names the plugin by category and name."""
+    def test_the_plugin_switches(self, mocker: MockerFixture, method, event):
+        """Enabling and disabling name the plugin under the key the host reads."""
         client, fake = _client(mocker)
 
         getattr(client, method)("music_service", "spop")
 
-        assert fake.calls == [_Call(event, {"category": "music_service", "name": "spop"})]
-
-    def test_modify_plugin_status(self, mocker: MockerFixture):
-        """Enabling in one call carries the flag beside the plugin."""
+        assert fake.calls == [_Call(event, {"category": "music_service", "plugin": "spop"})]
+    @pytest.mark.parametrize(("started", "status"), [(True, "START"), (False, "STOP")])
+    def test_modify_plugin_status(self, mocker: MockerFixture, started, status):
+        """Starting or stopping carries the status the host reads, under the same key."""
         client, fake = _client(mocker)
 
-        client.modify_plugin_status("music_service", "spop", True)
+        client.modify_plugin_status("music_service", "spop", started)
 
         assert fake.calls == [
             _Call(
                 "modifyPluginStatus",
-                {"category": "music_service", "name": "spop", "enabled": True},
+                {"category": "music_service", "plugin": "spop", "status": status},
             )
         ]
 
+    def test_update_plugin(self, mocker: MockerFixture):
+        """Updating names the plugin and the package to update it from."""
+        client, fake = _client(mocker)
+
+        client.update_plugin("music_service", "spop", "http://plugins/spop.zip")
+
+        assert fake.calls == [
+            _Call(
+                "updatePlugin",
+                {"category": "music_service", "name": "spop", "url": "http://plugins/spop.zip"},
+            )
+        ]
     def test_install_plugin(self, mocker: MockerFixture):
         """Installing carries the URL and the confirmation the host expects."""
         client, fake = _client(mocker)

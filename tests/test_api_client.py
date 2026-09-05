@@ -187,7 +187,7 @@ WEBSOCKET_METHODS = [
     ("set_language", ("en", "English"), {}, UI_OPERATION),
     ("set_multiroom", ({"k": "v"},), {}, MULTIROOM_OPERATION),
     ("set_music_source_enabled", ("name", True), {}, COLLECTION_OPERATION),
-    ("set_output_device", ("device", "mixer"), {}, AUDIO_OPERATION),
+    ("set_output_device", ("device",), {}, AUDIO_OPERATION),
     ("set_sleep_timer", (timedelta(minutes=5),), {}, ALARM_OPERATION),
     ("shutdown", (), {}, SYSTEM_OPERATION),
     ("standby", (), {}, SYSTEM_OPERATION),
@@ -196,7 +196,7 @@ WEBSOCKET_METHODS = [
     ("update", (True,), {}, UPDATE_OPERATION),
     ("update_all_metadata", (), {}, COLLECTION_OPERATION),
     ("update_library", ("uri",), {}, COLLECTION_OPERATION),
-    ("update_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
+    ("update_plugin", ("category", "name", "url"), {}, PLUGIN_OPERATION),
     ("update_service_tracklist", ("service",), {}, COLLECTION_OPERATION),
     ("write_multiroom", ({"k": "v"},), {}, MULTIROOM_OPERATION),
 ]
