@@ -36,6 +36,9 @@ All notable changes to this project will be documented in this file.
   (`disable`, `enable`, `list`), and options `--last` and `--root`
   of `collection browse` and `--super` of `collection search`
   (all needing a WebSocket API client)
+- Command group `system audio` (`disable`, `dsp`, `enable`, `inputs`,
+  `outputs`, `pause`, `play`, `volume`, and the `device` subgroup
+  with `list` and `set`), needing a WebSocket API client
 
 ### Changed
 

@@ -64,6 +64,7 @@ from volumito.cli.click_helpers import (
     option_cue_track,
     option_current_track,
     option_endpoint,
+    option_extended,
     option_fields,
     option_file_name_template,
     option_format,
@@ -76,6 +77,7 @@ from volumito.cli.click_helpers import (
     option_limit,
     option_manifest_file,
     option_metadata,
+    option_mixer,
     option_next,
     option_number_retries_next_track,
     option_offset,
@@ -177,6 +179,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
+    SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
     URI_FAVOURITES,
@@ -2032,6 +2035,162 @@ def system_info(ctx: click.Context, output_format: str) -> None:
     """Print the system information."""
     data = fetch_or_exit(ctx, lambda c: c.system_info.raw)
     render_payload(ctx, data, output_format, heading="Volumio System Info")
+
+
+@system.group("audio")
+@click.pass_context
+def system_audio(ctx: click.Context) -> None:
+    """Manage the audio outputs, the output devices, and the input sources."""
+    pass
+
+
+@system_audio.group("device")
+@click.pass_context
+def system_audio_device(ctx: click.Context) -> None:
+    """Manage the output device the Volumio host plays through."""
+    pass
+
+
+@system_audio_device.command("list")
+@click.pass_context
+@option_extended
+@option_format
+def audio_device_list(ctx: click.Context, extended: bool, output_format: str) -> None:
+    """Print the output devices the Volumio host can play through, and the active one.
+
+    Needs a WebSocket API client.
+    """
+    devices = fetch_or_exit(
+        ctx, lambda c: c.extended_output_devices if extended else c.output_devices
+    )
+    render_payload(ctx, devices.raw, output_format, heading="Volumio Output Devices")
+
+
+@system_audio_device.command("set")
+@click.pass_context
+@click.argument("device_id", type=str)
+@option_mixer
+def audio_device_set(ctx: click.Context, device_id: str, mixer: str | None) -> None:
+    """Make DEVICE_ID, as "system audio device list" names it, the output device.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'set output device "{device_id}"', lambda c: c.set_output_device(device_id, mixer)
+    )
+
+
+@system_audio.command("disable")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_disable(ctx: click.Context, output_id: str) -> None:
+    """Disable the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'disable output "{output_id}"', lambda c: c.disable_audio_output(output_id)
+    )
+
+
+@system_audio.command("dsp")
+@click.pass_context
+@option_format
+def audio_dsp(ctx: click.Context, output_format: str) -> None:
+    """Print the configuration page of the DSP of the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    config = fetch_or_exit(ctx, lambda c: c.dsp_config)
+    render_payload(ctx, config.raw, output_format, heading="Volumio DSP Configuration")
+
+
+@system_audio.command("enable")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_enable(ctx: click.Context, output_id: str) -> None:
+    """Enable the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'enable output "{output_id}"', lambda c: c.enable_audio_output(output_id)
+    )
+
+
+@system_audio.command("inputs")
+@click.pass_context
+@option_format
+def audio_inputs(ctx: click.Context, output_format: str) -> None:
+    """Print the input sources the Volumio host exposes, as it reports them.
+
+    The keys depend on the plugins of the host, which answers nothing without an
+    input source. Needs a WebSocket API client.
+    """
+    sources = fetch_or_exit(ctx, lambda c: c.input_sources)
+    render_payload(ctx, sources.raw, output_format, heading="Volumio Input Sources")
+
+
+@system_audio.command("outputs")
+@click.pass_context
+@option_fields
+@option_format
+def audio_outputs(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the audio outputs the Volumio host can play to.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.audio_outputs.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("availableOutputs", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
+        "Volumio Audio Outputs",
+    )
+
+
+@system_audio.command("pause")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_pause(ctx: click.Context, output_id: str) -> None:
+    """Pause the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'pause output "{output_id}"', lambda c: c.audio_output_pause(output_id)
+    )
+
+
+@system_audio.command("play")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_play(ctx: click.Context, output_id: str) -> None:
+    """Start the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'play output "{output_id}"', lambda c: c.audio_output_play(output_id))
+
+
+@system_audio.command("volume")
+@click.pass_context
+@click.argument("output_id", type=str)
+@click.argument("value", type=click.IntRange(0, 100))
+def audio_volume(ctx: click.Context, output_id: str, value: int) -> None:
+    """Set the volume of the audio output OUTPUT_ID to VALUE, from 0 to 100.
+
+    This is the volume of one output; "playback volume" is the volume of the host.
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx,
+        f'volume {value} of output "{output_id}"',
+        lambda c: c.set_audio_output_volume(output_id, value),
+    )
 
 
 @main.group()

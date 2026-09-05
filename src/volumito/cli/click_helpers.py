@@ -1723,6 +1723,16 @@ def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_extended(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--extended`` option to the system audio device list subcommand."""
+    return click.option(
+        "--extended",
+        is_flag=True,
+        default=False,
+        help="Print the devices with their details.",
+    )(func)
+
+
 def option_fields(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-L``/``--fields`` option to a display subcommand."""
     return click.option(
@@ -1856,6 +1866,16 @@ def option_metadata(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Refresh the metadata of the whole collection, instead of looking for changes.",
+    )(func)
+
+
+def option_mixer(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--mixer`` option to the system audio device set subcommand."""
+    return click.option(
+        "--mixer",
+        type=str,
+        default=None,
+        help="The mixer driving the volume of the device, left to the host when not given.",
     )(func)
 
 

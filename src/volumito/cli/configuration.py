@@ -94,6 +94,10 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,
     "multiroom-zones": DISPLAY_KEYS,
+    "system-audio-device-list": FORMAT_KEYS,
+    "system-audio-dsp": FORMAT_KEYS,
+    "system-audio-inputs": FORMAT_KEYS,
+    "system-audio-outputs": DISPLAY_KEYS,
     "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
@@ -184,6 +188,18 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "story-place": [
         ["story", "place"],
+    ],
+    "system-audio-device-list": [
+        ["system", "audio", "device", "list"],
+    ],
+    "system-audio-dsp": [
+        ["system", "audio", "dsp"],
+    ],
+    "system-audio-inputs": [
+        ["system", "audio", "inputs"],
+    ],
+    "system-audio-outputs": [
+        ["system", "audio", "outputs"],
     ],
     "system-execute": [
         ["system", "execute"],

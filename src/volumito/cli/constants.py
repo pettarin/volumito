@@ -315,6 +315,15 @@ SHORT_FORMAT_FIELDS_QUEUE_STATUS = [
 ]
 """Short fields list for the "queue status" command."""
 
+SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS = [
+    "id",
+    "name",
+    "type",
+    "enabled",
+    "volume",
+]
+"""Short fields list for the "system audio outputs" command."""
+
 SHORT_FORMAT_FIELDS_STORY = [
     "data.value",
 ]

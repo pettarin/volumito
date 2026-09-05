@@ -96,11 +96,14 @@ from volumito.clients.errors import (
     VolumioWebSocketError,
 )
 from volumito.clients.models import (
+    AudioOutputs,
     BrowseSources,
     CollectionStatistics,
     InfinityPlayback,
+    InputSources,
     MusicSources,
     Notifications,
+    OutputDevices,
     PlayerState,
     PlaylistContent,
     Playlists,
@@ -113,6 +116,7 @@ from volumito.clients.models import (
     SuccessResponse,
     SystemInfo,
     SystemVersion,
+    UiConfig,
     VolumioModel,
     Zones,
 )
@@ -145,9 +149,12 @@ def _isolate_config_probing(mocker: MockerFixture):
 
 
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
+    "audio_outputs": AudioOutputs,
     "browse_sources": BrowseSources,
     "collection_statistics": CollectionStatistics,
+    "dsp_config": UiConfig,
     "infinity_playback": InfinityPlayback,
+    "input_sources": InputSources,
     "music_sources": MusicSources,
     "notifications": Notifications,
     "playlists": Playlists,
@@ -6116,6 +6123,291 @@ class TestSystemCommands:
         assert info_result.exit_code == 0
         assert info_result.output == system_info_result.output
         assert json.loads(info_result.output)["name"] == "Living Room"
+
+
+class TestSystemAudio:
+    """Test cases for the system audio subgroup."""
+
+    AUDIO_OUTPUTS = {
+        "availableOutputs": [
+            {"id": "alsa", "name": "Main", "type": "device", "enabled": True, "volume": 60},
+            {
+                "id": "bt",
+                "name": "Bluetooth",
+                "type": "bluetooth",
+                "enabled": False,
+                "volume": 0,
+                "extra": "detail",
+            },
+        ]
+    }
+    """The audio outputs, as a Volumio host answers them."""
+
+    DEVICES = {
+        "devices": {
+            "active": {"id": "1", "name": "HiFiBerry DAC"},
+            "available": [{"id": "0", "name": "Headphones"}, {"id": "1", "name": "HiFiBerry DAC"}],
+        },
+        "i2s": True,
+    }
+    """The output devices, as a Volumio host answers them."""
+
+    DSP = {"page": {"label": "DSP"}, "sections": [{"id": "section", "content": []}]}
+    """A DSP configuration page, as a Volumio host answers it."""
+
+    INPUTS = {"spdif": {"name": "S/PDIF", "enabled": True}}
+    """The input sources, as a Volumio host answers them."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the audio "
+        "outputs and devices: use --api-client synchronous_websocket or "
+        "asynchronous_websocket, or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for an audio member, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the audio reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "audio_outputs", return_value=self.AUDIO_OUTPUTS)
+        _attach_property(mock_client, "dsp_config", return_value=self.DSP)
+        _attach_property(
+            mock_client, "output_devices", return_value=OutputDevices.from_envelope(self.DEVICES)
+        )
+        _attach_property(
+            mock_client,
+            "extended_output_devices",
+            return_value=OutputDevices.from_envelope({**self.DEVICES, "extended": True}),
+        )
+        _attach_property(mock_client, "input_sources", return_value=self.INPUTS)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_device_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system audio device list prints the devices and the active one."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", "device", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.DEVICES
+        mock_client.output_devices_property.assert_called_once()
+        mock_client.extended_output_devices_property.assert_not_called()
+
+    def test_device_list_extended(self, runner: CliRunner, mocker: MockerFixture):
+        """--extended asks for the devices with their details."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "audio", "device", "list", "--extended", "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["extended"] is True
+        mock_client.extended_output_devices_property.assert_called_once()
+        mock_client.output_devices_property.assert_not_called()
+
+    def test_device_list_table(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table heads the devices."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "audio", "device", "list", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        assert "Volumio Output Devices" in result.output
+        assert "HiFiBerry DAC" in result.output
+
+    @pytest.mark.parametrize(
+        ("options", "mixer"), [([], None), (["--mixer", "Digital"], "Digital")]
+    )
+    def test_device_set(self, runner: CliRunner, mocker: MockerFixture, options, mixer):
+        """system audio device set chooses the device, with the mixer given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "audio", "device", "set", "1", *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'set output device \"1\"' executed successfully" in result.output
+        mock_client.set_output_device.assert_called_once_with("1", mixer)
+
+    @pytest.mark.parametrize(
+        ("command", "member"),
+        [
+            ("disable", "disable_audio_output"),
+            ("enable", "enable_audio_output"),
+            ("pause", "audio_output_pause"),
+            ("play", "audio_output_play"),
+        ],
+    )
+    def test_output_actions(self, runner: CliRunner, mocker: MockerFixture, command, member):
+        """The output actions name the output to the client."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", command, "bt"])
+
+        assert result.exit_code == 0
+        assert f"Command '{command} output \"bt\"' executed successfully" in result.output
+        getattr(mock_client, member).assert_called_once_with("bt")
+
+    def test_dsp(self, runner: CliRunner, mocker: MockerFixture):
+        """system audio dsp prints the configuration page of the DSP."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", "dsp", "-F", "json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.DSP
+
+    def test_inputs(self, runner: CliRunner, mocker: MockerFixture):
+        """system audio inputs prints the input sources as the host reports them."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", "inputs"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.INPUTS
+
+    def test_outputs_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
+        """system audio outputs prints the short fields of each output."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", "outputs"])
+
+        assert result.exit_code == 0
+        outputs = json.loads(result.output)
+        assert [output["id"] for output in outputs] == ["alsa", "bt"]
+        assert outputs[1]["volume"] == 0
+        assert "extra" not in outputs[1]
+
+    def test_outputs_all_fields_as_a_table(self, runner: CliRunner, mocker: MockerFixture):
+        """-L ALL -F table lists every field of each output under the heading."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "audio", "outputs", "-L", "ALL", "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        lines = result.output.splitlines()
+        assert "Volumio Audio Outputs" in lines
+        assert "1. Main" in lines
+        assert "2. Bluetooth" in lines
+        assert "   Extra            : detail" in lines
+
+    def test_outputs_raw(self, runner: CliRunner, mocker: MockerFixture):
+        """-F raw prints the answer of the host as it is."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["-m", *self._WEBSOCKET, "system", "audio", "outputs", "-F", "raw"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.AUDIO_OUTPUTS
+
+    def test_outputs_format_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The system-audio-outputs subsection sets the default fields and format."""
+        self._mock_websocket_client(mocker)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  system-audio-outputs:\n    fields: id\n    format: json\n")
+
+        result = runner.invoke(
+            main, ["-c", str(config), *self._WEBSOCKET, "system", "audio", "outputs"]
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == [{"id": "alsa"}, {"id": "bt"}]
+
+    def test_volume(self, runner: CliRunner, mocker: MockerFixture):
+        """system audio volume sets the volume of the output."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "audio", "volume", "alsa", "75"])
+
+        assert result.exit_code == 0
+        assert "Command 'volume 75 of output \"alsa\"' executed successfully" in result.output
+        mock_client.set_audio_output_volume.assert_called_once_with("alsa", 75)
+
+    @pytest.mark.parametrize("value", ["-1", "101", "loud"])
+    def test_volume_out_of_range(self, runner: CliRunner, mocker: MockerFixture, value):
+        """The volume is an integer from 0 to 100."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "audio", "volume", "alsa", "--", value]
+        )
+
+        assert result.exit_code == 2
+        mock_client.set_audio_output_volume.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["device", "list"],
+            ["device", "set", "1"],
+            ["disable", "bt"],
+            ["dsp"],
+            ["enable", "bt"],
+            ["inputs"],
+            ["outputs"],
+            ["pause", "bt"],
+            ["play", "bt"],
+            ["volume", "alsa", "50"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["system", "audio", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "system", "audio", "inputs"]
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "Falling back to the WebSocket API client for the audio outputs and devices"
+        ) in result.output
+        assert json.loads(result.stdout) == self.INPUTS
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
 
 
 class TestSystemExecute:
@@ -15626,6 +15918,10 @@ class TestConfigurationCommands:
                     "story-credits": None,
                     "story-label": None,
                     "story-place": None,
+                    "system-audio-device-list": None,
+                    "system-audio-dsp": None,
+                    "system-audio-inputs": None,
+                    "system-audio-outputs": None,
                     "system-execute": None,
                     "system-info": None,
                     "system-version": None,

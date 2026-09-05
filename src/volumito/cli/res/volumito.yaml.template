@@ -93,6 +93,12 @@ aliases:
   # spla: story place
   # stop: playback stop
   # sys: system
+  # sysa: system audio
+  # sysad: system audio device
+  # sysadl: system audio device list
+  # sysads: system audio device set
+  # sysai: system audio inputs
+  # sysao: system audio outputs
   # syse: system execute
   # sysi: system info
   # sysp: system ping
@@ -278,6 +284,10 @@ output:
   # - story-credits
   # - story-label
   # - story-place
+  # - system-audio-device-list
+  # - system-audio-dsp
+  # - system-audio-inputs
+  # - system-audio-outputs
   # - system-execute
   # - system-info
   # - system-version
@@ -407,6 +417,18 @@ output:
     # Add your own overrides here
 
   story-place:
+    # Add your own overrides here
+
+  system-audio-device-list:
+    # Add your own overrides here
+
+  system-audio-dsp:
+    # Add your own overrides here
+
+  system-audio-inputs:
+    # Add your own overrides here
+
+  system-audio-outputs:
     # Add your own overrides here
 
   system-execute:

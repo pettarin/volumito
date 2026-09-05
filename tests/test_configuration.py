@@ -786,6 +786,12 @@ class TestBuildClickDefaultMap:
             "playlist": {"content": formatting, "list": format_only},
             "multiroom": {"zones": formatting},
             "system": {
+                "audio": {
+                    "device": {"list": format_only},
+                    "dsp": format_only,
+                    "inputs": format_only,
+                    "outputs": formatting,
+                },
                 "execute": format_only,
                 "version": format_only,
                 "info": format_only,
