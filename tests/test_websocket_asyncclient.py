@@ -1428,6 +1428,91 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
 
         assert len(await client.get_alarms()) == 0
 
+    _ALARMS = [
+        {"id": 3, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"},
+        {"id": 5, "name": "Weekend", "enabled": False, "time": "09:00", "playlist": "rock"},
+    ]
+    """Two alarms, as a Volumio host answers them."""
+
+    def _fake_with_alarms(self, alarms=None):
+        """A fake host answering the alarms it holds."""
+        return _FakeAsyncSocketIOClient(
+            answers={"getAlarms": ("pushAlarm", self._ALARMS if alarms is None else alarms)}
+        )
+
+    async def test_add_alarm(self, mocker: MockerFixture):
+        """The set is read and sent back with one more alarm, numbered after the highest."""
+        client, fake = await _client(mocker, self._fake_with_alarms())
+
+        added = await client.add_alarm("Nap", "14:15", "ambient", enabled=False)
+
+        assert added.id == 6
+        assert added.enabled is False
+        assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
+        assert fake.calls[1].payload == [
+            *self._ALARMS,
+            {"id": 6, "name": "Nap", "enabled": False, "time": "14:15", "playlist": "ambient"},
+        ]
+
+    async def test_add_alarm_to_an_empty_set(self, mocker: MockerFixture):
+        """The first alarm of a host gets the identifier 1."""
+        client, fake = await _client(mocker, self._fake_with_alarms([]))
+
+        added = await client.add_alarm("Weekday", "07:30", "jazz")
+
+        assert added.id == 1
+        assert fake.calls[1].payload == [
+            {"id": 1, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"}
+        ]
+
+    async def test_add_alarm_refuses_a_bad_time(self, mocker: MockerFixture):
+        """A time that is not a time of day is refused before anything is read or sent."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_alarms(), logger=logger)
+
+        with pytest.raises(ValueError, match='must be a time of day as "HH:MM"'):
+            await client.add_alarm("Nap", "7:30am", "ambient")
+
+        assert fake.calls == []
+        logger.warning.assert_called_once()
+
+    async def test_remove_alarm(self, mocker: MockerFixture):
+        """The set is read and sent back without the alarm."""
+        client, fake = await _client(mocker, self._fake_with_alarms())
+
+        await client.remove_alarm(3)
+
+        assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
+        assert fake.calls[1].payload == [self._ALARMS[1]]
+
+    @pytest.mark.parametrize(
+        ("enabled", "method"), [(True, "enable_alarm"), (False, "disable_alarm")]
+    )
+    async def test_enable_and_disable_alarm(self, mocker: MockerFixture, enabled, method):
+        """The set is read and sent back with the alarm armed or disarmed."""
+        client, fake = await _client(mocker, self._fake_with_alarms())
+
+        # Arming the disarmed alarm, or disarming the armed one, leaves both alike
+        await getattr(client, method)(5 if enabled else 3)
+
+        assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
+        assert fake.calls[1].payload == [
+            {**self._ALARMS[0], "enabled": enabled},
+            {**self._ALARMS[1], "enabled": enabled},
+        ]
+
+    @pytest.mark.parametrize("method", ["remove_alarm", "enable_alarm", "disable_alarm"])
+    async def test_an_unknown_alarm_is_refused(self, mocker: MockerFixture, method):
+        """An identifier no alarm has is refused after the read, before anything is sent."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_alarms(), logger=logger)
+
+        with pytest.raises(ValueError, match="No alarm has the identifier 9"):
+            await getattr(client, method)(9)
+
+        assert [call.event for call in fake.calls] == ["getAlarms"]
+        logger.warning.assert_called_once()
+
     async def test_set_alarms_replaces_the_whole_set(self, mocker: MockerFixture):
         """The alarms are sent as the list the Volumio API replaces its set with."""
         client, fake = await _client(mocker)

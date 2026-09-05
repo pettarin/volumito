@@ -114,6 +114,7 @@ UNSUPPORTED = [
 """The methods the WebSocket API does not offer, and how the messages name them."""
 
 WEBSOCKET_METHODS = [
+    ("add_alarm", ("Weekday", "07:30", "jazz", True), {}, ALARM_OPERATION),
     ("add_and_play", ("uri",), {}, QUEUE_OPERATION),
     ("add_cue_track", ("uri", 2, "mpd"), {}, QUEUE_OPERATION),
     ("add_radio_favourite", ("uri",), {}, FAVOURITE_OPERATION),
@@ -134,11 +135,13 @@ WEBSOCKET_METHODS = [
     ("delete_folder", ("path",), {}, COLLECTION_OPERATION),
     ("delete_playlist", ("name",), {}, PLAYLIST_OPERATION),
     ("delete_share", ("share",), {}, SHARE_OPERATION),
+    ("disable_alarm", (3,), {}, ALARM_OPERATION),
     ("disable_audio_output", ("output",), {}, AUDIO_OPERATION),
     ("disable_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
     ("discover_network_shares", (), {}, SHARE_OPERATION),
     ("edit_share", ("share",), {"name": "new"}, SHARE_OPERATION),
     ("emit", ("event", {"k": "v"}), {}, EVENT_OPERATION),
+    ("enable_alarm", (3,), {}, ALARM_OPERATION),
     ("enable_audio_output", ("output",), {}, AUDIO_OPERATION),
     ("enable_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
     ("enqueue_playlist", ("name",), {}, PLAYLIST_OPERATION),
@@ -159,6 +162,7 @@ WEBSOCKET_METHODS = [
     ("play_volatile", (2,), {}, PLAYBACK_OPERATION),
     ("reboot", (), {}, SYSTEM_OPERATION),
     ("regenerate_thumbnails", (), {}, COLLECTION_OPERATION),
+    ("remove_alarm", (3,), {}, ALARM_OPERATION),
     ("remove_from_favourites", ("uri", "mpd"), {}, FAVOURITE_OPERATION),
     ("remove_from_playlist", ("name", "uri", "mpd"), {}, PLAYLIST_OPERATION),
     ("remove_from_queue", (3,), {}, QUEUE_OPERATION),

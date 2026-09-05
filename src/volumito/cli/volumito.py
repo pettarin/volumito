@@ -46,6 +46,9 @@ from volumito.cli.click_helpers import (
     get_client,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
+    option_alarm_name,
+    option_alarm_playlist,
+    option_alarm_time,
     option_album,
     option_albumart_file_name_template,
     option_albums_only,
@@ -68,6 +71,7 @@ from volumito.cli.click_helpers import (
     option_cue_track,
     option_current_track,
     option_data,
+    option_disabled,
     option_endpoint,
     option_extended,
     option_fields,
@@ -160,6 +164,7 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
+    ALARM_FILE_ERROR,
     BACKUP_RESTORE_ARGUMENT_ERROR,
     BROWSE_LAST_ROOT_ERROR,
     COLLECTION_UPDATE_MODES_ERROR,
@@ -199,6 +204,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
+    SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST,
     SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
     SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
     SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
@@ -231,6 +237,7 @@ from volumito.cli.pure_helpers import (
     resolve_albumart_uri,
 )
 from volumito.clients import (
+    Alarm,
     Artist,
     BrowseResults,
     Label,
@@ -2061,6 +2068,125 @@ def system_info(ctx: click.Context, output_format: str) -> None:
     """Print the system information."""
     data = fetch_or_exit(ctx, lambda c: c.system_info.raw)
     render_payload(ctx, data, output_format, heading="Volumio System Info")
+
+
+@system.group("alarm")
+@click.pass_context
+def system_alarm(ctx: click.Context) -> None:
+    """Manage the alarms of the Volumio host (alarm-clock plugin)."""
+    pass
+
+
+@system_alarm.command("add")
+@click.pass_context
+@option_disabled
+@option_alarm_name
+@option_alarm_playlist
+@option_alarm_time
+def system_alarm_add(
+    ctx: click.Context, disabled: bool, name: str, playlist: str, time: str
+) -> None:
+    """Add an alarm playing a playlist at a time of day, armed unless --disabled.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'add alarm "{name}"', lambda c: c.add_alarm(name, time, playlist, not disabled)
+    )
+
+
+@system_alarm.command("clear")
+@click.pass_context
+@option_yes
+def system_alarm_clear(ctx: click.Context, yes: bool) -> None:
+    """Remove every alarm of the Volumio host.
+
+    IMPORTANT: the alarms cannot be recovered; they are removed only when -y/--yes is
+    given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to clear the alarms without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "clear alarms", lambda c: c.set_alarms([]))
+
+
+@system_alarm.command("disable")
+@click.pass_context
+@click.argument("alarm_id", type=int)
+def system_alarm_disable(ctx: click.Context, alarm_id: int) -> None:
+    """Disarm the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f"disable alarm {alarm_id}", lambda c: c.disable_alarm(alarm_id))
+
+
+@system_alarm.command("enable")
+@click.pass_context
+@click.argument("alarm_id", type=int)
+def system_alarm_enable(ctx: click.Context, alarm_id: int) -> None:
+    """Arm the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f"enable alarm {alarm_id}", lambda c: c.enable_alarm(alarm_id))
+
+
+@system_alarm.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_alarm_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the alarms set on the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.alarms.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("alarms", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST,
+        "Volumio Alarms",
+    )
+
+
+@system_alarm.command("remove")
+@click.pass_context
+@click.argument("alarm_id", type=int)
+def system_alarm_remove(ctx: click.Context, alarm_id: int) -> None:
+    """Remove the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f"remove alarm {alarm_id}", lambda c: c.remove_alarm(alarm_id))
+
+
+@system_alarm.command("set")
+@click.pass_context
+@click.argument("file", type=str)
+def system_alarm_set(ctx: click.Context, file: str) -> None:
+    """Replace the alarms of the Volumio host with the JSON list of alarms in FILE.
+
+    Each alarm of the list is an object with the "id", "name", "enabled", "time", and
+    "playlist" keys, as "system alarm list -F raw" prints them.
+
+    Needs a WebSocket API client.
+    """
+    try:
+        with open(file, encoding="utf-8") as alarms_file:
+            items = json.load(alarms_file)
+    except (OSError, ValueError) as e:
+        error(f'Cannot read alarms file "{file}": {e}')
+        sys.exit(1)
+    if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
+        raise click.UsageError(ALARM_FILE_ERROR)
+    alarms = [Alarm.from_raw(item) for item in items]
+    execute_command(ctx, f'set alarms "{file}"', lambda c: c.set_alarms(alarms))
 
 
 @system.group("audio")

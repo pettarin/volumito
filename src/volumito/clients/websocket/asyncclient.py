@@ -488,6 +488,36 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             self._log_debug(f'Requesting "{event}", waiting for "{awaited}"... done')
             return answer
 
+    async def add_alarm(
+        self, name: str, time: str, playlist: str, enabled: bool = True
+    ) -> Alarm:
+        """Add an alarm to the Volumio instance, keeping the others.
+
+        The Volumio API takes the alarms as a set: this reads :meth:`get_alarms` and
+        sends the set back with one more, numbered after the highest identifier in use.
+
+        Args:
+            name: The name of the alarm
+            time: The time of day it goes off, as ``"HH:MM"``
+            playlist: The name of the playlist it plays
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarm added, with its identifier
+
+        Raises:
+            ValueError: If the time is not a time of day as ``"HH:MM"``
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        checked = self._alarm_time(time)
+        alarms, alarm = self._alarm_added(
+            list(await self.get_alarms()), name, checked, playlist, enabled
+        )
+        await self.set_alarms(alarms)
+        return alarm
+
     async def add_and_play(self, uri: str) -> None:
         """Add the content of a URI to the queue and start playing it.
 
@@ -852,6 +882,24 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             'await client.emit("deleteUserData")'
         )
 
+    async def disable_alarm(self, alarm_id: int) -> None:
+        """Disarm an alarm of the Volumio instance, keeping the others as they are.
+
+        The Volumio API takes the alarms as a set: this reads :meth:`get_alarms` and
+        sends the set back with the alarm disarmed.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :meth:`get_alarms`
+
+        Raises:
+            ValueError: If no alarm has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        alarms = list(await self.get_alarms())
+        await self.set_alarms(self._alarm_toggled(alarms, alarm_id, False))
+
     async def disable_audio_output(self, output_id: str) -> None:
         """Disable one audio output of the Volumio instance.
 
@@ -932,6 +980,24 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(event, payload)
+
+    async def enable_alarm(self, alarm_id: int) -> None:
+        """Arm an alarm of the Volumio instance, keeping the others as they are.
+
+        The Volumio API takes the alarms as a set: this reads :meth:`get_alarms` and
+        sends the set back with the alarm armed.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :meth:`get_alarms`
+
+        Raises:
+            ValueError: If no alarm has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        alarms = list(await self.get_alarms())
+        await self.set_alarms(self._alarm_toggled(alarms, alarm_id, True))
 
     async def enable_audio_output(self, output_id: str) -> None:
         """Enable one audio output of the Volumio instance.
@@ -1977,6 +2043,24 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_REGENERATE_THUMBNAILS)
+
+    async def remove_alarm(self, alarm_id: int) -> None:
+        """Remove an alarm from the Volumio instance, keeping the others.
+
+        The Volumio API takes the alarms as a set: this reads :meth:`get_alarms` and
+        sends the set back without the alarm.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :meth:`get_alarms`
+
+        Raises:
+            ValueError: If no alarm has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        alarms = list(await self.get_alarms())
+        await self.set_alarms(self._alarm_removed(alarms, alarm_id))
 
     async def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         """Remove an item from the favourites.

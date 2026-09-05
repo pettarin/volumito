@@ -473,7 +473,11 @@ grouped by functionality.
 
 #### Alarms And Sleep Timer
 
+- `add_alarm(name, time, playlist, enabled=True)`
 - `alarms`
+- `disable_alarm(alarm_id)`
+- `enable_alarm(alarm_id)`
+- `remove_alarm(alarm_id)`
 - `set_alarms(alarms)`
 - `set_sleep_timer(delay)`
 - `sleep_timer`
@@ -493,6 +497,9 @@ grouped by functionality.
 > **`set_alarms` replaces the whole set.**
 > The Volumio API takes the alarms together, not one at a time,
 > so read `alarms` first and send back the list you want to keep.
+> `add_alarm`, `remove_alarm`, `enable_alarm`, and `disable_alarm`
+> do exactly that for one alarm, keeping the others as they are;
+> `add_alarm` numbers the new alarm after the highest identifier in use.
 
 ```python
 from datetime import timedelta
@@ -503,6 +510,10 @@ with VolumioWebSocketClient(host) as client:
 
     # keep only the alarms that are armed
     client.set_alarms([alarm for alarm in client.alarms if alarm.enabled])
+
+    # add an alarm, and disarm it right away
+    alarm = client.add_alarm("Weekday", "07:30", "jazz")
+    client.disable_alarm(alarm.id)
 ```
 
 #### Audio

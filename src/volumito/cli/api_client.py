@@ -212,6 +212,23 @@ class APIClient(ABC):
             self.logger.warning(f"Closing the {self.description} failed ({e})")
 
     @abstractmethod
+    def add_alarm(self, name: str, time: str, playlist: str, enabled: bool = True) -> Alarm:
+        """Add an alarm to the Volumio instance, keeping the others.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back with one more, numbered after the highest identifier in use.
+
+        Args:
+            name: The name of the alarm
+            time: The time of day it goes off, as ``"HH:MM"``
+            playlist: The name of the playlist it plays
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarm added, with its identifier
+        """
+
+    @abstractmethod
     def add_and_play(self, uri: str) -> None:
         """Add the content of a URI to the queue and start playing it.
 
@@ -520,6 +537,17 @@ class APIClient(ABC):
     def device_name(self, value: str) -> None: ...
 
     @abstractmethod
+    def disable_alarm(self, alarm_id: int) -> None:
+        """Disarm an alarm of the Volumio instance, keeping the others as they are.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back with the alarm disarmed.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :attr:`alarms`
+        """
+
+    @abstractmethod
     def disable_audio_output(self, output_id: str) -> None:
         """Disable one audio output of the Volumio instance.
 
@@ -575,6 +603,17 @@ class APIClient(ABC):
         Args:
             event: The name of the event to emit
             payload: What the event carries, when it carries anything
+        """
+
+    @abstractmethod
+    def enable_alarm(self, alarm_id: int) -> None:
+        """Arm an alarm of the Volumio instance, keeping the others as they are.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back with the alarm armed.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :attr:`alarms`
         """
 
     @abstractmethod
@@ -1061,6 +1100,17 @@ class APIClient(ABC):
 
         Args:
             url: The URL to register
+        """
+
+    @abstractmethod
+    def remove_alarm(self, alarm_id: int) -> None:
+        """Remove an alarm from the Volumio instance, keeping the others.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back without the alarm.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :attr:`alarms`
         """
 
     @abstractmethod
@@ -1684,6 +1734,9 @@ class RESTAPIClient(APIClient):
 
     _fallback: _WebSocketFallback
 
+    def add_alarm(self, name: str, time: str, playlist: str, enabled: bool = True) -> Alarm:
+        return self._fallback.client(ALARM_OPERATION).add_alarm(name, time, playlist, enabled)
+
     def add_and_play(self, uri: str) -> None:
         return self._fallback.client(QUEUE_OPERATION).add_and_play(uri)
 
@@ -1789,6 +1842,9 @@ class RESTAPIClient(APIClient):
     def device_name(self, value: str) -> None:
         self._fallback.client(SYSTEM_OPERATION).device_name = value
 
+    def disable_alarm(self, alarm_id: int) -> None:
+        return self._fallback.client(ALARM_OPERATION).disable_alarm(alarm_id)
+
     def disable_audio_output(self, output_id: str) -> None:
         return self._fallback.client(AUDIO_OPERATION).disable_audio_output(output_id)
 
@@ -1807,6 +1863,9 @@ class RESTAPIClient(APIClient):
 
     def emit(self, event: str, payload: object = None) -> None:
         return self._fallback.client(EVENT_OPERATION).emit(event, payload)
+
+    def enable_alarm(self, alarm_id: int) -> None:
+        return self._fallback.client(ALARM_OPERATION).enable_alarm(alarm_id)
 
     def enable_audio_output(self, output_id: str) -> None:
         return self._fallback.client(AUDIO_OPERATION).enable_audio_output(output_id)
@@ -1923,6 +1982,9 @@ class RESTAPIClient(APIClient):
 
     def regenerate_thumbnails(self) -> None:
         return self._fallback.client(COLLECTION_OPERATION).regenerate_thumbnails()
+
+    def remove_alarm(self, alarm_id: int) -> None:
+        return self._fallback.client(ALARM_OPERATION).remove_alarm(alarm_id)
 
     def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         return self._fallback.client(FAVOURITE_OPERATION).remove_from_favourites(uri, service)
@@ -2330,6 +2392,9 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
         super().__init__(client)
         self._fallback = _RESTFallback(self, fallback)
 
+    def add_alarm(self, name: str, time: str, playlist: str, enabled: bool = True) -> Alarm:
+        return self._client.add_alarm(name, time, playlist, enabled)
+
     def add_and_play(self, uri: str) -> None:
         return self._client.add_and_play(uri)
 
@@ -2445,6 +2510,9 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def device_name(self, value: str) -> None:
         self._client.device_name = value
 
+    def disable_alarm(self, alarm_id: int) -> None:
+        return self._client.disable_alarm(alarm_id)
+
     def disable_audio_output(self, output_id: str) -> None:
         return self._client.disable_audio_output(output_id)
 
@@ -2463,6 +2531,9 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
 
     def emit(self, event: str, payload: object = None) -> None:
         return self._client.emit(event, payload)
+
+    def enable_alarm(self, alarm_id: int) -> None:
+        return self._client.enable_alarm(alarm_id)
 
     def enable_audio_output(self, output_id: str) -> None:
         return self._client.enable_audio_output(output_id)
@@ -2603,6 +2674,9 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
 
     def register_notification(self, url: str | Notification) -> SuccessResponse:
         return self._fallback.client(NOTIFICATION_OPERATION).register_notification(url)
+
+    def remove_alarm(self, alarm_id: int) -> None:
+        return self._client.remove_alarm(alarm_id)
 
     def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         return self._client.remove_from_favourites(uri, service)
@@ -3086,6 +3160,9 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def _open_client(self) -> None:
         self._run(self._client.connect())
 
+    def add_alarm(self, name: str, time: str, playlist: str, enabled: bool = True) -> Alarm:
+        return self._run(self._client.add_alarm(name, time, playlist, enabled))
+
     def add_and_play(self, uri: str) -> None:
         return self._run(self._client.add_and_play(uri))
 
@@ -3197,6 +3274,9 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def device_name(self, value: str) -> None:
         self._run(self._client.set_device_name(value))
 
+    def disable_alarm(self, alarm_id: int) -> None:
+        return self._run(self._client.disable_alarm(alarm_id))
+
     def disable_audio_output(self, output_id: str) -> None:
         return self._run(self._client.disable_audio_output(output_id))
 
@@ -3215,6 +3295,9 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
 
     def emit(self, event: str, payload: object = None) -> None:
         return self._run(self._client.emit(event, payload))
+
+    def enable_alarm(self, alarm_id: int) -> None:
+        return self._run(self._client.enable_alarm(alarm_id))
 
     def enable_audio_output(self, output_id: str) -> None:
         return self._run(self._client.enable_audio_output(output_id))
@@ -3352,6 +3435,9 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
 
     def register_notification(self, url: str | Notification) -> SuccessResponse:
         return self._fallback.client(NOTIFICATION_OPERATION).register_notification(url)
+
+    def remove_alarm(self, alarm_id: int) -> None:
+        return self._run(self._client.remove_alarm(alarm_id))
 
     def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         return self._run(self._client.remove_from_favourites(uri, service))

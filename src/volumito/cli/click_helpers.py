@@ -1289,6 +1289,10 @@ def execute_command(
     except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
         error(f"API client error: {e}")
         sys.exit(1)
+    except ValueError as e:
+        # The clients refuse a value they cannot send before sending anything
+        error(f"Invalid value: {e}")
+        sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
@@ -1520,6 +1524,37 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
         default=True,
         show_default=True,
         help="Embed track metadata and cover art into the downloaded file.",
+    )(func)
+
+
+def option_alarm_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--name`` option to the system alarm add subcommand."""
+    return click.option(
+        "--name",
+        type=str,
+        required=True,
+        help="The name of the alarm.",
+    )(func)
+
+
+def option_alarm_playlist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--playlist`` option to the system alarm add subcommand."""
+    return click.option(
+        "--playlist",
+        type=str,
+        required=True,
+        help="The name of the playlist the alarm plays.",
+    )(func)
+
+
+def option_alarm_time(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--time`` option to the system alarm add subcommand."""
+    return click.option(
+        "--time",
+        type=str,
+        required=True,
+        metavar="HH:MM",
+        help="The time of day the alarm goes off, as HH:MM.",
     )(func)
 
 
@@ -1761,6 +1796,16 @@ def option_data(func: Callable[..., None]) -> Callable[..., None]:
         default=None,
         metavar="JSON",
         help="The arguments to call the method with, as a JSON object.",
+    )(func)
+
+
+def option_disabled(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--disabled`` option to the system alarm add subcommand."""
+    return click.option(
+        "--disabled",
+        is_flag=True,
+        default=False,
+        help="Add the alarm disarmed, instead of armed.",
     )(func)
 
 

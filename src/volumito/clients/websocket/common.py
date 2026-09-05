@@ -694,6 +694,99 @@ class VolumioWebSocketCommon(VolumioCommon):
     _CLIENT_DESCRIPTION: str = "WebSocket API client"
     """The name a client logs itself under while initializing."""
 
+    def _alarm_added(
+        self, alarms: list[Alarm], name: str, time: str, playlist: str, enabled: bool
+    ) -> tuple[list[Alarm], Alarm]:
+        """Build the set of alarms with one more, numbered after the highest in use.
+
+        Args:
+            alarms: The alarms the host holds
+            name: The name of the alarm
+            time: The time of day it goes off, as ``"HH:MM"``, already checked
+            playlist: The name of the playlist it plays
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarms to send back, and the one added (with identifier 1 when the host
+            held none)
+        """
+        identifiers = [alarm.id for alarm in alarms if alarm.id is not None]
+        alarm = Alarm.from_raw(
+            {
+                "id": max(identifiers, default=0) + 1,
+                "name": name,
+                "enabled": enabled,
+                "time": time,
+                "playlist": playlist,
+            }
+        )
+        return [*alarms, alarm], alarm
+
+    def _alarm_removed(self, alarms: list[Alarm], alarm_id: int) -> list[Alarm]:
+        """Build the set of alarms without one.
+
+        Args:
+            alarms: The alarms the host holds
+            alarm_id: The identifier of the alarm to drop
+
+        Returns:
+            The alarms to send back
+
+        Raises:
+            ValueError: If no alarm has the identifier
+        """
+        kept = [alarm for alarm in alarms if alarm.id != alarm_id]
+        if len(kept) == len(alarms):
+            self._fail_no_alarm(alarm_id)
+        return kept
+
+    def _alarm_time(self, time: str) -> str:
+        """Check that a time is a time of day as ``"HH:MM"``.
+
+        Args:
+            time: The time to check
+
+        Returns:
+            The time, as given
+
+        Raises:
+            ValueError: If the time is not a time of day as ``"HH:MM"``
+        """
+        hours, separator, minutes = time.partition(":")
+        valid = (
+            bool(separator)
+            and hours.isdigit()
+            and minutes.isdigit()
+            and len(minutes) == 2
+            and int(hours) < 24
+            and int(minutes) < 60
+        )
+        if not valid:
+            self._log_warning(f'Refusing the alarm time "{time}"')
+            raise ValueError(f'The alarm time must be a time of day as "HH:MM", got "{time}"')
+        return time
+
+    def _alarm_toggled(self, alarms: list[Alarm], alarm_id: int, enabled: bool) -> list[Alarm]:
+        """Build the set of alarms with one armed or disarmed.
+
+        Args:
+            alarms: The alarms the host holds
+            alarm_id: The identifier of the alarm to arm or disarm
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarms to send back
+
+        Raises:
+            ValueError: If no alarm has the identifier
+        """
+        if all(alarm.id != alarm_id for alarm in alarms):
+            self._fail_no_alarm(alarm_id)
+        return [
+            alarm.model_copy(update={"enabled": enabled}) if alarm.id == alarm_id else alarm
+            for alarm in alarms
+        ]
+
     def _alarms_payload(self, alarms: list[Alarm]) -> list[dict[str, Any]]:
         """Build the payload replacing the whole set of alarms.
 
@@ -774,6 +867,18 @@ class VolumioWebSocketCommon(VolumioCommon):
             f'Failed to emit "{event}" to Volumio instance at '
             f"{self._endpoint_description}: {error}"
         ) from error
+
+    def _fail_no_alarm(self, alarm_id: int) -> NoReturn:
+        """Refuse to act on an alarm the host does not hold.
+
+        Args:
+            alarm_id: The identifier no alarm has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f"No alarm has the identifier {alarm_id}")
+        raise ValueError(f"No alarm has the identifier {alarm_id}")
 
     def _fail_no_response(self, event: str, response_event: str, waited: float) -> NoReturn:
         """Report that a Volumio instance did not answer an event in time.

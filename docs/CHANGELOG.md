@@ -51,6 +51,10 @@ All notable changes to this project will be documented in this file.
   `install`, `list`, `manage`, `uninstall`, `update`) and `system ui`
   (`experience`, `menu`, `privacy`, `settings`, and the `background`
   and `language` subgroups), all needing a WebSocket API client
+- Command group `system alarm` (`add`, `clear`, `disable`, `enable`,
+  `list`, `remove`, `set`), needing a WebSocket API client
+- Methods `add_alarm`, `disable_alarm`, `enable_alarm`, and `remove_alarm`
+  on the WebSocket API clients
 
 ### Changed
 

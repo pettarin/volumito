@@ -4,6 +4,9 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+ALARM_FILE_ERROR = "Expected FILE to hold a JSON list of alarm objects."
+"""Error message when "system alarm set" is given a file of another shape."""
+
 API_CLIENTS = [
     "synchronous_rest",
     "asynchronous_rest",
@@ -332,6 +335,15 @@ SHORT_FORMAT_FIELDS_QUEUE_STATUS = [
     "has_next",
 ]
 """Short fields list for the "queue status" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST = [
+    "id",
+    "name",
+    "enabled",
+    "time",
+    "playlist",
+]
+"""Short fields list for the "system alarm list" command."""
 
 SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS = [
     "id",

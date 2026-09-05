@@ -96,6 +96,8 @@ from volumito.clients.errors import (
     VolumioWebSocketError,
 )
 from volumito.clients.models import (
+    Alarm,
+    Alarms,
     AudioOutputs,
     Backgrounds,
     BrowseSources,
@@ -164,6 +166,7 @@ def _isolate_config_probing(mocker: MockerFixture):
 
 
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
+    "alarms": Alarms,
     "audio_outputs": AudioOutputs,
     "available_timezones": Timezones,
     "backgrounds": Backgrounds,
@@ -6153,6 +6156,251 @@ class TestSystemCommands:
         assert info_result.exit_code == 0
         assert info_result.output == system_info_result.output
         assert json.loads(info_result.output)["name"] == "Living Room"
+
+
+class TestSystemAlarm:
+    """Test cases for the system alarm subgroup."""
+
+    ALARMS = {
+        "alarms": [
+            {"id": 3, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"},
+            {"id": 5, "name": "Weekend", "enabled": False, "time": "09:00", "playlist": "rock"},
+        ]
+    }
+    """The alarms, as a Volumio host answers them."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the sleep timer "
+        "and the alarms: use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for an alarm member, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the alarm reads and edits."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "alarms", return_value=self.ALARMS)
+        mock_client.add_alarm.return_value = Alarm.from_raw(
+            {"id": 6, "name": "Nap", "enabled": True, "time": "14:15", "playlist": "ambient"}
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system alarm list prints the short fields of each alarm, as a table too."""
+        self._mock_websocket_client(mocker)
+
+        pretty = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "list"])
+        table = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "list", "-F", "table"])
+
+        assert pretty.exit_code == 0
+        assert json.loads(pretty.output) == self.ALARMS["alarms"]
+        assert table.exit_code == 0
+        lines = table.output.splitlines()
+        assert "Volumio Alarms" in lines
+        assert "1. Weekday" in lines
+        assert "   Time             : 07:30" in lines
+
+    @pytest.mark.parametrize(("options", "enabled"), [([], True), (["--disabled"], False)])
+    def test_add(self, runner: CliRunner, mocker: MockerFixture, options, enabled):
+        """system alarm add adds an alarm, armed unless --disabled."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "alarm", "add", "--name", "Nap", "--time", "14:15",
+             "--playlist", "ambient", *options],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add alarm \"Nap\"' executed successfully" in result.output
+        mock_client.add_alarm.assert_called_once_with("Nap", "14:15", "ambient", enabled)
+
+    def test_add_requires_its_options(self, runner: CliRunner, mocker: MockerFixture):
+        """The name, the time, and the playlist are all required."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "alarm", "add", "--name", "Nap", "--time", "14:15"]
+        )
+
+        assert result.exit_code == 2
+        assert "Missing option '--playlist'" in result.output
+        mock_client.add_alarm.assert_not_called()
+
+    def test_add_with_a_bad_time(self, runner: CliRunner, mocker: MockerFixture):
+        """A time the client refuses is reported as an invalid value."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.add_alarm.side_effect = ValueError(
+            'The alarm time must be a time of day as "HH:MM", got "7:30am"'
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "alarm", "add", "--name", "Nap", "--time", "7:30am",
+             "--playlist", "ambient"],
+        )
+
+        assert result.exit_code == 1
+        assert 'Invalid value: The alarm time must be a time of day as "HH:MM"' in result.output
+
+    def test_clear_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes the alarms are kept."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "clear"])
+
+        assert result.exit_code == 1
+        assert "Refusing to clear the alarms without -y/--yes" in result.output
+        mock_client.set_alarms.assert_not_called()
+
+    def test_clear(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the set of alarms is replaced with an empty one."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "clear", "-y"])
+
+        assert result.exit_code == 0
+        assert "Command 'clear alarms' executed successfully" in result.output
+        mock_client.set_alarms.assert_called_once_with([])
+
+    @pytest.mark.parametrize(
+        ("command", "member"),
+        [("disable", "disable_alarm"), ("enable", "enable_alarm"), ("remove", "remove_alarm")],
+    )
+    def test_one_alarm_actions(self, runner: CliRunner, mocker: MockerFixture, command, member):
+        """The actions on one alarm name it by its identifier."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", command, "5"])
+
+        assert result.exit_code == 0
+        assert f"Command '{command} alarm 5' executed successfully" in result.output
+        getattr(mock_client, member).assert_called_once_with(5)
+
+    def test_an_unknown_alarm(self, runner: CliRunner, mocker: MockerFixture):
+        """An identifier the client refuses is reported as an invalid value."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.remove_alarm.side_effect = ValueError("No alarm has the identifier 9")
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "9"])
+
+        assert result.exit_code == 1
+        assert "Invalid value: No alarm has the identifier 9" in result.output
+
+    def test_an_identifier_must_be_an_integer(self, runner: CliRunner, mocker: MockerFixture):
+        """The identifier is the number system alarm list prints."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "Weekday"])
+
+        assert result.exit_code == 2
+        mock_client.remove_alarm.assert_not_called()
+
+    def test_set_from_a_file(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """system alarm set replaces the set with the alarms of the file."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "alarms.json"
+        source.write_text(json.dumps(self.ALARMS["alarms"]))
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "set", str(source)])
+
+        assert result.exit_code == 0
+        assert f"Command 'set alarms \"{source}\"' executed successfully" in result.output
+        mock_client.set_alarms.assert_called_once()
+        sent = mock_client.set_alarms.call_args.args[0]
+        assert [alarm.id for alarm in sent] == [3, 5]
+        assert sent[0].playlist == "jazz"
+
+    @pytest.mark.parametrize("content", ['{"id": 1}', "[1, 2]"])
+    def test_set_from_a_file_of_another_shape(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path, content
+    ):
+        """The file must hold a list of alarm objects."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "alarms.json"
+        source.write_text(content)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "set", str(source)])
+
+        assert result.exit_code == 2
+        assert "Expected FILE to hold a JSON list of alarm objects" in result.output
+        mock_client.set_alarms.assert_not_called()
+
+    @pytest.mark.parametrize("content", ["not json", None])
+    def test_set_from_an_unreadable_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path, content
+    ):
+        """A file that is missing, or is not JSON, is an error."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "alarms.json"
+        if content is not None:
+            source.write_text(content)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "set", str(source)])
+
+        assert result.exit_code == 1
+        assert "Cannot read alarms file" in result.output
+        mock_client.set_alarms.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["add", "--name", "Nap", "--time", "14:15", "--playlist", "ambient"],
+            ["clear", "-y"],
+            ["disable", "3"],
+            ["enable", "3"],
+            ["list"],
+            ["remove", "3"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["system", "alarm", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "system", "alarm", "enable", "5"]
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "Falling back to the WebSocket API client for the sleep timer and the alarms"
+        ) in result.output
+        websocket.enable_alarm.assert_called_once_with(5)
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
 
 
 class TestSystemAudio:
@@ -17334,6 +17582,7 @@ class TestConfigurationCommands:
                     "story-credits": None,
                     "story-label": None,
                     "story-place": None,
+                    "system-alarm-list": None,
                     "system-audio-device-list": None,
                     "system-audio-dsp": None,
                     "system-audio-inputs": None,

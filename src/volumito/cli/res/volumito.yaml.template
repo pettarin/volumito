@@ -94,6 +94,7 @@ aliases:
   # stop: playback stop
   # sys: system
   # sysa: system audio
+  # sysal: system alarm
   # sysad: system audio device
   # sysadl: system audio device list
   # sysads: system audio device set
@@ -294,6 +295,7 @@ output:
   # - story-credits
   # - story-label
   # - story-place
+  # - system-alarm-list
   # - system-audio-device-list
   # - system-audio-dsp
   # - system-audio-inputs
@@ -448,6 +450,9 @@ output:
     # Add your own overrides here
 
   story-place:
+    # Add your own overrides here
+
+  system-alarm-list:
     # Add your own overrides here
 
   system-audio-device-list:
