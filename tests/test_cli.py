@@ -97,10 +97,14 @@ from volumito.clients.errors import (
 )
 from volumito.clients.models import (
     AudioOutputs,
+    Backgrounds,
     BrowseSources,
     CollectionStatistics,
+    ExperienceSettings,
     InfinityPlayback,
     InputSources,
+    Languages,
+    MenuItems,
     MusicSources,
     NetworkInfo,
     Notifications,
@@ -108,7 +112,9 @@ from volumito.clients.models import (
     PlayerState,
     PlaylistContent,
     Playlists,
+    Plugins,
     PowerModes,
+    PrivacySettings,
     PushNotification,
     Queue,
     QueueTrack,
@@ -122,6 +128,7 @@ from volumito.clients.models import (
     SystemVersion,
     Timezones,
     UiConfig,
+    UiSettings,
     UpdaterChannel,
     UsbDrives,
     VolumioModel,
@@ -159,22 +166,29 @@ def _isolate_config_probing(mocker: MockerFixture):
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "audio_outputs": AudioOutputs,
     "available_timezones": Timezones,
+    "backgrounds": Backgrounds,
     "browse_sources": BrowseSources,
     "collection_statistics": CollectionStatistics,
     "dsp_config": UiConfig,
+    "experience_settings": ExperienceSettings,
     "infinity_playback": InfinityPlayback,
     "input_sources": InputSources,
+    "installed_plugins": Plugins,
+    "languages": Languages,
+    "menu_items": MenuItems,
     "music_sources": MusicSources,
     "network_info": NetworkInfo,
     "notifications": Notifications,
     "playlists": Playlists,
     "power_modes": PowerModes,
+    "privacy_settings": PrivacySettings,
     "queue": Queue,
     "shares": Shares,
     "sleep_timer": SleepTimer,
     "state": PlayerState,
     "system_info": SystemInfo,
     "system_version": SystemVersion,
+    "ui_settings": UiSettings,
     "updater_channel": UpdaterChannel,
     "usb_drives": UsbDrives,
     "wireless_networks": WirelessNetworks,
@@ -7332,6 +7346,482 @@ class TestSystemNetworkShareUsb:
             "Falling back to the WebSocket API client for the network shares and the USB drives"
         ) in result.output
         assert json.loads(result.stdout) == self.DRIVES["drives"]
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
+
+class TestSystemPluginAndUi:
+    """Test cases for the system plugin and system ui subgroups."""
+
+    PLUGINS = {
+        "plugins": [
+            {
+                "category": "music_service",
+                "name": "mpd",
+                "prettyName": "Music Library",
+                "version": "1.0.0",
+                "enabled": True,
+                "active": True,
+                "icon": "fa-music",
+            },
+            {
+                "category": "audio_interface",
+                "name": "alsa",
+                "prettyName": "ALSA",
+                "version": "0.9.1",
+                "enabled": False,
+                "active": False,
+                "icon": "fa-volume-up",
+            },
+        ]
+    }
+    """The installed plugins, as a Volumio host answers them."""
+
+    MANAGED = {"plugins": [{"category": "music_service", "name": "mpd", "enabled": False}]}
+    """The plugins as they stand after the plugin manager acted."""
+
+    CONFIG = {"page": {"label": "MPD"}, "sections": [{"id": "section", "content": []}]}
+    """A configuration page, as a Volumio host answers it."""
+
+    BACKGROUNDS = {
+        "available": [{"name": "Default", "path": "/bg/default.jpg"}],
+        "current": {"name": "Default", "path": "/bg/default.jpg"},
+    }
+    """The backgrounds, as a Volumio host answers them."""
+
+    EXPERIENCE = {
+        "options": [{"id": True, "label": "Advanced"}, {"id": False, "label": "Simple"}],
+        "status": {"id": True, "label": "Advanced"},
+    }
+    """The experience settings, as a Volumio host answers them."""
+
+    LANGUAGES = {
+        "available": [
+            {"code": "en", "language": "English"},
+            {"code": "it", "language": "Italiano"},
+        ],
+        "defaultLanguage": {"code": "en", "language": "English"},
+    }
+    """The languages, as a Volumio host answers them."""
+
+    MENU = {
+        "items": [
+            {"id": "browse", "name": "Browse", "state": "volumio.browse"},
+            {"id": "plugin", "name": "Plugin", "state": "volumio.plugin", "params": {"a": 1}},
+        ]
+    }
+    """The menu, as a Volumio host answers it."""
+
+    PRIVACY = {"allowUIStatistics": False}
+    """The privacy settings, as a Volumio host answers them."""
+
+    UI = {"color": "#54c688", "language": "en", "theme": "volumio"}
+    """The user interface settings, as a Volumio host answers them."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    @staticmethod
+    def _refusal(operation: str) -> str:
+        """The error of a REST API client asked for an operation, without the fallback."""
+        return (
+            f"API client error: The synchronous REST API client does not offer {operation}: "
+            "use --api-client synchronous_websocket or asynchronous_websocket, "
+            "or --allow-fallback-to-websocket-api"
+        )
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the plugin and interface reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "installed_plugins", return_value=self.PLUGINS)
+        mock_client.manage_plugin.return_value = Plugins.from_raw(self.MANAGED)
+        mock_client.get_plugin_config.return_value = UiConfig.from_raw(self.CONFIG)
+        _attach_property(mock_client, "backgrounds", return_value=self.BACKGROUNDS)
+        _attach_property(mock_client, "experience_settings", return_value=self.EXPERIENCE)
+        _attach_property(mock_client, "languages", return_value=self.LANGUAGES)
+        _attach_property(mock_client, "menu_items", return_value=self.MENU)
+        _attach_property(mock_client, "privacy_settings", return_value=self.PRIVACY)
+        _attach_property(mock_client, "ui_settings", return_value=self.UI)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_plugin_call_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes no method is called."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "call", "music_service/mpd", "rescan"]
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'Refusing to call the plugin method without -y/--yes: "music_service/mpd" "rescan"'
+        ) in result.output
+        mock_client.call_plugin_method.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("options", "data"), [([], None), (["--data", '{"path": "/mnt"}'], {"path": "/mnt"})]
+    )
+    def test_plugin_call(self, runner: CliRunner, mocker: MockerFixture, options, data):
+        """With -y/--yes the method is called, with the JSON arguments given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "call", "music_service/mpd", "rescan", "-y",
+             *options],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'call \"music_service/mpd\" \"rescan\"' executed" in result.output
+        mock_client.call_plugin_method.assert_called_once_with("music_service/mpd", "rescan", data)
+
+    @pytest.mark.parametrize("data", ["not json", "[1, 2]", '"text"'])
+    def test_plugin_call_with_bad_data(self, runner: CliRunner, mocker: MockerFixture, data):
+        """The arguments must be a JSON object."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "call", "music_service/mpd", "rescan", "-y",
+             "--data", data],
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the --data option to hold a JSON object" in result.output
+        mock_client.call_plugin_method.assert_not_called()
+
+    def test_plugin_config(self, runner: CliRunner, mocker: MockerFixture):
+        """system plugin config prints the configuration page of the plugin."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "config", "music_service/mpd", "-F", "json"],
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.CONFIG
+        mock_client.get_plugin_config.assert_called_once_with("music_service/mpd")
+
+    @pytest.mark.parametrize(
+        ("arguments", "action"),
+        [
+            (["disable", "music_service", "mpd"], "disable"),
+            (["enable", "music_service", "mpd"], "enable"),
+            (["manage", "restart", "music_service", "mpd"], "restart"),
+        ],
+    )
+    def test_plugin_manager_actions(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, action
+    ):
+        """The plugin manager acts on the plugin, and the plugins are printed as they stand."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", *arguments])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.MANAGED["plugins"]
+        mock_client.manage_plugin.assert_called_once_with(action, "music_service", "mpd")
+
+    def test_plugin_install_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is installed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "install", "http://x/plugin.zip"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Refusing to install the plugin without -y/--yes: "http://x/plugin.zip"' in (
+            result.output
+        )
+        mock_client.install_plugin.assert_not_called()
+
+    def test_plugin_install(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the plugin is installed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "install", "http://x/plugin.zip", "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'install plugin \"http://x/plugin.zip\"' executed" in result.output
+        mock_client.install_plugin.assert_called_once_with("http://x/plugin.zip")
+
+    def test_plugin_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system plugin list prints the short fields of each plugin, as a table too."""
+        self._mock_websocket_client(mocker)
+
+        pretty = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "list"])
+        table = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "list", "-F", "table"]
+        )
+
+        assert pretty.exit_code == 0
+        plugins = json.loads(pretty.output)
+        assert [plugin["name"] for plugin in plugins] == ["mpd", "alsa"]
+        assert plugins[0]["version"] == "1.0.0"
+        assert "icon" not in plugins[0]
+        assert table.exit_code == 0
+        assert "Volumio Plugins" in table.output
+        assert "1. mpd" in table.output
+
+    def test_plugin_uninstall_refused_without_yes(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Without -y/--yes nothing is removed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "uninstall", "music_service", "mpd"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Refusing to uninstall the plugin without -y/--yes: "music_service/mpd"' in (
+            result.output
+        )
+        mock_client.uninstall_plugin.assert_not_called()
+
+    def test_plugin_uninstall(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the plugin is removed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "uninstall", "music_service", "mpd", "-y"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'uninstall plugin \"music_service/mpd\"' executed" in result.output
+        mock_client.uninstall_plugin.assert_called_once_with("music_service", "mpd")
+
+    def test_plugin_update(self, runner: CliRunner, mocker: MockerFixture):
+        """system plugin update updates the plugin."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "update", "music_service", "mpd"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'update plugin \"music_service/mpd\"' executed" in result.output
+        mock_client.update_plugin.assert_called_once_with("music_service", "mpd")
+
+    def test_ui_background_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system ui background list prints the backgrounds and the one in use."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.BACKGROUNDS
+
+    def test_ui_background_delete_refused_without_yes(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Without -y/--yes no background is deleted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "ui", "background", "delete", "Default"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Refusing to delete the background without -y/--yes: "Default"' in result.output
+        mock_client.delete_background.assert_not_called()
+
+    def test_ui_background_delete(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the background is deleted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "ui", "background", "delete", "Default", "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'delete background \"Default\"' executed" in result.output
+        mock_client.delete_background.assert_called_once_with("Default")
+
+    @pytest.mark.parametrize(
+        ("options", "path"), [([], None), (["--path", "/bg/sea.jpg"], "/bg/sea.jpg")]
+    )
+    def test_ui_background_set(self, runner: CliRunner, mocker: MockerFixture, options, path):
+        """system ui background set chooses the background, with its path when given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "ui", "background", "set", "Sea", *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'set background \"Sea\"' executed" in result.output
+        mock_client.set_background.assert_called_once_with("Sea", path)
+
+    def test_ui_experience_prints_the_settings(self, runner: CliRunner, mocker: MockerFixture):
+        """Without a value, system ui experience prints the settings."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "experience"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.EXPERIENCE
+        mock_client.set_experience_settings.assert_not_called()
+
+    @pytest.mark.parametrize(("value", "advanced"), [("advanced", True), ("simple", False)])
+    def test_ui_experience_sets_the_mode(
+        self, runner: CliRunner, mocker: MockerFixture, value, advanced
+    ):
+        """A value chooses the set of options."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "experience", value])
+
+        assert result.exit_code == 0
+        assert f"Command 'experience {value}' executed successfully" in result.output
+        mock_client.set_experience_settings.assert_called_once_with(advanced)
+
+    def test_ui_experience_rejects_other_values(self, runner: CliRunner, mocker: MockerFixture):
+        """VALUE is advanced or simple."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "experience", "expert"])
+
+        assert result.exit_code == 2
+        mock_client.set_experience_settings.assert_not_called()
+
+    def test_ui_language_list(self, runner: CliRunner, mocker: MockerFixture):
+        """system ui language list prints the languages and the one in use."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "language", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.LANGUAGES
+
+    @pytest.mark.parametrize(
+        ("options", "name"), [([], None), (["--name", "Italiano"], "Italiano")]
+    )
+    def test_ui_language_set(self, runner: CliRunner, mocker: MockerFixture, options, name):
+        """system ui language set chooses a language of the list, named when given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "ui", "language", "set", "it", *options]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'language \"it\"' executed successfully" in result.output
+        mock_client.set_language.assert_called_once_with("it", name)
+
+    @pytest.mark.parametrize("available", [LANGUAGES["available"], []])
+    def test_ui_language_set_unknown(
+        self, runner: CliRunner, mocker: MockerFixture, available
+    ):
+        """A code outside the list is refused, listing the available codes."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "languages", return_value={"available": available})
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "language", "set", "xx"])
+
+        assert result.exit_code == 1
+        assert 'Language not found: "xx"' in result.output
+        assert ('  "en"' in result.output) is bool(available)
+        assert ("  (none)" in result.output) is not bool(available)
+        mock_client.set_language.assert_not_called()
+
+    def test_ui_menu(self, runner: CliRunner, mocker: MockerFixture):
+        """system ui menu prints the short fields of each entry."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "menu"])
+
+        assert result.exit_code == 0
+        items = json.loads(result.output)
+        assert [item["id"] for item in items] == ["browse", "plugin"]
+        assert "params" not in items[1]
+
+    @pytest.mark.parametrize(
+        ("command", "payload"), [("privacy", PRIVACY), ("settings", UI)]
+    )
+    def test_ui_reads(self, runner: CliRunner, mocker: MockerFixture, command, payload):
+        """system ui privacy and settings print the answer of the host."""
+        self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", command])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == payload
+
+    @pytest.mark.parametrize(
+        ("arguments", "operation"),
+        [
+            (["plugin", "call", "a/b", "m", "-y"], "the plugins"),
+            (["plugin", "config", "a/b"], "the plugins"),
+            (["plugin", "disable", "a", "b"], "the plugins"),
+            (["plugin", "enable", "a", "b"], "the plugins"),
+            (["plugin", "install", "http://x", "-y"], "the plugins"),
+            (["plugin", "list"], "the plugins"),
+            (["plugin", "manage", "restart", "a", "b"], "the plugins"),
+            (["plugin", "uninstall", "a", "b", "-y"], "the plugins"),
+            (["plugin", "update", "a", "b"], "the plugins"),
+            (["ui", "background", "delete", "x", "-y"], "the user interface settings"),
+            (["ui", "background", "list"], "the user interface settings"),
+            (["ui", "background", "set", "x"], "the user interface settings"),
+            (["ui", "experience"], "the user interface settings"),
+            (["ui", "experience", "simple"], "the user interface settings"),
+            (["ui", "language", "list"], "the user interface settings"),
+            (["ui", "language", "set", "en"], "the user interface settings"),
+            (["ui", "menu"], "the user interface settings"),
+            (["ui", "privacy"], "the user interface settings"),
+            (["ui", "settings"], "the user interface settings"),
+        ],
+    )
+    def test_a_rest_client_refuses(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, operation
+    ):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["system", *arguments])
+
+        assert result.exit_code == 1
+        assert self._refusal(operation) in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "system", "ui", "settings"]
+        )
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the user interface settings" in (
+            result.output
+        )
+        assert json.loads(result.stdout) == self.UI
         websocket.disconnect.assert_called_once_with()
         rest.close.assert_called_once_with()
 
@@ -16852,11 +17342,22 @@ class TestConfigurationCommands:
                     "system-execute": None,
                     "system-network-info": None,
                     "system-network-wireless": None,
+                    "system-plugin-config": None,
+                    "system-plugin-disable": None,
+                    "system-plugin-enable": None,
+                    "system-plugin-list": None,
+                    "system-plugin-manage": None,
                     "system-power-modes": None,
                     "system-share-discover": None,
                     "system-share-info": None,
                     "system-share-list": None,
                     "system-timezone-list": None,
+                    "system-ui-background-list": None,
+                    "system-ui-experience": None,
+                    "system-ui-language-list": None,
+                    "system-ui-menu": None,
+                    "system-ui-privacy": None,
+                    "system-ui-settings": None,
                     "system-update-channel-list": None,
                     "system-usb-list": None,
                     "system-info": None,

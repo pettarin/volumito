@@ -55,6 +55,7 @@ from volumito.cli.click_helpers import (
     option_artists_only,
     option_audio_file_name_template,
     option_autocompose_url,
+    option_background_path,
     option_backup_output_file,
     option_best_result_only,
     option_by_uid,
@@ -66,6 +67,7 @@ from volumito.cli.click_helpers import (
     option_create_download_manifest,
     option_cue_track,
     option_current_track,
+    option_data,
     option_endpoint,
     option_extended,
     option_fields,
@@ -77,6 +79,7 @@ from volumito.cli.click_helpers import (
     option_item_album,
     option_item_albumart,
     option_item_title,
+    option_language_name,
     option_last,
     option_limit,
     option_manifest_file,
@@ -163,6 +166,7 @@ from volumito.cli.constants import (
     COLLECTION_UPDATE_URI_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
+    EXPERIENCE_VALUES,
     FAVOURITE_NAME_OPTION_ERROR,
     FAVOURITE_RADIO_NAME_ERROR,
     FAVOURITE_RADIO_OPTIONS_ERROR,
@@ -179,6 +183,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PLAY_VOLATILE_ERROR,
+    PLUGIN_DATA_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
     QUEUE_ADD_MODES_ERROR,
@@ -197,7 +202,9 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
     SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
     SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
+    SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST,
     SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
+    SHORT_FORMAT_FIELDS_SYSTEM_UI_MENU,
     SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
@@ -229,6 +236,7 @@ from volumito.clients import (
     Label,
     NotificationListener,
     Place,
+    Plugins,
     PushNotification,
     Scheme,
     SearchResultItemKind,
@@ -2310,6 +2318,203 @@ def system_name(ctx: click.Context, value: str | None) -> None:
     execute_command(ctx, f'name "{new_name}"', set_name)
 
 
+def _render_plugins(ctx: click.Context, plugins: Plugins, fields: str, output_format: str) -> None:
+    """Print the installed plugins per the fields and format options.
+
+    Args:
+        ctx: Click context object holding the shared options
+        plugins: The installed plugins, as the client reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+    """
+    render_items(
+        ctx,
+        plugins.raw,
+        plugins.raw.get("plugins", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST,
+        "Volumio Plugins",
+    )
+
+
+@system.group("plugin")
+@click.pass_context
+def system_plugin(ctx: click.Context) -> None:
+    """Manage the plugins of the Volumio host."""
+    pass
+
+
+@system_plugin.command("call")
+@click.pass_context
+@click.argument("endpoint", type=str)
+@click.argument("method", type=str)
+@option_data
+@option_yes
+def system_plugin_call(
+    ctx: click.Context, endpoint: str, method: str, data: str | None, yes: bool
+) -> None:
+    """Call METHOD of the plugin ENDPOINT (as "category/name") directly.
+
+    The host answers nothing: whatever the plugin pushes is visible with
+    "notification event listen". IMPORTANT: any method can be called; the call is
+    made only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    arguments: dict[str, Any] | None = None
+    if data is not None:
+        try:
+            arguments = json.loads(data)
+        except ValueError:
+            arguments = None
+        if not isinstance(arguments, dict):
+            raise click.UsageError(PLUGIN_DATA_ERROR)
+    if not yes:
+        error(f'Refusing to call the plugin method without -y/--yes: "{endpoint}" "{method}"')
+        sys.exit(1)
+    execute_command(
+        ctx,
+        f'call "{endpoint}" "{method}"',
+        lambda c: c.call_plugin_method(endpoint, method, arguments),
+    )
+
+
+@system_plugin.command("config")
+@click.pass_context
+@click.argument("endpoint", type=str)
+@option_format
+def system_plugin_config(ctx: click.Context, endpoint: str, output_format: str) -> None:
+    """Print the configuration page of the plugin ENDPOINT (as "category/name").
+
+    Needs a WebSocket API client.
+    """
+    config = fetch_or_exit(ctx, lambda c: c.get_plugin_config(endpoint))
+    render_payload(
+        ctx, config.raw, output_format, heading=f'Volumio Plugin Configuration "{endpoint}"'
+    )
+
+
+@system_plugin.command("disable")
+@click.pass_context
+@click.argument("category", type=str)
+@click.argument("name", type=str)
+@option_fields
+@option_format
+def system_plugin_disable(
+    ctx: click.Context, category: str, name: str, fields: str, output_format: str
+) -> None:
+    """Disable the plugin NAME of CATEGORY, printing the plugins as they then stand.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("disable", category, name))
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("enable")
+@click.pass_context
+@click.argument("category", type=str)
+@click.argument("name", type=str)
+@option_fields
+@option_format
+def system_plugin_enable(
+    ctx: click.Context, category: str, name: str, fields: str, output_format: str
+) -> None:
+    """Enable the plugin NAME of CATEGORY, printing the plugins as they then stand.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("enable", category, name))
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("install")
+@click.pass_context
+@click.argument("url", type=str)
+@option_yes
+def system_plugin_install(ctx: click.Context, url: str, yes: bool) -> None:
+    """Install the plugin packaged at URL on the Volumio host.
+
+    The host reports its progress through the events its user interface listens for.
+    IMPORTANT: the plugin is installed only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to install the plugin without -y/--yes: "{url}"')
+        sys.exit(1)
+    execute_command(ctx, f'install plugin "{url}"', lambda c: c.install_plugin(url))
+
+
+@system_plugin.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_plugin_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the plugins installed on the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("manage")
+@click.pass_context
+@click.argument("action", type=str)
+@click.argument("category", type=str)
+@click.argument("name", type=str)
+@option_fields
+@option_format
+def system_plugin_manage(
+    ctx: click.Context, action: str, category: str, name: str, fields: str, output_format: str
+) -> None:
+    """Ask the plugin manager to do ACTION on the plugin NAME of CATEGORY.
+
+    ACTION is what the plugin manager of the host accepts (e.g., "enable",
+    "disable", "uninstall"); the plugins are printed as they then stand.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin(action, category, name))
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("uninstall")
+@click.pass_context
+@click.argument("category", type=str)
+@click.argument("name", type=str)
+@option_yes
+def system_plugin_uninstall(ctx: click.Context, category: str, name: str, yes: bool) -> None:
+    """Remove the plugin NAME of CATEGORY from the Volumio host.
+
+    IMPORTANT: the plugin is removed only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to uninstall the plugin without -y/--yes: "{category}/{name}"')
+        sys.exit(1)
+    execute_command(
+        ctx, f'uninstall plugin "{category}/{name}"', lambda c: c.uninstall_plugin(category, name)
+    )
+
+
+@system_plugin.command("update")
+@click.pass_context
+@click.argument("category", type=str)
+@click.argument("name", type=str)
+def system_plugin_update(ctx: click.Context, category: str, name: str) -> None:
+    """Update the plugin NAME of CATEGORY.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'update plugin "{category}/{name}"', lambda c: c.update_plugin(category, name)
+    )
+
+
 @system.group("power")
 @click.pass_context
 def system_power(ctx: click.Context) -> None:
@@ -2425,6 +2630,171 @@ def system_timezone_set(ctx: click.Context, value: str) -> None:
         client.timezone = value
 
     execute_command(ctx, f'timezone "{value}"', set_timezone)
+
+
+@system.group("ui")
+@click.pass_context
+def system_ui(ctx: click.Context) -> None:
+    """Manage the user interface of the Volumio host."""
+    pass
+
+
+@system_ui.group("background")
+@click.pass_context
+def system_ui_background(ctx: click.Context) -> None:
+    """Manage the background images of the user interface."""
+    pass
+
+
+@system_ui_background.command("delete")
+@click.pass_context
+@click.argument("name", type=str)
+@option_yes
+def system_ui_background_delete(ctx: click.Context, name: str, yes: bool) -> None:
+    """Delete the background image NAME, as "system ui background list" names it.
+
+    IMPORTANT: the image is deleted only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to delete the background without -y/--yes: "{name}"')
+        sys.exit(1)
+    execute_command(ctx, f'delete background "{name}"', lambda c: c.delete_background(name))
+
+
+@system_ui_background.command("list")
+@click.pass_context
+@option_format
+def system_ui_background_list(ctx: click.Context, output_format: str) -> None:
+    """Print the background images of the user interface, and the one in use.
+
+    Needs a WebSocket API client.
+    """
+    backgrounds = fetch_or_exit(ctx, lambda c: c.backgrounds)
+    render_payload(ctx, backgrounds.raw, output_format, heading="Volumio Backgrounds")
+
+
+@system_ui_background.command("set")
+@click.pass_context
+@click.argument("name", type=str)
+@option_background_path
+def system_ui_background_set(ctx: click.Context, name: str, path: str | None) -> None:
+    """Make NAME, as "system ui background list" names it, the background image.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'set background "{name}"', lambda c: c.set_background(name, path))
+
+
+@system_ui.command("experience")
+@click.pass_context
+@click.argument(
+    "value", required=False, default=None, type=click.Choice(EXPERIENCE_VALUES, case_sensitive=True)
+)
+@option_format
+def system_ui_experience(ctx: click.Context, value: str | None, output_format: str) -> None:
+    """Print or set how many options the user interface offers.
+
+    Without VALUE, print the setting in use and the ones that can be chosen.
+    Otherwise VALUE is "advanced" for the full set of options, or "simple".
+
+    Needs a WebSocket API client.
+    """
+    if value is None:
+        settings = fetch_or_exit(ctx, lambda c: c.experience_settings)
+        render_payload(ctx, settings.raw, output_format, heading="Volumio Experience Settings")
+        return
+    advanced = value == "advanced"
+    execute_command(
+        ctx, f"experience {value}", lambda c: c.set_experience_settings(advanced)
+    )
+
+
+@system_ui.group("language")
+@click.pass_context
+def system_ui_language(ctx: click.Context) -> None:
+    """Manage the language of the user interface."""
+    pass
+
+
+@system_ui_language.command("list")
+@click.pass_context
+@option_format
+def system_ui_language_list(ctx: click.Context, output_format: str) -> None:
+    """Print the languages the user interface can be shown in, and the one in use.
+
+    Needs a WebSocket API client.
+    """
+    languages = fetch_or_exit(ctx, lambda c: c.languages)
+    render_payload(ctx, languages.raw, output_format, heading="Volumio Languages")
+
+
+@system_ui_language.command("set")
+@click.pass_context
+@click.argument("code", type=str)
+@option_language_name
+def system_ui_language_set(ctx: click.Context, code: str, name: str | None) -> None:
+    """Show the user interface in the language CODE, one of "system ui language list".
+
+    Needs a WebSocket API client.
+    """
+    languages = fetch_or_exit(ctx, lambda c: c.languages)
+    codes = [language.code for language in languages if language.code is not None]
+    if code not in codes:
+        error(f'Language not found: "{code}"')
+        error("Available languages:")
+        for available in codes:
+            error(f'  "{available}"')
+        if not codes:
+            error("  (none)")
+        sys.exit(1)
+    execute_command(ctx, f'language "{code}"', lambda c: c.set_language(code, name))
+
+
+@system_ui.command("menu")
+@click.pass_context
+@option_fields
+@option_format
+def system_ui_menu(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the menu the Volumio host offers its user interface.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.menu_items.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("items", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_UI_MENU,
+        "Volumio Menu",
+    )
+
+
+@system_ui.command("privacy")
+@click.pass_context
+@option_format
+def system_ui_privacy(ctx: click.Context, output_format: str) -> None:
+    """Print the privacy settings of the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    settings = fetch_or_exit(ctx, lambda c: c.privacy_settings)
+    render_payload(ctx, settings.raw, output_format, heading="Volumio Privacy Settings")
+
+
+@system_ui.command("settings")
+@click.pass_context
+@option_format
+def system_ui_settings(ctx: click.Context, output_format: str) -> None:
+    """Print the colour, language, and theme of the user interface.
+
+    Needs a WebSocket API client.
+    """
+    settings = fetch_or_exit(ctx, lambda c: c.ui_settings)
+    render_payload(ctx, settings.raw, output_format, heading="Volumio User Interface Settings")
 
 
 @system.group("update")

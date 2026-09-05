@@ -89,6 +89,12 @@ DEFAULT_STORY_ARGUMENT_TYPE = "autodetect"
 DEFAULT_VOLUMIO_VERSION = "4"
 """Default target Volumio version for the "configuration create" command."""
 
+EXPERIENCE_VALUES = [
+    "advanced",
+    "simple",
+]
+"""Accepted values of the VALUE argument of the "system ui experience" command."""
+
 FAVOURITE_NAME_OPTION_ERROR = "Expected the --name option only together with --radio."
 """Error message when "collection favourite remove" names a web radio without --radio."""
 
@@ -185,6 +191,9 @@ OUTPUT_FORMATS = [
 
 PLAY_VOLATILE_ERROR = "Expected a POSITION argument together with --volatile."
 """Error message when "playback play" is asked for the volatile source without a position."""
+
+PLUGIN_DATA_ERROR = "Expected the --data option to hold a JSON object."
+"""Error message when "system plugin call" is given arguments that are not a JSON object."""
 
 PROGRAM_NAME = "volumito"
 """Name of the CLI tool, heading the command tree."""
@@ -349,6 +358,16 @@ SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS = [
 ]
 """Short fields list for the "system network wireless" command."""
 
+SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST = [
+    "category",
+    "name",
+    "prettyName",
+    "version",
+    "enabled",
+    "active",
+]
+"""Short fields list for the "system plugin" commands printing the installed plugins."""
+
 SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST = [
     "id",
     "name",
@@ -359,6 +378,13 @@ SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST = [
     "options",
 ]
 """Short fields list for the "system share list" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_UI_MENU = [
+    "id",
+    "name",
+    "state",
+]
+"""Short fields list for the "system ui menu" command."""
 
 SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST = [
     "name",

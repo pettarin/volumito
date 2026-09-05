@@ -1623,6 +1623,16 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_background_path(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--path`` option to the system ui background set subcommand."""
+    return click.option(
+        "--path",
+        type=str,
+        default=None,
+        help="The path of the image of the background, when the host needs it named too.",
+    )(func)
+
+
 def option_backup_output_file(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-o``/``--output-file`` option to the system backup create subcommand."""
     return click.option(
@@ -1740,6 +1750,17 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
             "Use the metadata of the current track "
             "instead of the positional argument(s)."
         ),
+    )(func)
+
+
+def option_data(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--data`` option to the system plugin call subcommand."""
+    return click.option(
+        "--data",
+        type=str,
+        default=None,
+        metavar="JSON",
+        help="The arguments to call the method with, as a JSON object.",
     )(func)
 
 
@@ -1862,6 +1883,16 @@ def option_item_title(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="The title to show for the item, when known.",
+    )(func)
+
+
+def option_language_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--name`` option to the system ui language set subcommand."""
+    return click.option(
+        "--name",
+        type=str,
+        default=None,
+        help="The name of the language, when the host needs it named too.",
     )(func)
 
 

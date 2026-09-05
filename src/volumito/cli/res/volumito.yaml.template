@@ -105,10 +105,12 @@ aliases:
   # sysn: system name
   # sysnet: system network
   # sysp: system ping
+  # syspl: system plugin
   # syspw: system power
   # syssh: system share
   # syst: system timezone
   # sysu: system update
+  # sysui: system ui
   # sysusb: system usb
   # sysv: system version
   # t: queue track
@@ -301,11 +303,22 @@ output:
   # - system-info
   # - system-network-info
   # - system-network-wireless
+  # - system-plugin-config
+  # - system-plugin-disable
+  # - system-plugin-enable
+  # - system-plugin-list
+  # - system-plugin-manage
   # - system-power-modes
   # - system-share-discover
   # - system-share-info
   # - system-share-list
   # - system-timezone-list
+  # - system-ui-background-list
+  # - system-ui-experience
+  # - system-ui-language-list
+  # - system-ui-menu
+  # - system-ui-privacy
+  # - system-ui-settings
   # - system-update-channel-list
   # - system-usb-list
   # - system-version
@@ -464,6 +477,21 @@ output:
   system-network-wireless:
     # Add your own overrides here
 
+  system-plugin-config:
+    # Add your own overrides here
+
+  system-plugin-disable:
+    # Add your own overrides here
+
+  system-plugin-enable:
+    # Add your own overrides here
+
+  system-plugin-list:
+    # Add your own overrides here
+
+  system-plugin-manage:
+    # Add your own overrides here
+
   system-power-modes:
     # Add your own overrides here
 
@@ -477,6 +505,24 @@ output:
     # Add your own overrides here
 
   system-timezone-list:
+    # Add your own overrides here
+
+  system-ui-background-list:
+    # Add your own overrides here
+
+  system-ui-experience:
+    # Add your own overrides here
+
+  system-ui-language-list:
+    # Add your own overrides here
+
+  system-ui-menu:
+    # Add your own overrides here
+
+  system-ui-privacy:
+    # Add your own overrides here
+
+  system-ui-settings:
     # Add your own overrides here
 
   system-update-channel-list:

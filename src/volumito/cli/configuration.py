@@ -104,11 +104,22 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-info": FORMAT_KEYS,
     "system-network-info": DISPLAY_KEYS,
     "system-network-wireless": DISPLAY_KEYS,
+    "system-plugin-config": FORMAT_KEYS,
+    "system-plugin-disable": DISPLAY_KEYS,
+    "system-plugin-enable": DISPLAY_KEYS,
+    "system-plugin-list": DISPLAY_KEYS,
+    "system-plugin-manage": DISPLAY_KEYS,
     "system-power-modes": FORMAT_KEYS,
     "system-share-discover": FORMAT_KEYS,
     "system-share-info": FORMAT_KEYS,
     "system-share-list": DISPLAY_KEYS,
     "system-timezone-list": FORMAT_KEYS,
+    "system-ui-background-list": FORMAT_KEYS,
+    "system-ui-experience": FORMAT_KEYS,
+    "system-ui-language-list": FORMAT_KEYS,
+    "system-ui-menu": DISPLAY_KEYS,
+    "system-ui-privacy": FORMAT_KEYS,
+    "system-ui-settings": FORMAT_KEYS,
     "system-update-channel-list": FORMAT_KEYS,
     "system-usb-list": DISPLAY_KEYS,
     "collection-browse": FORMAT_KEYS,
@@ -227,6 +238,21 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "system-network-wireless": [
         ["system", "network", "wireless"],
     ],
+    "system-plugin-config": [
+        ["system", "plugin", "config"],
+    ],
+    "system-plugin-disable": [
+        ["system", "plugin", "disable"],
+    ],
+    "system-plugin-enable": [
+        ["system", "plugin", "enable"],
+    ],
+    "system-plugin-list": [
+        ["system", "plugin", "list"],
+    ],
+    "system-plugin-manage": [
+        ["system", "plugin", "manage"],
+    ],
     "system-power-modes": [
         ["system", "power", "modes"],
     ],
@@ -241,6 +267,24 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "system-timezone-list": [
         ["system", "timezone", "list"],
+    ],
+    "system-ui-background-list": [
+        ["system", "ui", "background", "list"],
+    ],
+    "system-ui-experience": [
+        ["system", "ui", "experience"],
+    ],
+    "system-ui-language-list": [
+        ["system", "ui", "language", "list"],
+    ],
+    "system-ui-menu": [
+        ["system", "ui", "menu"],
+    ],
+    "system-ui-privacy": [
+        ["system", "ui", "privacy"],
+    ],
+    "system-ui-settings": [
+        ["system", "ui", "settings"],
     ],
     "system-update-channel-list": [
         ["system", "update", "channel", "list"],
