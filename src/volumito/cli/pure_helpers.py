@@ -14,8 +14,8 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER,
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
-    SHORT_FORMAT_FIELDS_MULTIROOM_ZONES,
-    SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE,
+    SHORT_FORMAT_FIELDS_MULTIROOM_INFO,
+    SHORT_FORMAT_FIELDS_MULTIROOM_INFO_EXCLUDED_FROM_STATE,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
 )
@@ -308,7 +308,7 @@ def filter_zones_fields(
         keyword the "state" subdictionary is trimmed too
     """
     zones = zones_data.get("zones", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_MULTIROOM_ZONES)
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_MULTIROOM_INFO)
     if selected is None:  # ALL
         return [zone.copy() for zone in zones]
 
@@ -321,7 +321,7 @@ def filter_zones_fields(
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
-                if key not in SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE
+                if key not in SHORT_FORMAT_FIELDS_MULTIROOM_INFO_EXCLUDED_FROM_STATE
             }
         filtered_zones.append(filtered_zone)
     return filtered_zones

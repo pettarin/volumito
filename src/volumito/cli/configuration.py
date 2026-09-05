@@ -93,7 +93,9 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playlist-list": FORMAT_KEYS,
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,
-    "multiroom-zones": DISPLAY_KEYS,
+    "multiroom-info": DISPLAY_KEYS,
+    "multiroom-set": FORMAT_KEYS,
+    "multiroom-status": FORMAT_KEYS,
     "system-alarm-list": DISPLAY_KEYS,
     "system-audio-device-list": FORMAT_KEYS,
     "system-audio-dsp": FORMAT_KEYS,
@@ -166,8 +168,14 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "command-list": [
         ["command", "list"],
     ],
-    "multiroom-zones": [
-        ["multiroom", "zones"],
+    "multiroom-info": [
+        ["multiroom", "info"],
+    ],
+    "multiroom-set": [
+        ["multiroom", "set"],
+    ],
+    "multiroom-status": [
+        ["multiroom", "status"],
     ],
     "notification-list": [
         ["notification", "list"],

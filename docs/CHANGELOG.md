@@ -55,12 +55,17 @@ All notable changes to this project will be documented in this file.
   `list`, `remove`, `set`), needing a WebSocket API client
 - Methods `add_alarm`, `disable_alarm`, `enable_alarm`, and `remove_alarm`
   on the WebSocket API clients
+- Commands `multiroom client`, `multiroom server`, `multiroom set`,
+  `multiroom single`, `multiroom status`, and `multiroom write`
+  (all needing a WebSocket API client)
 
 ### Changed
 
 - Command group `track` is now `queue track` (`track` is kept as a synonym),
   and commands `queue has_next` and `queue has_previous` are now
   `queue track has_next` and `queue track has_previous` (no synonyms)
+- Renamed the command `multiroom zones` to `multiroom info`
+  (and the corresponding configuration key); no synonym is kept
 
 
 ## [0.4.0] - 2026-09-04

@@ -36,7 +36,11 @@ aliases:
   # exec: system execute
   # i: info
   # mlt: multiroom
-  # mltz: multiroom zones
+  # mltc: multiroom client
+  # mlti: multiroom info
+  # mlts: multiroom status
+  # mltsg: multiroom single
+  # mltsv: multiroom server
   # mute: playback mute
   # next: playback next
   # not: notification
@@ -280,7 +284,9 @@ output:
   # - collection-source-list
   # - collection-statistics
   # - command-list
-  # - multiroom-zones
+  # - multiroom-info
+  # - multiroom-set
+  # - multiroom-status
   # - notification-list
   # - notification-listen
   # - playback-infinity
@@ -407,7 +413,13 @@ output:
 
     # Add your own overrides here
 
-  multiroom-zones:
+  multiroom-info:
+    # Add your own overrides here
+
+  multiroom-set:
+    # Add your own overrides here
+
+  multiroom-status:
     # Add your own overrides here
 
   notification-list:

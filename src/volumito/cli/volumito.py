@@ -180,6 +180,7 @@ from volumito.cli.constants import (
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
+    MULTIROOM_SETTINGS_ERROR,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_REGISTER_ERROR,
     MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR,
@@ -3845,11 +3846,50 @@ def multiroom(ctx: click.Context) -> None:
     pass
 
 
-@multiroom.command("zones")
+def _multiroom_settings(text: str) -> dict[str, Any]:
+    """Parse the multiroom settings given to a command.
+
+    Args:
+        text: A JSON object, or the path of a file holding one
+
+    Returns:
+        The settings
+
+    Raises:
+        click.UsageError: If the text is neither a JSON object nor the path of a readable
+            file holding one
+    """
+    try:
+        if os.path.isfile(text):
+            with open(text, encoding="utf-8") as settings_file:
+                settings = json.load(settings_file)
+        else:
+            settings = json.loads(text)
+    except (OSError, ValueError) as e:
+        raise click.UsageError(f"{MULTIROOM_SETTINGS_ERROR} ({e})") from e
+    if not isinstance(settings, dict):
+        raise click.UsageError(MULTIROOM_SETTINGS_ERROR)
+    return settings
+
+
+@multiroom.command("client")
+@click.pass_context
+@click.argument("server", type=str)
+def multiroom_client(ctx: click.Context, server: str) -> None:
+    """Make the Volumio host a multiroom client of the host SERVER.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    execute_command(
+        ctx, f'multiroom client of "{server}"', lambda c: c.set_as_multiroom_client(server)
+    )
+
+
+@multiroom.command("info")
 @click.pass_context
 @option_fields
 @option_format
-def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None:
+def multiroom_info(ctx: click.Context, fields: str, output_format: str) -> None:
     """Print the multiroom zones seen by the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.zones.raw)
 
@@ -3866,6 +3906,70 @@ def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None
             output = json.dumps(filtered_zones, indent=4, sort_keys=True, ensure_ascii=False)
 
     echo_data(ctx, output)
+
+
+@multiroom.command("server")
+@click.pass_context
+def multiroom_server(ctx: click.Context) -> None:
+    """Make the Volumio host a multiroom server.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    execute_command(ctx, "multiroom server", lambda c: c.set_as_multiroom_server())
+
+
+@multiroom.command("set")
+@click.pass_context
+@click.argument("settings", type=str)
+@option_format
+def multiroom_set(ctx: click.Context, settings: str, output_format: str) -> None:
+    """Change the multiroom configuration, printing the one the host then reports.
+
+    SETTINGS is a JSON object, or the path of a file holding one, of the shape
+    "multiroom status -F raw" prints.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    parsed = _multiroom_settings(settings)
+    resulting = fetch_or_exit(ctx, lambda c: c.set_multiroom(parsed))
+    render_payload(ctx, resulting.raw, output_format, heading="Volumio Multiroom Status")
+
+
+@multiroom.command("single")
+@click.pass_context
+def multiroom_single(ctx: click.Context) -> None:
+    """Take the Volumio host out of multiroom.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    execute_command(ctx, "multiroom single", lambda c: c.set_as_multiroom_single())
+
+
+@multiroom.command("status")
+@click.pass_context
+@option_format
+def multiroom_status(ctx: click.Context, output_format: str) -> None:
+    """Print the multiroom configuration of the Volumio host: whether it is on, and its role.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    status = fetch_or_exit(ctx, lambda c: c.multiroom)
+    render_payload(ctx, status.raw, output_format, heading="Volumio Multiroom Status")
+
+
+@multiroom.command("write")
+@click.pass_context
+@click.argument("settings", type=str)
+def multiroom_write(ctx: click.Context, settings: str) -> None:
+    """Write the multiroom configuration, without waiting for the host to report it.
+
+    SETTINGS is a JSON object, or the path of a file holding one, of the shape
+    "multiroom status -F raw" prints; "multiroom set" is the same write, answered.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    parsed = _multiroom_settings(settings)
+    execute_command(ctx, "multiroom write", lambda c: c.write_multiroom(parsed))
 
 
 @main.group()

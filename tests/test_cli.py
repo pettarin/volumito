@@ -107,6 +107,7 @@ from volumito.clients.models import (
     InputSources,
     Languages,
     MenuItems,
+    Multiroom,
     MusicSources,
     NetworkInfo,
     Notifications,
@@ -179,6 +180,7 @@ _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "installed_plugins": Plugins,
     "languages": Languages,
     "menu_items": MenuItems,
+    "multiroom": Multiroom,
     "music_sources": MusicSources,
     "network_info": NetworkInfo,
     "notifications": Notifications,
@@ -10093,10 +10095,10 @@ class TestMultiroomCommands:
         return mock_client
 
     def test_get_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones prints pretty JSON with the short fields, including the state."""
+        """multiroom info prints pretty JSON with the short fields, including the state."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["multiroom", "zones"])
+        result = runner.invoke(main, ["multiroom", "info"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -10110,10 +10112,10 @@ class TestMultiroomCommands:
         assert "albumart" not in output_data[0]["state"]
 
     def test_get_all_fields(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones -L all keeps every field of each zone."""
+        """multiroom info -L all keeps every field of each zone."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["multiroom", "zones", "-L", "ALL"])
+        result = runner.invoke(main, ["multiroom", "info", "-L", "ALL"])
 
         assert result.exit_code == 0
         output_data = json.loads(result.output)
@@ -10124,20 +10126,20 @@ class TestMultiroomCommands:
         assert output_data[0]["state"]["albumart"] == "/art1.png"
 
     def test_get_json_format(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones -F json prints JSON with 2-space indentation."""
+        """multiroom info -F json prints JSON with 2-space indentation."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["multiroom", "zones", "-F", "json"])
+        result = runner.invoke(main, ["multiroom", "info", "-F", "json"])
 
         assert result.exit_code == 0
         assert '\n    "' in result.output
         assert json.loads(result.output)[1]["name"] == "Volumio Studio"
 
     def test_get_table_format(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones -F table prints numbered blocks with aligned labels."""
+        """multiroom info -F table prints numbered blocks with aligned labels."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "info", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -10154,7 +10156,7 @@ class TestMultiroomCommands:
         """The nested state is printed one key/value per line, also with the short fields."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "info", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -10177,7 +10179,7 @@ class TestMultiroomCommands:
         }
         self._mock_client(mocker, zones=zones)
 
-        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "info", "-F", "table"])
         lines = result.output.splitlines()
 
         assert result.exit_code == 0
@@ -10191,20 +10193,20 @@ class TestMultiroomCommands:
         assert f"      {'Status':15}: play" in lines
 
     def test_get_table_format_empty(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones -F table reports an empty zone list."""
+        """multiroom info -F table reports an empty zone list."""
         self._mock_client(mocker, zones={"zones": []})
 
-        result = runner.invoke(main, ["multiroom", "zones", "-F", "table"])
+        result = runner.invoke(main, ["multiroom", "info", "-F", "table"])
 
         assert result.exit_code == 0
         assert "Volumio Multiroom Zones" in result.output
         assert "(empty)" in result.output
 
     def test_get_raw_format(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones -F raw prints the unfiltered payload as compact JSON."""
+        """multiroom info -F raw prints the unfiltered payload as compact JSON."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["multiroom", "zones", "-F", "raw"])
+        result = runner.invoke(main, ["multiroom", "info", "-F", "raw"])
 
         assert result.exit_code == 0
         assert "\n" not in result.output.strip()
@@ -10216,22 +10218,214 @@ class TestMultiroomCommands:
         """In machine-readable mode zones list still honors the format option."""
         self._mock_client(mocker)
 
-        result = runner.invoke(main, ["-m", "multiroom", "zones", "-F", "raw"])
+        result = runner.invoke(main, ["-m", "multiroom", "info", "-F", "raw"])
 
         assert result.exit_code == 0
         assert json.loads(result.output)["zones"][1]["name"] == "Volumio Studio"
 
     def test_get_connection_error(self, runner: CliRunner, mocker: MockerFixture):
-        """multiroom zones exits 1 on a connection error."""
+        """multiroom info exits 1 on a connection error."""
         mock_client = self._mock_client(mocker)
         _attach_property(
             mock_client, "zones", side_effect=VolumioConnectionError("Connection failed")
         )
 
-        result = runner.invoke(main, ["multiroom", "zones"])
+        result = runner.invoke(main, ["multiroom", "info"])
 
         assert result.exit_code == 1
         assert "Connection error" in result.output
+
+
+class TestMultiroomSettings:
+    """Test cases for the multiroom commands beyond the zones, and the zones rename."""
+
+    STATUS = {"enabled": True, "mode": "server", "port": 3001}
+    """The multiroom configuration, as a Volumio host answers it."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the multiroom "
+        "settings: use --api-client synchronous_websocket or asynchronous_websocket, "
+        "or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for a multiroom setting, without the fallback."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the commands need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the multiroom reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        _attach_property(mock_client, "multiroom", return_value=self.STATUS)
+        mock_client.set_multiroom.return_value = Multiroom.from_raw(
+            {**self.STATUS, "mode": "client"}
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def test_zones_is_now_info(self, runner: CliRunner):
+        """multiroom zones no longer exists, without a synonym."""
+        result = runner.invoke(main, ["-i", "multiroom", "zones"])
+
+        assert result.exit_code == 2
+        assert "No such command 'zones'" in result.output
+
+    def test_status(self, runner: CliRunner, mocker: MockerFixture):
+        """multiroom status prints the configuration of the host, as a table too."""
+        self._mock_websocket_client(mocker)
+
+        pretty = runner.invoke(main, [*self._WEBSOCKET, "multiroom", "status"])
+        table = runner.invoke(main, [*self._WEBSOCKET, "multiroom", "status", "-F", "table"])
+
+        assert pretty.exit_code == 0
+        assert json.loads(pretty.output) == self.STATUS
+        assert table.exit_code == 0
+        assert "Volumio Multiroom Status" in table.output
+        assert "server" in table.output
+
+    def test_client(self, runner: CliRunner, mocker: MockerFixture):
+        """multiroom client makes the host a client of the named server."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "multiroom", "client", "volumio-living.local"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'multiroom client of \"volumio-living.local\"' executed" in (
+            result.output
+        )
+        mock_client.set_as_multiroom_client.assert_called_once_with("volumio-living.local")
+
+    @pytest.mark.parametrize(
+        ("command", "member"),
+        [("server", "set_as_multiroom_server"), ("single", "set_as_multiroom_single")],
+    )
+    def test_server_and_single(self, runner: CliRunner, mocker: MockerFixture, command, member):
+        """multiroom server and single change the role of the host."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "multiroom", command])
+
+        assert result.exit_code == 0
+        assert f"Command 'multiroom {command}' executed successfully" in result.output
+        getattr(mock_client, member).assert_called_once_with()
+
+    def test_set_from_json(self, runner: CliRunner, mocker: MockerFixture):
+        """multiroom set sends the JSON object, printing the configuration answered."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "multiroom", "set", '{"enabled": true, "mode": "client"}']
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)["mode"] == "client"
+        mock_client.set_multiroom.assert_called_once_with({"enabled": True, "mode": "client"})
+
+    def test_set_from_a_file(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A path names a file holding the JSON object."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "multiroom.json"
+        source.write_text('{"enabled": false}')
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "multiroom", "set", str(source)])
+
+        assert result.exit_code == 0
+        mock_client.set_multiroom.assert_called_once_with({"enabled": False})
+
+    def test_write(self, runner: CliRunner, mocker: MockerFixture):
+        """multiroom write sends the JSON object without waiting for an answer."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "multiroom", "write", '{"enabled": false}']
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'multiroom write' executed successfully" in result.output
+        mock_client.write_multiroom.assert_called_once_with({"enabled": False})
+        mock_client.set_multiroom.assert_not_called()
+
+    @pytest.mark.parametrize("settings", ["not json", "[1, 2]", '"text"'])
+    def test_settings_of_another_shape(
+        self, runner: CliRunner, mocker: MockerFixture, settings
+    ):
+        """The settings must be a JSON object, or a file holding one."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "multiroom", "set", settings])
+
+        assert result.exit_code == 2
+        assert "Expected the SETTINGS argument to be a JSON object" in result.output
+        mock_client.set_multiroom.assert_not_called()
+
+    def test_settings_from_an_unreadable_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A file that is not JSON is a usage error naming the problem."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "multiroom.json"
+        source.write_text("{not json")
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "multiroom", "write", str(source)])
+
+        assert result.exit_code == 2
+        assert "Expected the SETTINGS argument to be a JSON object" in result.output
+        mock_client.write_multiroom.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["client", "volumio-living.local"],
+            ["server"],
+            ["set", "{}"],
+            ["single"],
+            ["status"],
+            ["write", "{}"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the commands fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["multiroom", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the command through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, ["--allow-fallback-to-websocket-api", "multiroom", "status"])
+
+        assert result.exit_code == 0
+        assert "Falling back to the WebSocket API client for the multiroom settings" in (
+            result.output
+        )
+        assert json.loads(result.stdout) == self.STATUS
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
 
 
 class TestPlaylistCommands:
@@ -17612,7 +17806,9 @@ class TestConfigurationCommands:
                     "system-info": None,
                     "system-version": None,
                     "track-info": None,
-                    "multiroom-zones": None,
+                    "multiroom-info": None,
+                    "multiroom-set": None,
+                    "multiroom-status": None,
                 },
                 "downloads": {
                     "create-download-manifest": True,

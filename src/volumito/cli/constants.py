@@ -130,6 +130,11 @@ MPD_PORT_VOLUMIO_3 = 6599
 MPD_PORT_VOLUMIO_4 = 6600
 """MPD port used by Volumio 4 (major version 4 and above)."""
 
+MULTIROOM_SETTINGS_ERROR = (
+    "Expected the SETTINGS argument to be a JSON object, or the path of a file holding one."
+)
+"""Error message when a "multiroom" subcommand is given settings of another shape."""
+
 MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR = (
     "Options -c/--configuration-file and --ignore-configuration-file are mutually exclusive."
 )
@@ -275,18 +280,18 @@ SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST = [
 ]
 """Short fields list for the "collection source list" command."""
 
-SHORT_FORMAT_FIELDS_MULTIROOM_ZONES = [
+SHORT_FORMAT_FIELDS_MULTIROOM_INFO = [
     "host",
     "name",
     "isSelf",
     "state",
 ]
-"""Short fields list for the "multiroom zones" command."""
+"""Short fields list for the "multiroom info" command."""
 
-SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE = [
+SHORT_FORMAT_FIELDS_MULTIROOM_INFO_EXCLUDED_FROM_STATE = [
     "albumart",
 ]
-"""Keys of the "state" subdictionary omitted by the short fields of "multiroom zones"."""
+"""Keys of the "state" subdictionary omitted by the short fields of "multiroom info"."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",

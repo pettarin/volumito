@@ -784,7 +784,7 @@ class TestBuildClickDefaultMap:
             "queue": {"list": formatting, "status": formatting, "track": {"info": formatting}},
             "notification": {"list": format_only, "listen": format_only},
             "playlist": {"content": formatting, "list": format_only},
-            "multiroom": {"zones": formatting},
+            "multiroom": {"info": formatting, "set": format_only, "status": format_only},
             "system": {
                 "alarm": {"list": formatting},
                 "audio": {
