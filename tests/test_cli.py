@@ -9172,7 +9172,7 @@ class TestCollectionFavouriteAndRadio:
             "prev": {"uri": "radio"},
         }
     }
-    """A payload of the shape a browse of the web radios is answered with."""
+    """A payload of the shape a browse of the Web radios is answered with."""
 
     _REFUSAL = (
         "API client error: The synchronous REST API client does not offer the favourites "
@@ -9182,7 +9182,7 @@ class TestCollectionFavouriteAndRadio:
     """The error of a REST API client asked for a favourite edit, without the fallback."""
 
     _STREAM = "http://radio.example/tre"
-    """The URL a web radio streams from."""
+    """The URL a Web radio streams from."""
 
     _URI = "albums://Paolo%20Conte/Aguaplano"
     """A URI of the kind a browse or a search prints."""
@@ -9337,7 +9337,7 @@ class TestCollectionFavouriteAndRadio:
     def test_favourite_add_radio_with_details(
         self, runner: CliRunner, mocker: MockerFixture, options
     ):
-        """A web radio takes no details."""
+        """A Web radio takes no details."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -9426,7 +9426,7 @@ class TestCollectionFavouriteAndRadio:
         mock_client.remove_radio_favourite.assert_not_called()
 
     def test_favourite_remove_with_a_name(self, runner: CliRunner, mocker: MockerFixture):
-        """A name only qualifies a web radio."""
+        """A name only qualifies a Web radio."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -9461,7 +9461,7 @@ class TestCollectionFavouriteAndRadio:
     def test_favourite_remove_radio_with_a_service(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """A web radio takes no service."""
+        """A Web radio takes no service."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -9489,7 +9489,7 @@ class TestCollectionFavouriteAndRadio:
         mock_client.add_web_radio.assert_called_once_with("Radio Tre", self._STREAM)
 
     def test_radio_remove(self, runner: CliRunner, mocker: MockerFixture):
-        """collection radio remove deletes the web radio saved under the name."""
+        """collection radio remove deletes the Web radio saved under the name."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -9966,7 +9966,7 @@ class TestCollectionSearch:
     def test_the_kind_of_the_results_nothing_else_is(
         self, runner: CliRunner, mocker: MockerFixture
     ):
-        """The other kind keeps what none of the named kinds is, a web radio here."""
+        """The other kind keeps what none of the named kinds is, a Web radio here."""
         assert self._titles_of_every_kind(runner, mocker, "--result-kinds", "other") == ["A Radio"]
 
     @pytest.mark.parametrize(

@@ -396,7 +396,7 @@ class VolumioCommon(VolumioBaseClient):
         when none is given, to ``mpd`` -- which silently adds nothing for the URI of
         another source. The service is therefore always sent, read from the URI: the
         scheme names it (``qobuz://...``), except for the schemes the local library is
-        browsed by and the scheme-less local paths (``mpd``), the web URLs
+        browsed by and the scheme-less local paths (``mpd``), the Web URLs
         (``webradio``), and the ``spotify:`` URIs (``spop``).
 
         Args:

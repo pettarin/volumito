@@ -570,10 +570,10 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         await self._emit(EVENT_ADD_PLAY_CUE, self._cue_payload(uri, number, service))
 
     async def add_radio_favourite(self, uri: str) -> None:
-        """Add a web radio to the radio favourites.
+        """Add a Web radio to the radio favourites.
 
         Args:
-            uri: The URL the web radio streams from
+            uri: The URL the Web radio streams from
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
@@ -665,10 +665,10 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         await self._emit(EVENT_ADD_QUEUE_UIDS, uids)
 
     async def add_web_radio(self, name: str, uri: str) -> None:
-        """Save a web radio of the user.
+        """Save a Web radio of the user.
 
         Args:
-            name: The name to save the web radio under
+            name: The name to save the Web radio under
             uri: The URL it streams from
 
         Raises:
@@ -2126,10 +2126,10 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         await self._emit(EVENT_REMOVE_QUEUE_ITEM, self._index_payload(position))
 
     async def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
-        """Remove a web radio from the radio favourites.
+        """Remove a Web radio from the radio favourites.
 
         Args:
-            uri: The URL the web radio streams from
+            uri: The URL the Web radio streams from
             name: The name it is a favourite under, when known
 
         Raises:
@@ -2139,10 +2139,10 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         await self._emit(EVENT_REMOVE_FROM_RADIO_FAVOURITES, payload)
 
     async def remove_web_radio(self, name: str) -> None:
-        """Delete a web radio of the user.
+        """Delete a Web radio of the user.
 
         Args:
-            name: The name the web radio was saved under
+            name: The name the Web radio was saved under
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent

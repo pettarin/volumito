@@ -49,10 +49,10 @@ EVENT_ADD_TO_QUEUE = "addToQueue"
 """The event appending items to the playback queue."""
 
 EVENT_ADD_TO_RADIO_FAVOURITES = "addToRadioFavourites"
-"""The event adding a web radio to the radio favourites."""
+"""The event adding a Web radio to the radio favourites."""
 
 EVENT_ADD_WEB_RADIO = "addWebRadio"
-"""The event saving a web radio of the user."""
+"""The event saving a Web radio of the user."""
 
 EVENT_AUDIO_OUTPUT_PAUSE = "audioOutputPause"
 """The event pausing one audio output."""
@@ -304,10 +304,10 @@ EVENT_PREVIOUS = "prev"
 """The event going back to the previous track."""
 
 EVENT_PUSH_ADD_TO_RADIO_FAVOURITES = "pushAddToRadioFavourites"
-"""The event confirming a web radio was made a favourite."""
+"""The event confirming a Web radio was made a favourite."""
 
 EVENT_PUSH_ADD_WEB_RADIO = "pushAddWebRadio"
-"""The event confirming a web radio was saved."""
+"""The event confirming a Web radio was saved."""
 
 EVENT_PUSH_ALARM = "pushAlarm"
 """The event carrying the alarms set on the host."""
@@ -424,7 +424,7 @@ EVENT_PUSH_QUEUE = "pushQueue"
 """The event carrying the playback queue."""
 
 EVENT_PUSH_REMOVE_FROM_RADIO_FAVOURITES = "pushRemoveFromRadioFavourites"
-"""The event confirming a web radio is no longer a favourite."""
+"""The event confirming a Web radio is no longer a favourite."""
 
 EVENT_PUSH_SAVE_QUEUE_TO_PLAYLIST = "pushSaveQueueToPlaylist"
 """The event confirming the queue was saved as a playlist."""
@@ -478,13 +478,13 @@ EVENT_REMOVE_FROM_PLAYLIST = "removeFromPlaylist"
 """The event removing an item from a saved playlist."""
 
 EVENT_REMOVE_FROM_RADIO_FAVOURITES = "removeFromRadioFavourites"
-"""The event removing a web radio from the radio favourites."""
+"""The event removing a Web radio from the radio favourites."""
 
 EVENT_REMOVE_QUEUE_ITEM = "removeQueueItem"
 """The event removing a track from the queue."""
 
 EVENT_REMOVE_WEB_RADIO = "removeWebRadio"
-"""The event deleting a web radio of the user."""
+"""The event deleting a Web radio of the user."""
 
 EVENT_REPLACE_AND_PLAY = "replaceAndPlay"
 """The event replacing the playback queue and starting it."""
@@ -1192,14 +1192,14 @@ class VolumioWebSocketCommon(VolumioCommon):
         return value
 
     def _web_radio_payload(self, name: str, uri: str | None = None) -> dict[str, str]:
-        """Build the payload naming a web radio of the user.
+        """Build the payload naming a Web radio of the user.
 
         Args:
-            name: The name of the web radio
+            name: The name of the Web radio
             uri: The URL it streams from, when the event needs it
 
         Returns:
-            The payload the web radio events carry
+            The payload the Web radio events carry
         """
         payload = {"name": name}
         if uri is not None:

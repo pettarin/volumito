@@ -102,7 +102,7 @@ EXPERIENCE_VALUES = [
 """Accepted values of the VALUE argument of the "system ui experience" command."""
 
 FAVOURITE_NAME_OPTION_ERROR = "Expected the --name option only together with --radio."
-"""Error message when "collection favourite remove" names a web radio without --radio."""
+"""Error message when "collection favourite remove" names a Web radio without --radio."""
 
 FAVOURITE_RADIO_NAME_ERROR = "Expected the NAME argument only without --radio."
 """Error message when "collection favourite play" is given a name together with --radio."""
@@ -110,7 +110,7 @@ FAVOURITE_RADIO_NAME_ERROR = "Expected the NAME argument only without --radio."
 FAVOURITE_RADIO_OPTIONS_ERROR = (
     "Expected the --albumart, --service, and --title options only without --radio."
 )
-"""Error message when a "collection favourite" subcommand details a web radio."""
+"""Error message when a "collection favourite" subcommand details a Web radio."""
 
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
@@ -459,7 +459,7 @@ URI_FAVOURITES = "favourites"
 """The URI the Favourites browse source of a Volumio host lists the favourites at."""
 
 URI_RADIO_FAVOURITES = "radio/favourites"
-"""The URI the web radio plugin of a Volumio host lists the radio favourites at."""
+"""The URI the Web radio plugin of a Volumio host lists the radio favourites at."""
 
 URI_WEB_RADIOS = "radio/myWebRadio"
-"""The URI the web radio plugin of a Volumio host lists the web radios of the user at."""
+"""The URI the Web radio plugin of a Volumio host lists the Web radios of the user at."""

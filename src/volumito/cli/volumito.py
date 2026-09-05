@@ -3522,10 +3522,10 @@ def favourite_add(
     service: str | None,
     title: str | None,
 ) -> None:
-    """Add the item at URI to the favourites, or a web radio to the radio favourites.
+    """Add the item at URI to the favourites, or a Web radio to the radio favourites.
 
     A URI comes from "collection browse" or "collection search". With --radio, URI is
-    the URL a web radio streams from, and --albumart, --service, and --title are not
+    the URL a Web radio streams from, and --albumart, --service, and --title are not
     accepted.
 
     Needs a WebSocket API client.
@@ -3604,9 +3604,9 @@ def favourite_play(
 def favourite_remove(
     ctx: click.Context, uri: str, name: str | None, radio: bool, service: str | None
 ) -> None:
-    """Remove the item at URI from the favourites, or a web radio from the radio favourites.
+    """Remove the item at URI from the favourites, or a Web radio from the radio favourites.
 
-    A URI comes from "collection favourite list". With --radio, URI is the URL the web
+    A URI comes from "collection favourite list". With --radio, URI is the URL the Web
     radio streams from, --name the name it is a favourite under, and --service is not
     accepted; without --radio, --name is not accepted.
 
@@ -3631,7 +3631,7 @@ def favourite_remove(
 @collection.group("radio")
 @click.pass_context
 def radio(ctx: click.Context) -> None:
-    """Manage the web radios saved by the user (web radio plugin)."""
+    """Manage the Web radios saved by the user (Web radio plugin)."""
     pass
 
 
@@ -3640,7 +3640,7 @@ def radio(ctx: click.Context) -> None:
 @click.argument("name", type=str)
 @click.argument("uri", type=str)
 def radio_add(ctx: click.Context, name: str, uri: str) -> None:
-    """Save the web radio streaming from the URL URI under NAME.
+    """Save the Web radio streaming from URI under NAME.
 
     Needs a WebSocket API client.
     """
@@ -3660,9 +3660,9 @@ def radio_list(
     offset: int | None,
     print_uri: bool,
 ) -> None:
-    """List the web radios saved by the user.
+    """List the Web radios saved by the user.
 
-    A convenience over "collection browse" of the URI the web radios are listed at,
+    A convenience over "collection browse" of the URI the Web radios are listed at,
     printed the same way; works with any API client.
     """
     results = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, offset))
@@ -3675,7 +3675,7 @@ def radio_list(
 @click.pass_context
 @click.argument("name", type=str)
 def radio_remove(ctx: click.Context, name: str) -> None:
-    """Delete the web radio saved under NAME.
+    """Delete the Web radio saved under NAME.
 
     Needs a WebSocket API client.
     """

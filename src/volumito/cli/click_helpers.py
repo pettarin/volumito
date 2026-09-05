@@ -2201,7 +2201,7 @@ def option_radio(func: Callable[..., None]) -> Callable[..., None]:
         "--radio",
         is_flag=True,
         default=False,
-        help="Act on the radio favourites (web radio plugin), instead of the favourites.",
+        help="Act on the radio favourites (Web radio plugin), instead of the favourites.",
     )(func)
 
 
@@ -2211,7 +2211,7 @@ def option_radio_name(func: Callable[..., None]) -> Callable[..., None]:
         "--name",
         type=str,
         default=None,
-        help="The name the web radio is a favourite under, when known (only with --radio).",
+        help="The name the Web radio is a favourite under, when known (only with --radio).",
     )(func)
 
 

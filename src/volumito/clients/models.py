@@ -1306,7 +1306,7 @@ class SearchResultItemKind(StrEnum):
     """An artist of a source."""
 
     OTHER = "other"
-    """Anything else, a web radio for instance."""
+    """Anything else, a Web radio for instance."""
 
     PLAYLIST = "playlist"
     """A playlist of a source."""

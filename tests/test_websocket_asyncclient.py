@@ -1238,7 +1238,7 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
 
 
 class TestVolumioAsyncWebSocketClientFavourites:
-    """The favourites and the web radios of the user."""
+    """The favourites and the Web radios of the user."""
 
     async def test_add_to_favourites(self, mocker: MockerFixture):
         """A favourite carries its service, and only the fields that are known."""
@@ -1291,7 +1291,7 @@ class TestVolumioAsyncWebSocketClientFavourites:
         ]
 
     async def test_the_radio_favourites(self, mocker: MockerFixture):
-        """A web radio is made a favourite, played, and removed."""
+        """A Web radio is made a favourite, played, and removed."""
         client, fake = await _client(mocker)
 
         await client.add_radio_favourite("http://stream/1")
@@ -1310,7 +1310,7 @@ class TestVolumioAsyncWebSocketClientFavourites:
         ]
 
     async def test_the_web_radios_of_the_user(self, mocker: MockerFixture):
-        """A web radio is saved with its URL and deleted by name alone."""
+        """A Web radio is saved with its URL and deleted by name alone."""
         client, fake = await _client(mocker)
 
         await client.add_web_radio("Jazz FM", "http://stream/1")
