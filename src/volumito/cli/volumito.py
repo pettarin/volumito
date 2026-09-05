@@ -69,6 +69,7 @@ from volumito.cli.click_helpers import (
     option_format_table,
     option_idle_timeout,
     option_item_album,
+    option_item_albumart,
     option_item_title,
     option_limit,
     option_manifest_file,
@@ -89,6 +90,8 @@ from volumito.cli.click_helpers import (
     option_print_uri,
     option_print_uri_toggle,
     option_propagate_remote_exit_code,
+    option_radio,
+    option_radio_name,
     option_recursive,
     option_register_url,
     option_register_url_full,
@@ -106,6 +109,7 @@ from volumito.cli.click_helpers import (
     option_with_albumart,
     option_yes,
     read_queue_log,
+    render_browse_results,
     render_fields,
     render_output_filename,
     render_payload,
@@ -132,6 +136,9 @@ from volumito.cli.constants import (
     BROWSE_KINDS_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
+    FAVOURITE_NAME_OPTION_ERROR,
+    FAVOURITE_RADIO_NAME_ERROR,
+    FAVOURITE_RADIO_OPTIONS_ERROR,
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -158,13 +165,15 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
+    URI_FAVOURITES,
+    URI_RADIO_FAVOURITES,
+    URI_WEB_RADIOS,
 )
 from volumito.cli.pure_helpers import (
     display_position,
     expand_manifest_file,
     expand_timestamp_placeholder,
     filter_zones_fields,
-    format_browse_results_as_table,
     format_command_nodes,
     format_duration,
     format_names_as_table,
@@ -2052,7 +2061,6 @@ def collection_browse(
     option of "collection search". The -o/--offset skip is applied by the host to
     each list, before the kind options act, and not at the root; the WebSocket API
     clients apply it themselves, the root included."""
-    machine_readable = ctx.obj["machine_readable"]
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
     asked = [
@@ -2078,22 +2086,189 @@ def collection_browse(
     if kept is not None:
         results = results.limited(kept)
 
-    if machine_readable or output_format == "raw":
-        # The raw format is the payload of the host, as it answered it
-        output = json.dumps(results.raw)
-    else:
-        info = results.info.model_dump(by_alias=True) if results.info else None
-        lists = [result_list.model_dump(by_alias=True) for result_list in results.lists]
-        if output_format == "table":
-            output = format_browse_results_as_table(lists, info, print_uri)
-        else:
-            navigation = {"info": info, "lists": lists, "prev": results.prev}
-            if output_format == "json":
-                output = json.dumps(navigation, indent=2)
-            else:  # pretty
-                output = json.dumps(navigation, indent=4, sort_keys=True, ensure_ascii=False)
+    render_browse_results(ctx, results, output_format, print_uri)
 
-    echo_data(ctx, output)
+
+@collection.group("favourite")
+@click.pass_context
+def favourite(ctx: click.Context) -> None:
+    """Manage the favourites, and the radio favourites (--radio)."""
+    pass
+
+
+@favourite.command("add")
+@click.pass_context
+@click.argument("uri", type=str)
+@option_item_albumart
+@option_radio
+@option_service_of_uri
+@option_item_title
+def favourite_add(
+    ctx: click.Context,
+    uri: str,
+    albumart: str | None,
+    radio: bool,
+    service: str | None,
+    title: str | None,
+) -> None:
+    """Add the item at URI to the favourites, or a web radio to the radio favourites.
+
+    A URI comes from "collection browse" or "collection search". With --radio, URI is
+    the URL a web radio streams from, and --albumart, --service, and --title are not
+    accepted.
+
+    Needs a WebSocket API client.
+    """
+    if radio:
+        if albumart is not None or service is not None or title is not None:
+            raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
+        execute_command(
+            ctx, f'add radio favourite "{uri}"', lambda c: c.add_radio_favourite(uri)
+        )
+    else:
+        execute_command(
+            ctx,
+            f'add favourite "{uri}"',
+            lambda c: c.add_to_favourites(uri, title, service, albumart),
+        )
+
+
+@favourite.command("list")
+@click.pass_context
+@option_format_table
+@option_limit
+@option_offset
+@option_print_uri_toggle
+@option_radio
+def favourite_list(
+    ctx: click.Context,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_uri: bool,
+    radio: bool,
+) -> None:
+    """List the favourites, or the radio favourites with --radio.
+
+    A convenience over "collection browse" of the URI the favourites are listed at,
+    printed the same way; works with any API client.
+    """
+    uri = URI_RADIO_FAVOURITES if radio else URI_FAVOURITES
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
+    if limit is not None:
+        results = results.limited(limit)
+    render_browse_results(ctx, results, output_format, print_uri)
+
+
+@favourite.command("play")
+@click.pass_context
+@click.argument("name", required=False, default=None, type=str)
+@option_print_resulting_status
+@option_radio
+def favourite_play(
+    ctx: click.Context, name: str | None, print_resulting_status: bool, radio: bool
+) -> None:
+    """Play the favourites, or the radio favourites with --radio.
+
+    With NAME, the favourites play from the one so named; NAME is not accepted with
+    --radio.
+
+    Needs a WebSocket API client.
+    """
+    if radio:
+        if name is not None:
+            raise click.UsageError(FAVOURITE_RADIO_NAME_ERROR)
+        execute_command(ctx, "play radio favourites", lambda c: c.play_radio_favourites())
+    else:
+        execute_command(ctx, "play favourites", lambda c: c.play_favourites(name))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@favourite.command("remove")
+@click.pass_context
+@click.argument("uri", type=str)
+@option_radio_name
+@option_radio
+@option_service_of_uri
+def favourite_remove(
+    ctx: click.Context, uri: str, name: str | None, radio: bool, service: str | None
+) -> None:
+    """Remove the item at URI from the favourites, or a web radio from the radio favourites.
+
+    A URI comes from "collection favourite list". With --radio, URI is the URL the web
+    radio streams from, --name the name it is a favourite under, and --service is not
+    accepted; without --radio, --name is not accepted.
+
+    Needs a WebSocket API client.
+    """
+    if radio:
+        if service is not None:
+            raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
+        execute_command(
+            ctx,
+            f'remove radio favourite "{uri}"',
+            lambda c: c.remove_radio_favourite(uri, name),
+        )
+    else:
+        if name is not None:
+            raise click.UsageError(FAVOURITE_NAME_OPTION_ERROR)
+        execute_command(
+            ctx, f'remove favourite "{uri}"', lambda c: c.remove_from_favourites(uri, service)
+        )
+
+
+@collection.group("radio")
+@click.pass_context
+def radio(ctx: click.Context) -> None:
+    """Manage the web radios saved by the user (web radio plugin)."""
+    pass
+
+
+@radio.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("uri", type=str)
+def radio_add(ctx: click.Context, name: str, uri: str) -> None:
+    """Save the web radio streaming from the URL URI under NAME.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'add web radio "{name}"', lambda c: c.add_web_radio(name, uri))
+
+
+@radio.command("list")
+@click.pass_context
+@option_format_table
+@option_limit
+@option_offset
+@option_print_uri_toggle
+def radio_list(
+    ctx: click.Context,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_uri: bool,
+) -> None:
+    """List the web radios saved by the user.
+
+    A convenience over "collection browse" of the URI the web radios are listed at,
+    printed the same way; works with any API client.
+    """
+    results = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, offset))
+    if limit is not None:
+        results = results.limited(limit)
+    render_browse_results(ctx, results, output_format, print_uri)
+
+
+@radio.command("remove")
+@click.pass_context
+@click.argument("name", type=str)
+def radio_remove(ctx: click.Context, name: str) -> None:
+    """Delete the web radio saved under NAME.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'remove web radio "{name}"', lambda c: c.remove_web_radio(name))
 
 
 @collection.command("search")

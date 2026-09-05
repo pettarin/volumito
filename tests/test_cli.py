@@ -6674,6 +6674,402 @@ class TestCollectionCommands:
         assert "Connection error" in result.output
 
 
+class TestCollectionFavouriteAndRadio:
+    """Test cases for the collection favourite and collection radio subgroups."""
+
+    ENVELOPE = {
+        "navigation": {
+            "lists": [
+                {
+                    "items": [
+                        {
+                            "service": "webradio",
+                            "type": "webradio",
+                            "title": "Radio Uno",
+                            "uri": "http://radio.example/uno",
+                        },
+                        {
+                            "service": "webradio",
+                            "type": "webradio",
+                            "title": "Radio Due",
+                            "uri": "http://radio.example/due",
+                        },
+                    ],
+                }
+            ],
+            "prev": {"uri": "radio"},
+        }
+    }
+    """A payload of the shape a browse of the web radios is answered with."""
+
+    _REFUSAL = (
+        "API client error: The synchronous REST API client does not offer the favourites "
+        "and the web radios: use --api-client synchronous_websocket or "
+        "asynchronous_websocket, or --allow-fallback-to-websocket-api"
+    )
+    """The error of a REST API client asked for a favourite edit, without the fallback."""
+
+    _STREAM = "http://radio.example/tre"
+    """The URL a web radio streams from."""
+
+    _URI = "albums://Paolo%20Conte/Aguaplano"
+    """A URI of the kind a browse or a search prints."""
+
+    _WEBSOCKET = ["-C", "synchronous_websocket"]
+    """The global option selecting the WebSocket API client the edits need."""
+
+    @pytest.fixture
+    def runner(self):
+        """Create a CliRunner instance."""
+        return CliRunner()
+
+    def _mock_rest_client(self, mocker: MockerFixture):
+        """Mock VolumioRESTAPIClient, the default client, answering the browses."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mock_client.browse.return_value = BrowseResults.from_envelope(self.ENVELOPE)
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioRESTAPIClient",
+            return_value=mock_client,
+        )
+        return mock_client
+
+    def _mock_websocket_client(self, mocker: MockerFixture):
+        """Mock VolumioWebSocketClient answering the browses and the state reads."""
+        mock_client = mocker.Mock()
+        mock_client.logger = LOGGER
+        mock_client.browse.return_value = BrowseResults.from_envelope(self.ENVELOPE)
+        _attach_property(
+            mock_client,
+            "state",
+            return_value={"title": "Test Song", "artist": "StatusMarkerArtist"},
+        )
+        mocker.patch(
+            "volumito.cli.click_helpers.VolumioWebSocketClient",
+            return_value=mock_client,
+        )
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
+        return mock_client
+
+    @pytest.mark.parametrize(
+        ("arguments", "uri"),
+        [
+            (["favourite", "list"], "favourites"),
+            (["favourite", "list", "--radio"], "radio/favourites"),
+            (["radio", "list"], "radio/myWebRadio"),
+        ],
+    )
+    def test_the_lists_browse_their_uri(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, uri
+    ):
+        """Each list browses the URI of what it lists, over any client, as a table."""
+        mock_client = self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["collection", *arguments])
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with(uri, None)
+        lines = result.output.splitlines()
+        assert "1. Radio Uno" in lines
+        assert "   http://radio.example/uno" in lines
+        assert "2. Radio Due" in lines
+
+    @pytest.mark.parametrize(
+        ("arguments", "uri"),
+        [(["favourite", "list"], "favourites"), (["radio", "list"], "radio/myWebRadio")],
+    )
+    def test_a_list_with_the_browse_options(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, uri
+    ):
+        """The offset reaches the host, the limit applies after, the URIs can be dropped."""
+        mock_client = self._mock_rest_client(mocker)
+
+        result = runner.invoke(
+            main, ["collection", *arguments, "-o", "2", "-l", "1", "--no-print-uri"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with(uri, 2)
+        lines = result.output.splitlines()
+        assert "1. Radio Uno" in lines
+        assert "2. Radio Due" not in lines
+        assert "http://radio.example/uno" not in result.output
+
+    def test_a_list_as_json(self, runner: CliRunner, mocker: MockerFixture):
+        """-F json prints the navigation, like collection browse does."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["collection", "radio", "list", "-F", "json"])
+
+        assert result.exit_code == 0
+        navigation = json.loads(result.output)
+        assert [item["title"] for item in navigation["lists"][0]["items"]] == [
+            "Radio Uno",
+            "Radio Due",
+        ]
+        assert navigation["prev"] == {"uri": "radio"}
+
+    def test_a_list_format_from_the_configuration(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The collection-favourite-list subsection sets the default format."""
+        self._mock_rest_client(mocker)
+        config = tmp_path / "volumito.yaml"
+        config.write_text("output:\n  collection-favourite-list:\n    format: raw\n")
+
+        result = runner.invoke(main, ["-c", str(config), "collection", "favourite", "list"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == self.ENVELOPE
+
+    @pytest.mark.parametrize(
+        ("options", "details"),
+        [
+            ([], (None, None, None)),
+            (
+                ["--title", "T", "--service", "mpd", "--albumart", "http://a"],
+                ("T", "mpd", "http://a"),
+            ),
+        ],
+    )
+    def test_favourite_add(self, runner: CliRunner, mocker: MockerFixture, options, details):
+        """collection favourite add adds the URI, with the details given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "favourite", "add", self._URI, *options]
+        )
+
+        assert result.exit_code == 0
+        assert f"Command 'add favourite \"{self._URI}\"' executed successfully" in result.output
+        mock_client.add_to_favourites.assert_called_once_with(self._URI, *details)
+        mock_client.add_radio_favourite.assert_not_called()
+
+    def test_favourite_add_radio(self, runner: CliRunner, mocker: MockerFixture):
+        """--radio adds the stream URL to the radio favourites."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "add", self._STREAM, "--radio"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add radio favourite" in result.output
+        mock_client.add_radio_favourite.assert_called_once_with(self._STREAM)
+        mock_client.add_to_favourites.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "options", [["--title", "T"], ["--service", "mpd"], ["--albumart", "http://a"]]
+    )
+    def test_favourite_add_radio_with_details(
+        self, runner: CliRunner, mocker: MockerFixture, options
+    ):
+        """A web radio takes no details."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "add", self._STREAM, "--radio",
+             *options],
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the --albumart, --service, and --title options only without" in (
+            result.output
+        )
+        mock_client.add_radio_favourite.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("arguments", "name"), [([], None), (["Favourite Song"], "Favourite Song")]
+    )
+    def test_favourite_play(self, runner: CliRunner, mocker: MockerFixture, arguments, name):
+        """collection favourite play starts the favourites, from the named one when given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "play", *arguments,
+             "--no-print-resulting-status"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'play favourites' executed successfully" in result.output
+        mock_client.play_favourites.assert_called_once_with(name)
+        mock_client.play_radio_favourites.assert_not_called()
+        mock_client.state_property.assert_not_called()
+
+    def test_favourite_play_prints_the_resulting_status(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """By default the resulting playback status is printed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "favourite", "play"])
+
+        assert result.exit_code == 0
+        assert "StatusMarkerArtist" in result.output
+        mock_client.state_property.assert_called_once()
+
+    def test_favourite_play_radio(self, runner: CliRunner, mocker: MockerFixture):
+        """--radio starts the radio favourites."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "play", "--radio",
+             "--no-print-resulting-status"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'play radio favourites' executed successfully" in result.output
+        mock_client.play_radio_favourites.assert_called_once_with()
+        mock_client.play_favourites.assert_not_called()
+
+    def test_favourite_play_radio_with_a_name(self, runner: CliRunner, mocker: MockerFixture):
+        """The radio favourites play from their start only."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "favourite", "play", "Name", "--radio"]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the NAME argument only without --radio" in result.output
+        mock_client.play_radio_favourites.assert_not_called()
+
+    @pytest.mark.parametrize(("options", "service"), [([], None), (["--service", "mpd"], "mpd")])
+    def test_favourite_remove(self, runner: CliRunner, mocker: MockerFixture, options, service):
+        """collection favourite remove drops the URI, of the given service."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "remove", self._URI, *options],
+        )
+
+        assert result.exit_code == 0
+        assert f"Command 'remove favourite \"{self._URI}\"' executed" in result.output
+        mock_client.remove_from_favourites.assert_called_once_with(self._URI, service)
+        mock_client.remove_radio_favourite.assert_not_called()
+
+    def test_favourite_remove_with_a_name(self, runner: CliRunner, mocker: MockerFixture):
+        """A name only qualifies a web radio."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "remove", self._URI, "--name", "N"],
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the --name option only together with --radio" in result.output
+        mock_client.remove_from_favourites.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("options", "name"), [([], None), (["--name", "Radio Tre"], "Radio Tre")]
+    )
+    def test_favourite_remove_radio(
+        self, runner: CliRunner, mocker: MockerFixture, options, name
+    ):
+        """--radio drops the stream URL from the radio favourites, by name when given."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "remove", self._STREAM, "--radio",
+             *options],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'remove radio favourite" in result.output
+        mock_client.remove_radio_favourite.assert_called_once_with(self._STREAM, name)
+        mock_client.remove_from_favourites.assert_not_called()
+
+    def test_favourite_remove_radio_with_a_service(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A web radio takes no service."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "remove", self._STREAM, "--radio",
+             "--service", "webradio"],
+        )
+
+        assert result.exit_code == 2
+        assert "Expected the --albumart, --service, and --title options only without" in (
+            result.output
+        )
+        mock_client.remove_radio_favourite.assert_not_called()
+
+    def test_radio_add(self, runner: CliRunner, mocker: MockerFixture):
+        """collection radio add saves the stream URL under the name."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "radio", "add", "Radio Tre", self._STREAM]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add web radio \"Radio Tre\"' executed successfully" in result.output
+        mock_client.add_web_radio.assert_called_once_with("Radio Tre", self._STREAM)
+
+    def test_radio_remove(self, runner: CliRunner, mocker: MockerFixture):
+        """collection radio remove deletes the web radio saved under the name."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "radio", "remove", "Radio Tre"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'remove web radio \"Radio Tre\"' executed successfully" in result.output
+        mock_client.remove_web_radio.assert_called_once_with("Radio Tre")
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["favourite", "add", _URI],
+            ["favourite", "add", _STREAM, "--radio"],
+            ["favourite", "play", "--no-print-resulting-status"],
+            ["favourite", "play", "--radio", "--no-print-resulting-status"],
+            ["favourite", "remove", _URI],
+            ["favourite", "remove", _STREAM, "--radio"],
+            ["radio", "add", "Radio Tre", _STREAM],
+            ["radio", "remove", "Radio Tre"],
+        ],
+    )
+    def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """With the default REST API client, the edits fail naming the remedies."""
+        self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["collection", *arguments])
+
+        assert result.exit_code == 1
+        assert self._REFUSAL in result.output
+
+    def test_a_rest_client_falls_back_when_allowed(self, runner: CliRunner, mocker: MockerFixture):
+        """With the switch, the REST API client serves the edit through a WebSocket one."""
+        rest = self._mock_rest_client(mocker)
+        websocket = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            ["--allow-fallback-to-websocket-api", "collection", "radio", "add", "Radio Tre",
+             self._STREAM],
+        )
+
+        assert result.exit_code == 0
+        assert (
+            "Falling back to the WebSocket API client for the favourites and the web radios"
+        ) in result.output
+        websocket.add_web_radio.assert_called_once_with("Radio Tre", self._STREAM)
+        websocket.disconnect.assert_called_once_with()
+        rest.close.assert_called_once_with()
+
+
 class TestCollectionSearch:
     """Test cases for the collection search command."""
 
@@ -14695,6 +15091,8 @@ class TestConfigurationCommands:
                     # Subsections are present but empty (null) override placeholders,
                     # except the two collection ones pinning their table format.
                     "collection-browse": {"format": "table"},
+                    "collection-favourite-list": {"format": "table"},
+                    "collection-radio-list": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-statistics": None,
                     "command-list": None,

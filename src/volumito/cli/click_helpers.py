@@ -76,6 +76,7 @@ from volumito.cli.pure_helpers import (
     format_as_json,
     format_as_pretty,
     format_as_table,
+    format_browse_results_as_table,
     format_duration,
     format_queue_as_table,
     parse_result_kinds,
@@ -109,7 +110,7 @@ from volumito.clients import (
 )
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
-from volumito.clients.models import PlayerState, SearchResultItemKind, Story
+from volumito.clients.models import BrowseResults, PlayerState, SearchResultItemKind, Story
 
 
 class AliasedGroup(click.Group):
@@ -1742,22 +1743,32 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_item_album(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--album`` option to the subcommands queuing a single item."""
+    """Add the ``--album`` option to the subcommands taking a single item."""
     return click.option(
         "--album",
         type=str,
         default=None,
-        help="The album to show for the queued item, when known (only with --next).",
+        help="The album to show for the item, when known.",
+    )(func)
+
+
+def option_item_albumart(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--albumart`` option to the subcommands taking a single item."""
+    return click.option(
+        "--albumart",
+        type=str,
+        default=None,
+        help="The URL of the cover to show for the item, when known.",
     )(func)
 
 
 def option_item_title(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--title`` option to the subcommands queuing a single item."""
+    """Add the ``--title`` option to the subcommands taking a single item."""
     return click.option(
         "--title",
         type=str,
         default=None,
-        help="The title to show for the queued item, when known (only with --next).",
+        help="The title to show for the item, when known.",
     )(func)
 
 
@@ -1978,6 +1989,26 @@ def option_propagate_remote_exit_code(func: Callable[..., None]) -> Callable[...
     )(func)
 
 
+def option_radio(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--radio`` option to the collection favourite subcommands."""
+    return click.option(
+        "--radio",
+        is_flag=True,
+        default=False,
+        help="Act on the radio favourites (web radio plugin), instead of the favourites.",
+    )(func)
+
+
+def option_radio_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--name`` option to the collection favourite remove subcommand."""
+    return click.option(
+        "--name",
+        type=str,
+        default=None,
+        help="The name the web radio is a favourite under, when known (only with --radio).",
+    )(func)
+
+
 def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--recursive`` option to an scp subcommand."""
     return click.option(
@@ -2184,6 +2215,38 @@ def read_queue_log(path: str) -> dict[str, Any] | None:
     if not isinstance(tracks, list) or not all(isinstance(track, dict) for track in tracks):
         return None
     return data
+
+
+def render_browse_results(
+    ctx: click.Context, results: BrowseResults, output_format: str, print_uri: bool
+) -> None:
+    """Print the content a browse listed, in the requested format.
+
+    The raw format, and the machine-readable mode, print the payload of the host as it
+    answered it; the table numbers the named items, with their URIs when asked; the
+    json and pretty formats print the navigation: the info, the lists, and the
+    previous URI.
+
+    Args:
+        ctx: Click context object holding the shared options
+        results: The content listed, filtered and limited as the command wants it
+        output_format: The -F/--format option value
+        print_uri: Whether the table prints the URI of each item
+    """
+    if ctx.obj["machine_readable"] or output_format == "raw":
+        output = json.dumps(results.raw)
+    else:
+        info = results.info.model_dump(by_alias=True) if results.info else None
+        lists = [result_list.model_dump(by_alias=True) for result_list in results.lists]
+        if output_format == "table":
+            output = format_browse_results_as_table(lists, info, print_uri)
+        else:
+            navigation = {"info": info, "lists": lists, "prev": results.prev}
+            if output_format == "json":
+                output = json.dumps(navigation, indent=2)
+            else:  # pretty
+                output = json.dumps(navigation, indent=4, sort_keys=True, ensure_ascii=False)
+    echo_data(ctx, output)
 
 
 def render_fields(

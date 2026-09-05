@@ -520,8 +520,10 @@ class TestDefaultConfigurationTemplate:
                 "print-resulting-status": True,
                 "strict-parsing-configuration-file": False,
                 "verbose": False,
-                # The two collection subsections pin their table format
+                # The listing collection subsections pin their table format
                 "collection-browse": {"format": "table"},
+                "collection-favourite-list": {"format": "table"},
+                "collection-radio-list": {"format": "table"},
                 "collection-search": {"format": "table"},
             },
             "downloads": {
@@ -789,6 +791,8 @@ class TestBuildClickDefaultMap:
             },
             "collection": {
                 "browse": format_only,
+                "favourite": {"list": format_only},
+                "radio": {"list": format_only},
                 "search": format_only,
                 "statistics": format_only,
             },
@@ -917,6 +921,7 @@ class TestBuildClickDefaultMap:
         result = build_click_default_map({"output": {"print-resulting-status": False}})
 
         assert result == {
+            "collection": {"favourite": {"play": {"print_resulting_status": False}}},
             "playback": {
                 "toggle": {"print_resulting_status": False},
                 "play": {"print_resulting_status": False},

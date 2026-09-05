@@ -27,6 +27,10 @@ All notable changes to this project will be documented in this file.
 - Commands `playback infinity` and `playback sleep`,
   and option `--volatile` of `playback play`
   (all needing a WebSocket API client)
+- Command groups `collection favourite` (`add`, `list`, `play`, `remove`,
+  with `--radio` for the radio favourites) and `collection radio`
+  (`add`, `list`, `remove`); all but the `list` commands
+  need a WebSocket API client
 
 ### Changed
 

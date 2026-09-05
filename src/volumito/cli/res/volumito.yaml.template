@@ -11,10 +11,19 @@ aliases:
   # - Aliases are not listed by --help: list them with "volumito command alias"
   # c: collection
   # cb: collection browse
+  # cf: collection favourite
+  # cfa: collection favourite add
+  # cfl: collection favourite list
+  # cfp: collection favourite play
+  # cfr: collection favourite remove
   # cmd: command
   # cmda: command alias
   # cmdl: command list
   # conf: configuration
+  # cr: collection radio
+  # cra: collection radio add
+  # crl: collection radio list
+  # crr: collection radio remove
   # cs: collection search
   # exec: system execute
   # i: info
@@ -239,6 +248,8 @@ output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
   # - collection-browse
+  # - collection-favourite-list
+  # - collection-radio-list
   # - collection-search
   # - collection-statistics
   # - command-list
@@ -300,6 +311,18 @@ output:
 
   collection-browse:
     # Browsing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
+  collection-favourite-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
+  collection-radio-list:
+    # Listing is meant for humans, so the table is its default format
     format: table
 
     # Add your own overrides here

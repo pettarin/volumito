@@ -15,6 +15,9 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_4
 
 ACTION_COMMAND_PATHS: list[list[str]] = (
     [
+        ["collection", "favourite", "play"],
+    ] +
+    [
         ["playback", name]
         for name in (
             "mute",
@@ -95,6 +98,8 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
     "collection-browse": FORMAT_KEYS,
+    "collection-favourite-list": FORMAT_KEYS,
+    "collection-radio-list": FORMAT_KEYS,
     "collection-search": FORMAT_KEYS,
     "collection-statistics": FORMAT_KEYS,
     "story-album": DISPLAY_KEYS,
@@ -111,6 +116,12 @@ DISPLAY_SUBSECTIONS: list[str] = list(DISPLAY_SUBSECTION_KEYS)
 DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "collection-browse": [
         ["collection", "browse"],
+    ],
+    "collection-favourite-list": [
+        ["collection", "favourite", "list"],
+    ],
+    "collection-radio-list": [
+        ["collection", "radio", "list"],
     ],
     "collection-search": [
         ["collection", "search"],

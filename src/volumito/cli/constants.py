@@ -69,6 +69,17 @@ DEFAULT_STORY_ARGUMENT_TYPE = "autodetect"
 DEFAULT_VOLUMIO_VERSION = "4"
 """Default target Volumio version for the "configuration create" command."""
 
+FAVOURITE_NAME_OPTION_ERROR = "Expected the --name option only together with --radio."
+"""Error message when "collection favourite remove" names a web radio without --radio."""
+
+FAVOURITE_RADIO_NAME_ERROR = "Expected the NAME argument only without --radio."
+"""Error message when "collection favourite play" is given a name together with --radio."""
+
+FAVOURITE_RADIO_OPTIONS_ERROR = (
+    "Expected the --albumart, --service, and --title options only without --radio."
+)
+"""Error message when a "collection favourite" subcommand details a web radio."""
+
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
 
@@ -308,3 +319,12 @@ UNREGISTER_ARGUMENT_ERROR = (
     "Expected a URL argument, or one of the -a/--all and -A/--autocompose-url options."
 )
 """Error message when "notification unregister" is given no way of naming a URL."""
+
+URI_FAVOURITES = "favourites"
+"""The URI the Favourites browse source of a Volumio host lists the favourites at."""
+
+URI_RADIO_FAVOURITES = "radio/favourites"
+"""The URI the web radio plugin of a Volumio host lists the radio favourites at."""
+
+URI_WEB_RADIOS = "radio/myWebRadio"
+"""The URI the web radio plugin of a Volumio host lists the web radios of the user at."""
