@@ -11,63 +11,29 @@ aliases:
   # - Aliases are not listed by --help: list them with "volumito command alias"
   # c: collection
   # cb: collection browse
-  # cf: collection favourite
-  # cfa: collection favourite add
-  # cfl: collection favourite list
-  # cfo: collection folder
-  # cfod: collection folder delete
-  # cfp: collection favourite play
-  # cfr: collection favourite remove
-  # cg: collection goto
   # cmd: command
   # cmda: command alias
   # cmdl: command list
   # conf: configuration
-  # cr: collection radio
-  # cra: collection radio add
-  # crl: collection radio list
-  # crr: collection radio remove
   # cs: collection search
-  # cso: collection source
-  # csod: collection source disable
-  # csoe: collection source enable
-  # csol: collection source list
-  # cu: collection update
   # exec: system execute
   # i: info
   # mlt: multiroom
-  # mltc: multiroom client
-  # mlti: multiroom info
-  # mlts: multiroom status
-  # mltsg: multiroom single
-  # mltsv: multiroom server
   # mute: playback mute
   # next: playback next
   # not: notification
-  # note: notification event
-  # notee: notification event emit
-  # notel: notification event listen
-  # noter: notification event request
   # notl: notification list
   # notlis: notification listen
   # notr: notification register
   # notu: notification unregister
   # p: playback
   # pause: playback pause
-  # pinf: playback infinity
   # ping: system ping
   # pl: playlist
-  # pla: playlist add
   # play: playback play
-  # plc: playlist content
-  # plcr: playlist create
   # pld: playlist download
-  # pldel: playlist delete
-  # ple: playlist enqueue
-  # pli: playlist import
   # pll: playlist list
   # plp: playlist play
-  # plr: playlist remove
   # pm: playback mute
   # pnext: playback next
   # ppause: playback pause
@@ -76,22 +42,16 @@ aliases:
   # prev: playback previous
   # ps: playback status
   # pseek: playback seek
-  # psl: playback sleep
   # pstop: playback stop
   # pt: playback toggle
   # pu: playback unmute
   # pv: playback volume
   # q: queue
-  # qa: queue add
   # qc: queue clear
-  # qco: queue consume
   # qd: queue download
   # ql: queue list
-  # qm: queue move
   # qr: queue replace
-  # qrm: queue remove
   # qs: queue status
-  # qsv: queue save
   # s: story
   # salb: story album
   # sart: story artist
@@ -101,26 +61,9 @@ aliases:
   # spla: story place
   # stop: playback stop
   # sys: system
-  # sysa: system audio
-  # sysad: system audio device
-  # sysadl: system audio device list
-  # sysads: system audio device set
-  # sysai: system audio inputs
-  # sysal: system alarm
-  # sysao: system audio outputs
-  # sysb: system backup
   # syse: system execute
   # sysi: system info
-  # sysn: system name
-  # sysnet: system network
   # sysp: system ping
-  # syspl: system plugin
-  # syspw: system power
-  # syssh: system share
-  # syst: system timezone
-  # sysu: system update
-  # sysui: system ui
-  # sysusb: system usb
   # sysv: system version
   # t: queue track
   # ta: queue track audio
