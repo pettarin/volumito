@@ -31,9 +31,17 @@ Rough plan, broken down by milestone:
 - Released
   - CLI: allow choosing any of the implemented clients
 
-## v1.0.0
+## v0.5.0
+
+- CLI: add commands covering the additional features that
+  the WebSocket API offers w.r.t. the REST API
+
+## v0.6.0
 
 - CLI: code review/cleanup
+
+## v1.0.0
+
 - Establish a CI/CD workflow for the `volumito` package
 - Establish a CI/CD workflow for the Sphinx documentation
 - Review info for contributors
