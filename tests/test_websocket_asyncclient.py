@@ -2214,17 +2214,21 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         assert await client.discover_network_shares() == {"nas": [{"name": "NAS"}]}
 
     async def test_usb_drives_and_safe_removal(self, mocker: MockerFixture):
-        """The drives are read, and one is unmounted by name."""
-        fake = _FakeAsyncSocketIOClient(
-            answers={"listUsbDrives": ("pushListUsbDrives", [{"name": "USB"}])}
-        )
+        """The drives are the folders of the USB source; one is unmounted by its bare name."""
+        drive = {"type": "remdisk", "title": "USB", "uri": "music-library/USB/USB"}
+        listing = {"navigation": {"lists": [{"title": "USB", "items": [drive]}]}}
+        fake = _FakeAsyncSocketIOClient(answers={"browseLibrary": ("pushBrowseLibrary", listing)})
         client, fake = await _client(mocker, fake)
 
-        drives = (await client.get_usb_drives())
+        drives = await client.get_usb_drives()
         await client.safe_remove_drive("USB")
 
         assert [drive.name for drive in drives] == ["USB"]
-        assert fake.calls[-1] == _Call("safeRemoveDrive", {"name": "USB"})
+        assert drives[0].uri == "music-library/USB/USB"
+        assert fake.calls[-2:] == [
+            _Call("browseLibrary", {"uri": "music-library/USB"}),
+            _Call("safeRemoveDrive", "USB"),
+        ]
 
     async def test_delete_folder(self, mocker: MockerFixture):
         """A folder is deleted by the path the host nests under "item"."""

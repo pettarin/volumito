@@ -1760,11 +1760,11 @@ class TestTierCModels:
     def test_usb_drives(self):
         """The drives are parsed."""
         drives = UsbDrives.from_raw(
-            {"drives": [{"name": "USB", "device": "sda1", "mountpoint": "/media/USB"}]}
+            {"drives": [{"type": "remdisk", "title": "USB", "uri": "music-library/USB/USB"}]}
         )
 
         assert len(drives) == 1
-        assert drives[0].mountpoint == "/media/USB"
+        assert drives[0].uri == "music-library/USB/USB"
         assert [d.name for d in drives] == ["USB"]
 
     def test_multiroom(self):

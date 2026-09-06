@@ -3349,6 +3349,7 @@ def system_usb_list(ctx: click.Context, fields: str, output_format: str) -> None
         output_format,
         SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
         "Volumio USB Drives",
+        name_key="title",
     )
 
 

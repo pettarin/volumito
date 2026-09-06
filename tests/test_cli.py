@@ -7291,14 +7291,18 @@ class TestSystemNetworkShareUsb:
     DRIVES = {
         "drives": [
             {
-                "name": "USB Stick",
-                "device": "/dev/sda1",
-                "mountpoint": "/mnt/USB/sda1",
-                "size": "32G",
+                "type": "remdisk",
+                "title": "USB Stick",
+                "service": "mpd",
+                "albumart": "/albumart?icon=usb",
+                "uri": "music-library/USB/USB Stick",
             },
         ]
     }
-    """The USB drives, as a Volumio host answers them."""
+    """The USB drives, as the USB music source of a Volumio host lists them."""
+
+    DRIVES_SHORT = [{"title": "USB Stick", "uri": "music-library/USB/USB Stick"}]
+    """The short fields of the drives, as system usb list prints them."""
 
     DISCOVERED = {"192.168.1.2": ["Music", "Films"]}
     """The shares a discovery finds."""
@@ -7558,7 +7562,7 @@ class TestSystemNetworkShareUsb:
         table = runner.invoke(main, [*self._WEBSOCKET, "system", "usb", "list", "-F", "table"])
 
         assert pretty.exit_code == 0
-        assert json.loads(pretty.output) == self.DRIVES["drives"]
+        assert json.loads(pretty.output) == self.DRIVES_SHORT
         assert table.exit_code == 0
         assert "Volumio USB Drives" in table.output
         assert "1. USB Stick" in table.output
@@ -7617,7 +7621,7 @@ class TestSystemNetworkShareUsb:
         assert (
             "Falling back to the WebSocket API client for the network shares and the USB drives"
         ) in result.output
-        assert json.loads(result.stdout) == self.DRIVES["drives"]
+        assert json.loads(result.stdout) == self.DRIVES_SHORT
         websocket.disconnect.assert_called_once_with()
         rest.close.assert_called_once_with()
 

@@ -1942,19 +1942,19 @@ class UpdaterChannel(VolumioModel):
 
 
 class UsbDrive(VolumioModel):
-    """A USB drive attached to a Volumio instance."""
+    """A USB drive attached to a Volumio instance, as its USB music source lists it."""
 
-    device: str | None = None
-    """The device node of the drive."""
+    albumart: str | None = None
+    """The icon of the drive, relative to the host."""
 
-    mountpoint: str | None = None
-    """Where the drive is mounted."""
+    name: str | None = Field(default=None, alias="title")
+    """The name of the drive, which is the folder it is mounted as."""
 
-    name: str | None = None
-    """The name of the drive."""
+    type: str | None = None
+    """The kind of entry (``"remdisk"`` for a removable disk)."""
 
-    size: str | None = None
-    """The size of the drive, as the host reports it."""
+    uri: str | None = None
+    """The URI browsing the content of the drive."""
 
 
 class UsbDrives(VolumioModel):

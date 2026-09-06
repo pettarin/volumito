@@ -266,9 +266,6 @@ EVENT_INSTALL_TO_DISK = "installToDisk"
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
 
-EVENT_LIST_USB_DRIVES = "listUsbDrives"
-"""The event asking for the USB drives attached to the host."""
-
 EVENT_MANAGE_BACKUP = "manageBackup"
 """The event restoring a backup of the configuration."""
 
@@ -403,9 +400,6 @@ EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 
 EVENT_PUSH_LIST_SHARES = "pushListShares"
 """The event carrying the network shares mounted by the host."""
-
-EVENT_PUSH_LIST_USB_DRIVES = "pushListUsbDrives"
-"""The event carrying the USB drives attached to the host."""
 
 EVENT_PUSH_MENU_ITEMS = "pushMenuItems"
 """The event carrying the menu of the user interface."""
@@ -706,7 +700,6 @@ RESPONSE_EVENTS = {
     EVENT_GET_WIRELESS_NETWORKS_CACHE: EVENT_PUSH_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_LIST_PLAYLIST: EVENT_PUSH_LIST_PLAYLIST,
-    EVENT_LIST_USB_DRIVES: EVENT_PUSH_LIST_USB_DRIVES,
     EVENT_PINGER: EVENT_PONGER,
     EVENT_PLUGIN_MANAGER: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
@@ -731,6 +724,9 @@ UPDATE_SETTINGS_METHOD = "saveUpdateSettings"
 
 UPDATE_WINDOW_IDS = ("automatic_updates_start_time", "automatic_updates_stop_time")
 """The settings of the automatic update window, which saving the update settings wants too."""
+
+USB_BROWSE_URI = "music-library/USB"
+"""The URI of the USB music source, which lists the attached drives as its folders."""
 
 VOLUME_DOWN = "-"
 """The volume argument lowering the level by one step of the host."""

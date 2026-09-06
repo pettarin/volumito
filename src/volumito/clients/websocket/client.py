@@ -141,7 +141,6 @@ from volumito.clients.websocket.common import (
     EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_INSTALL_PLUGIN,
     EVENT_LIST_PLAYLIST,
-    EVENT_LIST_USB_DRIVES,
     EVENT_MANAGE_BACKUP,
     EVENT_MODIFY_PLUGIN_STATUS,
     EVENT_MOVE_QUEUE,
@@ -214,6 +213,7 @@ from volumito.clients.websocket.common import (
     UPDATE_SETTINGS_ENDPOINT,
     UPDATE_SETTINGS_METHOD,
     UPDATE_WINDOW_IDS,
+    USB_BROWSE_URI,
     VOLUME_DOWN,
     VOLUME_UP,
     VolumioWebSocketCommon,
@@ -2299,7 +2299,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_SAFE_REMOVE_DRIVE, {"name": name})
+        self._emit(EVENT_SAFE_REMOVE_DRIVE, name)
 
     def save_backup(self) -> None:
         """Write a local backup of the playlists and favourites on the Volumio instance.
@@ -2911,16 +2911,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def usb_drives(self) -> UsbDrives:
         """The USB drives attached to the Volumio instance.
 
-        Each access emits a fresh event.
+        The host lists them as the folders of its USB music source, which is what
+        browsing that source answers. Each access emits a fresh event.
 
         Returns:
-            The attached drives
+            The attached drives, as the host lists them
 
         Raises:
             VolumioConnectionError: If not connected, or if the host does not answer
-            VolumioAPIError: If the answer is not an array
+            VolumioAPIError: If the answer is not an object
         """
-        return UsbDrives.from_raw({"drives": self._read_array(EVENT_LIST_USB_DRIVES)})
+        items = [item.raw for item in self.browse(USB_BROWSE_URI).items]
+        return UsbDrives.from_raw({"drives": items})
 
     @property
     def volume(self) -> int:

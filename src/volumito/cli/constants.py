@@ -411,10 +411,8 @@ SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST = [
 """Short fields list for the "system share list" command."""
 
 SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST = [
-    "name",
-    "device",
-    "mountpoint",
-    "size",
+    "title",
+    "uri",
 ]
 """Short fields list for the "system usb list" command."""
 
