@@ -2413,14 +2413,29 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def save_wireless_settings(self, ssid: str, password: str = "") -> None:
         """Join a wireless network with the Volumio instance.
 
+        The host hashes a WPA passphrase only when told the security of the network,
+        as its user interface does: the networks the host sees are read first, and
+        the security of the one named is sent along. A network the host does not see
+        is joined without it, as a hidden one. The password is checked the way the
+        host does: a WPA passphrase of 8 to 63 characters, or a WEP key.
+
         Args:
             ssid: The name of the network
             password: The password of the network, empty for an open one
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the password is neither a WPA passphrase nor a WEP key
+            VolumioConnectionError: If not connected, if the host does not answer, or
+                if the event cannot be sent
+            VolumioAPIError: If the answer to the read is not an object
         """
-        payload = {"ssid": ssid, "password": password}
+        payload: dict[str, Any] = {"ssid": ssid}
+        if password:
+            payload["password"] = self._wireless_password_checked(password)
+            networks = await self._read_object(EVENT_GET_WIRELESS_NETWORKS)
+            security = self._wireless_security_listed(networks, ssid)
+            if security is not None:
+                payload["security"] = security
         await self._emit(EVENT_SAVE_WIRELESS_NETWORK_SETTINGS, payload)
 
     async def search(self, query: str) -> SearchResults:

@@ -2253,16 +2253,35 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         assert [n.ssid for n in await client.get_wireless_networks_cache()] == ["home"]
 
     async def test_save_wireless_settings(self, mocker: MockerFixture):
-        """Joining a network carries the name and the password, empty when open."""
-        client, fake = await _client(mocker)
+        """Joining sends the security the host sees for the network, and no password when open."""
+        seen = {"available": [{"ssid": "home", "security": "wpa2", "signal": 70}]}
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getWirelessNetworks": ("pushWirelessNetworks", seen)}
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.save_wireless_settings("home", "hunter2")
+        await client.save_wireless_settings("home", "hunter22")
+        await client.save_wireless_settings("hidden", "0123456789")
         await client.save_wireless_settings("open")
 
-        assert fake.calls == [
-            _Call("saveWirelessNetworkSettings", {"ssid": "home", "password": "hunter2"}),
-            _Call("saveWirelessNetworkSettings", {"ssid": "open", "password": ""}),
+        assert [call for call in fake.calls if call.event != "getWirelessNetworks"] == [
+            _Call(
+                "saveWirelessNetworkSettings",
+                {"ssid": "home", "password": "hunter22", "security": "wpa2"},
+            ),
+            _Call("saveWirelessNetworkSettings", {"ssid": "hidden", "password": "0123456789"}),
+            _Call("saveWirelessNetworkSettings", {"ssid": "open"}),
         ]
+        assert [call.event for call in fake.calls].count("getWirelessNetworks") == 2
+
+    async def test_save_wireless_settings_refuses_a_bad_password(self, mocker: MockerFixture):
+        """A password that is neither a WPA passphrase nor a WEP key is refused."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="WPA passphrase"):
+            await client.save_wireless_settings("home", "abc")
+
+        assert fake.calls == []
 
 
 class TestVolumioAsyncWebSocketClientUiPreferences:

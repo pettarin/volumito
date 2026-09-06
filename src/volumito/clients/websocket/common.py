@@ -18,6 +18,7 @@ This module knows nothing about how a client talks to the host: it imports neith
 """
 
 import re
+import string
 from datetime import timedelta
 from typing import Any, NoReturn
 
@@ -1011,6 +1012,18 @@ class VolumioWebSocketCommon(VolumioCommon):
         self._log_warning(f"Refusing the automatic update hour {hour}")
         raise ValueError(f"The automatic update hours must be between 0 and 23, got {hour}")
 
+    def _fail_bad_wireless_password(self) -> NoReturn:
+        """Refuse a wireless password the host would not save.
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning("Refusing a wireless password the host would not save")
+        raise ValueError(
+            "The wireless password must be a WPA passphrase of 8 to 63 characters, or a "
+            "WEP key of 5, 13, or 16 characters, or of 10, 26, or 32 hexadecimal digits"
+        )
+
     def _fail_dialog(self, event: str, dialog: object) -> NoReturn:
         """Refuse a dialog the host pushed in place of the answer to a read.
 
@@ -1549,3 +1562,44 @@ class VolumioWebSocketCommon(VolumioCommon):
         if uri is not None:
             payload["uri"] = uri
         return payload
+
+    def _wireless_password_checked(self, password: str) -> str:
+        """Check a wireless password the way the host does before it saves a network.
+
+        Args:
+            password: The password of the network
+
+        Returns:
+            The password, unchanged
+
+        Raises:
+            ValueError: If the password is neither a WPA passphrase nor a WEP key
+        """
+        length = len(password)
+        is_hex = all(char in string.hexdigits for char in password)
+        wep = length in (10, 26, 32) if is_hex else length in (5, 13, 16)
+        wpa = 8 <= length <= 63
+        hashed = length == 70 and "hash::" in password
+        if not (wep or wpa or hashed):
+            self._fail_bad_wireless_password()
+        return password
+
+    def _wireless_security_listed(self, networks: dict[str, Any], ssid: str) -> str | None:
+        """Pick the security of a wireless network out of those the host sees.
+
+        The host hashes a WPA passphrase only when told the security of the network,
+        as its user interface does; a network it does not see has none to tell.
+
+        Args:
+            networks: The wireless networks the host sees, as :attr:`wireless_networks`
+                reads them
+            ssid: The name of the network
+
+        Returns:
+            The security of the network, or None when the host does not see it
+        """
+        for network in networks.get("available") or []:
+            if isinstance(network, dict) and network.get("ssid") == ssid:
+                security = network.get("security")
+                return security if isinstance(security, str) else None
+        return None
