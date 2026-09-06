@@ -59,7 +59,6 @@ from volumito.cli.click_helpers import (
     option_artists_only,
     option_audio_file_name_template,
     option_autocompose_url,
-    option_background_path,
     option_backup_output_file,
     option_best_result_only,
     option_by_uid,
@@ -2844,13 +2843,12 @@ def system_ui_background_list(ctx: click.Context, output_format: str) -> None:
 @system_ui_background.command("set")
 @click.pass_context
 @click.argument("name", type=str)
-@option_background_path
-def system_ui_background_set(ctx: click.Context, name: str, path: str | None) -> None:
+def system_ui_background_set(ctx: click.Context, name: str) -> None:
     """Make NAME, as "system ui background list" names it, the background image.
 
     Needs a WebSocket API client.
     """
-    execute_command(ctx, f'set background "{name}"', lambda c: c.set_background(name, path))
+    execute_command(ctx, f'set background "{name}"', lambda c: c.set_background(name))
 
 
 @system_ui.command("experience")

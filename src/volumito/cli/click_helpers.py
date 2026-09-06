@@ -1670,16 +1670,6 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_background_path(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--path`` option to the system ui background set subcommand."""
-    return click.option(
-        "--path",
-        type=str,
-        default=None,
-        help="The path of the image of the background, when the host needs it named too.",
-    )(func)
-
-
 def option_backup_output_file(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-o``/``--output-file`` option to the system backup create subcommand."""
     return click.option(

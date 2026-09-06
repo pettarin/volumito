@@ -886,6 +886,27 @@ class VolumioWebSocketCommon(VolumioCommon):
         payload = {key: output[key] for key in ("host", "id", "isSelf", "type") if key in output}
         return {**payload, "mute": False, "volume": volume}
 
+    def _background_listed(self, backgrounds: dict[str, Any], name: str) -> dict[str, Any]:
+        """Pick one background out of those the host lists.
+
+        The host applies a background only when sent the entry it listed, path
+        included: the background event carries that entry.
+
+        Args:
+            backgrounds: The backgrounds the host lists, as :attr:`backgrounds` reads them
+            name: The name of the background
+
+        Returns:
+            The entry of the background, as the host listed it
+
+        Raises:
+            ValueError: If no background has the name
+        """
+        for background in backgrounds.get("available") or []:
+            if isinstance(background, dict) and background.get("name") == name:
+                return dict(background)
+        self._fail_no_background(name)
+
     def _backup_payload(self, kind: str) -> dict[str, str]:
         """Build the payload asking for a backup of one kind.
 
@@ -1004,6 +1025,18 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._log_warning(f'No audio output has the identifier "{output_id}"')
         raise ValueError(f'No audio output has the identifier "{output_id}"')
+
+    def _fail_no_background(self, name: str) -> NoReturn:
+        """Refuse to act on a background the host does not list.
+
+        Args:
+            name: The name no background has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No background is named "{name}"')
+        raise ValueError(f'No background is named "{name}"')
 
     def _fail_no_music_source(self, name: str) -> NoReturn:
         """Refuse to act on a music source the host does not list.

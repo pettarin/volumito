@@ -8049,20 +8049,27 @@ class TestSystemPluginAndUi:
         assert "Command 'delete background \"Default\"' executed" in result.output
         mock_client.delete_background.assert_called_once_with("Default")
 
-    @pytest.mark.parametrize(
-        ("options", "path"), [([], None), (["--path", "/bg/sea.jpg"], "/bg/sea.jpg")]
-    )
-    def test_ui_background_set(self, runner: CliRunner, mocker: MockerFixture, options, path):
-        """system ui background set chooses the background, with its path when given."""
+    def test_ui_background_set(self, runner: CliRunner, mocker: MockerFixture):
+        """system ui background set chooses the background by name."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "ui", "background", "set", "Sea", *options]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background", "set", "Sea"])
 
         assert result.exit_code == 0
         assert "Command 'set background \"Sea\"' executed" in result.output
-        mock_client.set_background.assert_called_once_with("Sea", path)
+        mock_client.set_background.assert_called_once_with("Sea")
+
+    def test_ui_background_set_an_unknown_name(self, runner: CliRunner, mocker: MockerFixture):
+        """A background the host does not list is reported as an invalid value."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.set_background.side_effect = ValueError('No background is named "Nope"')
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "ui", "background", "set", "Nope"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Invalid value: No background is named "Nope"' in result.output
 
     def test_ui_experience_prints_the_settings(self, runner: CliRunner, mocker: MockerFixture):
         """Without a value, system ui experience prints the settings."""

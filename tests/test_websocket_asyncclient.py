@@ -2339,18 +2339,29 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
         client, fake = await _client(mocker, fake)
 
         backgrounds = (await client.get_backgrounds())
-        await client.set_background("Aurora", "aurora.jpg")
-        await client.set_background("Darkness")
+        await client.set_background("Aurora")
         await client.delete_background("Aurora")
 
         assert backgrounds.current is not None
         assert backgrounds.current.name == "Darkness"
         assert [b.name for b in backgrounds] == ["Aurora"]
         assert fake.calls[-3:] == [
+            _Call("getBackgrounds", None),
             _Call("setBackgrounds", {"name": "Aurora", "path": "aurora.jpg"}),
-            _Call("setBackgrounds", {"name": "Darkness"}),
             _Call("deleteBackground", {"name": "Aurora"}),
         ]
+
+    async def test_set_background_refuses_an_unknown_name(self, mocker: MockerFixture):
+        """A background the host does not list is refused before sending."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getBackgrounds": ("pushBackgrounds", {"available": [], "current": None})}
+        )
+        client, fake = await _client(mocker, fake)
+
+        with pytest.raises(ValueError, match='No background is named "Nope"'):
+            await client.set_background("Nope")
+
+        assert not any(call.event == "setBackgrounds" for call in fake.calls)
 
     async def test_privacy_settings(self, mocker: MockerFixture):
         """The statistics flag is read from its alias."""

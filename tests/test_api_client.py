@@ -181,7 +181,7 @@ WEBSOCKET_METHODS = [
     ("set_as_multiroom_server", (), {}, MULTIROOM_OPERATION),
     ("set_as_multiroom_single", (), {}, MULTIROOM_OPERATION),
     ("set_audio_output_volume", ("output", 50), {}, AUDIO_OPERATION),
-    ("set_background", ("name", "path"), {}, UI_OPERATION),
+    ("set_background", ("name",), {}, UI_OPERATION),
     ("set_experience_settings", (True,), {}, UI_OPERATION),
     ("set_infinity_playback", (True,), {}, PLAYBACK_OPERATION),
     ("set_language", ("en", "English"), {}, UI_OPERATION),

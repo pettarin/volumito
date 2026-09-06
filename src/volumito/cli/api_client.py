@@ -1354,12 +1354,11 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def set_background(self, name: str, path: str | None = None) -> None:
+    def set_background(self, name: str) -> None:
         """Choose the background image of the user interface.
 
         Args:
             name: The name of the background, from :attr:`backgrounds`
-            path: The path of its image, when the host needs it named too
         """
 
     @abstractmethod
@@ -2095,8 +2094,8 @@ class RESTAPIClient(APIClient):
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         return self._fallback.client(AUDIO_OPERATION).set_audio_output_volume(output_id, volume)
 
-    def set_background(self, name: str, path: str | None = None) -> None:
-        return self._fallback.client(UI_OPERATION).set_background(name, path)
+    def set_background(self, name: str) -> None:
+        return self._fallback.client(UI_OPERATION).set_background(name)
 
     def set_experience_settings(self, advanced: bool) -> None:
         return self._fallback.client(UI_OPERATION).set_experience_settings(advanced)
@@ -2787,8 +2786,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         return self._client.set_audio_output_volume(output_id, volume)
 
-    def set_background(self, name: str, path: str | None = None) -> None:
-        return self._client.set_background(name, path)
+    def set_background(self, name: str) -> None:
+        return self._client.set_background(name)
 
     def set_experience_settings(self, advanced: bool) -> None:
         return self._client.set_experience_settings(advanced)
@@ -3552,8 +3551,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         return self._run(self._client.set_audio_output_volume(output_id, volume))
 
-    def set_background(self, name: str, path: str | None = None) -> None:
-        return self._run(self._client.set_background(name, path))
+    def set_background(self, name: str) -> None:
+        return self._run(self._client.set_background(name))
 
     def set_experience_settings(self, advanced: bool) -> None:
         return self._run(self._client.set_experience_settings(advanced))

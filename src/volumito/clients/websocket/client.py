@@ -2450,18 +2450,23 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         payload = self._audio_output_volume_payload(output, volume)
         self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
 
-    def set_background(self, name: str, path: str | None = None) -> None:
+    def set_background(self, name: str) -> None:
         """Choose the background image of the user interface.
+
+        The host applies a background only when sent the entry it listed, path
+        included, so the backgrounds are read first.
 
         Args:
             name: The name of the background, from :attr:`backgrounds`
-            path: The path of its image, when the host needs it named too
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the host lists no background by that name
+            VolumioConnectionError: If not connected, if the host does not answer, or
+                if the event cannot be sent
+            VolumioAPIError: If the answer to the read is not an object
         """
-        payload = {"name": name} if path is None else {"name": name, "path": path}
-        self._emit(EVENT_SET_BACKGROUNDS, payload)
+        backgrounds = self._read_object(EVENT_GET_BACKGROUNDS)
+        self._emit(EVENT_SET_BACKGROUNDS, self._background_listed(backgrounds, name))
 
     def set_experience_settings(self, advanced: bool) -> None:
         """Choose how many options the user interface of the Volumio instance offers.
