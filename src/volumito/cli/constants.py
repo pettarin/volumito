@@ -200,6 +200,12 @@ OUTPUT_FORMATS = [
 PLAY_VOLATILE_ERROR = "Expected a POSITION argument together with --volatile."
 """Error message when "playback play" is asked for the volatile source without a position."""
 
+PLUGIN_INSTALL_WAIT_INTERVAL = 5.0
+"""Seconds between two looks at the installed plugins while waiting for an install."""
+
+PLUGIN_INSTALL_WAIT_RETRIES = 120
+"""Number of looks at the installed plugins while waiting for an install: ten minutes."""
+
 PROGRAM_NAME = "volumito"
 """Name of the CLI tool, heading the command tree."""
 

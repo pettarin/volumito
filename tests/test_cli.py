@@ -7840,6 +7840,55 @@ class TestSystemPluginAndUi:
         assert "Command 'install plugin \"spop\"' executed" in result.output
         mock_client.install_plugin.assert_called_once_with("http://store/spop.zip")
 
+    def test_plugin_install_wait_and_enable(self, runner: CliRunner, mocker: MockerFixture):
+        """--wait-and-enable polls the host until it registers the plugin, then enables it."""
+        mock_client = self._mock_websocket_client(mocker)
+        moving = {"category": "music_service", "name": "spop", "prettyName": "Spotify"}
+        registered = {**moving, "version": "2.0.0", "enabled": False, "active": False}
+        _attach_property(
+            mock_client,
+            "installed_plugins",
+            side_effect=[
+                self.PLUGINS,
+                {"plugins": [*self.PLUGINS["plugins"], moving]},
+                {"plugins": [*self.PLUGINS["plugins"], registered]},
+            ],
+        )
+        sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "install", "spop", "--url", "http://x/p.zip",
+             "--wait-and-enable", "-y"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'install plugin \"spop\"' executed" in result.output
+        assert 'Waiting for the plugin "spop" to be installed... done' in result.output
+        assert "Command 'enable plugin \"spop\"' executed" in result.output
+        mock_client.install_plugin.assert_called_once_with("http://x/p.zip")
+        mock_client.manage_plugin.assert_called_once_with("enable", "music_service", "spop")
+        assert sleep.call_count == 2
+
+    def test_plugin_install_wait_and_enable_times_out(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A plugin the host never registers is reported after the last look."""
+        mock_client = self._mock_websocket_client(mocker)
+        mocker.patch("volumito.cli.click_helpers.PLUGIN_INSTALL_WAIT_RETRIES", 2)
+        sleep = mocker.patch("volumito.cli.click_helpers.time.sleep")
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "install", "spop", "--url", "http://x/p.zip",
+             "--wait-and-enable", "-y"],
+        )
+
+        assert result.exit_code == 1
+        assert 'Plugin not installed within 10 seconds: "spop"' in result.output
+        mock_client.manage_plugin.assert_not_called()
+        assert sleep.call_count == 1
+
     def test_plugin_install_with_a_url(self, runner: CliRunner, mocker: MockerFixture):
         """--url names the package, and the store is not consulted."""
         mock_client = self._mock_websocket_client(mocker)

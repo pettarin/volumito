@@ -56,6 +56,8 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
+    PLUGIN_INSTALL_WAIT_INTERVAL,
+    PLUGIN_INSTALL_WAIT_RETRIES,
     SEARCH_SERVICES,
     SHORT_FORMAT_FIELDS_STORY,
     STORY_ARGUMENT_TYPES,
@@ -2523,6 +2525,16 @@ def option_volatile(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_wait_and_enable(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--wait-and-enable`` flag to the system plugin install subcommand."""
+    return click.option(
+        "--wait-and-enable",
+        is_flag=True,
+        default=False,
+        help="Wait until the host lists the plugin as installed, then enable it.",
+    )(func)
+
+
 def option_wireless_password(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--password`` option to the system network join subcommand."""
     return click.option(
@@ -3190,6 +3202,42 @@ def sleep_between_api_calls(ctx: click.Context) -> None:
         ctx: Click context object holding the shared options
     """
     time.sleep(ctx.obj["sleep_before_next_api_call"])
+
+
+def wait_for_installed_plugin_or_exit(ctx: click.Context, name: str) -> PluginReference:
+    """Wait until the Volumio host lists a plugin as installed, or exit.
+
+    A Volumio host lists a plugin from the moment its files are in place, before its
+    install script has run, and reports whether it is enabled only once it registered
+    the plugin at the end of the install: the wait ends at the registration. The host
+    is asked every few seconds, for up to the configured number of times.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+
+    Returns:
+        The plugin, with its category
+
+    Raises:
+        SystemExit: If the host does not list the plugin as installed in time
+    """
+    retries = PLUGIN_INSTALL_WAIT_RETRIES
+    info(f'Waiting for the plugin "{name}" to be installed...')
+    for attempt in range(1, retries + 1):
+        plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+        plugin = next((p for p in plugins if p.name == name), None)
+        if plugin is not None and plugin.category is not None and plugin.enabled is not None:
+            info(f'Waiting for the plugin "{name}" to be installed... done')
+            return PluginReference(name, plugin.category, None)
+        debug(
+            f'The host does not list the plugin "{name}" as installed yet ({attempt}/{retries})'
+        )
+        if attempt < retries:
+            time.sleep(PLUGIN_INSTALL_WAIT_INTERVAL)
+    seconds = retries * PLUGIN_INSTALL_WAIT_INTERVAL
+    error(f'Plugin not installed within {seconds:.0f} seconds: "{name}"')
+    sys.exit(1)
 
 
 def write_download_manifest(

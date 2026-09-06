@@ -135,6 +135,7 @@ from volumito.cli.click_helpers import (
     option_unregister_url_on_exit,
     option_url,
     option_volatile,
+    option_wait_and_enable,
     option_wireless_password,
     option_with_albumart,
     option_yes,
@@ -153,6 +154,7 @@ from volumito.cli.click_helpers import (
     resolve_story_album_entities,
     resolve_story_entity,
     sleep_between_api_calls,
+    wait_for_installed_plugin_or_exit,
     write_queue_log,
 )
 from volumito.cli.configuration import (
@@ -2586,14 +2588,19 @@ def system_plugin_enable(ctx: click.Context, name: str, fields: str, output_form
 @click.pass_context
 @click.argument("name", type=str)
 @option_url
+@option_wait_and_enable
 @option_yes
-def system_plugin_install(ctx: click.Context, name: str, url: str | None, yes: bool) -> None:
+def system_plugin_install(
+    ctx: click.Context, name: str, url: str | None, wait_and_enable: bool, yes: bool
+) -> None:
     """Install the plugin NAME on the Volumio host.
 
     The package comes from the store, which the host lists only when it is logged in
     to MyVolumio (see "system plugin available"), unless --url names it. The host
-    reports its progress through the events its user interface listens for.
-    IMPORTANT: the plugin is installed only when -y/--yes is given.
+    reports its progress through the events its user interface listens for; with
+    --wait-and-enable, the command waits until the host lists the plugin as installed,
+    for up to ten minutes, and then enables it. IMPORTANT: the plugin is installed
+    only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
@@ -2604,6 +2611,13 @@ def system_plugin_install(ctx: click.Context, name: str, url: str | None, yes: b
     if package is None:
         package = resolve_plugin_or_exit(ctx, name, installed=False, available=True).url
     execute_command(ctx, f'install plugin "{name}"', lambda c: c.install_plugin(package))
+    if wait_and_enable:
+        plugin = wait_for_installed_plugin_or_exit(ctx, name)
+        execute_command(
+            ctx,
+            f'enable plugin "{name}"',
+            lambda c: c.manage_plugin("enable", plugin.category, name),
+        )
 
 
 @system_plugin.command("list")

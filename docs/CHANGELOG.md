@@ -53,6 +53,7 @@ All notable changes to this project will be documented in this file.
   and `language` subgroups), all needing a WebSocket API client
 - Property `available_plugins` on the WebSocket API clients, with the models
   `AvailablePlugin`, `AvailablePluginCategory`, and `AvailablePlugins`
+- Option `--wait-and-enable` of `system plugin install`
 - Command group `system alarm` (`add`, `clear`, `disable`, `enable`,
   `list`, `remove`, `set`), needing a WebSocket API client
 - Methods `add_alarm`, `disable_alarm`, `enable_alarm`, and `remove_alarm`
