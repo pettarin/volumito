@@ -2645,14 +2645,19 @@ def system_plugin_uninstall(ctx: click.Context, name: str, yes: bool) -> None:
 @click.pass_context
 @click.argument("name", type=str)
 @option_url
-def system_plugin_update(ctx: click.Context, name: str, url: str | None) -> None:
+@option_yes
+def system_plugin_update(ctx: click.Context, name: str, url: str | None, yes: bool) -> None:
     """Update the plugin NAME, as "system plugin list" names it.
 
     The package comes from the store, which the host lists only when it is logged in
-    to MyVolumio (see "system plugin available"), unless --url names it.
+    to MyVolumio (see "system plugin available"), unless --url names it. IMPORTANT:
+    the plugin is updated only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
+    if not yes:
+        error(f'Refusing to update the plugin without -y/--yes: "{name}"')
+        sys.exit(1)
     plugin = resolve_plugin_or_exit(ctx, name, available=url is None)
     package = url if url is not None else plugin.url
     execute_command(

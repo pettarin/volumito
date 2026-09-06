@@ -7908,12 +7908,23 @@ class TestSystemPluginAndUi:
         mock_client.uninstall_plugin.assert_called_once_with("music_service", "mpd")
 
 
+    def test_plugin_update_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes nothing is updated, and the host is not consulted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "update", "mpd"])
+
+        assert result.exit_code == 1
+        assert 'Refusing to update the plugin without -y/--yes: "mpd"' in result.output
+        mock_client.update_plugin.assert_not_called()
+        mock_client.installed_plugins_property.assert_not_called()
+
     def test_plugin_update(self, runner: CliRunner, mocker: MockerFixture):
         """system plugin update reads the category from the host and the package from the store."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "update", "touch_display"]
+            main, [*self._WEBSOCKET, "system", "plugin", "update", "touch_display", "-y"]
         )
 
         assert result.exit_code == 0
@@ -7930,7 +7941,8 @@ class TestSystemPluginAndUi:
 
         result = runner.invoke(
             main,
-            [*self._WEBSOCKET, "system", "plugin", "update", "mpd", "--url", "http://x/mpd.zip"],
+            [*self._WEBSOCKET, "system", "plugin", "update", "mpd", "--url", "http://x/mpd.zip",
+             "-y"],
         )
 
         assert result.exit_code == 0
@@ -7946,7 +7958,7 @@ class TestSystemPluginAndUi:
         """An installed plugin the store does not offer cannot be updated."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "update", "mpd"])
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "update", "mpd", "-y"])
 
         assert result.exit_code == 1
         assert 'Plugin not found: "mpd" (see "system plugin available")' in result.output
@@ -8107,7 +8119,7 @@ class TestSystemPluginAndUi:
             (["plugin", "install", "spop", "--url", "http://x", "-y"], "the plugins"),
             (["plugin", "list"], "the plugins"),
             (["plugin", "uninstall", "mpd", "-y"], "the plugins"),
-            (["plugin", "update", "mpd"], "the plugins"),
+            (["plugin", "update", "mpd", "-y"], "the plugins"),
             (["ui", "background", "delete", "x", "-y"], "the user interface settings"),
             (["ui", "background", "list"], "the user interface settings"),
             (["ui", "background", "set", "x"], "the user interface settings"),
