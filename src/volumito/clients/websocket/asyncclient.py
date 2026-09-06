@@ -2603,7 +2603,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        await self._emit(EVENT_SET_TIMEZONE, {"timeZone": value})
+        await self._emit(EVENT_SET_TIMEZONE, value)
 
     async def set_updater_channel(self, value: str) -> None:
         """Move the Volumio instance to another update channel.

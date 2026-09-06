@@ -2660,7 +2660,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
     @timezone.setter
     def timezone(self, value: str) -> None:
-        self._emit(EVENT_SET_TIMEZONE, {"timeZone": value})
+        self._emit(EVENT_SET_TIMEZONE, value)
 
     def toggle(self) -> None:
         """Toggle between playing and paused.

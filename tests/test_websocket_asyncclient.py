@@ -2271,7 +2271,7 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
 
         await client.set_timezone("UTC")
 
-        assert fake.calls[-1] == _Call("setTimezone", {"timeZone": "UTC"})
+        assert fake.calls[-1] == _Call("setTimezone", "UTC")
 
     async def test_backgrounds(self, mocker: MockerFixture):
         """The background in use is read beside the available ones."""
