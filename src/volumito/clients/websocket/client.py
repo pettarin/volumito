@@ -2853,7 +2853,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
     @updater_channel.setter
     def updater_channel(self, value: str) -> None:
-        self._emit(EVENT_SET_UPDATER_CHANNEL, {"channel": value})
+        self._emit(EVENT_SET_UPDATER_CHANNEL, value)
 
     @property
     def usb_drives(self) -> UsbDrives:

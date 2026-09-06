@@ -2683,7 +2683,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        await self._emit(EVENT_SET_UPDATER_CHANNEL, {"channel": value})
+        await self._emit(EVENT_SET_UPDATER_CHANNEL, value)
 
     async def set_volume(self, value: int) -> None:
         """Set the playback volume to an absolute level.

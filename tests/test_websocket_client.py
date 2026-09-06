@@ -2653,7 +2653,7 @@ class TestVolumioWebSocketClientSystemAdministration:
 
         assert channel.current_channel == "stable"
         assert channel.available_channels == ["stable", "test"]
-        assert fake.calls[-1] == _Call("setUpdaterChannel", {"channel": "test"})
+        assert fake.calls[-1] == _Call("setUpdaterChannel", "test")
 
     def test_the_update_commands(self, mocker: MockerFixture):
         """Checking and installing carry the flags the host expects."""
