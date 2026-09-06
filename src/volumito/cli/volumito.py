@@ -133,6 +133,7 @@ from volumito.cli.click_helpers import (
     option_tracklist,
     option_tracks_only,
     option_unregister_url_on_exit,
+    option_url,
     option_volatile,
     option_wireless_password,
     option_with_albumart,
@@ -148,6 +149,7 @@ from volumito.cli.click_helpers import (
     render_story,
     render_tracks,
     resolve_output_conflict,
+    resolve_plugin_or_exit,
     resolve_story_album_entities,
     resolve_story_entity,
     sleep_between_api_calls,
@@ -2458,27 +2460,6 @@ def system_name(ctx: click.Context, value: str | None) -> None:
     execute_command(ctx, f'name "{new_name}"', set_name)
 
 
-def _plugin_url(ctx: click.Context, name: str) -> str:
-    """Return the URL of the package of a plugin the store offers, by name.
-
-    Args:
-        ctx: Click context object holding the shared options
-        name: The name of the plugin, as "system plugin available" lists it
-
-    Returns:
-        The URL of the package
-
-    Raises:
-        SystemExit: If the store offers no plugin by that name, or none with a URL
-    """
-    plugins = fetch_or_exit(ctx, lambda c: c.available_plugins)
-    plugin = plugins.find(name)
-    if plugin is None or plugin.url is None:
-        error(f'Plugin not found: "{name}" (see "system plugin available")')
-        sys.exit(1)
-    return plugin.url
-
-
 def _render_available_plugins(
     ctx: click.Context, plugins: AvailablePlugins, fields: str, output_format: str
 ) -> None:
@@ -2554,72 +2535,75 @@ def system_plugin_available(ctx: click.Context, fields: str, output_format: str)
 
 @system_plugin.command("config")
 @click.pass_context
-@click.argument("endpoint", type=str)
+@click.argument("name", type=str)
 @option_format
-def system_plugin_config(ctx: click.Context, endpoint: str, output_format: str) -> None:
-    """Print the configuration page of the plugin ENDPOINT (as "category/name").
+def system_plugin_config(ctx: click.Context, name: str, output_format: str) -> None:
+    """Print the configuration page of the plugin NAME, as "system plugin list" names it.
 
     Needs a WebSocket API client.
     """
-    config = fetch_or_exit(ctx, lambda c: c.get_plugin_config(endpoint))
+    plugin = resolve_plugin_or_exit(ctx, name)
+    config = fetch_or_exit(ctx, lambda c: c.get_plugin_config(plugin.endpoint))
     render_payload(
-        ctx, config.raw, output_format, heading=f'Volumio Plugin Configuration "{endpoint}"'
+        ctx,
+        config.raw,
+        output_format,
+        heading=f'Volumio Plugin Configuration "{plugin.endpoint}"',
     )
 
 
 @system_plugin.command("disable")
 @click.pass_context
-@click.argument("category", type=str)
 @click.argument("name", type=str)
 @option_fields
 @option_format
-def system_plugin_disable(
-    ctx: click.Context, category: str, name: str, fields: str, output_format: str
-) -> None:
-    """Disable the plugin NAME of CATEGORY, printing the plugins as they then stand.
+def system_plugin_disable(ctx: click.Context, name: str, fields: str, output_format: str) -> None:
+    """Disable the plugin NAME, printing the plugins as they then stand.
 
-    Needs a WebSocket API client.
+    NAME is what "system plugin list" prints. Needs a WebSocket API client.
     """
-    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("disable", category, name))
+    plugin = resolve_plugin_or_exit(ctx, name)
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("disable", plugin.category, name))
     _render_plugins(ctx, plugins, fields, output_format)
 
 
 @system_plugin.command("enable")
 @click.pass_context
-@click.argument("category", type=str)
 @click.argument("name", type=str)
 @option_fields
 @option_format
-def system_plugin_enable(
-    ctx: click.Context, category: str, name: str, fields: str, output_format: str
-) -> None:
-    """Enable the plugin NAME of CATEGORY, printing the plugins as they then stand.
+def system_plugin_enable(ctx: click.Context, name: str, fields: str, output_format: str) -> None:
+    """Enable the plugin NAME, printing the plugins as they then stand.
 
-    Needs a WebSocket API client.
+    NAME is what "system plugin list" prints. Needs a WebSocket API client.
     """
-    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("enable", category, name))
+    plugin = resolve_plugin_or_exit(ctx, name)
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("enable", plugin.category, name))
     _render_plugins(ctx, plugins, fields, output_format)
 
 
 @system_plugin.command("install")
 @click.pass_context
-@click.argument("plugin", type=str)
+@click.argument("name", type=str)
+@option_url
 @option_yes
-def system_plugin_install(ctx: click.Context, plugin: str, yes: bool) -> None:
-    """Install the plugin PLUGIN, a URL or a name from "system plugin available".
+def system_plugin_install(ctx: click.Context, name: str, url: str | None, yes: bool) -> None:
+    """Install the plugin NAME on the Volumio host.
 
-    A URL is passed to the host as it is; a name is looked up in the store, which the
-    host lists only when it is logged in to MyVolumio. The host reports its progress
-    through the events its user interface listens for. IMPORTANT: the plugin is
-    installed only when -y/--yes is given.
+    The package comes from the store, which the host lists only when it is logged in
+    to MyVolumio (see "system plugin available"), unless --url names it. The host
+    reports its progress through the events its user interface listens for.
+    IMPORTANT: the plugin is installed only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
     if not yes:
-        error(f'Refusing to install the plugin without -y/--yes: "{plugin}"')
+        error(f'Refusing to install the plugin without -y/--yes: "{name}"')
         sys.exit(1)
-    url = plugin if "://" in plugin else _plugin_url(ctx, plugin)
-    execute_command(ctx, f'install plugin "{url}"', lambda c: c.install_plugin(url))
+    package = url
+    if package is None:
+        package = resolve_plugin_or_exit(ctx, name, installed=False, available=True).url
+    execute_command(ctx, f'install plugin "{name}"', lambda c: c.install_plugin(package))
 
 
 @system_plugin.command("list")
@@ -2637,38 +2621,44 @@ def system_plugin_list(ctx: click.Context, fields: str, output_format: str) -> N
 
 @system_plugin.command("uninstall")
 @click.pass_context
-@click.argument("category", type=str)
 @click.argument("name", type=str)
 @option_yes
-def system_plugin_uninstall(ctx: click.Context, category: str, name: str, yes: bool) -> None:
-    """Remove the plugin NAME of CATEGORY from the Volumio host.
+def system_plugin_uninstall(ctx: click.Context, name: str, yes: bool) -> None:
+    """Remove the plugin NAME, as "system plugin list" names it, from the Volumio host.
 
     IMPORTANT: the plugin is removed only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
     if not yes:
-        error(f'Refusing to uninstall the plugin without -y/--yes: "{category}/{name}"')
+        error(f'Refusing to uninstall the plugin without -y/--yes: "{name}"')
         sys.exit(1)
+    plugin = resolve_plugin_or_exit(ctx, name)
     execute_command(
-        ctx, f'uninstall plugin "{category}/{name}"', lambda c: c.uninstall_plugin(category, name)
+        ctx,
+        f'uninstall plugin "{plugin.endpoint}"',
+        lambda c: c.uninstall_plugin(plugin.category, name),
     )
 
 
 @system_plugin.command("update")
 @click.pass_context
-@click.argument("category", type=str)
 @click.argument("name", type=str)
-@click.argument("url", type=str)
-def system_plugin_update(ctx: click.Context, category: str, name: str, url: str) -> None:
-    """Update the plugin NAME of CATEGORY from the package at URL.
+@option_url
+def system_plugin_update(ctx: click.Context, name: str, url: str | None) -> None:
+    """Update the plugin NAME, as "system plugin list" names it.
+
+    The package comes from the store, which the host lists only when it is logged in
+    to MyVolumio (see "system plugin available"), unless --url names it.
 
     Needs a WebSocket API client.
     """
+    plugin = resolve_plugin_or_exit(ctx, name, available=url is None)
+    package = url if url is not None else plugin.url
     execute_command(
         ctx,
-        f'update plugin "{category}/{name}"',
-        lambda c: c.update_plugin(category, name, url),
+        f'update plugin "{plugin.endpoint}"',
+        lambda c: c.update_plugin(plugin.category, name, package),
     )
 
 

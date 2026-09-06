@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from string import Formatter
-from typing import Any, get_args, overload
+from typing import Any, NamedTuple, get_args, overload
 
 import click
 import requests
@@ -207,6 +207,24 @@ class OnOffParamType(click.ParamType):
             sorted(s for spellings in self.ALIASES.values() for s in spellings)
         )
         self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+
+class PluginReference(NamedTuple):
+    """A plugin named on the command line, resolved against the Volumio host."""
+
+    name: str
+    """The name of the plugin, as it is identified."""
+
+    category: str | None
+    """The category the plugin belongs to, when read from the installed plugins."""
+
+    url: str | None
+    """The URL of the package of the plugin, when read from the store."""
+
+    @property
+    def endpoint(self) -> str:
+        """The plugin as ``category/name``, the way the endpoints of the host name it."""
+        return f"{self.category}/{self.name}"
 
 
 class ResultKindsParamType(click.ParamType):
@@ -2481,6 +2499,17 @@ def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--url`` option to the system plugin install and update subcommands."""
+    return click.option(
+        "--url",
+        type=str,
+        default=None,
+        metavar="URL",
+        help="The URL of the package to use, instead of the one the store offers.",
+    )(func)
+
+
 def option_volatile(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--volatile`` option to the playback play subcommand."""
     return click.option(
@@ -2958,6 +2987,45 @@ def resolve_output_conflict(
     if directory_explicit and not file_explicit:
         return None, output_directory
     raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
+
+
+def resolve_plugin_or_exit(
+    ctx: click.Context, name: str, installed: bool = True, available: bool = False
+) -> PluginReference:
+    """Resolve the name of a plugin into what the plugin commands need, or exit.
+
+    With ``installed``, the category comes from the plugins installed on the host, as
+    "system plugin list" prints them; with ``available``, the URL of the package comes
+    from the store, as "system plugin available" prints it, which the host lists only
+    when it is logged in to MyVolumio.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+        installed: Whether to read the category from the installed plugins
+        available: Whether to read the URL of the package from the store
+
+    Returns:
+        The plugin, with the parts asked for
+
+    Raises:
+        SystemExit: If the host does not list the plugin where it was looked up
+    """
+    category, url = None, None
+    if installed:
+        plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+        plugin = next((p for p in plugins if p.name == name), None)
+        if plugin is None or plugin.category is None:
+            error(f'Plugin not installed: "{name}" (see "system plugin list")')
+            sys.exit(1)
+        category = plugin.category
+    if available:
+        offered = fetch_or_exit(ctx, lambda c: c.available_plugins).find(name)
+        if offered is None or offered.url is None:
+            error(f'Plugin not found: "{name}" (see "system plugin available")')
+            sys.exit(1)
+        url = offered.url
+    return PluginReference(name, category, url)
 
 
 def resolve_story_album_entities(

@@ -7603,6 +7603,15 @@ class TestSystemPluginAndUi:
                 "active": False,
                 "icon": "fa-volume-up",
             },
+            {
+                "category": "user_interface",
+                "name": "touch_display",
+                "prettyName": "Touch Display",
+                "version": "3.0.0",
+                "enabled": True,
+                "active": True,
+                "icon": "fa-tv",
+            },
         ]
     }
     """The installed plugins, as a Volumio host answers them."""
@@ -7769,18 +7778,30 @@ class TestSystemPluginAndUi:
 
         result = runner.invoke(
             main,
-            [*self._WEBSOCKET, "system", "plugin", "config", "music_service/mpd", "-F", "json"],
+            [*self._WEBSOCKET, "system", "plugin", "config", "mpd", "-F", "json"],
         )
 
         assert result.exit_code == 0
         assert json.loads(result.output) == self.CONFIG
         mock_client.get_plugin_config.assert_called_once_with("music_service/mpd")
 
+    def test_plugin_config_of_a_plugin_not_installed(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A name the host does not list as installed is an error naming the listing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "config", "nope"])
+
+        assert result.exit_code == 1
+        assert 'Plugin not installed: "nope" (see "system plugin list")' in result.output
+        mock_client.get_plugin_config.assert_not_called()
+
     @pytest.mark.parametrize(
         ("arguments", "action"),
         [
-            (["disable", "music_service", "mpd"], "disable"),
-            (["enable", "music_service", "mpd"], "enable"),
+            (["disable", "mpd"], "disable"),
+            (["enable", "mpd"], "enable"),
         ],
     )
     def test_plugin_manager_actions(
@@ -7799,30 +7820,14 @@ class TestSystemPluginAndUi:
         """Without -y/--yes nothing is installed."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "install", "http://x/plugin.zip"]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "install", "spop"])
 
         assert result.exit_code == 1
-        assert 'Refusing to install the plugin without -y/--yes: "http://x/plugin.zip"' in (
-            result.output
-        )
+        assert 'Refusing to install the plugin without -y/--yes: "spop"' in result.output
         mock_client.install_plugin.assert_not_called()
 
     def test_plugin_install(self, runner: CliRunner, mocker: MockerFixture):
-        """With -y/--yes the plugin is installed."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "install", "http://x/plugin.zip", "-y"]
-        )
-
-        assert result.exit_code == 0
-        assert "Command 'install plugin \"http://x/plugin.zip\"' executed" in result.output
-        mock_client.install_plugin.assert_called_once_with("http://x/plugin.zip")
-
-    def test_plugin_install_by_name(self, runner: CliRunner, mocker: MockerFixture):
-        """A name instead of a URL is looked up in the store."""
+        """With -y/--yes the plugin is installed from the package the store offers."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -7830,8 +7835,23 @@ class TestSystemPluginAndUi:
         )
 
         assert result.exit_code == 0
-        assert "Command 'install plugin \"http://store/spop.zip\"' executed" in result.output
+        assert "Command 'install plugin \"spop\"' executed" in result.output
         mock_client.install_plugin.assert_called_once_with("http://store/spop.zip")
+
+    def test_plugin_install_with_a_url(self, runner: CliRunner, mocker: MockerFixture):
+        """--url names the package, and the store is not consulted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "install", "spop", "--url", "http://x/p.zip",
+             "-y"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'install plugin \"spop\"' executed" in result.output
+        mock_client.install_plugin.assert_called_once_with("http://x/p.zip")
+        mock_client.available_plugins_property.assert_not_called()
 
     def test_plugin_install_an_unknown_name(self, runner: CliRunner, mocker: MockerFixture):
         """A name the store does not offer is an error naming the listing."""
@@ -7856,7 +7876,7 @@ class TestSystemPluginAndUi:
 
         assert pretty.exit_code == 0
         plugins = json.loads(pretty.output)
-        assert [plugin["name"] for plugin in plugins] == ["mpd", "alsa"]
+        assert [plugin["name"] for plugin in plugins] == ["mpd", "alsa", "touch_display"]
         assert plugins[0]["version"] == "1.0.0"
         assert "icon" not in plugins[0]
         assert table.exit_code == 0
@@ -7869,14 +7889,10 @@ class TestSystemPluginAndUi:
         """Without -y/--yes nothing is removed."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "uninstall", "music_service", "mpd"]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "uninstall", "mpd"])
 
         assert result.exit_code == 1
-        assert 'Refusing to uninstall the plugin without -y/--yes: "music_service/mpd"' in (
-            result.output
-        )
+        assert 'Refusing to uninstall the plugin without -y/--yes: "mpd"' in result.output
         mock_client.uninstall_plugin.assert_not_called()
 
     def test_plugin_uninstall(self, runner: CliRunner, mocker: MockerFixture):
@@ -7884,8 +7900,7 @@ class TestSystemPluginAndUi:
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "system", "plugin", "uninstall", "music_service", "mpd", "-y"],
+            main, [*self._WEBSOCKET, "system", "plugin", "uninstall", "mpd", "-y"]
         )
 
         assert result.exit_code == 0
@@ -7894,17 +7909,48 @@ class TestSystemPluginAndUi:
 
 
     def test_plugin_update(self, runner: CliRunner, mocker: MockerFixture):
-        """system plugin update updates the plugin from the package."""
+        """system plugin update reads the category from the host and the package from the store."""
         mock_client = self._mock_websocket_client(mocker)
-        url = "http://plugins/mpd.zip"
 
         result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "update", "music_service", "mpd", url]
+            main, [*self._WEBSOCKET, "system", "plugin", "update", "touch_display"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'update plugin \"user_interface/touch_display\"' executed" in (
+            result.output
+        )
+        mock_client.update_plugin.assert_called_once_with(
+            "user_interface", "touch_display", "http://store/touch.zip"
+        )
+
+    def test_plugin_update_with_a_url(self, runner: CliRunner, mocker: MockerFixture):
+        """--url names the package, and the store is not consulted."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "system", "plugin", "update", "mpd", "--url", "http://x/mpd.zip"],
         )
 
         assert result.exit_code == 0
         assert "Command 'update plugin \"music_service/mpd\"' executed" in result.output
-        mock_client.update_plugin.assert_called_once_with("music_service", "mpd", url)
+        mock_client.update_plugin.assert_called_once_with(
+            "music_service", "mpd", "http://x/mpd.zip"
+        )
+        mock_client.available_plugins_property.assert_not_called()
+
+    def test_plugin_update_of_a_plugin_the_store_lacks(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """An installed plugin the store does not offer cannot be updated."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "update", "mpd"])
+
+        assert result.exit_code == 1
+        assert 'Plugin not found: "mpd" (see "system plugin available")' in result.output
+        mock_client.update_plugin.assert_not_called()
     def test_ui_background_list(self, runner: CliRunner, mocker: MockerFixture):
         """system ui background list prints the backgrounds and the one in use."""
         self._mock_websocket_client(mocker)
@@ -8054,14 +8100,14 @@ class TestSystemPluginAndUi:
         ("arguments", "operation"),
         [
             (["plugin", "available"], "the plugins"),
-            (["plugin", "config", "a/b"], "the plugins"),
-            (["plugin", "disable", "a", "b"], "the plugins"),
-            (["plugin", "enable", "a", "b"], "the plugins"),
-            (["plugin", "install", "http://x", "-y"], "the plugins"),
+            (["plugin", "config", "mpd"], "the plugins"),
+            (["plugin", "disable", "mpd"], "the plugins"),
+            (["plugin", "enable", "mpd"], "the plugins"),
             (["plugin", "install", "spop", "-y"], "the plugins"),
+            (["plugin", "install", "spop", "--url", "http://x", "-y"], "the plugins"),
             (["plugin", "list"], "the plugins"),
-            (["plugin", "uninstall", "a", "b", "-y"], "the plugins"),
-            (["plugin", "update", "a", "b", "http://p/b.zip"], "the plugins"),
+            (["plugin", "uninstall", "mpd", "-y"], "the plugins"),
+            (["plugin", "update", "mpd"], "the plugins"),
             (["ui", "background", "delete", "x", "-y"], "the user interface settings"),
             (["ui", "background", "list"], "the user interface settings"),
             (["ui", "background", "set", "x"], "the user interface settings"),
