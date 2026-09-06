@@ -214,7 +214,6 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE,
     SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST,
     SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
-    SHORT_FORMAT_FIELDS_SYSTEM_UI_MENU,
     SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
@@ -2914,27 +2913,6 @@ def system_ui_language_set(ctx: click.Context, code: str, name: str | None) -> N
             error("  (none)")
         sys.exit(1)
     execute_command(ctx, f'language "{code}"', lambda c: c.set_language(code, name))
-
-
-@system_ui.command("menu")
-@click.pass_context
-@option_fields
-@option_format
-def system_ui_menu(ctx: click.Context, fields: str, output_format: str) -> None:
-    """Print the menu the Volumio host offers its user interface.
-
-    Needs a WebSocket API client.
-    """
-    data = fetch_or_exit(ctx, lambda c: c.menu_items.raw)
-    render_items(
-        ctx,
-        data,
-        data.get("items", []),
-        fields,
-        output_format,
-        SHORT_FORMAT_FIELDS_SYSTEM_UI_MENU,
-        "Volumio Menu",
-    )
 
 
 @system_ui.command("privacy")

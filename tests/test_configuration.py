@@ -820,7 +820,6 @@ class TestBuildClickDefaultMap:
                     "background": {"list": format_only},
                     "experience": format_only,
                     "language": {"list": format_only},
-                    "menu": formatting,
                     "privacy": format_only,
                     "settings": format_only,
                 },

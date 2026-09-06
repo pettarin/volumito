@@ -121,7 +121,6 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-ui-background-list": FORMAT_KEYS,
     "system-ui-experience": FORMAT_KEYS,
     "system-ui-language-list": FORMAT_KEYS,
-    "system-ui-menu": DISPLAY_KEYS,
     "system-ui-privacy": FORMAT_KEYS,
     "system-ui-settings": FORMAT_KEYS,
     "system-update-channel-list": FORMAT_KEYS,
@@ -292,9 +291,6 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "system-ui-language-list": [
         ["system", "ui", "language", "list"],
-    ],
-    "system-ui-menu": [
-        ["system", "ui", "menu"],
     ],
     "system-ui-privacy": [
         ["system", "ui", "privacy"],

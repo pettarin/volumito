@@ -283,7 +283,6 @@ output:
   # - system-ui-background-list
   # - system-ui-experience
   # - system-ui-language-list
-  # - system-ui-menu
   # - system-ui-privacy
   # - system-ui-settings
   # - system-update-channel-list
@@ -493,9 +492,6 @@ output:
     # Add your own overrides here
 
   system-ui-language-list:
-    # Add your own overrides here
-
-  system-ui-menu:
     # Add your own overrides here
 
   system-ui-privacy:

@@ -7680,14 +7680,6 @@ class TestSystemPluginAndUi:
     }
     """The languages, as a Volumio host answers them."""
 
-    MENU = {
-        "items": [
-            {"id": "browse", "name": "Browse", "state": "volumio.browse"},
-            {"id": "plugin", "name": "Plugin", "state": "volumio.plugin", "params": {"a": 1}},
-        ]
-    }
-    """The menu, as a Volumio host answers it."""
-
     PRIVACY = {"allowUIStatistics": False}
     """The privacy settings, as a Volumio host answers them."""
 
@@ -7732,7 +7724,6 @@ class TestSystemPluginAndUi:
         _attach_property(mock_client, "backgrounds", return_value=self.BACKGROUNDS)
         _attach_property(mock_client, "experience_settings", return_value=self.EXPERIENCE)
         _attach_property(mock_client, "languages", return_value=self.LANGUAGES)
-        _attach_property(mock_client, "menu_items", return_value=self.MENU)
         _attach_property(mock_client, "privacy_settings", return_value=self.PRIVACY)
         _attach_property(mock_client, "ui_settings", return_value=self.UI)
         mocker.patch(
@@ -8143,17 +8134,6 @@ class TestSystemPluginAndUi:
         assert ("  (none)" in result.output) is not bool(available)
         mock_client.set_language.assert_not_called()
 
-    def test_ui_menu(self, runner: CliRunner, mocker: MockerFixture):
-        """system ui menu prints the short fields of each entry."""
-        self._mock_websocket_client(mocker)
-
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "menu"])
-
-        assert result.exit_code == 0
-        items = json.loads(result.output)
-        assert [item["id"] for item in items] == ["browse", "plugin"]
-        assert "params" not in items[1]
-
     @pytest.mark.parametrize(
         ("command", "payload"), [("privacy", PRIVACY), ("settings", UI)]
     )
@@ -8185,7 +8165,6 @@ class TestSystemPluginAndUi:
             (["ui", "experience", "simple"], "the user interface settings"),
             (["ui", "language", "list"], "the user interface settings"),
             (["ui", "language", "set", "en"], "the user interface settings"),
-            (["ui", "menu"], "the user interface settings"),
             (["ui", "privacy"], "the user interface settings"),
             (["ui", "settings"], "the user interface settings"),
         ],
@@ -18283,7 +18262,6 @@ class TestConfigurationCommands:
                     "system-ui-background-list": None,
                     "system-ui-experience": None,
                     "system-ui-language-list": None,
-                    "system-ui-menu": None,
                     "system-ui-privacy": None,
                     "system-ui-settings": None,
                     "system-update-channel-list": None,

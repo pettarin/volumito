@@ -49,7 +49,7 @@ All notable changes to this project will be documented in this file.
   and `system usb` (`eject`, `list`), all needing a WebSocket API client
 - Command groups `system plugin` (`available`, `configuration`, `disable`,
   `enable`, `install`, `list`, `uninstall`, `update`) and `system ui`
-  (`experience`, `menu`, `privacy`, `settings`, and the `background`
+  (`experience`, `privacy`, `settings`, and the `background`
   and `language` subgroups), all needing a WebSocket API client
 - Property `available_plugins` on the WebSocket API clients, with the models
   `AvailablePlugin`, `AvailablePluginCategory`, and `AvailablePlugins`
