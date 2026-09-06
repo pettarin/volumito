@@ -2806,14 +2806,17 @@ def system_ui(ctx: click.Context) -> None:
 @system_ui.group("background", invoke_without_command=True)
 @click.pass_context
 def system_ui_background(ctx: click.Context) -> None:
-    """Print the name of the background image in use, or manage the backgrounds.
+    """Print the background in use, or manage the backgrounds.
+
+    The background in use is the title of an image, or a solid colour (e.g., "#000").
 
     Needs a WebSocket API client.
     """
     if ctx.invoked_subcommand is None:
-        current = fetch_or_exit(ctx, lambda c: c.backgrounds).current
-        name = current.name if current is not None else None
-        click.echo(json.dumps(name) if ctx.obj["machine_readable"] else name or "")
+        settings = fetch_or_exit(ctx, lambda c: c.ui_settings)
+        image = settings.background
+        value = image.title if image is not None else settings.color
+        click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value or "")
 
 
 @system_ui_background.command("delete")
@@ -2849,7 +2852,10 @@ def system_ui_background_list(ctx: click.Context, output_format: str) -> None:
 @click.pass_context
 @click.argument("name", type=str)
 def system_ui_background_set(ctx: click.Context, name: str) -> None:
-    """Make NAME, as "system ui background list" names it, the background image.
+    """Make NAME the background: an image, or a solid colour when NAME starts with "#".
+
+    An image is one "system ui background list" names; a colour is hexadecimal, with
+    three or six digits (e.g., "#000", "#1a2b3c").
 
     Needs a WebSocket API client.
     """

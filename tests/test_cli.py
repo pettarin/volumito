@@ -8006,17 +8006,25 @@ class TestSystemPluginAndUi:
         assert 'Plugin not found: "mpd" (see "system plugin available")' in result.output
         mock_client.update_plugin.assert_not_called()
     def test_ui_background_prints_the_current_one(self, runner: CliRunner, mocker: MockerFixture):
-        """system ui background alone prints the name of the background in use."""
+        """system ui background alone prints the title of the image in use, or the colour."""
         mock_client = self._mock_websocket_client(mocker)
 
-        plain = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background"])
+        colour = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background"])
         machine = runner.invoke(main, ["-m", *self._WEBSOCKET, "system", "ui", "background"])
+        _attach_property(
+            mock_client,
+            "ui_settings",
+            return_value={"background": {"title": "Yosemite", "path": "y.jpg"}, "theme": "x"},
+        )
+        image = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background"])
 
-        assert plain.exit_code == 0
-        assert plain.output.strip() == "Default"
+        assert colour.exit_code == 0
+        assert colour.output.strip() == "#54c688"
         assert machine.exit_code == 0
-        assert machine.output.strip() == '"Default"'
-        assert mock_client.backgrounds_property.call_count == 2
+        assert machine.output.strip() == '"#54c688"'
+        assert image.exit_code == 0
+        assert image.output.strip() == "Yosemite"
+        mock_client.backgrounds_property.assert_not_called()
 
     def test_ui_background_list(self, runner: CliRunner, mocker: MockerFixture):
         """system ui background list prints the backgrounds and the one in use."""
@@ -8053,15 +8061,16 @@ class TestSystemPluginAndUi:
         assert "Command 'delete background \"Default\"' executed" in result.output
         mock_client.delete_background.assert_called_once_with("Default")
 
-    def test_ui_background_set(self, runner: CliRunner, mocker: MockerFixture):
-        """system ui background set chooses the background by name."""
+    @pytest.mark.parametrize("name", ["Sea", "#000"])
+    def test_ui_background_set(self, runner: CliRunner, mocker: MockerFixture, name):
+        """system ui background set chooses an image by name, or a colour by its value."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background", "set", "Sea"])
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background", "set", name])
 
         assert result.exit_code == 0
-        assert "Command 'set background \"Sea\"' executed" in result.output
-        mock_client.set_background.assert_called_once_with("Sea")
+        assert f"Command 'set background \"{name}\"' executed" in result.output
+        mock_client.set_background.assert_called_once_with(name)
 
     def test_ui_background_set_an_unknown_name(self, runner: CliRunner, mocker: MockerFixture):
         """A background the host does not list is reported as an invalid value."""

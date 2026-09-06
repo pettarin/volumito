@@ -2451,20 +2451,25 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
 
     def set_background(self, name: str) -> None:
-        """Choose the background image of the user interface.
+        """Choose the background of the user interface: an image, or a solid colour.
 
-        The host applies a background only when sent the entry it listed, path
-        included, so the backgrounds are read first.
+        A name starting with ``#`` is a hexadecimal colour (e.g., ``"#000"``) and is
+        sent as such. Any other name is that of an image, which the host applies only
+        when sent the entry it listed, path included, so the backgrounds are read first.
 
         Args:
-            name: The name of the background, from :attr:`backgrounds`
+            name: The name of the image, from :attr:`backgrounds`, or a colour
 
         Raises:
-            ValueError: If the host lists no background by that name
+            ValueError: If the colour is not hexadecimal, or if the host lists no image
+                by that name
             VolumioConnectionError: If not connected, if the host does not answer, or
                 if the event cannot be sent
             VolumioAPIError: If the answer to the read is not an object
         """
+        if name.startswith("#"):
+            self._emit(EVENT_SET_BACKGROUNDS, self._background_color_payload(name))
+            return
         backgrounds = self._read_object(EVENT_GET_BACKGROUNDS)
         self._emit(EVENT_SET_BACKGROUNDS, self._background_listed(backgrounds, name))
 

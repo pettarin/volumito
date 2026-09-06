@@ -886,6 +886,26 @@ class VolumioWebSocketCommon(VolumioCommon):
         payload = {key: output[key] for key in ("host", "id", "isSelf", "type") if key in output}
         return {**payload, "mute": False, "volume": volume}
 
+    def _background_color_payload(self, color: str) -> dict[str, str]:
+        """Build the payload making a solid colour the background.
+
+        Args:
+            color: The colour, hexadecimal with three or six digits (e.g., ``"#000"``)
+
+        Returns:
+            The payload the background event carries
+
+        Raises:
+            ValueError: If the colour is not hexadecimal
+        """
+        if not re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", color):
+            self._log_warning(f'Refusing the background colour "{color}"')
+            raise ValueError(
+                f'The background colour must be hexadecimal, like "#000" or "#1a2b3c", '
+                f'got "{color}"'
+            )
+        return {"color": color}
+
     def _background_listed(self, backgrounds: dict[str, Any], name: str) -> dict[str, Any]:
         """Pick one background out of those the host lists.
 

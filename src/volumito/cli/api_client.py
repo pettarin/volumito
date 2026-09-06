@@ -1355,10 +1355,11 @@ class APIClient(ABC):
 
     @abstractmethod
     def set_background(self, name: str) -> None:
-        """Choose the background image of the user interface.
+        """Choose the background of the user interface: an image, or a solid colour.
 
         Args:
-            name: The name of the background, from :attr:`backgrounds`
+            name: The name of the image, from :attr:`backgrounds`, or a hexadecimal
+                colour starting with ``#``
         """
 
     @abstractmethod

@@ -1879,6 +1879,16 @@ class Timezones(VolumioModel):
         return len(self.timezones)
 
 
+class UiBackground(VolumioModel):
+    """The background image the user interface settings of a Volumio instance report."""
+
+    path: str | None = None
+    """The file name of the image, relative to the backgrounds folder of the host."""
+
+    title: str | None = None
+    """The name of the image, as :attr:`Backgrounds.available` lists it."""
+
+
 class UiConfig(VolumioModel):
     """The configuration page a plugin of a Volumio instance offers."""
 
@@ -1892,8 +1902,11 @@ class UiConfig(VolumioModel):
 class UiSettings(VolumioModel):
     """The user interface settings of a Volumio instance."""
 
+    background: UiBackground | None = None
+    """The background image in use, when the background is an image."""
+
     color: str | None = None
-    """The accent color of the interface."""
+    """The solid background colour in use (e.g., ``"#000"``), when it is a colour."""
 
     language: str | None = None
     """The language code of the interface (e.g., ``"en"``)."""

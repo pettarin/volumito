@@ -1547,6 +1547,17 @@ class TestSleepTimer:
 class TestUiSettings:
     """Test cases for the UiSettings model."""
 
+    def test_background_image(self):
+        """An image background is reported as an object with its title and path."""
+        settings = UiSettings.from_raw(
+            {"background": {"title": "Yosemite", "path": "yosemite.jpg"}, "language": "it"}
+        )
+
+        assert settings.background is not None
+        assert settings.background.title == "Yosemite"
+        assert settings.background.path == "yosemite.jpg"
+        assert settings.color is None
+
     def test_parses_the_settings(self):
         """The interface settings are parsed."""
         settings = UiSettings.from_raw({"color": "#000", "language": "en", "theme": "default"})

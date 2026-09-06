@@ -2340,16 +2340,27 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
 
         backgrounds = (await client.get_backgrounds())
         await client.set_background("Aurora")
+        await client.set_background("#1a2b3c")
         await client.delete_background("Aurora")
 
         assert backgrounds.current is not None
         assert backgrounds.current.name == "Darkness"
         assert [b.name for b in backgrounds] == ["Aurora"]
-        assert fake.calls[-3:] == [
+        assert fake.calls[-4:] == [
             _Call("getBackgrounds", None),
             _Call("setBackgrounds", {"name": "Aurora", "path": "aurora.jpg"}),
+            _Call("setBackgrounds", {"color": "#1a2b3c"}),
             _Call("deleteBackground", {"name": "Aurora"}),
         ]
+
+    async def test_set_background_refuses_a_bad_colour(self, mocker: MockerFixture):
+        """A colour that is not hexadecimal is refused before sending."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="must be hexadecimal"):
+            await client.set_background("#12345")
+
+        assert not any(call.event == "setBackgrounds" for call in fake.calls)
 
     async def test_set_background_refuses_an_unknown_name(self, mocker: MockerFixture):
         """A background the host does not list is refused before sending."""
