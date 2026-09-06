@@ -723,6 +723,15 @@ reads: two of them in flight at once could take each other's result."""
 UPDATE_CHECK_TIMEOUT = 60.0
 """Seconds an update check is waited for at least: the host asks its updater, which is slow."""
 
+UPDATE_SETTINGS_ENDPOINT = "system_controller/system"
+"""The plugin whose method saves the update settings, as the method call names it."""
+
+UPDATE_SETTINGS_METHOD = "saveUpdateSettings"
+"""The method of the system plugin saving the update settings."""
+
+UPDATE_WINDOW_IDS = ("automatic_updates_start_time", "automatic_updates_stop_time")
+"""The settings of the automatic update window, which saving the update settings wants too."""
+
 VOLUME_DOWN = "-"
 """The volume argument lowering the level by one step of the host."""
 
@@ -994,6 +1003,18 @@ class VolumioWebSocketCommon(VolumioCommon):
         """The base URL a failing connection names as unreachable."""
         return self.host_configuration.websocket_base_url
 
+    def _fail_bad_update_hour(self, hour: int) -> NoReturn:
+        """Refuse an hour outside the day for the automatic update window.
+
+        Args:
+            hour: The hour refused
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f"Refusing the automatic update hour {hour}")
+        raise ValueError(f"The automatic update hours must be between 0 and 23, got {hour}")
+
     def _fail_dialog(self, event: str, dialog: object) -> NoReturn:
         """Refuse a dialog the host pushed in place of the answer to a read.
 
@@ -1112,6 +1133,15 @@ class VolumioWebSocketCommon(VolumioCommon):
             f'Volumio instance at {self._endpoint_description} did not answer "{event}" '
             f'with "{response_event}" within {waited} seconds'
         )
+
+    def _fail_no_update_window(self) -> NoReturn:
+        """Refuse to save the update settings when the host does not report its window.
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning("The host does not report the automatic update window")
+        raise ValueError("The host does not report the automatic update window")
 
     def _fail_not_connected(self, action: str) -> NoReturn:
         """Report that an operation needs a connection the client does not have.
@@ -1442,6 +1472,55 @@ class VolumioWebSocketCommon(VolumioCommon):
             raise ValueError(f"The sleep delay must not be negative, got {delay}")
         minutes = int(delay.total_seconds() // 60)
         return {"enabled": True, "time": f"{minutes // 60}:{minutes % 60:02d}"}
+
+    def _update_window_given(
+        self, start_time: int | None, end_time: int | None
+    ) -> dict[str, dict[str, int]]:
+        """Build the window settings out of the hours given, as the save wants them.
+
+        Args:
+            start_time: The hour the window opens, or None to keep the one of the host
+            end_time: The hour the window closes, or None to keep the one of the host
+
+        Returns:
+            The settings of the hours given, each as the value and label pair the host
+            stores
+
+        Raises:
+            ValueError: If an hour is not between 0 and 23
+        """
+        window: dict[str, dict[str, int]] = {}
+        for key, hour in zip(UPDATE_WINDOW_IDS, (start_time, end_time), strict=True):
+            if hour is None:
+                continue
+            if not 0 <= hour <= 23:
+                self._fail_bad_update_hour(hour)
+            window[key] = {"value": hour, "label": hour}
+        return window
+
+    def _update_window_listed(self, sections: list[dict[str, Any]]) -> dict[str, Any]:
+        """Pick the window settings out of the configuration page of the system plugin.
+
+        The method saving the update settings wants the window too, which the page
+        reports as it stands.
+
+        Args:
+            sections: The sections of the page, as :meth:`get_plugin_config` reads them
+
+        Returns:
+            The settings of the window, as the host listed them
+
+        Raises:
+            ValueError: If the page does not report the window
+        """
+        window: dict[str, Any] = {}
+        for section in sections:
+            for entry in section.get("content") or []:
+                if isinstance(entry, dict) and entry.get("id") in UPDATE_WINDOW_IDS:
+                    window[entry["id"]] = entry.get("value")
+        if any(not isinstance(window.get(key), dict) for key in UPDATE_WINDOW_IDS):
+            self._fail_no_update_window()
+        return window
 
     def _volume_payload(self, value: int) -> int:
         """Build the payload setting the volume to an absolute level.

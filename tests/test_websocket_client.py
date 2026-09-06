@@ -2655,6 +2655,73 @@ class TestVolumioWebSocketClientSystemAdministration:
         assert channel.available_channels == ["stable", "test"]
         assert fake.calls[-1] == _Call("setUpdaterChannel", "test")
 
+    def test_automatic_updates_switched(self, mocker: MockerFixture):
+        """Switching the automatic updates saves the settings with the window of the host."""
+        content = [
+            {"id": "automatic_updates", "value": True},
+            {"id": "automatic_updates_start_time", "value": {"value": 0, "label": 0}},
+            {"id": "automatic_updates_stop_time", "value": {"value": 5, "label": 5}},
+            "not an entry",
+        ]
+        page = {"page": {"label": "System"}, "sections": [{"id": "updates", "content": content}]}
+        fake = _FakeSocketIOClient(answers={"getUiConfig": ("pushUiConfig", page)})
+        client, fake = _client(mocker, fake)
+
+        client.set_automatic_updates(False)
+        client.set_automatic_updates(True, end_time=6)
+
+        assert [call.event for call in fake.calls] == [
+            "getUiConfig", "callMethod", "getUiConfig", "callMethod"
+        ]
+        assert fake.calls[0].payload == {"page": "system_controller/system"}
+        assert fake.calls[1].payload == {
+            "endpoint": "system_controller/system",
+            "method": "saveUpdateSettings",
+            "data": {
+                "automatic_updates": False,
+                "automatic_updates_start_time": {"value": 0, "label": 0},
+                "automatic_updates_stop_time": {"value": 5, "label": 5},
+            },
+        }
+        assert fake.calls[3].payload["data"] == {
+            "automatic_updates": True,
+            "automatic_updates_start_time": {"value": 0, "label": 0},
+            "automatic_updates_stop_time": {"value": 6, "label": 6},
+        }
+
+    def test_automatic_updates_with_a_whole_window(self, mocker: MockerFixture):
+        """With both hours given, the page of the host is not read."""
+        client, fake = _client(mocker)
+
+        client.set_automatic_updates(True, 3, 6)
+
+        assert [call.event for call in fake.calls] == ["callMethod"]
+        assert fake.calls[0].payload["data"] == {
+            "automatic_updates": True,
+            "automatic_updates_start_time": {"value": 3, "label": 3},
+            "automatic_updates_stop_time": {"value": 6, "label": 6},
+        }
+
+    def test_automatic_updates_refused_a_bad_hour(self, mocker: MockerFixture):
+        """An hour outside the day is refused before anything is sent."""
+        client, fake = _client(mocker)
+
+        with pytest.raises(ValueError, match="must be between 0 and 23, got 24"):
+            client.set_automatic_updates(True, 24, 6)
+
+        assert fake.calls == []
+
+    def test_automatic_updates_refused_without_the_window(self, mocker: MockerFixture):
+        """A page not reporting the update window is refused before saving."""
+        page = {"sections": [{"id": "updates", "content": [{"id": "automatic_updates"}]}]}
+        fake = _FakeSocketIOClient(answers={"getUiConfig": ("pushUiConfig", page)})
+        client, fake = _client(mocker, fake)
+
+        with pytest.raises(ValueError, match="does not report the automatic update window"):
+            client.set_automatic_updates(True)
+
+        assert not any(call.event == "callMethod" for call in fake.calls)
+
     def test_the_update_commands(self, mocker: MockerFixture):
         """Checking waits for the answer of the updater; installing carries its flag."""
         found = {"updateavailable": True, "title": "3.800", "description": "<p>Fixes</p>"}

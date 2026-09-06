@@ -1790,6 +1790,17 @@ def option_disabled(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_end_time(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--end-time`` option to the system update automatic enable subcommand."""
+    return click.option(
+        "--end-time",
+        type=click.IntRange(0, 23),
+        default=None,
+        metavar="HOUR",
+        help="The hour of the day the automatic updates window closes (0 to 23).",
+    )(func)
+
+
 def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-e``/``--endpoint`` option to the notification listen subcommand."""
     return click.option(
@@ -2395,6 +2406,17 @@ def option_share_username(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="The user the share is mounted as.",
+    )(func)
+
+
+def option_start_time(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--start-time`` option to the system update automatic enable subcommand."""
+    return click.option(
+        "--start-time",
+        type=click.IntRange(0, 23),
+        default=None,
+        metavar="HOUR",
+        help="The hour of the day the automatic updates window opens (0 to 23).",
     )(func)
 
 

@@ -41,8 +41,8 @@ All notable changes to this project will be documented in this file.
   with `list` and `set`), needing a WebSocket API client
 - Command `system name`, and command groups `system backup` (`create`,
   `restore`, `save`), `system power` (`modes`, `reboot`, `shutdown`, `standby`),
-  `system timezone` (`list`, `set`), and `system update` (`automatic`,
-  `channel` with `list` and `set`, `check`, `install`),
+  `system timezone` (`list`, `set`), and `system update` (`automatic` with
+  `enable` and `disable`, `channel` with `list` and `set`, `check`, `install`),
   all needing a WebSocket API client
 - Command groups `system network` (`info`, `join`, `wireless`),
   `system share` (`add`, `discover`, `edit`, `info`, `list`, `remove`),

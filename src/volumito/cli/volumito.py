@@ -70,6 +70,7 @@ from volumito.cli.click_helpers import (
     option_cue_track,
     option_current_track,
     option_disabled,
+    option_end_time,
     option_endpoint,
     option_extended,
     option_fields,
@@ -124,6 +125,7 @@ from volumito.cli.click_helpers import (
     option_share_password,
     option_share_path,
     option_share_username,
+    option_start_time,
     option_story_type,
     option_super,
     option_thumbnails,
@@ -2963,15 +2965,47 @@ def system_update(ctx: click.Context) -> None:
     pass
 
 
-@system_update.command("automatic")
+@system_update.group("automatic", invoke_without_command=True)
 @click.pass_context
 def system_update_automatic(ctx: click.Context) -> None:
-    """Print whether the Volumio host updates itself.
+    """Print whether the Volumio host updates itself, or switch it with the subcommands.
 
     Needs a WebSocket API client.
     """
-    value = fetch_or_exit(ctx, lambda c: c.automatic_update_enabled)
-    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+    if ctx.invoked_subcommand is None:
+        value = fetch_or_exit(ctx, lambda c: c.automatic_update_enabled)
+        click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@system_update_automatic.command("disable")
+@click.pass_context
+def system_update_automatic_disable(ctx: click.Context) -> None:
+    """Stop the Volumio host from updating itself.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, "update automatic disable", lambda c: c.set_automatic_updates(False))
+
+
+@system_update_automatic.command("enable")
+@click.pass_context
+@option_start_time
+@option_end_time
+def system_update_automatic_enable(
+    ctx: click.Context, start_time: int | None, end_time: int | None
+) -> None:
+    """Make the Volumio host update itself, within a window of hours of its day.
+
+    The window opens at --start-time and closes at --end-time; an hour not given keeps
+    the one the host holds.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx,
+        "update automatic enable",
+        lambda c: c.set_automatic_updates(True, start_time, end_time),
+    )
 
 
 @system_update.group("channel", invoke_without_command=True)

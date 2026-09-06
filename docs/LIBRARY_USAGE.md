@@ -612,6 +612,7 @@ system administration, and user interface preferences.
 - `set_as_multiroom_client(server)`
 - `set_as_multiroom_server()`
 - `set_as_multiroom_single()`
+- `set_automatic_updates(enabled, start_time, end_time)`
 - `set_background(name)`
 - `set_experience_settings(advanced)`
 - `set_infinity_playback(enabled)`

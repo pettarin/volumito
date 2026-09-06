@@ -1363,6 +1363,20 @@ class APIClient(ABC):
         """
 
     @abstractmethod
+    def set_automatic_updates(
+        self, enabled: bool, start_time: int | None = None, end_time: int | None = None
+    ) -> None:
+        """Switch the automatic updates of the Volumio instance, and set their window.
+
+        Args:
+            enabled: True for the host to update itself, False otherwise
+            start_time: The hour of the day the window opens (0 to 23), or None to
+                keep the one the host holds
+            end_time: The hour of the day the window closes (0 to 23), or None to
+                keep the one the host holds
+        """
+
+    @abstractmethod
     def set_background(self, name: str) -> None:
         """Choose the background of the user interface: an image, or a solid colour.
 
@@ -2104,6 +2118,13 @@ class RESTAPIClient(APIClient):
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         return self._fallback.client(AUDIO_OPERATION).set_audio_output_volume(output_id, volume)
 
+    def set_automatic_updates(
+        self, enabled: bool, start_time: int | None = None, end_time: int | None = None
+    ) -> None:
+        return self._fallback.client(UPDATE_OPERATION).set_automatic_updates(
+            enabled, start_time, end_time
+        )
+
     def set_background(self, name: str) -> None:
         return self._fallback.client(UI_OPERATION).set_background(name)
 
@@ -2795,6 +2816,11 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
 
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         return self._client.set_audio_output_volume(output_id, volume)
+
+    def set_automatic_updates(
+        self, enabled: bool, start_time: int | None = None, end_time: int | None = None
+    ) -> None:
+        return self._client.set_automatic_updates(enabled, start_time, end_time)
 
     def set_background(self, name: str) -> None:
         return self._client.set_background(name)
@@ -3560,6 +3586,11 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
 
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         return self._run(self._client.set_audio_output_volume(output_id, volume))
+
+    def set_automatic_updates(
+        self, enabled: bool, start_time: int | None = None, end_time: int | None = None
+    ) -> None:
+        return self._run(self._client.set_automatic_updates(enabled, start_time, end_time))
 
     def set_background(self, name: str) -> None:
         return self._run(self._client.set_background(name))

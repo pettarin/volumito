@@ -208,6 +208,9 @@ from volumito.clients.websocket.common import (
     EVENT_WRITE_MULTIROOM,
     RESPONSE_EVENTS,
     UPDATE_CHECK_TIMEOUT,
+    UPDATE_SETTINGS_ENDPOINT,
+    UPDATE_SETTINGS_METHOD,
+    UPDATE_WINDOW_IDS,
     VOLUME_DOWN,
     VOLUME_UP,
     VolumioWebSocketCommon,
@@ -2526,6 +2529,36 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         output = self._audio_output_listed(outputs, output_id)
         payload = self._audio_output_volume_payload(output, volume)
         await self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
+
+    async def set_automatic_updates(
+        self, enabled: bool, start_time: int | None = None, end_time: int | None = None
+    ) -> None:
+        """Switch the automatic updates of the Volumio instance, and set their window.
+
+        The switch goes through the settings of the system plugin, which want the
+        window of the automatic updates too: an hour not given is read from the
+        configuration page of the plugin, as it stands.
+
+        Args:
+            enabled: True for the host to update itself, False otherwise
+            start_time: The hour of the day the window opens (0 to 23), or None to
+                keep the one the host holds
+            end_time: The hour of the day the window closes (0 to 23), or None to
+                keep the one the host holds
+
+        Raises:
+            ValueError: If an hour is not between 0 and 23, or if the host does not
+                report the window when one is needed
+            VolumioConnectionError: If not connected, if the host does not answer, or
+                if the event cannot be sent
+            VolumioAPIError: If the page is not an object
+        """
+        window = self._update_window_given(start_time, end_time)
+        if len(window) < len(UPDATE_WINDOW_IDS):
+            page = await self.get_plugin_config(UPDATE_SETTINGS_ENDPOINT)
+            window = {**self._update_window_listed(page.sections), **window}
+        arguments = {"automatic_updates": enabled, **window}
+        await self.call_plugin_method(UPDATE_SETTINGS_ENDPOINT, UPDATE_SETTINGS_METHOD, arguments)
 
     async def set_background(self, name: str) -> None:
         """Choose the background of the user interface: an image, or a solid colour.

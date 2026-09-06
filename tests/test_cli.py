@@ -7051,6 +7051,44 @@ class TestSystemSettings:
         assert machine.exit_code == 0
         assert machine.output.strip() == "true"
 
+    @pytest.mark.parametrize(
+        ("arguments", "expected"),
+        [
+            (["enable"], (True, None, None)),
+            (["enable", "--start-time", "3", "--end-time", "6"], (True, 3, 6)),
+            (["disable"], (False, None, None)),
+        ],
+    )
+    def test_update_automatic_switch(
+        self, runner: CliRunner, mocker: MockerFixture, arguments, expected
+    ):
+        """system update automatic enable/disable switches the automatic updates."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "automatic", *arguments]
+        )
+
+        assert result.exit_code == 0
+        assert f"Command 'update automatic {arguments[0]}' executed successfully" in (
+            result.output
+        )
+        mock_client.set_automatic_updates.assert_called_once_with(*expected)
+
+    def test_update_automatic_enable_refuses_an_hour_outside_the_day(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The window hours are hours of the day."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "automatic", "enable", "--end-time", "24"]
+        )
+
+        assert result.exit_code == 2
+        assert "24 is not in the range 0<=x<=23" in result.output
+        mock_client.set_automatic_updates.assert_not_called()
+
     def test_update_channel_prints_the_channel(self, runner: CliRunner, mocker: MockerFixture):
         """system update channel alone prints the channel in use."""
         self._mock_websocket_client(mocker)
@@ -7171,6 +7209,8 @@ class TestSystemSettings:
             (["timezone", "list"], "the system settings"),
             (["timezone", "set", "UTC"], "the system settings"),
             (["update", "automatic"], "the updates"),
+            (["update", "automatic", "disable"], "the updates"),
+            (["update", "automatic", "enable"], "the updates"),
             (["update", "channel"], "the updates"),
             (["update", "channel", "list"], "the updates"),
             (["update", "channel", "set", "test"], "the updates"),
