@@ -2406,20 +2406,34 @@ class TestVolumioAsyncWebSocketClientSystemAdministration:
             _Call("update", {"ignoreIntegrityCheck": True}),
         ]
 
-    async def test_backup_and_restore(self, mocker: MockerFixture):
-        """A backup is read and handed back to be restored."""
-        fake = _FakeAsyncSocketIOClient(answers={"getBackup": ("pushBackup", {"playlist": []})})
+    async def test_backup_of_one_kind(self, mocker: MockerFixture):
+        """A backup names its kind, and comes back as the host reports it."""
+        answer = {"id": {"name": "volumio"}, "backup": [{"name": "jazz", "content": []}]}
+        fake = _FakeAsyncSocketIOClient(answers={"getBackup": ("pushBackup", answer)})
         client, fake = await _client(mocker, fake)
 
-        backup = await client.backup()
-        await client.restore_backup(backup)
-        await client.restore_config()
+        backup = await client.backup("playlist")
 
-        assert backup == {"playlist": []}
-        assert fake.calls[-2:] == [
-            _Call("manageBackup", {"playlist": []}),
-            _Call("restoreConfig", None),
-        ]
+        assert backup == answer
+        assert fake.calls[-1] == _Call("getBackup", {"type": "playlist"})
+
+    async def test_backup_refuses_an_unknown_kind(self, mocker: MockerFixture):
+        """A kind the host does not read is refused before sending."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="The backup kind must be one of"):
+            await client.backup("settings")
+
+        assert not any(call.event == "getBackup" for call in fake.calls)
+
+    async def test_backup_saved_and_restored_by_flag(self, mocker: MockerFixture):
+        """The host writes its local backup on 0, and restores it on 1."""
+        client, fake = await _client(mocker)
+
+        await client.save_backup()
+        await client.restore_backup()
+
+        assert fake.calls[-2:] == [_Call("manageBackup", 0), _Call("manageBackup", 1)]
 
     async def test_install_to_disk_refuses_to_run(self, mocker: MockerFixture):
         """Writing to the internal storage is deliberately not implemented."""

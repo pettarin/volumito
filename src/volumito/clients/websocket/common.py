@@ -27,6 +27,16 @@ from volumito.clients.models import Alarm, Playlist, QueueTrack
 ALARM_TIME_DATE = "2000-01-01"
 """The date the alarm times are rendered on: the host schedules by the time of day alone."""
 
+BACKUP_ACTION_RESTORE = 1
+"""The backup flag making the host restore its local backup of the playlists and favourites."""
+
+BACKUP_ACTION_SAVE = 0
+"""The backup flag making the host write its local backup of the playlists and favourites."""
+
+BACKUP_KINDS = ("favourites", "my-web-radio", "playlist", "radio-favourites")
+"""The kinds of backup a Volumio host reads: the favourite tracks, the Web radios added by
+hand, the saved playlists with their content, and the favourite Web radios."""
+
 EVENT_ADD_PLAY = "addPlay"
 """The event appending items to the queue and playing them."""
 
@@ -864,6 +874,27 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         payload = {key: output[key] for key in ("host", "id", "isSelf", "type") if key in output}
         return {**payload, "mute": False, "volume": volume}
+
+    def _backup_payload(self, kind: str) -> dict[str, str]:
+        """Build the payload asking for a backup of one kind.
+
+        A Volumio host answers nothing to a kind it does not know, so the kind is checked
+        before sending.
+
+        Args:
+            kind: The kind of backup, one of :data:`BACKUP_KINDS`
+
+        Returns:
+            The payload the backup event carries
+
+        Raises:
+            ValueError: If the kind is not one a Volumio host reads
+        """
+        if kind not in BACKUP_KINDS:
+            self._log_warning(f'Refusing the unknown backup kind "{kind}"')
+            kinds = ", ".join(BACKUP_KINDS)
+            raise ValueError(f'The backup kind must be one of {kinds}, got "{kind}"')
+        return {"type": kind}
 
     def _browse_payload(self, uri: str | None) -> dict[str, str]:
         """Build the payload browsing a URI.

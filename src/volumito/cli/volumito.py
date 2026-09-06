@@ -30,6 +30,7 @@ from volumito.cli.click_helpers import (
     alias_problems,
     aliases_by_command_path,
     api_position,
+    backup_document,
     browse_kinds,
     check_playlist_name_or_exit,
     command_nodes,
@@ -65,7 +66,6 @@ from volumito.cli.click_helpers import (
     option_cached,
     option_check_next_track,
     option_check_playlist_name,
-    option_config,
     option_count,
     option_create_download_manifest,
     option_cue_track,
@@ -166,7 +166,6 @@ from volumito.cli.configuration import (
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
     ALARM_FILE_ERROR,
-    BACKUP_RESTORE_ARGUMENT_ERROR,
     BROWSE_LAST_ROOT_ERROR,
     COLLECTION_UPDATE_MODES_ERROR,
     COLLECTION_UPDATE_URI_ERROR,
@@ -2361,7 +2360,7 @@ def audio_volume(ctx: click.Context, output_id: str, value: int) -> None:
 @system.group("backup")
 @click.pass_context
 def system_backup(ctx: click.Context) -> None:
-    """Back up and restore the configuration of the Volumio host."""
+    """Back up and restore the playlists and favourites of the Volumio host."""
     pass
 
 
@@ -2373,14 +2372,16 @@ def system_backup(ctx: click.Context) -> None:
 def system_backup_create(
     ctx: click.Context, output_format: str, output_file: str | None, overwrite_existing_files: bool
 ) -> None:
-    """Read a backup of the configuration of the Volumio host, printing or saving it.
+    """Read a backup of the playlists and favourites of the Volumio host, printing or saving it.
 
-    With -o/--output-file, the backup is written to FILE as JSON, which
-    "system backup restore" reads back, instead of being printed.
+    The backup holds the identification of the host and, by kind, the saved playlists
+    with their content, the favourite tracks, the favourite Web radios, and the Web
+    radios added by hand. With -o/--output-file, it is written to FILE as JSON instead
+    of being printed.
 
     Needs a WebSocket API client.
     """
-    backup = fetch_or_exit(ctx, lambda c: c.backup())
+    backup = fetch_or_exit(ctx, backup_document)
     if output_file is None:
         render_payload(ctx, backup, output_format, heading="Volumio Backup")
         return
@@ -2403,35 +2404,35 @@ def system_backup_create(
 
 @system_backup.command("restore")
 @click.pass_context
-@click.argument("file", required=False, default=None, type=str)
-@option_config
 @option_yes
-def system_backup_restore(ctx: click.Context, file: str | None, config: bool, yes: bool) -> None:
-    """Restore the backup saved in FILE, or the configuration of the plugins with --config.
+def system_backup_restore(ctx: click.Context, yes: bool) -> None:
+    """Restore the local backup of the playlists and favourites on the Volumio host.
 
-    FILE is what "system backup create -o" wrote. IMPORTANT: the configuration of the
-    Volumio host is replaced; it is restored only when -y/--yes is given.
+    The host restores what "system backup save" wrote, after about ten seconds: the
+    playlists are replaced, the favourites are merged with the current ones. IMPORTANT:
+    the current playlists cannot be recovered; the backup is restored only when
+    -y/--yes is given.
 
     Needs a WebSocket API client.
     """
-    if (file is None) == (not config):
-        raise click.UsageError(BACKUP_RESTORE_ARGUMENT_ERROR)
-    if config:
-        if not yes:
-            error("Refusing to restore the configuration of the plugins without -y/--yes")
-            sys.exit(1)
-        execute_command(ctx, "restore config", lambda c: c.restore_config())
-        return
     if not yes:
-        error(f'Refusing to restore the backup without -y/--yes: "{file}"')
+        error("Refusing to restore the backup without -y/--yes")
         sys.exit(1)
-    try:
-        with open(str(file), encoding="utf-8") as backup_file:
-            backup = json.load(backup_file)
-    except (OSError, ValueError) as e:
-        error(f'Cannot read backup file "{file}": {e}')
-        sys.exit(1)
-    execute_command(ctx, f'restore backup "{file}"', lambda c: c.restore_backup(backup))
+    execute_command(ctx, "restore backup", lambda c: c.restore_backup())
+
+
+@system_backup.command("save")
+@click.pass_context
+def system_backup_save(ctx: click.Context) -> None:
+    """Write a local backup of the playlists and favourites on the Volumio host.
+
+    The host writes the backup after about ten seconds, replacing the previous one;
+    "system backup restore" reads it back. To keep a copy elsewhere, use
+    "system backup create" instead.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, "save backup", lambda c: c.save_backup())
 
 
 @system.command("name")

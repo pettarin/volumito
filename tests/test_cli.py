@@ -6704,8 +6704,16 @@ class TestSystemAudio:
 class TestSystemSettings:
     """Test cases for system name, backup, power, timezone, and update."""
 
-    BACKUP = {"config": {"name": "volumio"}, "plugins": ["a", "b"]}
-    """A backup of the configuration, as a Volumio host answers it."""
+    BACKUPS = {
+        "favourites": [{"uri": "song", "title": "Song"}],
+        "my-web-radio": [],
+        "playlist": [{"name": "jazz", "content": [{"uri": "track"}]}],
+        "radio-favourites": [{"uri": "radio", "title": "Radio"}],
+    }
+    """The backup of each kind, as a Volumio host answers it."""
+
+    BACKUP_ID = {"name": "volumio", "uuid": "1234", "time": "6/8/2026 - 15:29"}
+    """The identification a Volumio host puts in a backup."""
 
     CHANNEL = {"currentChannel": "stable", "availableChannels": ["stable", "test"]}
     """The update channel, as a Volumio host answers it."""
@@ -6743,11 +6751,18 @@ class TestSystemSettings:
         )
         return mock_client
 
+    def _backup_document(self) -> dict:
+        """What system backup create prints or writes: the identification and every kind."""
+        return {"id": self.BACKUP_ID, **self.BACKUPS}
+
     def _mock_websocket_client(self, mocker: MockerFixture, power_modes: dict | None = None):
         """Mock VolumioWebSocketClient answering the system reads."""
         mock_client = mocker.Mock()
         mock_client.logger = LOGGER
-        mock_client.backup.return_value = self.BACKUP
+        mock_client.backup.side_effect = lambda kind: {
+            "id": self.BACKUP_ID,
+            "backup": self.BACKUPS[kind],
+        }
         _attach_property(
             mock_client, "available_timezones", return_value={"timezones": self.TIMEZONES}
         )
@@ -6800,7 +6815,7 @@ class TestSystemSettings:
         mock_client.device_name_property.assert_called_once_with("Kitchen")
 
     def test_backup_create_prints_the_backup(self, runner: CliRunner, mocker: MockerFixture):
-        """Without a file, system backup create prints the backup."""
+        """Without a file, system backup create prints the backup of every kind."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -6808,8 +6823,10 @@ class TestSystemSettings:
         )
 
         assert result.exit_code == 0
-        assert json.loads(result.output) == self.BACKUP
-        mock_client.backup.assert_called_once_with()
+        assert json.loads(result.output) == self._backup_document()
+        assert [c.args for c in mock_client.backup.call_args_list] == [
+            ("favourites",), ("my-web-radio",), ("playlist",), ("radio-favourites",)
+        ]
 
     def test_backup_create_writes_the_file(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6824,7 +6841,7 @@ class TestSystemSettings:
 
         assert result.exit_code == 0
         assert f'Created backup file "{target}"' in result.output
-        assert json.loads(target.read_text()) == self.BACKUP
+        assert json.loads(target.read_text()) == self._backup_document()
 
     def test_backup_create_machine_readable_prints_the_path(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
@@ -6860,7 +6877,7 @@ class TestSystemSettings:
         assert kept.exit_code == 1
         assert "File already exists" in kept.output
         assert replaced.exit_code == 0
-        assert json.loads(target.read_text()) == self.BACKUP
+        assert json.loads(target.read_text()) == self._backup_document()
 
     def test_backup_create_cannot_write(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """A file that cannot be written is an error."""
@@ -6874,86 +6891,35 @@ class TestSystemSettings:
         assert result.exit_code == 1
         assert "Cannot write backup file" in result.output
 
-    def test_backup_restore_from_a_file(
-        self, runner: CliRunner, mocker: MockerFixture, tmp_path
-    ):
-        """With -y/--yes the backup read from the file is restored."""
-        mock_client = self._mock_websocket_client(mocker)
-        source = tmp_path / "backup.json"
-        source.write_text(json.dumps(self.BACKUP))
-
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "backup", "restore", str(source), "-y"]
-        )
-
-        assert result.exit_code == 0
-        assert f"Command 'restore backup \"{source}\"' executed successfully" in result.output
-        mock_client.restore_backup.assert_called_once_with(self.BACKUP)
-
-    def test_backup_restore_the_config(self, runner: CliRunner, mocker: MockerFixture):
-        """--config restores the configuration of the plugins."""
+    def test_backup_restore(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the host restores its local backup."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "backup", "restore", "--config", "-y"]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "backup", "restore", "-y"])
 
         assert result.exit_code == 0
-        assert "Command 'restore config' executed successfully" in result.output
-        mock_client.restore_config.assert_called_once_with()
-        mock_client.restore_backup.assert_not_called()
+        assert "Command 'restore backup' executed successfully" in result.output
+        mock_client.restore_backup.assert_called_once_with()
 
-    @pytest.mark.parametrize(
-        ("arguments", "message"),
-        [
-            (["backup.json"], 'Refusing to restore the backup without -y/--yes: "backup.json"'),
-            (["--config"], "Refusing to restore the configuration of the plugins without -y/--yes"),
-        ],
-    )
-    def test_backup_restore_refused_without_yes(
-        self, runner: CliRunner, mocker: MockerFixture, arguments, message
-    ):
+    def test_backup_restore_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
         """Without -y/--yes nothing is restored."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "backup", "restore", *arguments])
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "backup", "restore"])
 
         assert result.exit_code == 1
-        assert message in result.output
+        assert "Refusing to restore the backup without -y/--yes" in result.output
         mock_client.restore_backup.assert_not_called()
-        mock_client.restore_config.assert_not_called()
 
-    @pytest.mark.parametrize("arguments", [[], ["backup.json", "--config"]])
-    def test_backup_restore_takes_one_input(
-        self, runner: CliRunner, mocker: MockerFixture, arguments
-    ):
-        """A file or --config is expected, not both nor neither."""
-        self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "backup", "restore", *arguments, "-y"]
-        )
-
-        assert result.exit_code == 2
-        assert "Expected a FILE argument, or the --config option, not both" in result.output
-
-    @pytest.mark.parametrize("content", ["not json", None])
-    def test_backup_restore_unreadable_file(
-        self, runner: CliRunner, mocker: MockerFixture, tmp_path, content
-    ):
-        """A file that is missing, or is not JSON, is an error."""
+    def test_backup_save(self, runner: CliRunner, mocker: MockerFixture):
+        """system backup save has the host write its local backup."""
         mock_client = self._mock_websocket_client(mocker)
-        source = tmp_path / "backup.json"
-        if content is not None:
-            source.write_text(content)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "backup", "restore", str(source), "-y"]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "backup", "save"])
 
-        assert result.exit_code == 1
-        assert "Cannot read backup file" in result.output
-        mock_client.restore_backup.assert_not_called()
+        assert result.exit_code == 0
+        assert "Command 'save backup' executed successfully" in result.output
+        mock_client.save_backup.assert_called_once_with()
 
     def test_power_modes(self, runner: CliRunner, mocker: MockerFixture):
         """system power modes prints the power modes of the host."""
@@ -7191,7 +7157,8 @@ class TestSystemSettings:
             (["name"], "the system settings"),
             (["name", "Kitchen"], "the system settings"),
             (["backup", "create"], "the system settings"),
-            (["backup", "restore", "--config", "-y"], "the system settings"),
+            (["backup", "restore", "-y"], "the system settings"),
+            (["backup", "save"], "the system settings"),
             (["power", "modes"], "the system settings"),
             (["power", "reboot", "-y"], "the system settings"),
             (["power", "shutdown", "-y"], "the system settings"),

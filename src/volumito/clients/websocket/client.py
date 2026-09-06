@@ -64,6 +64,8 @@ from volumito.clients.models import (
     Zones,
 )
 from volumito.clients.websocket.common import (
+    BACKUP_ACTION_RESTORE,
+    BACKUP_ACTION_SAVE,
     EVENT_ADD_PLAY,
     EVENT_ADD_PLAY_CUE,
     EVENT_ADD_QUEUE_UIDS,
@@ -162,7 +164,6 @@ from volumito.clients.websocket.common import (
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
     EVENT_RESCAN_DB,
-    EVENT_RESTORE_CONFIG,
     EVENT_SAFE_REMOVE_DRIVE,
     EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
@@ -782,17 +783,26 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return Backgrounds.from_raw(self._read_object(EVENT_GET_BACKGROUNDS))
 
-    def backup(self) -> dict[str, Any]:
-        """Read a backup of the configuration of the Volumio instance.
+    def backup(self, kind: str) -> dict[str, Any]:
+        """Read a backup of one kind from the Volumio instance.
+
+        The kinds are the saved playlists with their content (``"playlist"``), the
+        favourite tracks (``"favourites"``), the favourite Web radios
+        (``"radio-favourites"``), and the Web radios added by hand (``"my-web-radio"``).
+
+        Args:
+            kind: The kind of backup, one of :data:`BACKUP_KINDS`
 
         Returns:
-            The backup, as the host reported it
+            The backup, as the host reported it: its identification under ``id``, and
+            the backup itself under ``backup``
 
         Raises:
+            ValueError: If the kind is not one a Volumio host reads
             VolumioConnectionError: If not connected, or if the host does not answer
             VolumioAPIError: If the answer is not an object
         """
-        return self._read_object(EVENT_GET_BACKUP)
+        return self._read_object(EVENT_GET_BACKUP, self._backup_payload(kind))
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -2199,24 +2209,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_RESCAN_DB)
 
-    def restore_backup(self, backup: dict[str, Any]) -> None:
-        """Restore a backup of the configuration of the Volumio instance.
+    def restore_backup(self) -> None:
+        """Restore the local backup of the playlists and favourites of the Volumio instance.
 
-        Args:
-            backup: The backup to restore, as :meth:`backup` reported it
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_MANAGE_BACKUP, backup)
-
-    def restore_config(self) -> None:
-        """Restore the configuration of the plugins of the Volumio instance.
+        The host restores what :meth:`save_backup` wrote, after a delay of about ten
+        seconds: the playlists are replaced, the favourites are merged with the current
+        ones. Nothing happens when there is no local backup.
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_RESTORE_CONFIG)
+        self._emit(EVENT_MANAGE_BACKUP, BACKUP_ACTION_RESTORE)
 
     def safe_remove_drive(self, name: str) -> None:
         """Unmount a USB drive of the Volumio instance before it is unplugged.
@@ -2228,6 +2231,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         self._emit(EVENT_SAFE_REMOVE_DRIVE, {"name": name})
+
+    def save_backup(self) -> None:
+        """Write a local backup of the playlists and favourites on the Volumio instance.
+
+        The host writes the backup under its configuration folder after a delay of about
+        ten seconds, replacing the previous one; :meth:`restore_backup` reads it back.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_MANAGE_BACKUP, BACKUP_ACTION_SAVE)
 
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         """Save the current queue as a saved playlist.

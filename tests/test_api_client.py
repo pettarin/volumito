@@ -125,7 +125,7 @@ WEBSOCKET_METHODS = [
     ("add_web_radio", ("name", "uri"), {}, FAVOURITE_OPERATION),
     ("audio_output_pause", ("output",), {}, AUDIO_OPERATION),
     ("audio_output_play", ("output",), {}, AUDIO_OPERATION),
-    ("backup", (), {}, SYSTEM_OPERATION),
+    ("backup", ("playlist",), {}, SYSTEM_OPERATION),
     ("call_plugin_method", ("music_service/mpd", "method", {"k": "v"}), {}, PLUGIN_OPERATION),
     ("check_for_update", (), {}, UPDATE_OPERATION),
     ("check_update_cache", (), {}, UPDATE_OPERATION),
@@ -171,9 +171,9 @@ WEBSOCKET_METHODS = [
     ("replace_queue_with_cue_track", ("uri", 2, "mpd"), {}, QUEUE_OPERATION),
     ("request", ("event", "pushEvent", {"k": "v"}, 1.0), {}, EVENT_OPERATION),
     ("rescan_library", (), {}, COLLECTION_OPERATION),
-    ("restore_backup", ({"k": "v"},), {}, SYSTEM_OPERATION),
-    ("restore_config", (), {}, SYSTEM_OPERATION),
+    ("restore_backup", (), {}, SYSTEM_OPERATION),
     ("safe_remove_drive", ("name",), {}, SHARE_OPERATION),
+    ("save_backup", (), {}, SYSTEM_OPERATION),
     ("save_queue_as_playlist", ("name",), {}, QUEUE_OPERATION),
     ("save_wireless_settings", ("ssid", "secret"), {}, NETWORK_OPERATION),
     ("set_alarms", ([],), {}, ALARM_OPERATION),
@@ -887,7 +887,7 @@ class TestRESTFallback:
         adapter, client = self._adapter(adapter_class, fallback=factory)
 
         assert adapter.sleep_timer == "timer"
-        assert adapter.backup() == {"k": "v"}
+        assert adapter.backup("playlist") == {"k": "v"}
         websocket.close.assert_not_called()
         adapter.close()
 

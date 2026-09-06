@@ -580,7 +580,7 @@ system administration, and user interface preferences.
 - `automatic_update_enabled`
 - `available_timezones`
 - `backgrounds`
-- `backup()`
+- `backup(kind)`
 - `call_plugin_method(endpoint, method, data)`
 - `check_for_update()`
 - `check_update_cache()`
@@ -604,9 +604,9 @@ system administration, and user interface preferences.
 - `multiroom`
 - `network_info`
 - `privacy_settings`
-- `restore_backup(backup)`
-- `restore_config()`
+- `restore_backup()`
 - `safe_remove_drive(name)`
+- `save_backup()`
 - `save_wireless_settings(ssid, password)`
 - `set_as_multiroom_client(server)`
 - `set_as_multiroom_server()`

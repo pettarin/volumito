@@ -40,7 +40,7 @@ All notable changes to this project will be documented in this file.
   `outputs`, `pause`, `play`, `volume`, and the `device` subgroup
   with `list` and `set`), needing a WebSocket API client
 - Command `system name`, and command groups `system backup` (`create`,
-  `restore`), `system power` (`modes`, `reboot`, `shutdown`, `standby`),
+  `restore`, `save`), `system power` (`modes`, `reboot`, `shutdown`, `standby`),
   `system timezone` (`list`, `set`), and `system update` (`automatic`,
   `channel` with `list` and `set`, `check`, `install`),
   all needing a WebSocket API client

@@ -115,6 +115,7 @@ from volumito.clients import (
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
 from volumito.clients.models import BrowseResults, PlayerState, SearchResultItemKind, Story
+from volumito.clients.websocket.common import BACKUP_KINDS
 
 
 class AliasedGroup(click.Group):
@@ -584,6 +585,24 @@ def api_position(ctx: click.Context, position: int, name: str = "position") -> i
     if position < minimum:
         raise click.UsageError(f"{name} must be {minimum} or greater, got {position}")
     return position - minimum
+
+
+def backup_document(client: APIClient) -> dict[str, Any]:
+    """Read the backup of every kind from a Volumio host, as one document.
+
+    Args:
+        client: The API client to read through
+
+    Returns:
+        The identification of the host under ``id``, and the backup of each kind under
+        the name of the kind
+    """
+    document: dict[str, Any] = {}
+    for kind in BACKUP_KINDS:
+        answer = client.backup(kind)
+        document.setdefault("id", answer.get("id"))
+        document[kind] = answer.get("backup")
+    return document
 
 
 def browse_kinds(
@@ -1700,16 +1719,6 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
         default=True,
         show_default=True,
         help="Check that the playlist name exists before using it.",
-    )(func)
-
-
-def option_config(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--config`` option to the system backup restore subcommand."""
-    return click.option(
-        "--config",
-        is_flag=True,
-        default=False,
-        help="Restore the configuration of the plugins, instead of a backup file.",
     )(func)
 
 

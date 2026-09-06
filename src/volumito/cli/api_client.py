@@ -394,11 +394,15 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def backup(self) -> dict[str, Any]:
-        """Read a backup of the configuration of the Volumio instance.
+    def backup(self, kind: str) -> dict[str, Any]:
+        """Read a backup of one kind from the Volumio instance.
+
+        Args:
+            kind: The kind of backup, one of the kinds a Volumio host reads
 
         Returns:
-            The backup, as the host reported it
+            The backup, as the host reported it: its identification under ``id``, and
+            the backup itself under ``backup``
         """
 
     @property
@@ -1230,16 +1234,13 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def restore_backup(self, backup: dict[str, Any]) -> None:
-        """Restore a backup of the configuration of the Volumio instance.
+    def restore_backup(self) -> None:
+        """Restore the local backup of the playlists and favourites of the Volumio instance.
 
-        Args:
-            backup: The backup to restore, as :meth:`backup` reported it
+        The host restores what :meth:`save_backup` wrote, after a delay of about ten
+        seconds: the playlists are replaced, the favourites are merged with the current
+        ones.
         """
-
-    @abstractmethod
-    def restore_config(self) -> None:
-        """Restore the configuration of the plugins of the Volumio instance."""
 
     @abstractmethod
     def safe_remove_drive(self, name: str) -> None:
@@ -1247,6 +1248,14 @@ class APIClient(ABC):
 
         Args:
             name: The name of the drive, from :attr:`usb_drives`
+        """
+
+    @abstractmethod
+    def save_backup(self) -> None:
+        """Write a local backup of the playlists and favourites on the Volumio instance.
+
+        The host writes the backup after a delay of about ten seconds, replacing the
+        previous one; :meth:`restore_backup` reads it back.
         """
 
     @abstractmethod
@@ -1803,8 +1812,8 @@ class RESTAPIClient(APIClient):
     def backgrounds(self) -> Backgrounds:
         return self._fallback.client(UI_OPERATION).backgrounds
 
-    def backup(self) -> dict[str, Any]:
-        return self._fallback.client(SYSTEM_OPERATION).backup()
+    def backup(self, kind: str) -> dict[str, Any]:
+        return self._fallback.client(SYSTEM_OPERATION).backup(kind)
 
     @property
     def browse_sources(self) -> BrowseSources:
@@ -2038,14 +2047,14 @@ class RESTAPIClient(APIClient):
     def rescan_library(self) -> None:
         return self._fallback.client(COLLECTION_OPERATION).rescan_library()
 
-    def restore_backup(self, backup: dict[str, Any]) -> None:
-        return self._fallback.client(SYSTEM_OPERATION).restore_backup(backup)
-
-    def restore_config(self) -> None:
-        return self._fallback.client(SYSTEM_OPERATION).restore_config()
+    def restore_backup(self) -> None:
+        return self._fallback.client(SYSTEM_OPERATION).restore_backup()
 
     def safe_remove_drive(self, name: str) -> None:
         return self._fallback.client(SHARE_OPERATION).safe_remove_drive(name)
+
+    def save_backup(self) -> None:
+        return self._fallback.client(SYSTEM_OPERATION).save_backup()
 
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         return self._fallback.client(QUEUE_OPERATION).save_queue_as_playlist(name)
@@ -2459,8 +2468,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def backgrounds(self) -> Backgrounds:
         return self._client.backgrounds
 
-    def backup(self) -> dict[str, Any]:
-        return self._client.backup()
+    def backup(self, kind: str) -> dict[str, Any]:
+        return self._client.backup(kind)
 
     @property
     def base_url(self) -> str:
@@ -2726,14 +2735,14 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def rescan_library(self) -> None:
         return self._client.rescan_library()
 
-    def restore_backup(self, backup: dict[str, Any]) -> None:
-        return self._client.restore_backup(backup)
-
-    def restore_config(self) -> None:
-        return self._client.restore_config()
+    def restore_backup(self) -> None:
+        return self._client.restore_backup()
 
     def safe_remove_drive(self, name: str) -> None:
         return self._client.safe_remove_drive(name)
+
+    def save_backup(self) -> None:
+        return self._client.save_backup()
 
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         return self._client.save_queue_as_playlist(name)
@@ -3227,8 +3236,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def backgrounds(self) -> Backgrounds:
         return self._run(self._client.get_backgrounds())
 
-    def backup(self) -> dict[str, Any]:
-        return self._run(self._client.backup())
+    def backup(self, kind: str) -> dict[str, Any]:
+        return self._run(self._client.backup(kind))
 
     @property
     def base_url(self) -> str:
@@ -3487,14 +3496,14 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def rescan_library(self) -> None:
         return self._run(self._client.rescan_library())
 
-    def restore_backup(self, backup: dict[str, Any]) -> None:
-        return self._run(self._client.restore_backup(backup))
-
-    def restore_config(self) -> None:
-        return self._run(self._client.restore_config())
+    def restore_backup(self) -> None:
+        return self._run(self._client.restore_backup())
 
     def safe_remove_drive(self, name: str) -> None:
         return self._run(self._client.safe_remove_drive(name))
+
+    def save_backup(self) -> None:
+        return self._run(self._client.save_backup())
 
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         return self._run(self._client.save_queue_as_playlist(name))
