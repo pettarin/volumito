@@ -578,6 +578,7 @@ system administration, and user interface preferences.
 
 - `add_share(name, path, fstype, ...)`
 - `automatic_update_enabled`
+- `available_plugins`
 - `available_timezones`
 - `backgrounds`
 - `backup(kind)`
@@ -823,6 +824,7 @@ than the REST API clients, and thus in turn additional models:
 | `alarms`                                       | `Alarms` (of `Alarm`)                     |
 | `audio_outputs`                                | `AudioOutputs` (of `AudioOutput`)         |
 | `automatic_update_enabled`                     | `bool`                                    |
+| `available_plugins`                            | `AvailablePlugins` (of `AvailablePlugin`) |
 | `available_timezones`                          | `Timezones`                               |
 | `backgrounds`                                  | `Backgrounds` (of `Background`)           |
 | `backup`, `discover_network_shares`            | `dict`                                    |

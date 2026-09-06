@@ -210,6 +210,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
     SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
     SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
+    SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE,
     SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST,
     SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
     SHORT_FORMAT_FIELDS_SYSTEM_UI_MENU,
@@ -241,6 +242,7 @@ from volumito.cli.pure_helpers import (
 from volumito.clients import (
     Alarm,
     Artist,
+    AvailablePlugins,
     BrowseResults,
     Label,
     NotificationListener,
@@ -2458,6 +2460,56 @@ def system_name(ctx: click.Context, value: str | None) -> None:
     execute_command(ctx, f'name "{new_name}"', set_name)
 
 
+def _plugin_url(ctx: click.Context, name: str) -> str:
+    """Return the URL of the package of a plugin the store offers, by name.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the plugin, as "system plugin available" lists it
+
+    Returns:
+        The URL of the package
+
+    Raises:
+        SystemExit: If the store offers no plugin by that name, or none with a URL
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.available_plugins)
+    plugin = plugins.find(name)
+    if plugin is None or plugin.url is None:
+        error(f'Plugin not found: "{name}" (see "system plugin available")')
+        sys.exit(1)
+    return plugin.url
+
+
+def _render_available_plugins(
+    ctx: click.Context, plugins: AvailablePlugins, fields: str, output_format: str
+) -> None:
+    """Print the plugins the store offers per the fields and format options.
+
+    Args:
+        ctx: Click context object holding the shared options
+        plugins: The available plugins, as the client reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+    """
+    items = [
+        plugin
+        for category in plugins.raw.get("categories", [])
+        if isinstance(category, dict)
+        for plugin in category.get("plugins", [])
+        if isinstance(plugin, dict)
+    ]
+    render_items(
+        ctx,
+        plugins.raw,
+        items,
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE,
+        "Volumio Available Plugins",
+    )
+
+
 def _render_plugins(ctx: click.Context, plugins: Plugins, fields: str, output_format: str) -> None:
     """Print the installed plugins per the fields and format options.
 
@@ -2483,6 +2535,23 @@ def _render_plugins(ctx: click.Context, plugins: Plugins, fields: str, output_fo
 def system_plugin(ctx: click.Context) -> None:
     """Manage the plugins of the Volumio host."""
     pass
+
+
+@system_plugin.command("available")
+@click.pass_context
+@option_fields
+@option_format
+def system_plugin_available(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the plugins the store offers to the Volumio host, with their URLs.
+
+    The host lists the store only when it is logged in to MyVolumio: otherwise the
+    command fails, reporting the login request. The URL of a plugin is what
+    "system plugin install" reads; the name is what it accepts in place of the URL.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.available_plugins)
+    _render_available_plugins(ctx, plugins, fields, output_format)
 
 
 @system_plugin.command("call")
@@ -2571,19 +2640,22 @@ def system_plugin_enable(
 
 @system_plugin.command("install")
 @click.pass_context
-@click.argument("url", type=str)
+@click.argument("plugin", type=str)
 @option_yes
-def system_plugin_install(ctx: click.Context, url: str, yes: bool) -> None:
-    """Install the plugin packaged at URL on the Volumio host.
+def system_plugin_install(ctx: click.Context, plugin: str, yes: bool) -> None:
+    """Install the plugin PLUGIN, a URL or a name from "system plugin available".
 
-    The host reports its progress through the events its user interface listens for.
-    IMPORTANT: the plugin is installed only when -y/--yes is given.
+    A URL is passed to the host as it is; a name is looked up in the store, which the
+    host lists only when it is logged in to MyVolumio. The host reports its progress
+    through the events its user interface listens for. IMPORTANT: the plugin is
+    installed only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
     if not yes:
-        error(f'Refusing to install the plugin without -y/--yes: "{url}"')
+        error(f'Refusing to install the plugin without -y/--yes: "{plugin}"')
         sys.exit(1)
+    url = plugin if "://" in plugin else _plugin_url(ctx, plugin)
     execute_command(ctx, f'install plugin "{url}"', lambda c: c.install_plugin(url))
 
 

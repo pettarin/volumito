@@ -26,6 +26,7 @@ from volumito.clients.models import (
     Alarm,
     Alarms,
     AudioOutputs,
+    AvailablePlugins,
     Backgrounds,
     BrowseResults,
     BrowseSources,
@@ -96,6 +97,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_AUDIO_OUTPUTS,
     EVENT_GET_AUTOMATIC_UPDATE_ENABLED,
     EVENT_GET_AVAILABLE_LANGUAGES,
+    EVENT_GET_AVAILABLE_PLUGINS,
     EVENT_GET_AVAILABLE_TIMEZONES,
     EVENT_GET_BACKGROUNDS,
     EVENT_GET_BACKUP,
@@ -144,6 +146,7 @@ from volumito.clients.websocket.common import (
     EVENT_MOVE_QUEUE,
     EVENT_MUTE,
     EVENT_NEXT,
+    EVENT_OPEN_MODAL,
     EVENT_PAUSE,
     EVENT_PINGER,
     EVENT_PLAY,
@@ -391,21 +394,28 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return self._as_json_boolean(self._request(event, payload=payload))
 
-    def _read_object(self, event: str, payload: object = None) -> dict[str, Any]:
+    def _read_object(
+        self, event: str, payload: object = None, dialog_event: str | None = None
+    ) -> dict[str, Any]:
         """Read an event answered by a JSON object.
 
         Args:
             event: The event to emit
             payload: What the emitted event carries, when it carries anything
+            dialog_event: The event carrying a dialog the host pushes in place of the
+                answer when it cannot serve the read, when there is one
 
         Returns:
             The object the answer carried
 
         Raises:
             VolumioConnectionError: If not connected, or if the host does not answer
-            VolumioAPIError: If the answer is not an object
+            VolumioAPIError: If the answer is not an object, or if the host answered
+                with the dialog instead
         """
-        return self._as_json_object(self._request(event, payload=payload))
+        return self._as_json_object(
+            self._request(event, payload=payload, dialog_event=dialog_event)
+        )
 
     def _read_text(self, event: str, payload: object = None) -> str:
         """Read an event answered by a bare JSON string.
@@ -444,6 +454,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         response_event: str | None = None,
         payload: object = None,
         timeout: float | None = None,
+        dialog_event: str | None = None,
     ) -> object:
         """Emit an event and return the payload of the answer the host pushes back.
 
@@ -456,6 +467,8 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             payload: What the emitted event carries, when it carries anything
             timeout: The number of seconds to wait, the timeout of the client when
                 not given
+            dialog_event: The event carrying a dialog the host pushes in place of the
+                answer when it cannot serve the read, when there is one
 
         Returns:
             What the answer carried
@@ -464,6 +477,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             ValueError: If no answer event is given for an event the host does not answer
             VolumioConnectionError: If not connected, if the event cannot be sent, or if
                 the host does not answer in time
+            VolumioAPIError: If the host answered with the dialog instead
         """
         awaited = response_event if response_event is not None else self._response_event(event)
         waited = timeout if timeout is not None else self.timeout
@@ -473,13 +487,26 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             self._ensure_registered(awaited)
             arrived = threading.Event()
             self._arrived[awaited] = arrived
+            if dialog_event is not None:
+                # a dialog pushed in place of the answer ends the wait too
+                self._ensure_registered(dialog_event)
+                self._arrived[dialog_event] = arrived
             try:
                 self._emit(event, payload)
                 if not arrived.wait(waited):
                     self._fail_no_response(event, awaited, waited)
+                if (
+                    dialog_event is not None
+                    and awaited not in self._slots
+                    and dialog_event in self._slots
+                ):
+                    self._fail_dialog(event, self._slots[dialog_event])
                 answer = self._slots.pop(awaited, None)
             finally:
                 self._arrived.pop(awaited, None)
+                if dialog_event is not None:
+                    self._arrived.pop(dialog_event, None)
+                    self._slots.pop(dialog_event, None)
             self._log_debug(f'Requesting "{event}", waiting for "{awaited}"... done')
             return answer
 
@@ -751,6 +778,26 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If the answer is not a boolean
         """
         return self._read_boolean(EVENT_GET_AUTOMATIC_UPDATE_ENABLED)
+
+    @property
+    def available_plugins(self) -> AvailablePlugins:
+        """The plugins the store offers to the Volumio instance.
+
+        The host lists the store only when it is logged in to MyVolumio: otherwise it
+        answers with a login dialog, reported as an API error. Each access emits a
+        fresh event.
+
+        Returns:
+            The available plugins, by category, each with the URL of its package
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object, or if the host asks for a
+                login instead
+        """
+        return AvailablePlugins.from_raw(
+            self._read_object(EVENT_GET_AVAILABLE_PLUGINS, dialog_event=EVENT_OPEN_MODAL)
+        )
 
     @property
     def available_timezones(self) -> Timezones:

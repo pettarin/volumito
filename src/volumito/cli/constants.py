@@ -375,6 +375,17 @@ SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS = [
 ]
 """Short fields list for the "system network wireless" command."""
 
+SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE = [
+    "category",
+    "name",
+    "prettyName",
+    "version",
+    "installed",
+    "updateAvailable",
+    "url",
+]
+"""Short fields list for the "system plugin available" command printing the store."""
+
 SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST = [
     "category",
     "name",

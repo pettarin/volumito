@@ -2137,6 +2137,56 @@ class TestVolumioWebSocketClientPower:
 class TestVolumioWebSocketClientPlugins:
     """The plugins installed on the host, and their configuration pages."""
 
+    def test_available_plugins(self, mocker: MockerFixture):
+        """The store is answered by category, each plugin with the URL of its package."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getAvailablePlugins": (
+                    "pushAvailablePlugins",
+                    {
+                        "categories": [
+                            {
+                                "name": "music_service",
+                                "prettyName": "Music Services",
+                                "plugins": [
+                                    {"name": "spop", "prettyName": "Spotify", "url": "http://p/s"}
+                                ],
+                            }
+                        ]
+                    },
+                )
+            }
+        )
+        client, fake = _client(mocker, fake)
+
+        plugins = client.available_plugins
+
+        assert [plugin.url for plugin in plugins] == ["http://p/s"]
+        assert plugins.find("spop").pretty_name == "Spotify"
+        assert fake.calls[-1] == _Call("getAvailablePlugins", None)
+
+    def test_available_plugins_want_a_login(self, mocker: MockerFixture):
+        """A host not logged in to MyVolumio answers with a dialog, which is an error."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "getAvailablePlugins": (
+                    "openModal",
+                    {
+                        "title": "Please login",
+                        "message": "To access the plugins store you need to "
+                        '<a href="/myvolumio/signup">login to MyVolumio</a>',
+                    },
+                )
+            }
+        )
+        client, _ = _client(mocker, fake)
+
+        with pytest.raises(VolumioAPIError, match="Please login") as raised:
+            _ = client.available_plugins
+
+        assert "you need to login to MyVolumio" in str(raised.value)
+        assert "<a" not in str(raised.value)
+
     def test_installed_plugins(self, mocker: MockerFixture):
         """The plugins are answered as a bare array, which the model wraps."""
         fake = _FakeSocketIOClient(

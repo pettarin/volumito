@@ -47,10 +47,12 @@ All notable changes to this project will be documented in this file.
 - Command groups `system network` (`info`, `join`, `wireless`),
   `system share` (`add`, `discover`, `edit`, `info`, `list`, `remove`),
   and `system usb` (`eject`, `list`), all needing a WebSocket API client
-- Command groups `system plugin` (`call`, `config`, `disable`, `enable`,
-  `install`, `list`, `manage`, `uninstall`, `update`) and `system ui`
+- Command groups `system plugin` (`available`, `call`, `config`, `disable`,
+  `enable`, `install`, `list`, `manage`, `uninstall`, `update`) and `system ui`
   (`experience`, `menu`, `privacy`, `settings`, and the `background`
   and `language` subgroups), all needing a WebSocket API client
+- Property `available_plugins` on the WebSocket API clients, with the models
+  `AvailablePlugin`, `AvailablePluginCategory`, and `AvailablePlugins`
 - Command group `system alarm` (`add`, `clear`, `disable`, `enable`,
   `list`, `remove`, `set`), needing a WebSocket API client
 - Methods `add_alarm`, `disable_alarm`, `enable_alarm`, and `remove_alarm`

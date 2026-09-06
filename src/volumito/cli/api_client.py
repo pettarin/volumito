@@ -40,6 +40,7 @@ from volumito.clients import (
     Album,
     Artist,
     AudioOutputs,
+    AvailablePlugins,
     Backgrounds,
     BrowseResults,
     BrowseSources,
@@ -369,6 +370,19 @@ class APIClient(ABC):
 
         Returns:
             True if the host updates itself, False otherwise
+        """
+
+    @property
+    @abstractmethod
+    def available_plugins(self) -> AvailablePlugins:
+        """The plugins the store offers to the Volumio instance.
+
+        The host lists the store only when it is logged in to MyVolumio: otherwise it
+        answers with a login dialog, reported as an API error. Each access emits a
+        fresh event.
+
+        Returns:
+            The available plugins, by category, each with the URL of its package
         """
 
     @property
@@ -1805,6 +1819,10 @@ class RESTAPIClient(APIClient):
         return self._fallback.client(UPDATE_OPERATION).automatic_update_enabled
 
     @property
+    def available_plugins(self) -> AvailablePlugins:
+        return self._fallback.client(PLUGIN_OPERATION).available_plugins
+
+    @property
     def available_timezones(self) -> Timezones:
         return self._fallback.client(SYSTEM_OPERATION).available_timezones
 
@@ -2459,6 +2477,10 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     @property
     def automatic_update_enabled(self) -> bool:
         return self._client.automatic_update_enabled
+
+    @property
+    def available_plugins(self) -> AvailablePlugins:
+        return self._client.available_plugins
 
     @property
     def available_timezones(self) -> Timezones:
@@ -3227,6 +3249,10 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     @property
     def automatic_update_enabled(self) -> bool:
         return self._run(self._client.is_automatic_update_enabled())
+
+    @property
+    def available_plugins(self) -> AvailablePlugins:
+        return self._run(self._client.get_available_plugins())
 
     @property
     def available_timezones(self) -> Timezones:

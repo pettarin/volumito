@@ -13,6 +13,7 @@ from volumito.clients.errors import VolumioAPIError, VolumioStoryError
 from volumito.clients.models import (
     Alarms,
     AudioOutputs,
+    AvailablePlugins,
     Backgrounds,
     BrowseResults,
     BrowseSources,
@@ -1662,6 +1663,36 @@ class TestTierCModels:
 
         assert config.page == {"label": "System Settings"}
         assert config.sections[0]["id"] == "language_selector"
+
+    def test_available_plugins(self):
+        """The store is parsed by category, and flattened as a sequence of plugins."""
+        plugins = AvailablePlugins.from_raw(
+            {
+                "categories": [
+                    {
+                        "name": "music_service",
+                        "prettyName": "Music Services",
+                        "plugins": [
+                            {"name": "spop", "prettyName": "Spotify", "version": "1.0",
+                             "installed": True, "updateAvailable": True, "url": "http://p/s"}
+                        ],
+                    },
+                    {
+                        "name": "user_interface",
+                        "prettyName": "User Interface",
+                        "plugins": [{"name": "touch_display", "url": "http://p/t"}],
+                    },
+                ]
+            }
+        )
+
+        assert len(plugins) == 2
+        assert plugins[0].pretty_name == "Spotify"
+        assert plugins[0].update_available is True
+        assert [p.name for p in plugins] == ["spop", "touch_display"]
+        assert plugins.categories[1].pretty_name == "User Interface"
+        assert plugins.find("touch_display").url == "http://p/t"
+        assert plugins.find("missing") is None
 
     def test_plugins(self):
         """The plugins are parsed, aliases included."""

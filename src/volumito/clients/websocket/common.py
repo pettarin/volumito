@@ -17,11 +17,12 @@ This module knows nothing about how a client talks to the host: it imports neith
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import re
 from datetime import timedelta
 from typing import Any, NoReturn
 
 from volumito.clients.common import VolumioCommon
-from volumito.clients.errors import VolumioConnectionError
+from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
 from volumito.clients.models import Alarm, Playlist, QueueTrack
 
 ALARM_TIME_DATE = "2000-01-01"
@@ -132,6 +133,9 @@ EVENT_GET_AUTOMATIC_UPDATE_ENABLED = "getAutomaticUpdateEnabled"
 
 EVENT_GET_AVAILABLE_LANGUAGES = "getAvailableLanguages"
 """The event asking for the languages of the user interface."""
+
+EVENT_GET_AVAILABLE_PLUGINS = "getAvailablePlugins"
+"""The event asking for the plugins the store offers, answered only to a MyVolumio login."""
 
 EVENT_GET_AVAILABLE_TIMEZONES = "getAvailableTimezones"
 """The event asking for the time zones the host can be set to."""
@@ -280,6 +284,9 @@ EVENT_MUTE = "mute"
 EVENT_NEXT = "next"
 """The event skipping to the next track."""
 
+EVENT_OPEN_MODAL = "openModal"
+"""The event pushing a dialog to the user interface, which some reads get as their answer."""
+
 EVENT_PAUSE = "pause"
 """The event pausing the playback."""
 
@@ -330,6 +337,9 @@ EVENT_PUSH_AUTOMATIC_UPDATE_ENABLED = "pushAutomaticUpdateEnabled"
 
 EVENT_PUSH_AVAILABLE_LANGUAGES = "pushAvailableLanguages"
 """The event carrying the languages of the user interface."""
+
+EVENT_PUSH_AVAILABLE_PLUGINS = "pushAvailablePlugins"
+"""The event carrying the plugins the store offers."""
 
 EVENT_PUSH_AVAILABLE_TIMEZONES = "pushAvailableTimezones"
 """The event carrying the time zones the host can be set to."""
@@ -649,6 +659,7 @@ RESPONSE_EVENTS = {
     EVENT_GET_AUDIO_OUTPUTS: EVENT_PUSH_AUDIO_OUTPUTS,
     EVENT_GET_AUTOMATIC_UPDATE_ENABLED: EVENT_PUSH_AUTOMATIC_UPDATE_ENABLED,
     EVENT_GET_AVAILABLE_LANGUAGES: EVENT_PUSH_AVAILABLE_LANGUAGES,
+    EVENT_GET_AVAILABLE_PLUGINS: EVENT_PUSH_AVAILABLE_PLUGINS,
     EVENT_GET_AVAILABLE_TIMEZONES: EVENT_PUSH_AVAILABLE_TIMEZONES,
     EVENT_GET_BACKGROUNDS: EVENT_PUSH_BACKGROUNDS,
     EVENT_GET_BACKUP: EVENT_PUSH_BACKUP,
@@ -930,6 +941,28 @@ class VolumioWebSocketCommon(VolumioCommon):
     def _endpoint_description(self) -> str:
         """The base URL a failing connection names as unreachable."""
         return self.host_configuration.websocket_base_url
+
+    def _fail_dialog(self, event: str, dialog: object) -> NoReturn:
+        """Refuse a dialog the host pushed in place of the answer to a read.
+
+        A Volumio host answers some reads with a dialog for its user interface when it
+        cannot serve them: the plugin store, for instance, wants a MyVolumio login.
+
+        Args:
+            event: The event the host was answering
+            dialog: What the dialog event carried, a ``title`` and a ``message`` when
+                an object
+
+        Raises:
+            VolumioAPIError: Always
+        """
+        title, message = "", ""
+        if isinstance(dialog, dict):
+            title = re.sub(r"<[^>]+>", "", str(dialog.get("title", "")))
+            message = re.sub(r"<[^>]+>", "", str(dialog.get("message", "")))
+        reason = f'The host answered "{event}" with a dialog: "{title}" "{message}"'
+        self._log_warning(reason)
+        raise VolumioAPIError(reason)
 
     def _fail_emit(self, event: str, error: Exception) -> NoReturn:
         """Report that an event could not be sent to the Volumio instance.

@@ -99,6 +99,7 @@ from volumito.clients.models import (
     Alarm,
     Alarms,
     AudioOutputs,
+    AvailablePlugins,
     Backgrounds,
     BrowseSources,
     CollectionStatistics,
@@ -169,6 +170,7 @@ def _isolate_config_probing(mocker: MockerFixture):
 _RESPONSE_MODELS: dict[str, type[VolumioModel]] = {
     "alarms": Alarms,
     "audio_outputs": AudioOutputs,
+    "available_plugins": AvailablePlugins,
     "available_timezones": Timezones,
     "backgrounds": Backgrounds,
     "browse_sources": BrowseSources,
@@ -7605,6 +7607,43 @@ class TestSystemPluginAndUi:
     }
     """The installed plugins, as a Volumio host answers them."""
 
+    AVAILABLE = {
+        "categories": [
+            {
+                "name": "music_service",
+                "prettyName": "Music Services",
+                "plugins": [
+                    {
+                        "category": "music_service",
+                        "name": "spop",
+                        "prettyName": "Spotify",
+                        "version": "2.0.0",
+                        "installed": False,
+                        "url": "http://store/spop.zip",
+                        "description": "Spotify",
+                        "author": "Volumio",
+                    }
+                ],
+            },
+            {
+                "name": "user_interface",
+                "prettyName": "User Interface",
+                "plugins": [
+                    {
+                        "category": "user_interface",
+                        "name": "touch_display",
+                        "prettyName": "Touch Display",
+                        "version": "3.1.0",
+                        "installed": True,
+                        "updateAvailable": True,
+                        "url": "http://store/touch.zip",
+                    }
+                ],
+            },
+        ]
+    }
+    """The plugins the store offers, as a Volumio host answers them."""
+
     MANAGED = {"plugins": [{"category": "music_service", "name": "mpd", "enabled": False}]}
     """The plugins as they stand after the plugin manager acted."""
 
@@ -7678,6 +7717,7 @@ class TestSystemPluginAndUi:
         mock_client = mocker.Mock()
         mock_client.logger = LOGGER
         _attach_property(mock_client, "installed_plugins", return_value=self.PLUGINS)
+        _attach_property(mock_client, "available_plugins", return_value=self.AVAILABLE)
         mock_client.manage_plugin.return_value = Plugins.from_raw(self.MANAGED)
         mock_client.get_plugin_config.return_value = UiConfig.from_raw(self.CONFIG)
         _attach_property(mock_client, "backgrounds", return_value=self.BACKGROUNDS)
@@ -7691,6 +7731,37 @@ class TestSystemPluginAndUi:
             return_value=mock_client,
         )
         return mock_client
+
+    def test_plugin_available(self, runner: CliRunner, mocker: MockerFixture):
+        """system plugin available prints the store plugins with their URLs, as a table too."""
+        self._mock_websocket_client(mocker)
+
+        pretty = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "available"])
+        table = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "available", "-F", "table"]
+        )
+
+        assert pretty.exit_code == 0
+        plugins = json.loads(pretty.output)
+        assert [plugin["name"] for plugin in plugins] == ["spop", "touch_display"]
+        assert plugins[0]["url"] == "http://store/spop.zip"
+        assert plugins[1]["updateAvailable"] is True
+        assert "description" not in plugins[0]
+        assert table.exit_code == 0
+        assert "Volumio Available Plugins" in table.output
+        assert "1. spop" in table.output
+
+    def test_plugin_available_wants_a_login(self, runner: CliRunner, mocker: MockerFixture):
+        """A host not logged in to MyVolumio makes the command fail with the API error."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client, "available_plugins", side_effect=VolumioAPIError("Please login")
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "available"])
+
+        assert result.exit_code == 1
+        assert "Please login" in result.output
 
     def test_plugin_call_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
         """Without -y/--yes no method is called."""
@@ -7796,6 +7867,30 @@ class TestSystemPluginAndUi:
         assert result.exit_code == 0
         assert "Command 'install plugin \"http://x/plugin.zip\"' executed" in result.output
         mock_client.install_plugin.assert_called_once_with("http://x/plugin.zip")
+
+    def test_plugin_install_by_name(self, runner: CliRunner, mocker: MockerFixture):
+        """A name instead of a URL is looked up in the store."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "install", "spop", "-y"]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'install plugin \"http://store/spop.zip\"' executed" in result.output
+        mock_client.install_plugin.assert_called_once_with("http://store/spop.zip")
+
+    def test_plugin_install_an_unknown_name(self, runner: CliRunner, mocker: MockerFixture):
+        """A name the store does not offer is an error naming the listing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "install", "nope", "-y"]
+        )
+
+        assert result.exit_code == 1
+        assert 'Plugin not found: "nope" (see "system plugin available")' in result.output
+        mock_client.install_plugin.assert_not_called()
 
     def test_plugin_list(self, runner: CliRunner, mocker: MockerFixture):
         """system plugin list prints the short fields of each plugin, as a table too."""
@@ -8005,11 +8100,13 @@ class TestSystemPluginAndUi:
     @pytest.mark.parametrize(
         ("arguments", "operation"),
         [
+            (["plugin", "available"], "the plugins"),
             (["plugin", "call", "a/b", "m", "-y"], "the plugins"),
             (["plugin", "config", "a/b"], "the plugins"),
             (["plugin", "disable", "a", "b"], "the plugins"),
             (["plugin", "enable", "a", "b"], "the plugins"),
             (["plugin", "install", "http://x", "-y"], "the plugins"),
+            (["plugin", "install", "spop", "-y"], "the plugins"),
             (["plugin", "list"], "the plugins"),
             (["plugin", "manage", "restart", "a", "b"], "the plugins"),
             (["plugin", "uninstall", "a", "b", "-y"], "the plugins"),

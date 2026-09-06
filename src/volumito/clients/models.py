@@ -264,6 +264,89 @@ class AudioOutputs(VolumioModel):
         return len(self.available_outputs)
 
 
+class AvailablePlugin(VolumioModel):
+    """A plugin the store offers to a Volumio instance."""
+
+    author: str | None = None
+    """The author of the plugin."""
+
+    category: str | None = None
+    """The category the plugin belongs to (e.g., ``"music_service"``)."""
+
+    description: str | None = None
+    """The one-line description of the plugin."""
+
+    installed: bool | None = None
+    """Whether the plugin is installed on the Volumio instance."""
+
+    name: str | None = None
+    """The name of the plugin, as it is identified."""
+
+    pretty_name: str | None = Field(default=None, alias="prettyName")
+    """The name of the plugin, as it is displayed."""
+
+    update_available: bool | None = Field(default=None, alias="updateAvailable")
+    """Whether the store offers a newer version than the installed one."""
+
+    url: str | None = None
+    """The URL of the package of the plugin, which the install reads."""
+
+    version: str | None = None
+    """The version the store offers, or the installed one when the plugin is installed."""
+
+
+class AvailablePluginCategory(VolumioModel):
+    """A category of the plugins the store offers to a Volumio instance."""
+
+    name: str | None = None
+    """The name of the category, as it is identified (e.g., ``"music_service"``)."""
+
+    plugins: list[AvailablePlugin] = Field(default_factory=list)
+    """The plugins of the category, in the order reported by the store."""
+
+    pretty_name: str | None = Field(default=None, alias="prettyName")
+    """The name of the category, as it is displayed."""
+
+
+class AvailablePlugins(VolumioModel):
+    """The plugins the store offers to a Volumio instance, by category.
+
+    The collection is a sequence of its plugins across the categories: it can be
+    iterated, indexed, and measured with ``len()``.
+    """
+
+    categories: list[AvailablePluginCategory] = Field(default_factory=list)
+    """The categories, in the order reported by the store."""
+
+    def __getitem__(self, index: int) -> AvailablePlugin:
+        """Return the plugin at the given position across the categories."""
+        return self.plugins[index]
+
+    def __iter__(self) -> Iterator[AvailablePlugin]:  # type: ignore[override]
+        """Iterate over the plugins across the categories."""
+        return iter(self.plugins)
+
+    def __len__(self) -> int:
+        """Return the number of plugins across the categories."""
+        return len(self.plugins)
+
+    def find(self, name: str) -> AvailablePlugin | None:
+        """Return the plugin with the given name, or None when the store offers none.
+
+        Args:
+            name: The name of the plugin, as it is identified
+
+        Returns:
+            The plugin, or None
+        """
+        return next((plugin for plugin in self if plugin.name == name), None)
+
+    @property
+    def plugins(self) -> list[AvailablePlugin]:
+        """The plugins across the categories, in the order reported by the store."""
+        return [plugin for category in self.categories for plugin in category.plugins]
+
+
 class Background(VolumioModel):
     """A background image of the user interface of a Volumio instance."""
 

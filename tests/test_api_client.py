@@ -210,6 +210,7 @@ WEBSOCKET_PROPERTIES = [
     ("alarms", "get_alarms", ALARM_OPERATION),
     ("audio_outputs", "get_audio_outputs", AUDIO_OPERATION),
     ("automatic_update_enabled", "is_automatic_update_enabled", UPDATE_OPERATION),
+    ("available_plugins", "get_available_plugins", PLUGIN_OPERATION),
     ("available_timezones", "get_available_timezones", SYSTEM_OPERATION),
     ("backgrounds", "get_backgrounds", UI_OPERATION),
     ("browse_sources", "get_browse_sources", COLLECTION_OPERATION),
