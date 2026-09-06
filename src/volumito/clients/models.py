@@ -552,14 +552,16 @@ class Languages(VolumioModel):
     """The languages the user interface of a Volumio instance can be shown in.
 
     The collection is a sequence of the available languages: it can be iterated,
-    indexed, and measured with ``len()``; the one in use is :attr:`default_language`.
+    indexed, and measured with ``len()``. The host reports English as
+    :attr:`default_language` whatever the language in use, which :class:`UiSettings`
+    carries.
     """
 
     available: list[Language] = Field(default_factory=list)
     """The languages that can be chosen."""
 
     default_language: Language | None = Field(default=None, alias="defaultLanguage")
-    """The language in use."""
+    """The default language of the host (English), not the one in use."""
 
     def __getitem__(self, index: int) -> Language:
         """Return the available language at the given position."""

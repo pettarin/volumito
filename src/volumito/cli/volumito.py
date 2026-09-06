@@ -2803,11 +2803,17 @@ def system_ui(ctx: click.Context) -> None:
     pass
 
 
-@system_ui.group("background")
+@system_ui.group("background", invoke_without_command=True)
 @click.pass_context
 def system_ui_background(ctx: click.Context) -> None:
-    """Manage the background images of the user interface."""
-    pass
+    """Print the name of the background image in use, or manage the backgrounds.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        current = fetch_or_exit(ctx, lambda c: c.backgrounds).current
+        name = current.name if current is not None else None
+        click.echo(json.dumps(name) if ctx.obj["machine_readable"] else name or "")
 
 
 @system_ui_background.command("delete")
@@ -2874,11 +2880,16 @@ def system_ui_experience(ctx: click.Context, value: str | None, output_format: s
     )
 
 
-@system_ui.group("language")
+@system_ui.group("language", invoke_without_command=True)
 @click.pass_context
 def system_ui_language(ctx: click.Context) -> None:
-    """Manage the language of the user interface."""
-    pass
+    """Print the code of the language of the user interface, or manage the language.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        code = fetch_or_exit(ctx, lambda c: c.ui_settings).language
+        click.echo(json.dumps(code) if ctx.obj["machine_readable"] else code or "")
 
 
 @system_ui_language.command("list")

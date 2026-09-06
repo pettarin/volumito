@@ -7683,7 +7683,7 @@ class TestSystemPluginAndUi:
     PRIVACY = {"allowUIStatistics": False}
     """The privacy settings, as a Volumio host answers them."""
 
-    UI = {"color": "#54c688", "language": "en", "theme": "volumio"}
+    UI = {"color": "#54c688", "language": "it", "theme": "volumio"}
     """The user interface settings, as a Volumio host answers them."""
 
     _WEBSOCKET = ["-C", "synchronous_websocket"]
@@ -8005,6 +8005,19 @@ class TestSystemPluginAndUi:
         assert result.exit_code == 1
         assert 'Plugin not found: "mpd" (see "system plugin available")' in result.output
         mock_client.update_plugin.assert_not_called()
+    def test_ui_background_prints_the_current_one(self, runner: CliRunner, mocker: MockerFixture):
+        """system ui background alone prints the name of the background in use."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        plain = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "background"])
+        machine = runner.invoke(main, ["-m", *self._WEBSOCKET, "system", "ui", "background"])
+
+        assert plain.exit_code == 0
+        assert plain.output.strip() == "Default"
+        assert machine.exit_code == 0
+        assert machine.output.strip() == '"Default"'
+        assert mock_client.backgrounds_property.call_count == 2
+
     def test_ui_background_list(self, runner: CliRunner, mocker: MockerFixture):
         """system ui background list prints the backgrounds and the one in use."""
         self._mock_websocket_client(mocker)
@@ -8094,6 +8107,24 @@ class TestSystemPluginAndUi:
         assert result.exit_code == 2
         mock_client.set_experience_settings.assert_not_called()
 
+    def test_ui_language_prints_the_current_one(self, runner: CliRunner, mocker: MockerFixture):
+        """system ui language alone prints the code of the language in use.
+
+        The host reports English as the default language whatever is in use, so the
+        code comes from the user interface settings, not from the language listing.
+        """
+        mock_client = self._mock_websocket_client(mocker)
+
+        plain = runner.invoke(main, [*self._WEBSOCKET, "system", "ui", "language"])
+        machine = runner.invoke(main, ["-m", *self._WEBSOCKET, "system", "ui", "language"])
+
+        assert plain.exit_code == 0
+        assert plain.output.strip() == "it"
+        assert machine.exit_code == 0
+        assert machine.output.strip() == '"it"'
+        assert mock_client.ui_settings_property.call_count == 2
+        mock_client.languages_property.assert_not_called()
+
     def test_ui_language_list(self, runner: CliRunner, mocker: MockerFixture):
         """system ui language list prints the languages and the one in use."""
         self._mock_websocket_client(mocker)
@@ -8158,11 +8189,13 @@ class TestSystemPluginAndUi:
             (["plugin", "list"], "the plugins"),
             (["plugin", "uninstall", "mpd", "-y"], "the plugins"),
             (["plugin", "update", "mpd", "-y"], "the plugins"),
+            (["ui", "background"], "the user interface settings"),
             (["ui", "background", "delete", "x", "-y"], "the user interface settings"),
             (["ui", "background", "list"], "the user interface settings"),
             (["ui", "background", "set", "x"], "the user interface settings"),
             (["ui", "experience"], "the user interface settings"),
             (["ui", "experience", "simple"], "the user interface settings"),
+            (["ui", "language"], "the user interface settings"),
             (["ui", "language", "list"], "the user interface settings"),
             (["ui", "language", "set", "en"], "the user interface settings"),
             (["ui", "privacy"], "the user interface settings"),
