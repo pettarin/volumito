@@ -629,6 +629,12 @@ EVENT_UPDATE_DB = "updateDb"
 EVENT_UPDATE_PLUGIN = "updatePlugin"
 """The event updating an installed plugin."""
 
+EVENT_UPDATE_READY_CACHE = "updateReadyCache"
+"""The event carrying the cached answer of the updater, in reply to a cached check."""
+
+EVENT_UPDATE_READY_FOR_DAEMON = "updateReadyForDaemon"
+"""The event carrying the answer of the updater to a check, pushed whatever the check asked."""
+
 EVENT_URI_FAVOURITES = "urifavourites"
 """The event carrying the favourite status of a URI."""
 
@@ -706,11 +712,16 @@ RESPONSE_EVENTS = {
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_SET_MULTIROOM: EVENT_PUSH_MULTIROOM,
     EVENT_SUPER_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_UPDATE_CHECK: EVENT_UPDATE_READY_FOR_DAEMON,
+    EVENT_UPDATE_CHECK_CACHE: EVENT_UPDATE_READY_CACHE,
 }
 """The event each read waits for, keyed by the event it emits.
 
 ``search`` and ``browseLibrary`` share their answer, which is why a client serializes its
 reads: two of them in flight at once could take each other's result."""
+
+UPDATE_CHECK_TIMEOUT = 60.0
+"""Seconds an update check is waited for at least: the host asks its updater, which is slow."""
 
 VOLUME_DOWN = "-"
 """The volume argument lowering the level by one step of the host."""

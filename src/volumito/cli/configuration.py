@@ -86,6 +86,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-infinity": FORMAT_KEYS,
     "playback-sleep": FORMAT_KEYS,
     "playback-status": DISPLAY_KEYS,
+    "system-update-check": FORMAT_KEYS,
     "track-info": DISPLAY_KEYS,
     "queue-list": DISPLAY_KEYS,
     "queue-status": DISPLAY_KEYS,
@@ -300,6 +301,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "system-update-channel-list": [
         ["system", "update", "channel", "list"],
+    ],
+    "system-update-check": [
+        ["system", "update", "check"],
     ],
     "system-usb-list": [
         ["system", "usb", "list"],

@@ -133,6 +133,7 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrives,
     VolumioModel,
@@ -6720,6 +6721,9 @@ class TestSystemSettings:
     CHANNEL = {"currentChannel": "stable", "availableChannels": ["stable", "test"]}
     """The update channel, as a Volumio host answers it."""
 
+    CHECK = {"updateavailable": False, "title": "No update available", "description": "Latest"}
+    """The answer of the updater, as a Volumio host relays it."""
+
     POWER_MODES = {"hasPowerOffMode": True, "hasStandbyMode": False}
     """The power modes of a host without a standby mode."""
 
@@ -6777,6 +6781,8 @@ class TestSystemSettings:
         )
         _attach_property(mock_client, "timezone", return_value="Europe/Rome")
         _attach_property(mock_client, "updater_channel", return_value=self.CHANNEL)
+        mock_client.check_for_update.return_value = UpdateCheck.from_raw(self.CHECK)
+        mock_client.check_update_cache.return_value = UpdateCheck.from_raw(self.CHECK)
         mocker.patch(
             "volumito.cli.click_helpers.VolumioWebSocketClient",
             return_value=mock_client,
@@ -7110,22 +7116,18 @@ class TestSystemSettings:
         assert ("  (none)" in result.output) is not bool(channels)
 
     @pytest.mark.parametrize(
-        ("options", "member", "label"),
-        [
-            ([], "check_for_update", "update check"),
-            (["--cached"], "check_update_cache", "update check cached"),
-        ],
+        ("options", "member"), [([], "check_for_update"), (["--cached"], "check_update_cache")]
     )
-    def test_update_check(
-        self, runner: CliRunner, mocker: MockerFixture, options, member, label
-    ):
-        """system update check asks the host to check, anew or in its cache."""
+    def test_update_check(self, runner: CliRunner, mocker: MockerFixture, options, member):
+        """system update check waits for the answer, anew or cached, and prints it."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "update", "check", *options])
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "update", "check", *options, "-F", "json"]
+        )
 
         assert result.exit_code == 0
-        assert f"Command '{label}' executed successfully" in result.output
+        assert json.loads(result.output) == self.CHECK
         getattr(mock_client, member).assert_called_once_with()
 
     def test_update_install_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
@@ -18307,6 +18309,7 @@ class TestConfigurationCommands:
                     "system-ui-privacy": None,
                     "system-ui-settings": None,
                     "system-update-channel-list": None,
+                    "system-update-check": None,
                     "system-usb-list": None,
                     "system-info": None,
                     "system-version": None,

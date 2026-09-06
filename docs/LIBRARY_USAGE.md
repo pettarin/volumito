@@ -829,6 +829,7 @@ than the REST API clients, and thus in turn additional models:
 | `backgrounds`                                  | `Backgrounds` (of `Background`)           |
 | `backup`, `discover_network_shares`            | `dict`                                    |
 | `browse_sources`                               | `BrowseSources` (of `BrowseSource`)       |
+| `check_for_update()`, `check_update_cache()`   | `UpdateCheck`                             |
 | `device_info`                                  | `DeviceInfo`                              |
 | `device_name`, `device_uuid`, `timezone`       | `str`                                     |
 | `dsp_config`, `get_plugin_config`              | `UiConfig`                                |

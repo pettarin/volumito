@@ -2463,14 +2463,25 @@ class TestVolumioAsyncWebSocketClientSystemAdministration:
         assert fake.calls[-1] == _Call("setUpdaterChannel", "test")
 
     async def test_the_update_commands(self, mocker: MockerFixture):
-        """Checking and installing carry the flags the host expects."""
-        client, fake = await _client(mocker)
+        """Checking waits for the answer of the updater; installing carries its flag."""
+        found = {"updateavailable": True, "title": "3.800", "description": "<p>Fixes</p>"}
+        cached = {"updateavailable": False, "title": "No update available"}
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "updateCheck": ("updateReadyForDaemon", found),
+                "updateCheckCache": ("updateReadyCache", cached),
+            }
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.check_for_update()
-        await client.check_update_cache()
+        check = await client.check_for_update()
+        check_cached = await client.check_update_cache()
         await client.update()
         await client.update(ignore_integrity_check=True)
 
+        assert check.update_available is True
+        assert check.title == "3.800"
+        assert check_cached.update_available is False
         assert fake.calls == [
             _Call("updateCheck", {"hideModal": True}),
             _Call("updateCheckCache", None),

@@ -59,6 +59,7 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrives,
     WirelessNetworks,
@@ -209,6 +210,7 @@ from volumito.clients.websocket.common import (
     EVENT_WRITE_MULTIROOM,
     PENDING_PACKETS_POLL_INTERVAL,
     RESPONSE_EVENTS,
+    UPDATE_CHECK_TIMEOUT,
     VOLUME_DOWN,
     VOLUME_UP,
     VolumioWebSocketCommon,
@@ -912,24 +914,41 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         payload["data"] = data if data is not None else {}
         self._emit(EVENT_CALL_METHOD, payload)
 
-    def check_for_update(self) -> None:
-        """Ask the Volumio instance to check whether an update is available.
+    def check_for_update(self) -> UpdateCheck:
+        """Check whether an update is available for the Volumio instance.
 
-        The host reports what it found through the events its user interface listens
-        for, which :meth:`on` can be registered for.
+        The host asks its updater, which can take a while: the answer is waited for
+        :data:`UPDATE_CHECK_TIMEOUT` seconds at least, the timeout of the client when
+        longer. The user interface is not shown the check.
 
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_UPDATE_CHECK, {"hideModal": True})
-
-    def check_update_cache(self) -> None:
-        """Ask the Volumio instance to check the update information it cached.
+        Returns:
+            What the updater found
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
         """
-        self._emit(EVENT_UPDATE_CHECK_CACHE)
+        answer = self._request(
+            EVENT_UPDATE_CHECK,
+            payload={"hideModal": True},
+            timeout=max(self.timeout, UPDATE_CHECK_TIMEOUT),
+        )
+        return UpdateCheck.from_raw(self._as_json_object(answer))
+
+    def check_update_cache(self) -> UpdateCheck:
+        """Read the update information the Volumio instance cached.
+
+        The host answers only when its automatic update check is enabled, and does
+        not answer at all otherwise.
+
+        Returns:
+            What the updater found the last time
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return UpdateCheck.from_raw(self._read_object(EVENT_UPDATE_CHECK_CACHE))
 
     def clear(self) -> None:
         """Empty the playback queue.

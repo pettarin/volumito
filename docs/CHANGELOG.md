@@ -54,6 +54,9 @@ All notable changes to this project will be documented in this file.
 - Property `available_plugins` on the WebSocket API clients, with the models
   `AvailablePlugin`, `AvailablePluginCategory`, and `AvailablePlugins`
 - Model `UiBackground`, the background image `UiSettings` reports
+- Methods `check_for_update` and `check_update_cache` on the WebSocket API
+  clients wait for the answer of the updater, an `UpdateCheck`, which
+  `system update check` prints
 - Option `--wait-and-enable` of `system plugin install`
 - Command group `system alarm` (`add`, `clear`, `disable`, `enable`,
   `list`, `remove`, `set`), needing a WebSocket API client

@@ -55,6 +55,7 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrives,
     WirelessNetworks,
@@ -1624,6 +1625,17 @@ class TestTierCModels:
         assert len(languages) == 1
         assert languages[0].language == "Catala"
         assert [lang.code for lang in languages] == ["ca"]
+
+    def test_update_check(self):
+        """The answer of the updater is parsed, aliases included."""
+        check = UpdateCheck.from_raw(
+            {"updateavailable": True, "title": "3.800", "description": "Fixes",
+             "changeLogLink": "http://x/changelog"}
+        )
+
+        assert check.update_available is True
+        assert check.change_log_link == "http://x/changelog"
+        assert check.title == "3.800"
 
     def test_updater_channel(self):
         """The channel in use is read beside the available ones."""

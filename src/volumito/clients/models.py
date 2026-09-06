@@ -1915,6 +1915,22 @@ class UiSettings(VolumioModel):
     """The name of the theme of the interface."""
 
 
+class UpdateCheck(VolumioModel):
+    """What the updater of a Volumio instance found when asked for an update."""
+
+    change_log_link: str | None = Field(default=None, alias="changeLogLink")
+    """The link to the change log of the update, when there is one."""
+
+    description: str | None = None
+    """The description of the update, or the notice that none is available."""
+
+    title: str | None = None
+    """The title of the answer: the version offered, or the notice that none is."""
+
+    update_available: bool | None = Field(default=None, alias="updateavailable")
+    """Whether an update is available."""
+
+
 class UpdaterChannel(VolumioModel):
     """The update channel a Volumio instance follows."""
 

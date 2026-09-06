@@ -823,7 +823,7 @@ class TestBuildClickDefaultMap:
                     "privacy": format_only,
                     "settings": format_only,
                 },
-                "update": {"channel": {"list": format_only}},
+                "update": {"channel": {"list": format_only}, "check": format_only},
                 "usb": {"list": formatting},
             },
             "collection": {

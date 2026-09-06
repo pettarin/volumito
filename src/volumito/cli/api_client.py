@@ -79,6 +79,7 @@ from volumito.clients import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrives,
     VolumioAsyncRESTAPIClient,
@@ -464,16 +465,24 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def check_for_update(self) -> None:
-        """Ask the Volumio instance to check whether an update is available.
+    def check_for_update(self) -> UpdateCheck:
+        """Check whether an update is available for the Volumio instance.
 
-        The host reports what it found through the events its user interface listens
-        for, which :meth:`on` can be registered for.
+        The host asks its updater, which can take a while; the answer is waited for.
+
+        Returns:
+            What the updater found
         """
 
     @abstractmethod
-    def check_update_cache(self) -> None:
-        """Ask the Volumio instance to check the update information it cached."""
+    def check_update_cache(self) -> UpdateCheck:
+        """Read the update information the Volumio instance cached.
+
+        The host answers only when its automatic update check is enabled.
+
+        Returns:
+            What the updater found the last time
+        """
 
     @abstractmethod
     def clear(self) -> CommandResponse | None:
@@ -1845,10 +1854,10 @@ class RESTAPIClient(APIClient):
     ) -> None:
         return self._fallback.client(PLUGIN_OPERATION).call_plugin_method(endpoint, method, data)
 
-    def check_for_update(self) -> None:
+    def check_for_update(self) -> UpdateCheck:
         return self._fallback.client(UPDATE_OPERATION).check_for_update()
 
-    def check_update_cache(self) -> None:
+    def check_update_cache(self) -> UpdateCheck:
         return self._fallback.client(UPDATE_OPERATION).check_update_cache()
 
     def consume(self, value: bool) -> None:
@@ -2513,10 +2522,10 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     ) -> None:
         return self._client.call_plugin_method(endpoint, method, data)
 
-    def check_for_update(self) -> None:
+    def check_for_update(self) -> UpdateCheck:
         return self._client.check_for_update()
 
-    def check_update_cache(self) -> None:
+    def check_update_cache(self) -> UpdateCheck:
         return self._client.check_update_cache()
 
     def close(self) -> None:
@@ -3285,10 +3294,10 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     ) -> None:
         return self._run(self._client.call_plugin_method(endpoint, method, data))
 
-    def check_for_update(self) -> None:
+    def check_for_update(self) -> UpdateCheck:
         return self._run(self._client.check_for_update())
 
-    def check_update_cache(self) -> None:
+    def check_update_cache(self) -> UpdateCheck:
         return self._run(self._client.check_update_cache())
 
     def consume(self, value: bool) -> None:

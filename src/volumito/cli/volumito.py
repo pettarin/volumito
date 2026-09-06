@@ -3025,19 +3025,21 @@ def system_update_channel_set(ctx: click.Context, value: str) -> None:
 @system_update.command("check")
 @click.pass_context
 @option_cached
-def system_update_check(ctx: click.Context, cached: bool) -> None:
-    """Ask the Volumio host to check whether an update is available.
+@option_format
+def system_update_check(ctx: click.Context, cached: bool, output_format: str) -> None:
+    """Check whether an update is available for the Volumio host, and print the answer.
 
-    The host answers through the events its user interface listens for, not to this
-    command, which exits once the check is asked for. With --cached, the host checks
-    the update information it cached instead.
+    The host asks its updater and answers once it has replied, which can take a while.
+    With --cached, the host answers with the update information it cached instead,
+    which it does only when its automatic update check is enabled.
 
     Needs a WebSocket API client.
     """
     if cached:
-        execute_command(ctx, "update check cached", lambda c: c.check_update_cache())
+        check = fetch_or_exit(ctx, lambda c: c.check_update_cache())
     else:
-        execute_command(ctx, "update check", lambda c: c.check_for_update())
+        check = fetch_or_exit(ctx, lambda c: c.check_for_update())
+    render_payload(ctx, check.raw, output_format, heading="Volumio Update Check")
 
 
 @system_update.command("install")

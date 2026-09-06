@@ -286,6 +286,7 @@ output:
   # - system-ui-privacy
   # - system-ui-settings
   # - system-update-channel-list
+  # - system-update-check
   # - system-usb-list
   # - system-version
   # - track-info
@@ -501,6 +502,9 @@ output:
     # Add your own overrides here
 
   system-update-channel-list:
+    # Add your own overrides here
+
+  system-update-check:
     # Add your own overrides here
 
   system-usb-list:
