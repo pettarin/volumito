@@ -2533,11 +2533,11 @@ def system_plugin_available(ctx: click.Context, fields: str, output_format: str)
     _render_available_plugins(ctx, plugins, fields, output_format)
 
 
-@system_plugin.command("config")
+@system_plugin.command("configuration")
 @click.pass_context
 @click.argument("name", type=str)
 @option_format
-def system_plugin_config(ctx: click.Context, name: str, output_format: str) -> None:
+def system_plugin_configuration(ctx: click.Context, name: str, output_format: str) -> None:
     """Print the configuration page of the plugin NAME, as "system plugin list" names it.
 
     Needs a WebSocket API client.

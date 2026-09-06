@@ -808,7 +808,7 @@ class TestBuildClickDefaultMap:
                 "info": format_only,
                 "network": {"info": formatting, "wireless": formatting},
                 "plugin": {
-                    "config": format_only,
+                    "configuration": format_only,
                     "disable": formatting,
                     "enable": formatting,
                     "list": formatting,

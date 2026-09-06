@@ -7772,26 +7772,28 @@ class TestSystemPluginAndUi:
         assert result.exit_code == 1
         assert "Please login" in result.output
 
-    def test_plugin_config(self, runner: CliRunner, mocker: MockerFixture):
+    def test_plugin_configuration(self, runner: CliRunner, mocker: MockerFixture):
         """system plugin config prints the configuration page of the plugin."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
             main,
-            [*self._WEBSOCKET, "system", "plugin", "config", "mpd", "-F", "json"],
+            [*self._WEBSOCKET, "system", "plugin", "configuration", "mpd", "-F", "json"],
         )
 
         assert result.exit_code == 0
         assert json.loads(result.output) == self.CONFIG
         mock_client.get_plugin_config.assert_called_once_with("music_service/mpd")
 
-    def test_plugin_config_of_a_plugin_not_installed(
+    def test_plugin_configuration_of_a_plugin_not_installed(
         self, runner: CliRunner, mocker: MockerFixture
     ):
         """A name the host does not list as installed is an error naming the listing."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "plugin", "config", "nope"])
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "plugin", "configuration", "nope"]
+        )
 
         assert result.exit_code == 1
         assert 'Plugin not installed: "nope" (see "system plugin list")' in result.output
@@ -8112,7 +8114,7 @@ class TestSystemPluginAndUi:
         ("arguments", "operation"),
         [
             (["plugin", "available"], "the plugins"),
-            (["plugin", "config", "mpd"], "the plugins"),
+            (["plugin", "configuration", "mpd"], "the plugins"),
             (["plugin", "disable", "mpd"], "the plugins"),
             (["plugin", "enable", "mpd"], "the plugins"),
             (["plugin", "install", "spop", "-y"], "the plugins"),
@@ -18213,7 +18215,7 @@ class TestConfigurationCommands:
                     "system-execute": None,
                     "system-network-info": None,
                     "system-network-wireless": None,
-                    "system-plugin-config": None,
+                    "system-plugin-configuration": None,
                     "system-plugin-disable": None,
                     "system-plugin-enable": None,
                     "system-plugin-list": None,

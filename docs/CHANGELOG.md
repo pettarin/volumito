@@ -47,8 +47,8 @@ All notable changes to this project will be documented in this file.
 - Command groups `system network` (`info`, `join`, `wireless`),
   `system share` (`add`, `discover`, `edit`, `info`, `list`, `remove`),
   and `system usb` (`eject`, `list`), all needing a WebSocket API client
-- Command groups `system plugin` (`available`, `config`, `disable`, `enable`,
-  `install`, `list`, `uninstall`, `update`) and `system ui`
+- Command groups `system plugin` (`available`, `configuration`, `disable`,
+  `enable`, `install`, `list`, `uninstall`, `update`) and `system ui`
   (`experience`, `menu`, `privacy`, `settings`, and the `background`
   and `language` subgroups), all needing a WebSocket API client
 - Property `available_plugins` on the WebSocket API clients, with the models

@@ -271,7 +271,7 @@ output:
   # - system-info
   # - system-network-info
   # - system-network-wireless
-  # - system-plugin-config
+  # - system-plugin-configuration
   # - system-plugin-disable
   # - system-plugin-enable
   # - system-plugin-list
@@ -459,7 +459,7 @@ output:
   system-network-wireless:
     # Add your own overrides here
 
-  system-plugin-config:
+  system-plugin-configuration:
     # Add your own overrides here
 
   system-plugin-disable:

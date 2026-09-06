@@ -109,7 +109,7 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-info": FORMAT_KEYS,
     "system-network-info": DISPLAY_KEYS,
     "system-network-wireless": DISPLAY_KEYS,
-    "system-plugin-config": FORMAT_KEYS,
+    "system-plugin-configuration": FORMAT_KEYS,
     "system-plugin-disable": DISPLAY_KEYS,
     "system-plugin-enable": DISPLAY_KEYS,
     "system-plugin-list": DISPLAY_KEYS,
@@ -257,8 +257,8 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "system-network-wireless": [
         ["system", "network", "wireless"],
     ],
-    "system-plugin-config": [
-        ["system", "plugin", "config"],
+    "system-plugin-configuration": [
+        ["system", "plugin", "configuration"],
     ],
     "system-plugin-disable": [
         ["system", "plugin", "disable"],
