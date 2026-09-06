@@ -49,9 +49,6 @@ from volumito.cli.click_helpers import (
     get_client,
     ignore_configuration_file_callback,
     option_add_cover_and_metadata,
-    option_alarm_name,
-    option_alarm_playlist,
-    option_alarm_time,
     option_album,
     option_albumart_file_name_template,
     option_albums_only,
@@ -2086,17 +2083,17 @@ def system_alarm(ctx: click.Context) -> None:
 
 @system_alarm.command("add")
 @click.pass_context
+@click.argument("name", type=str)
+@click.argument("time", type=str)
+@click.argument("playlist", type=str)
 @option_disabled
-@option_alarm_name
-@option_alarm_playlist
-@option_alarm_time
 def system_alarm_add(
-    ctx: click.Context, disabled: bool, name: str, playlist: str, time: str
+    ctx: click.Context, name: str, time: str, playlist: str, disabled: bool
 ) -> None:
-    """Add an alarm playing a playlist at a time of day, armed unless --disabled.
+    """Add the alarm NAME playing the playlist PLAYLIST at TIME, armed unless --disabled.
 
-    The host numbers the alarm by its position, and reads the time in its own time
-    zone. Needs a WebSocket API client.
+    TIME is a time of day as HH:MM, which the host reads in its own time zone. The host
+    numbers the alarm by its position. Needs a WebSocket API client.
     """
     execute_command(
         ctx, f'add alarm "{name}"', lambda c: c.add_alarm(name, time, playlist, not disabled)

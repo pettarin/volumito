@@ -6231,25 +6231,21 @@ class TestSystemAlarm:
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "system", "alarm", "add", "--name", "Nap", "--time", "14:15",
-             "--playlist", "ambient", *options],
+            main, [*self._WEBSOCKET, "system", "alarm", "add", "Nap", "14:15", "ambient", *options]
         )
 
         assert result.exit_code == 0
         assert "Command 'add alarm \"Nap\"' executed successfully" in result.output
         mock_client.add_alarm.assert_called_once_with("Nap", "14:15", "ambient", enabled)
 
-    def test_add_requires_its_options(self, runner: CliRunner, mocker: MockerFixture):
+    def test_add_requires_its_arguments(self, runner: CliRunner, mocker: MockerFixture):
         """The name, the time, and the playlist are all required."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "alarm", "add", "--name", "Nap", "--time", "14:15"]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "add", "Nap", "14:15"])
 
         assert result.exit_code == 2
-        assert "Missing option '--playlist'" in result.output
+        assert "Missing argument 'PLAYLIST'" in result.output
         mock_client.add_alarm.assert_not_called()
 
     def test_add_with_a_bad_time(self, runner: CliRunner, mocker: MockerFixture):
@@ -6260,9 +6256,7 @@ class TestSystemAlarm:
         )
 
         result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "system", "alarm", "add", "--name", "Nap", "--time", "7:30am",
-             "--playlist", "ambient"],
+            main, [*self._WEBSOCKET, "system", "alarm", "add", "Nap", "7:30am", "ambient"]
         )
 
         assert result.exit_code == 1
@@ -6392,7 +6386,7 @@ class TestSystemAlarm:
     @pytest.mark.parametrize(
         "arguments",
         [
-            ["add", "--name", "Nap", "--time", "14:15", "--playlist", "ambient"],
+            ["add", "Nap", "14:15", "ambient"],
             ["clear", "-y"],
             ["disable", "3"],
             ["enable", "3"],

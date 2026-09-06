@@ -1531,37 +1531,6 @@ def option_add_cover_and_metadata(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
-def option_alarm_name(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--name`` option to the system alarm add subcommand."""
-    return click.option(
-        "--name",
-        type=str,
-        required=True,
-        help="The name of the alarm.",
-    )(func)
-
-
-def option_alarm_playlist(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--playlist`` option to the system alarm add subcommand."""
-    return click.option(
-        "--playlist",
-        type=str,
-        required=True,
-        help="The name of the playlist the alarm plays.",
-    )(func)
-
-
-def option_alarm_time(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--time`` option to the system alarm add subcommand."""
-    return click.option(
-        "--time",
-        type=str,
-        required=True,
-        metavar="HH:MM",
-        help="The time of day the alarm goes off, as HH:MM.",
-    )(func)
-
-
 def option_album(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-b``/``--album`` option to the collection search subcommand."""
     return click.option(
