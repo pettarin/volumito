@@ -6290,7 +6290,7 @@ class TestSystemAlarm:
 
     @pytest.mark.parametrize(
         ("command", "member"),
-        [("disable", "disable_alarm"), ("enable", "enable_alarm"), ("remove", "remove_alarm")],
+        [("disable", "disable_alarm"), ("enable", "enable_alarm")],
     )
     def test_one_alarm_actions(self, runner: CliRunner, mocker: MockerFixture, command, member):
         """The actions on one alarm name it by its identifier."""
@@ -6302,12 +6302,32 @@ class TestSystemAlarm:
         assert f"Command '{command} alarm 5' executed successfully" in result.output
         getattr(mock_client, member).assert_called_once_with(5)
 
+    def test_remove_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+        """Without -y/--yes the alarm is kept."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "5"])
+
+        assert result.exit_code == 1
+        assert "Refusing to remove the alarm without -y/--yes: 5" in result.output
+        mock_client.remove_alarm.assert_not_called()
+
+    def test_remove(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the alarm is removed by its identifier."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "5", "-y"])
+
+        assert result.exit_code == 0
+        assert "Command 'remove alarm 5' executed successfully" in result.output
+        mock_client.remove_alarm.assert_called_once_with(5)
+
     def test_an_unknown_alarm(self, runner: CliRunner, mocker: MockerFixture):
         """An identifier the client refuses is reported as an invalid value."""
         mock_client = self._mock_websocket_client(mocker)
         mock_client.remove_alarm.side_effect = ValueError("No alarm has the identifier 9")
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "9"])
+        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "9", "-y"])
 
         assert result.exit_code == 1
         assert "Invalid value: No alarm has the identifier 9" in result.output
@@ -6316,7 +6336,9 @@ class TestSystemAlarm:
         """The identifier is the number system alarm list prints."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "system", "alarm", "remove", "Weekday"])
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "system", "alarm", "remove", "Weekday", "-y"]
+        )
 
         assert result.exit_code == 2
         mock_client.remove_alarm.assert_not_called()
@@ -6375,7 +6397,7 @@ class TestSystemAlarm:
             ["disable", "3"],
             ["enable", "3"],
             ["list"],
-            ["remove", "3"],
+            ["remove", "3", "-y"],
         ],
     )
     def test_a_rest_client_refuses(self, runner: CliRunner, mocker: MockerFixture, arguments):

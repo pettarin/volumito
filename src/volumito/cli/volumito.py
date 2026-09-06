@@ -2167,11 +2167,17 @@ def system_alarm_list(ctx: click.Context, fields: str, output_format: str) -> No
 @system_alarm.command("remove")
 @click.pass_context
 @click.argument("alarm_id", type=int)
-def system_alarm_remove(ctx: click.Context, alarm_id: int) -> None:
+@option_yes
+def system_alarm_remove(ctx: click.Context, alarm_id: int, yes: bool) -> None:
     """Remove the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    IMPORTANT: the alarm cannot be recovered; it is removed only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
+    if not yes:
+        error(f"Refusing to remove the alarm without -y/--yes: {alarm_id}")
+        sys.exit(1)
     execute_command(ctx, f"remove alarm {alarm_id}", lambda c: c.remove_alarm(alarm_id))
 
 
