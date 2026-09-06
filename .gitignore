@@ -79,3 +79,7 @@ PLAN*.md
 .ignore
 .mcp.json
 /graft/
+
+# local configuration files
+.volumito.yaml
+volumito.yaml
