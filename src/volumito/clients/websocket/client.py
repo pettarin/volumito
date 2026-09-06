@@ -1621,6 +1621,10 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
         """Start or stop an enabled plugin of the Volumio instance.
 
+        The host acts only on a plugin it has loaded: one enabled when the host booted,
+        or one enabled through :meth:`manage_plugin` since. A plugin enabled through
+        :meth:`enable_plugin` alone is loaded at the next boot.
+
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
