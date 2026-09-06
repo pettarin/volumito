@@ -1770,17 +1770,6 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_data(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--data`` option to the system plugin call subcommand."""
-    return click.option(
-        "--data",
-        type=str,
-        default=None,
-        metavar="JSON",
-        help="The arguments to call the method with, as a JSON object.",
-    )(func)
-
-
 def option_disabled(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--disabled`` option to the system alarm add subcommand."""
     return click.option(

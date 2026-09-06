@@ -7763,52 +7763,6 @@ class TestSystemPluginAndUi:
         assert result.exit_code == 1
         assert "Please login" in result.output
 
-    def test_plugin_call_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
-        """Without -y/--yes no method is called."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "system", "plugin", "call", "music_service/mpd", "rescan"]
-        )
-
-        assert result.exit_code == 1
-        assert (
-            'Refusing to call the plugin method without -y/--yes: "music_service/mpd" "rescan"'
-        ) in result.output
-        mock_client.call_plugin_method.assert_not_called()
-
-    @pytest.mark.parametrize(
-        ("options", "data"), [([], None), (["--data", '{"path": "/mnt"}'], {"path": "/mnt"})]
-    )
-    def test_plugin_call(self, runner: CliRunner, mocker: MockerFixture, options, data):
-        """With -y/--yes the method is called, with the JSON arguments given."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "system", "plugin", "call", "music_service/mpd", "rescan", "-y",
-             *options],
-        )
-
-        assert result.exit_code == 0
-        assert "Command 'call \"music_service/mpd\" \"rescan\"' executed" in result.output
-        mock_client.call_plugin_method.assert_called_once_with("music_service/mpd", "rescan", data)
-
-    @pytest.mark.parametrize("data", ["not json", "[1, 2]", '"text"'])
-    def test_plugin_call_with_bad_data(self, runner: CliRunner, mocker: MockerFixture, data):
-        """The arguments must be a JSON object."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "system", "plugin", "call", "music_service/mpd", "rescan", "-y",
-             "--data", data],
-        )
-
-        assert result.exit_code == 2
-        assert "Expected the --data option to hold a JSON object" in result.output
-        mock_client.call_plugin_method.assert_not_called()
-
     def test_plugin_config(self, runner: CliRunner, mocker: MockerFixture):
         """system plugin config prints the configuration page of the plugin."""
         mock_client = self._mock_websocket_client(mocker)
@@ -7827,7 +7781,6 @@ class TestSystemPluginAndUi:
         [
             (["disable", "music_service", "mpd"], "disable"),
             (["enable", "music_service", "mpd"], "enable"),
-            (["manage", "restart", "music_service", "mpd"], "restart"),
         ],
     )
     def test_plugin_manager_actions(
@@ -8101,14 +8054,12 @@ class TestSystemPluginAndUi:
         ("arguments", "operation"),
         [
             (["plugin", "available"], "the plugins"),
-            (["plugin", "call", "a/b", "m", "-y"], "the plugins"),
             (["plugin", "config", "a/b"], "the plugins"),
             (["plugin", "disable", "a", "b"], "the plugins"),
             (["plugin", "enable", "a", "b"], "the plugins"),
             (["plugin", "install", "http://x", "-y"], "the plugins"),
             (["plugin", "install", "spop", "-y"], "the plugins"),
             (["plugin", "list"], "the plugins"),
-            (["plugin", "manage", "restart", "a", "b"], "the plugins"),
             (["plugin", "uninstall", "a", "b", "-y"], "the plugins"),
             (["plugin", "update", "a", "b", "http://p/b.zip"], "the plugins"),
             (["ui", "background", "delete", "x", "-y"], "the user interface settings"),
@@ -18208,7 +18159,6 @@ class TestConfigurationCommands:
                     "system-plugin-disable": None,
                     "system-plugin-enable": None,
                     "system-plugin-list": None,
-                    "system-plugin-manage": None,
                     "system-power-modes": None,
                     "system-share-discover": None,
                     "system-share-info": None,

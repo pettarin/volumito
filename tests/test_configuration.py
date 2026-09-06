@@ -812,7 +812,6 @@ class TestBuildClickDefaultMap:
                     "disable": formatting,
                     "enable": formatting,
                     "list": formatting,
-                    "manage": formatting,
                 },
                 "power": {"modes": format_only},
                 "share": {"discover": format_only, "info": format_only, "list": formatting},

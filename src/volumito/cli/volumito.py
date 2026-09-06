@@ -70,7 +70,6 @@ from volumito.cli.click_helpers import (
     option_create_download_manifest,
     option_cue_track,
     option_current_track,
-    option_data,
     option_disabled,
     option_endpoint,
     option_extended,
@@ -190,7 +189,6 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PLAY_VOLATILE_ERROR,
-    PLUGIN_DATA_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
     QUEUE_ADD_MODES_ERROR,
@@ -2554,41 +2552,6 @@ def system_plugin_available(ctx: click.Context, fields: str, output_format: str)
     _render_available_plugins(ctx, plugins, fields, output_format)
 
 
-@system_plugin.command("call")
-@click.pass_context
-@click.argument("endpoint", type=str)
-@click.argument("method", type=str)
-@option_data
-@option_yes
-def system_plugin_call(
-    ctx: click.Context, endpoint: str, method: str, data: str | None, yes: bool
-) -> None:
-    """Call METHOD of the plugin ENDPOINT (as "category/name") directly.
-
-    The host answers nothing: whatever the plugin pushes is visible with
-    "notification event listen". IMPORTANT: any method can be called; the call is
-    made only when -y/--yes is given.
-
-    Needs a WebSocket API client.
-    """
-    arguments: dict[str, Any] | None = None
-    if data is not None:
-        try:
-            arguments = json.loads(data)
-        except ValueError:
-            arguments = None
-        if not isinstance(arguments, dict):
-            raise click.UsageError(PLUGIN_DATA_ERROR)
-    if not yes:
-        error(f'Refusing to call the plugin method without -y/--yes: "{endpoint}" "{method}"')
-        sys.exit(1)
-    execute_command(
-        ctx,
-        f'call "{endpoint}" "{method}"',
-        lambda c: c.call_plugin_method(endpoint, method, arguments),
-    )
-
-
 @system_plugin.command("config")
 @click.pass_context
 @click.argument("endpoint", type=str)
@@ -2669,27 +2632,6 @@ def system_plugin_list(ctx: click.Context, fields: str, output_format: str) -> N
     Needs a WebSocket API client.
     """
     plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
-    _render_plugins(ctx, plugins, fields, output_format)
-
-
-@system_plugin.command("manage")
-@click.pass_context
-@click.argument("action", type=str)
-@click.argument("category", type=str)
-@click.argument("name", type=str)
-@option_fields
-@option_format
-def system_plugin_manage(
-    ctx: click.Context, action: str, category: str, name: str, fields: str, output_format: str
-) -> None:
-    """Ask the plugin manager to do ACTION on the plugin NAME of CATEGORY.
-
-    ACTION is what the plugin manager of the host accepts (e.g., "enable",
-    "disable", "uninstall"); the plugins are printed as they then stand.
-
-    Needs a WebSocket API client.
-    """
-    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin(action, category, name))
     _render_plugins(ctx, plugins, fields, output_format)
 
 

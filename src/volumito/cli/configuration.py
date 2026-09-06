@@ -113,7 +113,6 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "system-plugin-disable": DISPLAY_KEYS,
     "system-plugin-enable": DISPLAY_KEYS,
     "system-plugin-list": DISPLAY_KEYS,
-    "system-plugin-manage": DISPLAY_KEYS,
     "system-power-modes": FORMAT_KEYS,
     "system-share-discover": FORMAT_KEYS,
     "system-share-info": FORMAT_KEYS,
@@ -269,9 +268,6 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     ],
     "system-plugin-list": [
         ["system", "plugin", "list"],
-    ],
-    "system-plugin-manage": [
-        ["system", "plugin", "manage"],
     ],
     "system-power-modes": [
         ["system", "power", "modes"],

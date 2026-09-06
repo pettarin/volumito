@@ -275,7 +275,6 @@ output:
   # - system-plugin-disable
   # - system-plugin-enable
   # - system-plugin-list
-  # - system-plugin-manage
   # - system-power-modes
   # - system-share-discover
   # - system-share-info
@@ -470,9 +469,6 @@ output:
     # Add your own overrides here
 
   system-plugin-list:
-    # Add your own overrides here
-
-  system-plugin-manage:
     # Add your own overrides here
 
   system-power-modes:
