@@ -74,3 +74,8 @@ Thumbs.db
 .claude/
 CLAUDE.md
 PLAN*.md
+
+# graft
+.ignore
+.mcp.json
+/graft/
