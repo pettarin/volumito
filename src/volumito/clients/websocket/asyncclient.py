@@ -1505,8 +1505,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def get_power_modes(self) -> PowerModes:
         """Get the ways the Volumio instance can be powered down.
 
-        A host that reports no standby mode answers :meth:`standby` by powering off
-        instead.
+        A host that reports no standby mode ignores :meth:`standby`.
 
         Returns:
             The power modes of the host
@@ -2767,7 +2766,8 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def standby(self) -> None:
         """Put the Volumio host on standby.
 
-        A host whose :meth:`get_power_modes` report no standby mode powers off instead.
+        A host whose :meth:`get_power_modes` report no standby mode ignores the request,
+        logging that it has no standby handler.
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent

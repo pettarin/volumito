@@ -1074,8 +1074,8 @@ class APIClient(ABC):
     def power_modes(self) -> PowerModes:
         """The ways the Volumio instance can be powered down.
 
-        Each access emits a fresh event. A host that reports no standby mode answers
-        :meth:`standby` by powering off instead.
+        Each access emits a fresh event. A host that reports no standby mode ignores
+        :meth:`standby`.
 
         Returns:
             The power modes of the host
@@ -1491,7 +1491,7 @@ class APIClient(ABC):
     def standby(self) -> None:
         """Put the Volumio host on standby.
 
-        A host whose :attr:`power_modes` report no standby mode powers off instead.
+        A host whose :attr:`power_modes` report no standby mode ignores the request.
         """
 
     @property

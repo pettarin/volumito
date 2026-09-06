@@ -2738,10 +2738,10 @@ def system_power_shutdown(ctx: click.Context, yes: bool) -> None:
 @click.pass_context
 @option_yes
 def system_power_standby(ctx: click.Context, yes: bool) -> None:
-    """Put the Volumio host on standby.
+    """Put the Volumio host on standby, when it has a standby mode.
 
-    IMPORTANT: a host without a standby mode (see "system power modes") powers off
-    instead, and does not come back on its own; the host is put on standby only when
+    A host without a standby mode (see "system power modes") ignores the request, so
+    the command refuses it instead. IMPORTANT: the host is put on standby only when
     -y/--yes is given.
 
     Needs a WebSocket API client.
@@ -2751,7 +2751,8 @@ def system_power_standby(ctx: click.Context, yes: bool) -> None:
         sys.exit(1)
     modes = fetch_or_exit(ctx, lambda c: c.power_modes)
     if not modes.has_standby_mode:
-        warning("The Volumio host reports no standby mode: it powers off instead")
+        error('The Volumio host reports no standby mode (see "system power modes")')
+        sys.exit(1)
     execute_command(ctx, "standby", lambda c: c.standby())
 
 

@@ -6970,22 +6970,22 @@ class TestSystemSettings:
         getattr(mock_client, command).assert_called_once_with()
 
     @pytest.mark.parametrize(
-        ("has_standby_mode", "warned"), [(True, False), (False, True), (None, True)]
+        ("has_standby_mode", "refused"), [(True, False), (False, True), (None, True)]
     )
     def test_power_standby(
-        self, runner: CliRunner, mocker: MockerFixture, has_standby_mode, warned
+        self, runner: CliRunner, mocker: MockerFixture, has_standby_mode, refused
     ):
-        """With -y/--yes the host goes on standby, warned about when it has no such mode."""
+        """With -y/--yes the host goes on standby, unless it reports no such mode."""
         mock_client = self._mock_websocket_client(
             mocker, power_modes={"hasPowerOffMode": True, "hasStandbyMode": has_standby_mode}
         )
 
         result = runner.invoke(main, [*self._WEBSOCKET, "system", "power", "standby", "-y"])
 
-        assert result.exit_code == 0
-        assert "Command 'standby' executed successfully" in result.output
-        assert ("reports no standby mode" in result.output) is warned
-        mock_client.standby.assert_called_once_with()
+        assert result.exit_code == (1 if refused else 0)
+        assert ("Command 'standby' executed successfully" in result.output) is not refused
+        assert ("reports no standby mode" in result.output) is refused
+        assert mock_client.standby.call_count == (0 if refused else 1)
 
     def test_timezone_prints_the_zone(self, runner: CliRunner, mocker: MockerFixture):
         """system timezone alone prints the time zone of the host."""
