@@ -522,6 +522,7 @@ class TestDefaultConfigurationTemplate:
                 "machine-readable": False,
                 "pager": False,
                 "position-starting-at-one": True,
+                "print-resulting-content": True,
                 "print-resulting-status": True,
                 "strict-parsing-configuration-file": False,
                 "verbose": False,
@@ -799,7 +800,12 @@ class TestBuildClickDefaultMap:
                 "list": format_only,
                 "listen": format_only,
             },
-            "playlist": {"content": formatting, "list": format_only},
+            "playlist": {
+                "add": formatting,
+                "content": formatting,
+                "list": format_only,
+                "remove": formatting,
+            },
             "multiroom": {"info": formatting, "set": format_only, "status": format_only},
             "system": {
                 "alarm": {"list": formatting},
@@ -1014,6 +1020,17 @@ class TestBuildClickDefaultMap:
                 "download": {"print_resulting_status": False},
                 "enqueue": {"print_resulting_status": False},
                 "play": {"print_resulting_status": False},
+            },
+        }
+
+    def test_print_resulting_content_replicated_under_playlist_editing_commands(self):
+        """print-resulting-content is nested under playlist add and playlist remove only."""
+        result = build_click_default_map({"output": {"print-resulting-content": False}})
+
+        assert result == {
+            "playlist": {
+                "add": {"print_resulting_content": False},
+                "remove": {"print_resulting_content": False},
             },
         }
 

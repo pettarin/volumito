@@ -318,6 +318,9 @@ EVENT_PONGER = "ponger"
 EVENT_PREVIOUS = "prev"
 """The event going back to the previous track."""
 
+EVENT_PUSH_ADD_TO_PLAYLIST = "pushAddToPlaylist"
+"""The event confirming an item was added to a playlist."""
+
 EVENT_PUSH_ADD_TO_RADIO_FAVOURITES = "pushAddToRadioFavourites"
 """The event confirming a Web radio was made a favourite."""
 

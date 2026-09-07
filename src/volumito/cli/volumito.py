@@ -100,6 +100,7 @@ from volumito.cli.click_helpers import (
     option_playlists_only,
     option_port,
     option_position,
+    option_print_resulting_content,
     option_print_resulting_status,
     option_print_uri,
     option_print_uri_toggle,
@@ -4078,18 +4079,26 @@ def playlist(ctx: click.Context) -> None:
 @click.argument("name", type=str)
 @click.argument("uri", type=str)
 @option_check_playlist_name
+@option_fields
+@option_format
+@option_print_resulting_content
 @option_service_of_uri
 def playlist_add(
     ctx: click.Context,
     name: str,
     uri: str,
     check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    print_resulting_content: bool,
     service: str | None,
 ) -> None:
     """Add the item at URI to the playlist NAME.
 
     A URI comes from "collection browse" or "collection search". The Volumio host
     creates the playlist when it does not exist, which --no-check-playlist-name allows.
+    Once the item is added, the content of the playlist is printed as "playlist
+    content" prints it, unless --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
@@ -4098,6 +4107,8 @@ def playlist_add(
     execute_command(
         ctx, f'add to playlist "{name}"', lambda c: c.add_to_playlist(name, uri, service)
     )
+    if print_resulting_content:
+        _render_playlist_content(ctx, name, fields, output_format)
 
 
 @playlist.command("content")
@@ -4119,16 +4130,7 @@ def playlist_content(
     """
     if check_playlist_name:
         check_playlist_name_or_exit(ctx, name)
-    content = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name))
-    render_tracks(
-        ctx,
-        content.raw,
-        [track.raw for track in content.tracks],
-        fields,
-        output_format,
-        SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
-        f'Volumio Playlist "{name}"',
-    )
+    _render_playlist_content(ctx, name, fields, output_format)
 
 
 @playlist.command("create")
@@ -4229,17 +4231,25 @@ def playlist_play(
 @click.argument("name", type=str)
 @click.argument("uri", type=str)
 @option_check_playlist_name
+@option_fields
+@option_format
+@option_print_resulting_content
 @option_service_of_uri
 def playlist_remove(
     ctx: click.Context,
     name: str,
     uri: str,
     check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    print_resulting_content: bool,
     service: str | None,
 ) -> None:
     """Remove the item at URI from the playlist NAME.
 
-    A URI comes from "playlist content".
+    A URI comes from "playlist content". Once the item is removed, the content of the
+    playlist is printed as "playlist content" prints it, unless
+    --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
@@ -4249,6 +4259,31 @@ def playlist_remove(
         ctx,
         f'remove from playlist "{name}"',
         lambda c: c.remove_from_playlist(name, uri, service),
+    )
+    if print_resulting_content:
+        _render_playlist_content(ctx, name, fields, output_format)
+
+
+def _render_playlist_content(
+    ctx: click.Context, name: str, fields: str, output_format: str
+) -> None:
+    """Read the content of a playlist and print it per the fields/format options.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+    """
+    content = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name))
+    render_tracks(
+        ctx,
+        content.raw,
+        [track.raw for track in content.tracks],
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
+        f'Volumio Playlist "{name}"',
     )
 
 

@@ -80,6 +80,10 @@ All notable changes to this project will be documented in this file.
   and `update_plugin` takes the URL of the package
 - The table of `playback status` lists the audio-quality fields of its short set
 - The short field set of `playlist content` includes the URI of each track
+- `playlist add` and `playlist remove` print the content of the playlist once
+  done, as `playlist content` does, with its `-L/--fields` and `-F/--format`
+  options and a `-r/--print-resulting-content` switch,
+  with the corresponding configuration keys
 - `queue consume`, `queue randomize`, and `queue repeat` without a value print
   the mode instead of toggling it, and print it once set instead of the playback
   status (no `--print-resulting-status` option any more), with a `-F/--format`
@@ -98,6 +102,8 @@ All notable changes to this project will be documented in this file.
   the local library before queueing it, which failed for a single track
 - `set_sleep_timer` and `set_infinity_playback` of the WebSocket clients wait for
   the answer of the host, which a read right after them took as its own
+- `add_to_playlist` and `remove_from_playlist` of the WebSocket clients wait for
+  the answer of the host, so a read of the content right after them is current
 
 
 ## [0.4.0] - 2026-09-04

@@ -1321,7 +1321,13 @@ class TestVolumioWebSocketClientPlaylistEditing:
 
     def test_add_and_remove_an_item(self, mocker: MockerFixture):
         """An item carries the playlist, the URI, and the service it belongs to."""
-        client, fake = _client(mocker)
+        fake = _FakeSocketIOClient(
+            answers={
+                "addToPlaylist": ("pushAddToPlaylist", {}),
+                "removeFromPlaylist": ("pushBrowseLibrary", NAVIGATION_PAYLOAD),
+            }
+        )
+        client, fake = _client(mocker, fake)
 
         client.add_to_playlist("jazz", "qobuz://track/1")
         client.remove_from_playlist("jazz", "mpd://NAS/a.flac")
@@ -1337,9 +1343,24 @@ class TestVolumioWebSocketClientPlaylistEditing:
             ),
         ]
 
+    def test_editing_a_playlist_waits_for_the_answer(self, mocker: MockerFixture):
+        """The pushes the host answers an add and a removal with are waited for."""
+        client, _ = _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.add_to_playlist("jazz", "qobuz://track/1")
+        assert 'did not answer "addToPlaylist" with "pushAddToPlaylist"' in str(excinfo.value)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.remove_from_playlist("jazz", "qobuz://track/1")
+        assert 'did not answer "removeFromPlaylist" with "pushBrowseLibrary"' in str(
+            excinfo.value
+        )
+
     def test_an_explicit_service_wins(self, mocker: MockerFixture):
         """A service given by the caller is not derived from the URI."""
-        client, fake = _client(mocker)
+        fake = _FakeSocketIOClient(answers={"addToPlaylist": ("pushAddToPlaylist", {})})
+        client, fake = _client(mocker, fake)
 
         client.add_to_playlist("jazz", "mpd://a", service="upnp")
 

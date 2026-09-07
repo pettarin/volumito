@@ -10939,8 +10939,11 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         assert "Command 'add to playlist \"Rock\"' executed successfully" in result.output
+        # The resulting content is printed, as "playlist content" prints it
+        assert '"uri": "music-library/a.flac"' in result.output
         mock_client.playlists_property.assert_called_once()
         mock_client.add_to_playlist.assert_called_once_with("Rock", self._URI, service)
+        mock_client.get_playlist_content.assert_called_once_with("Rock")
 
     def test_add_to_a_new_playlist_without_the_check(
         self, runner: CliRunner, mocker: MockerFixture
@@ -10956,6 +10959,46 @@ class TestPlaylistCommands:
         assert result.exit_code == 0
         mock_client.playlists_property.assert_not_called()
         mock_client.add_to_playlist.assert_called_once_with("New", self._URI, None)
+        mock_client.get_playlist_content.assert_called_once_with("New")
+
+    @pytest.mark.parametrize("command", ["add", "remove"])
+    def test_editing_without_the_resulting_content(
+        self, runner: CliRunner, mocker: MockerFixture, command
+    ):
+        """--no-print-resulting-content skips the content print after the edit."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                command,
+                "Rock",
+                self._URI,
+                "--no-print-resulting-content",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "executed successfully" in result.output
+        assert '"uri"' not in result.output
+        mock_client.get_playlist_content.assert_not_called()
+
+    def test_editing_prints_the_resulting_content_as_a_table(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F table heads the resulting content with the name of the playlist."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", self._URI, "-F", "table"]
+        )
+
+        assert result.exit_code == 0
+        assert 'Volumio Playlist "Rock"' in result.output
+        assert "   URI    : music-library/a.flac" in result.output
+        mock_client.remove_from_playlist.assert_called_once_with("Rock", self._URI, None)
 
     @pytest.mark.parametrize(
         "arguments",
@@ -11176,8 +11219,11 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         assert "Command 'remove from playlist \"Rock\"' executed successfully" in result.output
+        # The resulting content is printed, as "playlist content" prints it
+        assert '"uri": "music-library/a.flac"' in result.output
         mock_client.playlists_property.assert_called_once()
         mock_client.remove_from_playlist.assert_called_once_with("Rock", self._URI, service)
+        mock_client.get_playlist_content.assert_called_once_with("Rock")
 
     @pytest.mark.parametrize(
         "arguments",
@@ -17866,6 +17912,33 @@ class TestConfigurationFile:
         assert statistics_result.exit_code == 0
         assert "Collection Statistics" in statistics_result.output
 
+    def test_print_resulting_content_from_config(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The output section can disable the resulting-content print for playlist edits."""
+        mock_client = mocker.Mock()
+        mocker.patch("volumito.cli.click_helpers.VolumioWebSocketClient", return_value=mock_client)
+        config = self._write_config(tmp_path, "output:\n  print-resulting-content: false\n")
+
+        result = runner.invoke(
+            main,
+            [
+                "-c",
+                config,
+                "-C",
+                "synchronous_websocket",
+                "playlist",
+                "add",
+                "Rock",
+                "qobuz://track/3",
+                "--no-check-playlist-name",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.add_to_playlist.assert_called_once_with("Rock", "qobuz://track/3", None)
+        mock_client.get_playlist_content.assert_not_called()
+
     def test_print_resulting_status_from_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -18377,6 +18450,7 @@ class TestConfigurationCommands:
                     "machine-readable": False,
                     "pager": False,
                     "position-starting-at-one": True,
+                    "print-resulting-content": True,
                     "print-resulting-status": True,
                     "strict-parsing-configuration-file": False,
                     "verbose": False,

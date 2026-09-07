@@ -64,6 +64,12 @@ CONFIGURATION_FILENAMES: list[str] = [
 ]
 """Configuration file names tried within each directory, in this order."""
 
+CONTENT_COMMAND_PATHS: list[list[str]] = [
+    ["playlist", "add"],
+    ["playlist", "remove"],
+]
+"""--print-resulting-content lives on the playlist editing commands."""
+
 DEFAULT_CONFIGURATION_TEMPLATE: str = "volumito.yaml.template"
 """File name of the packaged default-configuration template (in the cli "res" directory)."""
 
@@ -200,7 +206,9 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["playback", "status"],
     ],
     "playlist-content": [
+        ["playlist", "add"],
         ["playlist", "content"],
+        ["playlist", "remove"],
     ],
     "playlist-list": [
         ["playlist", "list"],
@@ -418,12 +426,14 @@ OUTPUT_SCALAR_KEYS: list[str] = [
     "fields",
     "format",
     "print-resulting-status",
+    "print-resulting-content",
 ]
 """The "output" section is hierarchical: its scalar keys are shared, and optional
 per-command subsections override the display keys (fields/format). color, verbose,
 machine-readable, position-starting-at-one, pager, and
 strict-parsing-configuration-file are global; print-resulting-status applies to the
-playback and queue action commands.
+playback and queue action commands, and print-resulting-content to the playlist
+editing ones.
 """
 
 NOTIFICATION_KEY_PATHS: dict[str, list[list[str]]] = {
@@ -709,6 +719,9 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
             result[_param_name(key)] = value
         elif key == "print-resulting-status":
             for command_path in ACTION_COMMAND_PATHS:
+                _assign_nested(result, command_path, _param_name(key), value)
+        elif key == "print-resulting-content":
+            for command_path in CONTENT_COMMAND_PATHS:
                 _assign_nested(result, command_path, _param_name(key), value)
     shared_display = {k: v for k, v in output.items() if k in DISPLAY_KEYS}
     _apply_hierarchical(

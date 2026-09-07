@@ -2131,6 +2131,17 @@ def option_position(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_print_resulting_content(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--print-resulting-content`` option to a playlist editing subcommand."""
+    return click.option(
+        "--print-resulting-content/--no-print-resulting-content",
+        "-r",
+        default=True,
+        show_default=True,
+        help="After executing the command, print the resulting content of the playlist.",
+    )(func)
+
+
 def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--print-resulting-status`` option to a playback subcommand."""
     return click.option(

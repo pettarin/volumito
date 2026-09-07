@@ -157,6 +157,8 @@ from volumito.clients.websocket.common import (
     EVENT_PLAY_RADIO_FAVOURITES,
     EVENT_PLUGIN_MANAGER,
     EVENT_PREVIOUS,
+    EVENT_PUSH_ADD_TO_PLAYLIST,
+    EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_PUSH_INFINITY_PLAYBACK,
     EVENT_PUSH_SLEEP,
     EVENT_REBOOT,
@@ -620,6 +622,9 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     ) -> None:
         """Add an item to a saved playlist, creating the playlist if it does not exist.
 
+        The host answers once the item is written, with a push of its own that is
+        waited for and dropped: :meth:`get_playlist_content` right after sees the item.
+
         Args:
             name: The name of the playlist, or the playlist itself
             uri: The URI of the item to add, from a browse or a search
@@ -627,9 +632,14 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
         Raises:
             ValueError: If the given playlist has no name
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_ADD_TO_PLAYLIST, self._playlist_item_payload(name, uri, service))
+        self._request(
+            EVENT_ADD_TO_PLAYLIST,
+            EVENT_PUSH_ADD_TO_PLAYLIST,
+            self._playlist_item_payload(name, uri, service),
+        )
 
     def add_to_queue(self, uri: str) -> None:
         """Add the content of a URI to the end of the queue, without touching playback.
@@ -2090,6 +2100,11 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     ) -> None:
         """Remove an item from a saved playlist.
 
+        The host answers once the item is removed, with the listing of the playlist as
+        the push a browse is answered by, which is waited for and dropped:
+        :meth:`get_playlist_content` right after sees the removal, and a browse right
+        after is answered by its own push.
+
         Args:
             name: The name of the playlist, or the playlist itself
             uri: The URI of the item to remove
@@ -2097,9 +2112,14 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
         Raises:
             ValueError: If the given playlist has no name
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_REMOVE_FROM_PLAYLIST, self._playlist_item_payload(name, uri, service))
+        self._request(
+            EVENT_REMOVE_FROM_PLAYLIST,
+            EVENT_PUSH_BROWSE_LIBRARY,
+            self._playlist_item_payload(name, uri, service),
+        )
 
     def remove_from_queue(self, position: int) -> None:
         """Remove a track from the queue.
