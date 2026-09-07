@@ -9784,7 +9784,31 @@ class TestCollectionFavouriteAndRadio:
 
         assert result.exit_code == 0
         assert "Command 'add web radio \"Radio Tre\"' executed successfully" in result.output
+        # The Web radios are then listed, as "collection radio list" lists them
+        assert "1. Radio Uno" in result.output
         mock_client.add_web_radio.assert_called_once_with("Radio Tre", self._STREAM)
+        mock_client.browse.assert_called_once_with("radio/myWebRadio")
+
+    def test_radio_add_without_the_list(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-list skips the listing after the save."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "collection",
+                "radio",
+                "add",
+                "Radio Tre",
+                self._STREAM,
+                "--no-print-resulting-list",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Radio Uno" not in result.output
+        mock_client.browse.assert_not_called()
 
     def test_radio_remove(self, runner: CliRunner, mocker: MockerFixture):
         """collection radio remove deletes the Web radio saved under the name."""
@@ -9797,7 +9821,29 @@ class TestCollectionFavouriteAndRadio:
         assert result.exit_code == 0
         assert "Command 'remove web radio \"Radio Tre\"' executed successfully" in result.output
         mock_client.remove_web_radio.assert_called_once_with("Radio Tre")
-        # The Web radios are read again, to check that the radio is gone
+        # The Web radios are read again to check that the radio is gone, then listed
+        assert mock_client.browse.call_count == 2
+        assert "1. Radio Uno" in result.output
+
+    def test_radio_remove_without_the_list(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-list keeps the check, and skips the listing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "collection",
+                "radio",
+                "remove",
+                "Radio Tre",
+                "--no-print-resulting-list",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Radio Uno" not in result.output
+        # The check still reads the Web radios once
         mock_client.browse.assert_called_once_with("radio/myWebRadio")
 
     def test_radio_remove_still_listed(self, runner: CliRunner, mocker: MockerFixture):
@@ -9832,6 +9878,8 @@ class TestCollectionFavouriteAndRadio:
             in result.output
         )
         mock_client.remove_web_radio.assert_called_once_with("Radio Tre")
+        # No listing follows a failed removal
+        mock_client.browse.assert_called_once_with("radio/myWebRadio")
 
     @pytest.mark.parametrize(
         "arguments",
@@ -18319,6 +18367,33 @@ class TestConfigurationFile:
         mock_client.add_to_playlist.assert_called_once_with("Rock", "qobuz://track/3", None)
         mock_client.get_playlist_content.assert_not_called()
 
+    def test_print_resulting_list_from_config(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The output section can disable the listing after a Web radio edit."""
+        mock_client = mocker.Mock()
+        mocker.patch("volumito.cli.click_helpers.VolumioWebSocketClient", return_value=mock_client)
+        config = self._write_config(tmp_path, "output:\n  print-resulting-list: false\n")
+
+        result = runner.invoke(
+            main,
+            [
+                "-c",
+                config,
+                "-C",
+                "synchronous_websocket",
+                "collection",
+                "radio",
+                "add",
+                "Radio Tre",
+                "http://radio.example/tre",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.add_web_radio.assert_called_once_with("Radio Tre", "http://radio.example/tre")
+        mock_client.browse.assert_not_called()
+
     def test_print_resulting_status_from_config(
         self, runner: CliRunner, mocker: MockerFixture, tmp_path
     ):
@@ -18831,6 +18906,7 @@ class TestConfigurationCommands:
                     "pager": False,
                     "position-starting-at-one": True,
                     "print-resulting-content": True,
+                    "print-resulting-list": True,
                     "print-resulting-status": True,
                     "strict-parsing-configuration-file": False,
                     "verbose": False,

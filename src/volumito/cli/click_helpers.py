@@ -2190,6 +2190,17 @@ def option_print_resulting_content(func: Callable[..., None]) -> Callable[..., N
     )(func)
 
 
+def option_print_resulting_list(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--print-resulting-list`` option to a Web radio editing subcommand."""
+    return click.option(
+        "--print-resulting-list/--no-print-resulting-list",
+        "-r",
+        default=True,
+        show_default=True,
+        help="After executing the command, print the resulting list of Web radios.",
+    )(func)
+
+
 def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--print-resulting-status`` option to a playback subcommand."""
     return click.option(

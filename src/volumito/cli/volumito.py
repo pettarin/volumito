@@ -104,6 +104,7 @@ from volumito.cli.click_helpers import (
     option_port,
     option_position,
     option_print_resulting_content,
+    option_print_resulting_list,
     option_print_resulting_status,
     option_print_uri,
     option_print_uri_toggle,
@@ -3685,12 +3686,31 @@ def radio(ctx: click.Context) -> None:
 @click.pass_context
 @click.argument("name", type=str)
 @click.argument("uri", type=str)
-def radio_add(ctx: click.Context, name: str, uri: str) -> None:
+@option_format_table
+@option_limit
+@option_offset
+@option_print_resulting_list
+@option_print_uri_toggle
+def radio_add(
+    ctx: click.Context,
+    name: str,
+    uri: str,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_resulting_list: bool,
+    print_uri: bool,
+) -> None:
     """Save the Web radio streaming from URI under NAME.
+
+    Once the radio is saved, the Web radios are listed as "collection radio list"
+    lists them, unless --no-print-resulting-list.
 
     Needs a WebSocket API client.
     """
     execute_command(ctx, f'add web radio "{name}"', lambda c: c.add_web_radio(name, uri))
+    if print_resulting_list:
+        _render_web_radios(ctx, output_format, limit, offset, print_uri)
 
 
 @radio.command("list")
@@ -3711,21 +3731,33 @@ def radio_list(
     A convenience over "collection browse" of the URI the Web radios are listed at,
     printed the same way; works with any API client.
     """
-    results = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, offset))
-    if limit is not None:
-        results = results.limited(limit)
-    render_browse_results(ctx, results, output_format, print_uri)
+    _render_web_radios(ctx, output_format, limit, offset, print_uri)
 
 
 @radio.command("remove")
 @click.pass_context
 @click.argument("name", type=str)
-def radio_remove(ctx: click.Context, name: str) -> None:
+@option_format_table
+@option_limit
+@option_offset
+@option_print_resulting_list
+@option_print_uri_toggle
+def radio_remove(
+    ctx: click.Context,
+    name: str,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_resulting_list: bool,
+    print_uri: bool,
+) -> None:
     """Delete the Web radio saved under NAME.
 
     The Web radios are read again once the host answers: a radio it still lists is
     reported as an error, which happens on a MyVolumio cloud device asked to remove
-    its last Web radio, since it does not save an empty list.
+    its last Web radio, since it does not save an empty list. Otherwise, the Web
+    radios are listed as "collection radio list" lists them, unless
+    --no-print-resulting-list.
 
     Needs a WebSocket API client.
     """
@@ -3734,6 +3766,30 @@ def radio_remove(ctx: click.Context, name: str) -> None:
     if any(item.title == name for item in listed.items):
         error(RADIO_REMOVE_STILL_LISTED_ERROR.format(name=name))
         sys.exit(1)
+    if print_resulting_list:
+        _render_web_radios(ctx, output_format, limit, offset, print_uri)
+
+
+def _render_web_radios(
+    ctx: click.Context,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_uri: bool,
+) -> None:
+    """Read the Web radios of the user and print them as a browse prints its results.
+
+    Args:
+        ctx: Click context object holding the shared options
+        output_format: The -F/--format option value
+        limit: The -l/--limit option value, None for every radio
+        offset: The -o/--offset option value, None for the first radio on
+        print_uri: Whether to print the URL of each radio under its line
+    """
+    results = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, offset))
+    if limit is not None:
+        results = results.limited(limit)
+    render_browse_results(ctx, results, output_format, print_uri)
 
 
 @collection.command("search")

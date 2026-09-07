@@ -94,6 +94,9 @@ All notable changes to this project will be documented in this file.
   done, as `playlist content` does, with its `-L/--fields` and `-F/--format`
   options and a `-r/--print-resulting-content` switch,
   with the corresponding configuration keys
+- `collection radio add` and `collection radio remove` list the Web radios once
+  done, as `collection radio list` does, with its options
+  and a `-r/--print-resulting-list` switch, with the corresponding configuration keys
 - `queue consume`, `queue randomize`, and `queue repeat` without a value print
   the mode instead of toggling it, and print it once set instead of the playback
   status (no `--print-resulting-status` option any more), with a `-F/--format`

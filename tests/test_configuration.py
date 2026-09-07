@@ -523,6 +523,7 @@ class TestDefaultConfigurationTemplate:
                 "pager": False,
                 "position-starting-at-one": True,
                 "print-resulting-content": True,
+                "print-resulting-list": True,
                 "print-resulting-status": True,
                 "strict-parsing-configuration-file": False,
                 "verbose": False,
@@ -841,7 +842,7 @@ class TestBuildClickDefaultMap:
             "collection": {
                 "browse": format_only,
                 "favourite": {"list": format_only},
-                "radio": {"list": format_only},
+                "radio": {"add": format_only, "list": format_only, "remove": format_only},
                 "search": format_only,
                 "source": {"list": formatting},
                 "statistics": format_only,
@@ -1029,6 +1030,19 @@ class TestBuildClickDefaultMap:
             "playlist": {
                 "add": {"print_resulting_content": False},
                 "remove": {"print_resulting_content": False},
+            },
+        }
+
+    def test_print_resulting_list_replicated_under_web_radio_commands(self):
+        """print-resulting-list is nested under collection radio add and remove only."""
+        result = build_click_default_map({"output": {"print-resulting-list": False}})
+
+        assert result == {
+            "collection": {
+                "radio": {
+                    "add": {"print_resulting_list": False},
+                    "remove": {"print_resulting_list": False},
+                },
             },
         }
 
