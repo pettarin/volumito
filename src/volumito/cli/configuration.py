@@ -42,11 +42,8 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
         for name in (
             "add",
             "clear",
-            "consume",
             "move",
-            "randomize",
             "remove",
-            "repeat",
             "replace",
         )
     ]
@@ -88,7 +85,10 @@ DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "playback-status": DISPLAY_KEYS,
     "system-update-check": FORMAT_KEYS,
     "track-info": DISPLAY_KEYS,
+    "queue-consume": FORMAT_KEYS,
     "queue-list": DISPLAY_KEYS,
+    "queue-randomize": FORMAT_KEYS,
+    "queue-repeat": FORMAT_KEYS,
     "queue-status": DISPLAY_KEYS,
     "playlist-content": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
@@ -205,8 +205,17 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "playlist-list": [
         ["playlist", "list"],
     ],
+    "queue-consume": [
+        ["queue", "consume"],
+    ],
     "queue-list": [
         ["queue", "list"],
+    ],
+    "queue-randomize": [
+        ["queue", "randomize"],
+    ],
+    "queue-repeat": [
+        ["queue", "repeat"],
     ],
     "queue-status": [
         ["queue", "status"],

@@ -345,10 +345,6 @@ class TestFilterFields:
             "duration": 180,
             "volume": 100,
             "mute": False,
-            "random": True,
-            "repeat": False,
-            "repeatSingle": False,
-            "consume": True,
             "extra": "data",
         }
 
@@ -362,12 +358,6 @@ class TestFilterFields:
         # volume and mute are part of the short field set
         assert "volume" in result
         assert "mute" in result
-
-        # The playback modes are part of the short field set
-        assert result["random"] is True
-        assert result["repeat"] is False
-        assert result["repeatSingle"] is False
-        assert result["consume"] is True
 
         # Audio-quality fields are now part of the short field set
         assert "samplerate" in result
@@ -588,14 +578,10 @@ class TestFormatFunctions:
         assert "Test" in result
 
     def test_format_as_table_short_set_labels(self):
-        """The short set is labelled through its playback modes and audio-quality fields."""
+        """The short set is labelled through its audio-quality fields."""
         state = {
             "status": "play",
             "mute": False,
-            "random": True,
-            "repeat": False,
-            "repeatSingle": False,
-            "consume": True,
             "trackType": "flac",
             "samplerate": "44.1 kHz",
             "bitdepth": "16 bit",
@@ -604,10 +590,6 @@ class TestFormatFunctions:
 
         result = format_as_table(state)
 
-        assert f"{'Random':20}: True" in result
-        assert f"{'Repeat':20}: False" in result
-        assert f"{'Repeatsingle':20}: False" in result
-        assert f"{'Consume':20}: True" in result
         assert f"{'Tracktype':20}: flac" in result
         assert f"{'Samplerate':20}: 44.1 kHz" in result
         assert f"{'Bitdepth':20}: 16 bit" in result
@@ -15312,6 +15294,9 @@ class TestQueueActions:
             "title": "Test Song",
             "artist": "StatusMarkerArtist",
             "status": "stop",
+            "random": False,
+            "repeat": True,
+            "repeatSingle": False,
         })
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
@@ -15434,15 +15419,33 @@ class TestQueueActions:
         # One sleep between clear and stop, one before each of the first two reads
         assert mock_sleep.call_count == 3
 
-    def test_repeat_toggle(self, runner: CliRunner, mocker: MockerFixture):
-        """queue repeat with no value toggles the repeat mode (None passed to the client)."""
-        mock_client, _ = self._mock_client(mocker)
+    def test_repeat_prints_the_mode(self, runner: CliRunner, mocker: MockerFixture):
+        """queue repeat with no value prints the repeat mode, read off the state."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+        _attach_property(
+            mock_client, "state", return_value={"repeat": True, "repeatSingle": False}
+        )
 
-        result = runner.invoke(main, ["queue", "repeat", "--no-print-resulting-status"])
+        result = runner.invoke(main, ["queue", "repeat"])
 
         assert result.exit_code == 0
-        assert "Command 'repeat' executed successfully" in result.output
-        mock_client.repeat.assert_called_once_with(None)
+        assert json.loads(result.output) == {"repeat": True, "repeatSingle": False}
+        mock_client.repeat.assert_not_called()
+        mock_sleep.assert_not_called()
+
+    def test_repeat_prints_the_mode_as_a_table(self, runner: CliRunner, mocker: MockerFixture):
+        """-F table heads the repeat mode fields."""
+        mock_client, _ = self._mock_client(mocker)
+        _attach_property(
+            mock_client, "state", return_value={"repeat": False, "repeatSingle": True}
+        )
+
+        result = runner.invoke(main, ["queue", "repeat", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Repeat Mode" in result.output
+        assert f"{'Repeat':20}: False" in result.output
+        assert f"{'Repeatsingle':20}: True" in result.output
 
     @pytest.mark.parametrize(
         ("spelling", "expected"),
@@ -15460,36 +15463,52 @@ class TestQueueActions:
     def test_repeat_with_value(
         self, runner: CliRunner, mocker: MockerFixture, spelling, expected
     ):
-        """queue repeat accepts on/true/yes/1 and off/false/no/0 to set the mode explicitly."""
-        mock_client, _ = self._mock_client(mocker)
+        """queue repeat accepts on/true/yes/1 and off/false/no/0, then prints the mode."""
+        mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(
-            main, ["queue", "repeat", spelling, "--no-print-resulting-status"]
-        )
+        result = runner.invoke(main, ["queue", "repeat", spelling])
 
+        label = "on" if expected else "off"
         assert result.exit_code == 0
+        assert f"Command 'repeat {label}' executed successfully" in result.output
+        assert '"repeat": true' in result.output
+        assert "StatusMarkerArtist" not in result.output
         mock_client.repeat.assert_called_once_with(expected)
+        mock_client.state_property.assert_called_once()
+        mock_sleep.assert_not_called()
 
     def test_repeat_invalid_value(self, runner: CliRunner, mocker: MockerFixture):
         """queue repeat rejects a value that is not an accepted on/off spelling."""
         self._mock_client(mocker)
 
-        result = runner.invoke(
-            main, ["queue", "repeat", "maybe", "--no-print-resulting-status"]
-        )
+        result = runner.invoke(main, ["queue", "repeat", "maybe"])
 
         assert result.exit_code == 2
         assert "must be one of" in result.output
 
-    def test_randomize_toggle(self, runner: CliRunner, mocker: MockerFixture):
-        """queue randomize with no value toggles the random mode (None passed to the client)."""
-        mock_client, _ = self._mock_client(mocker)
+    def test_randomize_prints_the_mode(self, runner: CliRunner, mocker: MockerFixture):
+        """queue randomize with no value prints the random mode, read off the state."""
+        mock_client, mock_sleep = self._mock_client(mocker)
+        _attach_property(mock_client, "state", return_value={"random": True})
 
-        result = runner.invoke(main, ["queue", "randomize", "--no-print-resulting-status"])
+        result = runner.invoke(main, ["queue", "randomize"])
 
         assert result.exit_code == 0
-        assert "Command 'randomize' executed successfully" in result.output
-        mock_client.randomize.assert_called_once_with(None)
+        assert json.loads(result.output) == {"random": True}
+        mock_client.randomize.assert_not_called()
+        mock_sleep.assert_not_called()
+
+    def test_randomize_prints_the_mode_as_a_table(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """-F table heads the random mode field."""
+        self._mock_client(mocker)
+
+        result = runner.invoke(main, ["queue", "randomize", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Random Mode" in result.output
+        assert "Random" in result.output
 
     @pytest.mark.parametrize(
         ("spelling", "expected"),
@@ -15507,26 +15526,19 @@ class TestQueueActions:
     def test_randomize_with_value(
         self, runner: CliRunner, mocker: MockerFixture, spelling, expected
     ):
-        """queue randomize accepts on/true/yes/1 and off/false/no/0 to set the mode explicitly."""
-        mock_client, _ = self._mock_client(mocker)
-
-        result = runner.invoke(
-            main, ["queue", "randomize", spelling, "--no-print-resulting-status"]
-        )
-
-        assert result.exit_code == 0
-        mock_client.randomize.assert_called_once_with(expected)
-
-    def test_short_flag_prints_resulting_status(self, runner: CliRunner, mocker: MockerFixture):
-        """The -r short flag prints the resulting playback status after the action."""
+        """queue randomize accepts on/true/yes/1 and off/false/no/0, then prints the mode."""
         mock_client, mock_sleep = self._mock_client(mocker)
 
-        result = runner.invoke(main, ["queue", "repeat", "-r"])
+        result = runner.invoke(main, ["queue", "randomize", spelling])
 
+        label = "on" if expected else "off"
         assert result.exit_code == 0
-        assert "StatusMarkerArtist" in result.output
+        assert f"Command 'randomize {label}' executed successfully" in result.output
+        assert '"random": false' in result.output
+        assert "StatusMarkerArtist" not in result.output
+        mock_client.randomize.assert_called_once_with(expected)
         mock_client.state_property.assert_called_once()
-        mock_sleep.assert_called_once_with(2.0)
+        mock_sleep.assert_not_called()
 
     def test_machine_readable_suppresses_success_message(
         self, runner: CliRunner, mocker: MockerFixture
@@ -16404,33 +16416,44 @@ class TestQueueEditing:
     def test_consume_with_value(
         self, runner: CliRunner, mocker: MockerFixture, spelling, expected
     ):
-        """queue consume on/off sets the mode without reading the state."""
-        mock_client = self._mock_websocket_client(mocker)
+        """queue consume on/off sets the mode, then prints it off the state."""
+        mock_client = self._mock_websocket_client(mocker, consume=expected)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "queue", "consume", spelling, *self._NO_STATUS]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "consume", spelling])
 
         assert result.exit_code == 0
         assert f"Command 'consume {spelling}' executed successfully" in result.output
-        mock_client.consume.assert_called_once_with(expected)
-        mock_client.state_property.assert_not_called()
-
-    @pytest.mark.parametrize(
-        ("current", "expected"), [(True, False), (False, True), (None, True)]
-    )
-    def test_consume_toggles_after_reading_the_state(
-        self, runner: CliRunner, mocker: MockerFixture, current, expected
-    ):
-        """Without a value, the mode read from the state is inverted."""
-        mock_client = self._mock_websocket_client(mocker, consume=current)
-
-        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "consume", *self._NO_STATUS])
-
-        assert result.exit_code == 0
-        assert "Command 'consume' executed successfully" in result.output
+        assert f'"consume": {json.dumps(expected)}' in result.output
+        assert "StatusMarkerArtist" not in result.output
         mock_client.consume.assert_called_once_with(expected)
         mock_client.state_property.assert_called_once()
+
+    @pytest.mark.parametrize("current", [True, False, None])
+    def test_consume_prints_the_mode(
+        self, runner: CliRunner, mocker: MockerFixture, current
+    ):
+        """Without a value, the mode read from the state is printed, not inverted."""
+        mock_client = self._mock_websocket_client(mocker, consume=current)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "consume"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output) == {"consume": current}
+        mock_client.consume.assert_not_called()
+        mock_client.state_property.assert_called_once()
+
+    def test_consume_prints_the_mode_with_a_rest_client(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Printing the mode reads the state, which the REST API client offers too."""
+        mock_client = self._mock_rest_client(mocker)
+
+        result = runner.invoke(main, ["queue", "consume", "-F", "table"])
+
+        assert result.exit_code == 0
+        assert "Volumio Consume Mode" in result.output
+        assert f"{'Consume':20}: False" in result.output
+        mock_client.consume.assert_not_called()
 
     def test_move_positions_starting_at_one(self, runner: CliRunner, mocker: MockerFixture):
         """The one-based positions of the user reach the client 0-based."""
@@ -16521,7 +16544,7 @@ class TestQueueEditing:
             ["add", URI, "--next", "--no-print-resulting-status"],
             ["add", URI, "--cue-track", "1", "--no-print-resulting-status"],
             ["add", "12", "--by-uid", "--no-print-resulting-status"],
-            ["consume", "on", "--no-print-resulting-status"],
+            ["consume", "on"],
             ["move", "1", "2", "--no-print-resulting-status"],
             ["remove", "1", "--no-print-resulting-status"],
             ["save", "name"],
@@ -18360,7 +18383,10 @@ class TestConfigurationCommands:
                     "playback-status": None,
                     "playlist-content": None,
                     "playlist-list": None,
+                    "queue-consume": None,
                     "queue-list": None,
+                    "queue-randomize": None,
+                    "queue-repeat": None,
                     "queue-status": None,
                     "story-album": None,
                     "story-artist": None,

@@ -1794,31 +1794,36 @@ def clear(ctx: click.Context, print_resulting_status: bool) -> None:
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@option_print_resulting_status
-def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the repeat mode.
+@option_format
+def repeat(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the repeat mode.
 
-    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
-    or "off"/"false"/"no"/"0".
+    Without VALUE, print whether the repeat mode is on, and whether it repeats the
+    current track only. Otherwise VALUE is "on"/"true"/"yes"/"1" or
+    "off"/"false"/"no"/"0", and the mode is printed once set.
     """
-    label = "repeat" if value is None else f"repeat {'on' if value else 'off'}"
-    execute_command(ctx, label, lambda c: c.repeat(value))
-    execute_conditionally(ctx, print_resulting_status, playback_status)
+    if value is not None:
+        mode = value
+        execute_command(ctx, f"repeat {'on' if mode else 'off'}", lambda c: c.repeat(mode))
+    _render_playback_mode(ctx, output_format, "Volumio Repeat Mode", "repeat", "repeatSingle")
 
 
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@option_print_resulting_status
-def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the random (shuffle) mode.
+@option_format
+def randomize(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the random (shuffle) mode.
 
-    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
-    or "off"/"false"/"no"/"0".
+    Without VALUE, print whether the random mode is on. Otherwise VALUE is
+    "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0", and the mode is printed once set.
     """
-    label = "randomize" if value is None else f"randomize {'on' if value else 'off'}"
-    execute_command(ctx, label, lambda c: c.randomize(value))
-    execute_conditionally(ctx, print_resulting_status, playback_status)
+    if value is not None:
+        mode = value
+        execute_command(
+            ctx, f"randomize {'on' if mode else 'off'}", lambda c: c.randomize(mode)
+        )
+    _render_playback_mode(ctx, output_format, "Volumio Random Mode", "random")
 
 
 @queue.command()
@@ -1883,24 +1888,34 @@ def add(
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@option_print_resulting_status
-def consume(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the consume mode, dropping each track from the queue once played.
+@option_format
+def consume(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the consume mode, which drops each track from the queue once played.
 
-    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
-    or "off"/"false"/"no"/"0".
+    Without VALUE, print whether the consume mode is on. Otherwise VALUE is
+    "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0", and the mode is printed once set.
 
-    Needs a WebSocket API client.
+    Setting the mode needs a WebSocket API client.
     """
-    if value is None:
-        # The API only sets the mode: toggling it means reading the current one first
-        mode = not fetch_state_or_exit(ctx).consume
-        label = "consume"
-    else:
+    if value is not None:
         mode = value
-        label = f"consume {'on' if value else 'off'}"
-    execute_command(ctx, label, lambda c: c.consume(mode))
-    execute_conditionally(ctx, print_resulting_status, playback_status)
+        execute_command(ctx, f"consume {'on' if mode else 'off'}", lambda c: c.consume(mode))
+    _render_playback_mode(ctx, output_format, "Volumio Consume Mode", "consume")
+
+
+def _render_playback_mode(
+    ctx: click.Context, output_format: str, heading: str, *fields: str
+) -> None:
+    """Read the playback state and print the given fields of it, a playback mode.
+
+    Args:
+        ctx: Click context object holding the shared options
+        output_format: The output format ("json", "pretty", "raw", or "table")
+        heading: The heading of the table format
+        fields: The keys of the state to print, as the host names them
+    """
+    state = fetch_state_or_exit(ctx).raw
+    render_payload(ctx, {field: state.get(field) for field in fields}, output_format, heading)
 
 
 @queue.command()

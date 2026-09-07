@@ -786,7 +786,14 @@ class TestBuildClickDefaultMap:
             "playback": {"infinity": format_only, "sleep": format_only, "status": formatting},
             # "track" is the top-level synonym of "queue track"
             "track": {"info": formatting},
-            "queue": {"list": formatting, "status": formatting, "track": {"info": formatting}},
+            "queue": {
+                "consume": format_only,
+                "list": formatting,
+                "randomize": format_only,
+                "repeat": format_only,
+                "status": formatting,
+                "track": {"info": formatting},
+            },
             "notification": {
                 "event": {"listen": format_only, "request": format_only},
                 "list": format_only,
@@ -999,11 +1006,8 @@ class TestBuildClickDefaultMap:
             "queue": {
                 "add": {"print_resulting_status": False},
                 "clear": {"print_resulting_status": False},
-                "consume": {"print_resulting_status": False},
                 "move": {"print_resulting_status": False},
-                "randomize": {"print_resulting_status": False},
                 "remove": {"print_resulting_status": False},
-                "repeat": {"print_resulting_status": False},
                 "replace": {"print_resulting_status": False},
             },
             "playlist": {

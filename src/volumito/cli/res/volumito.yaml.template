@@ -254,7 +254,10 @@ output:
   # - playback-status
   # - playlist-content
   # - playlist-list
+  # - queue-consume
   # - queue-list
+  # - queue-randomize
+  # - queue-repeat
   # - queue-status
   # - story-album
   # - story-artist
@@ -408,7 +411,16 @@ output:
   playlist-list:
     # Add your own overrides here
 
+  queue-consume:
+    # Add your own overrides here
+
   queue-list:
+    # Add your own overrides here
+
+  queue-randomize:
+    # Add your own overrides here
+
+  queue-repeat:
     # Add your own overrides here
 
   queue-status:
