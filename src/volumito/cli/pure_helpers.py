@@ -402,6 +402,14 @@ def format_as_table(
             ("Seek", "seek"),
             ("Volume", "volume"),
             ("Mute", "mute"),
+            ("Random", "random"),
+            ("Repeat", "repeat"),
+            ("Repeatsingle", "repeatSingle"),
+            ("Consume", "consume"),
+            ("Tracktype", "trackType"),
+            ("Samplerate", "samplerate"),
+            ("Bitdepth", "bitdepth"),
+            ("Channels", "channels"),
         ]
     else:
         # Display all fields from the state

@@ -345,6 +345,10 @@ class TestFilterFields:
             "duration": 180,
             "volume": 100,
             "mute": False,
+            "random": True,
+            "repeat": False,
+            "repeatSingle": False,
+            "consume": True,
             "extra": "data",
         }
 
@@ -358,6 +362,12 @@ class TestFilterFields:
         # volume and mute are part of the short field set
         assert "volume" in result
         assert "mute" in result
+
+        # The playback modes are part of the short field set
+        assert result["random"] is True
+        assert result["repeat"] is False
+        assert result["repeatSingle"] is False
+        assert result["consume"] is True
 
         # Audio-quality fields are now part of the short field set
         assert "samplerate" in result
@@ -576,6 +586,32 @@ class TestFormatFunctions:
 
         assert "Volumio Status" in result
         assert "Test" in result
+
+    def test_format_as_table_short_set_labels(self):
+        """The short set is labelled through its playback modes and audio-quality fields."""
+        state = {
+            "status": "play",
+            "mute": False,
+            "random": True,
+            "repeat": False,
+            "repeatSingle": False,
+            "consume": True,
+            "trackType": "flac",
+            "samplerate": "44.1 kHz",
+            "bitdepth": "16 bit",
+            "channels": 2,
+        }
+
+        result = format_as_table(state)
+
+        assert f"{'Random':20}: True" in result
+        assert f"{'Repeat':20}: False" in result
+        assert f"{'Repeatsingle':20}: False" in result
+        assert f"{'Consume':20}: True" in result
+        assert f"{'Tracktype':20}: flac" in result
+        assert f"{'Samplerate':20}: 44.1 kHz" in result
+        assert f"{'Bitdepth':20}: 16 bit" in result
+        assert f"{'Channels':20}: 2" in result
 
     def test_format_as_table_duration(self):
         """Test format_as_table renders duration (seconds) as HH:MM:SS."""

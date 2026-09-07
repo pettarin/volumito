@@ -78,6 +78,9 @@ All notable changes to this project will be documented in this file.
 - `set_output_device` of the WebSocket clients no longer takes a mixer
 - `modify_plugin_status` of the WebSocket clients starts or stops the plugin,
   and `update_plugin` takes the URL of the package
+- The short field set of `playback status`, which `--print-resulting-status`
+  prints too, includes the playback modes (`random`, `repeat`, `repeatSingle`,
+  `consume`), and its table lists the audio-quality fields
 
 ### Fixed
 
