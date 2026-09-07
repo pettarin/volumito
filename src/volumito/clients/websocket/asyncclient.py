@@ -157,6 +157,7 @@ from volumito.clients.websocket.common import (
     EVENT_PUSH_ADD_TO_PLAYLIST,
     EVENT_PUSH_ADD_WEB_RADIO,
     EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_PUSH_CREATE_PLAYLIST,
     EVENT_PUSH_INFINITY_PLAYBACK,
     EVENT_PUSH_SLEEP,
     EVENT_REBOOT,
@@ -882,14 +883,21 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def create_playlist(self, name: str | Playlist) -> None:
         """Create an empty saved playlist.
 
+        The host answers once the playlist is written, telling whether it did: a
+        name already in use is refused, which is reported as an API error.
+
         Args:
             name: The name to give the playlist, or the playlist itself
 
         Raises:
             ValueError: If the given playlist has no name
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
+            VolumioAPIError: If the host did not create the playlist
         """
-        await self._emit(EVENT_CREATE_PLAYLIST, self._playlist_payload(name))
+        payload = self._playlist_payload(name)
+        answer = await self._request(EVENT_CREATE_PLAYLIST, EVENT_PUSH_CREATE_PLAYLIST, payload)
+        self._check_created_playlist(payload["name"], answer)
 
     async def decrease_volume(self) -> None:
         """Decrease the playback volume by one step.

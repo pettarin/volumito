@@ -4171,6 +4171,54 @@ def playlist_content(
     _render_playlist_content(ctx, name, fields, output_format)
 
 
+@playlist.command("copy")
+@click.pass_context
+@click.argument("source", type=str)
+@click.argument("target", type=str)
+@option_check_playlist_name
+@option_fields
+@option_format
+@option_print_resulting_content
+def playlist_copy(
+    ctx: click.Context,
+    source: str,
+    target: str,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    print_resulting_content: bool,
+) -> None:
+    """Copy the playlist SOURCE to the new playlist TARGET, with the same content.
+
+    TARGET is created empty, which the Volumio host refuses when a playlist of that
+    name exists, and the items of SOURCE are added to it one by one, by the URI and
+    the service each holds, as "playlist add" adds them without expanding. Once
+    done, the content of TARGET is printed as "playlist content" prints it, unless
+    --no-print-resulting-content.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, source)
+    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(source)).tracks
+    items: list[tuple[str, str | None]] = []
+    for index, track in enumerate(tracks, 1):
+        if track.uri is None:
+            warning(f'Skipping the item at position {index} of "{source}", which has no URI')
+            continue
+        items.append((track.uri, track.service))
+    info(f'Copying {len(items)} items of "{source}" to "{target}"')
+
+    def copy_items(client: APIClient) -> None:
+        client.create_playlist(target)
+        for uri, service in items:
+            client.add_to_playlist(target, uri, service)
+
+    execute_command(ctx, f'copy playlist "{source}" to "{target}"', copy_items)
+    if print_resulting_content:
+        _render_playlist_content(ctx, target, fields, output_format)
+
+
 @playlist.command("create")
 @click.pass_context
 @click.argument("name", type=str)

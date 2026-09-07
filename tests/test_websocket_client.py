@@ -1308,8 +1308,11 @@ class TestVolumioWebSocketClientPlaylistEditing:
     """Creating, editing and reading the saved playlists."""
 
     def test_create_and_delete(self, mocker: MockerFixture):
-        """A playlist is created and deleted by name."""
-        client, fake = _client(mocker)
+        """A playlist is created and deleted by name, the host answering the creation."""
+        fake = _FakeSocketIOClient(
+            answers={"createPlaylist": ("pushCreatePlaylist", {"success": True})}
+        )
+        client, fake = _client(mocker, fake)
 
         client.create_playlist("jazz")
         client.delete_playlist(Playlist.from_name("rock"))
@@ -1318,6 +1321,37 @@ class TestVolumioWebSocketClientPlaylistEditing:
             _Call("createPlaylist", {"name": "jazz"}),
             _Call("deletePlaylist", {"name": "rock"}),
         ]
+
+    @pytest.mark.parametrize(
+        ("answer", "detail"),
+        [
+            ({"success": False, "reason": "Playlist already exists"}, ": Playlist already exists"),
+            ({"success": False}, ""),
+            (None, ""),
+        ],
+    )
+    def test_create_a_playlist_the_host_refuses(
+        self, mocker: MockerFixture, answer, detail
+    ):
+        """A creation the host did not carry out is an API error, with its reason."""
+        logger = Mock()
+        fake = _FakeSocketIOClient(answers={"createPlaylist": ("pushCreatePlaylist", answer)})
+        client, _ = _client(mocker, fake, logger=logger)
+
+        with pytest.raises(VolumioAPIError) as excinfo:
+            client.create_playlist("jazz")
+
+        assert str(excinfo.value) == f'The host did not create the playlist "jazz"{detail}'
+        logger.warning.assert_called_once()
+
+    def test_create_playlist_waits_for_the_answer(self, mocker: MockerFixture):
+        """The answer the host gives a creation is waited for."""
+        client, _ = _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.create_playlist("jazz")
+
+        assert 'did not answer "createPlaylist" with "pushCreatePlaylist"' in str(excinfo.value)
 
     def test_add_and_remove_an_item(self, mocker: MockerFixture):
         """An item carries the playlist, the URI, and the service it belongs to."""

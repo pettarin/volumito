@@ -803,6 +803,7 @@ class TestBuildClickDefaultMap:
             "playlist": {
                 "add": formatting,
                 "content": formatting,
+                "copy": formatting,
                 "list": format_only,
                 "remove": formatting,
             },
@@ -1029,6 +1030,7 @@ class TestBuildClickDefaultMap:
         assert result == {
             "playlist": {
                 "add": {"print_resulting_content": False},
+                "copy": {"print_resulting_content": False},
                 "remove": {"print_resulting_content": False},
             },
         }

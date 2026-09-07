@@ -11106,7 +11106,7 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "--help"])
 
         assert result.exit_code == 0
-        for command in ("add", "content", "create", "delete", "enqueue", "remove"):
+        for command in ("add", "content", "copy", "create", "delete", "enqueue", "remove"):
             assert f"  {command} " in result.output
 
     @pytest.mark.parametrize(
@@ -11363,6 +11363,78 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         assert 'Volumio Playlist "Rock"' in result.output
+
+    def test_copy(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist copy creates the target, adds every item of the source, and prints it."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "copy", "Rock", "New"])
+
+        assert result.exit_code == 0
+        assert 'Copying 2 items of "Rock" to "New"' in result.output
+        assert "Command 'copy playlist \"Rock\" to \"New\"' executed successfully" in result.output
+        mock_client.playlists_property.assert_called_once()
+        mock_client.create_playlist.assert_called_once_with("New")
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("New", "music-library/a.flac", "mpd"),
+            mocker.call("New", "qobuz://track/2", "qobuz"),
+        ]
+        # The content of the source is read, then the one of the target is printed
+        assert mock_client.get_playlist_content.call_args_list == [
+            mocker.call("Rock"),
+            mocker.call("New"),
+        ]
+        assert '"uri": "music-library/a.flac"' in result.output
+
+    def test_copy_without_the_resulting_content(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """--no-print-resulting-content skips the print of the target."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "copy", "Rock", "New", "--no-print-resulting-content"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.get_playlist_content.assert_called_once_with("Rock")
+        assert '"uri"' not in result.output
+
+    def test_copy_skips_an_item_without_a_uri(self, runner: CliRunner, mocker: MockerFixture):
+        """An item the host lists without a URI cannot be added, and is skipped with a warning."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {
+                "name": "Rock",
+                "lists": [
+                    [
+                        {"title": "No URI", "service": "mpd"},
+                        {"title": "Song", "service": "qobuz", "uri": "qobuz://track/2"},
+                    ]
+                ],
+            }
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "copy", "Rock", "New", "--no-print-resulting-content"],
+        )
+
+        assert result.exit_code == 0
+        assert 'Skipping the item at position 1 of "Rock", which has no URI' in result.output
+        assert 'Copying 1 items of "Rock" to "New"' in result.output
+        mock_client.add_to_playlist.assert_called_once_with("New", "qobuz://track/2", "qobuz")
+
+    def test_copy_of_a_missing_source(self, runner: CliRunner, mocker: MockerFixture):
+        """A source the host does not list is refused before anything is created."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "copy", "Nope", "New"])
+
+        assert result.exit_code == 1
+        assert 'Playlist not found: "Nope"' in result.output
+        mock_client.create_playlist.assert_not_called()
 
     def test_create(self, runner: CliRunner, mocker: MockerFixture):
         """playlist create makes an empty playlist."""
@@ -11657,6 +11729,7 @@ class TestPlaylistCommands:
         [
             ["add", "Rock", _URI],
             ["content", "Rock"],
+            ["copy", "Rock", "New"],
             ["create", "New"],
             ["delete", "Rock", "-y"],
             ["enqueue", "Rock"],

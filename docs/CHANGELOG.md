@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 - Commands `queue add`, `queue consume`, `queue move`, `queue remove`,
   and `queue save`, and option `--cue-track` of `queue replace`
   (all needing a WebSocket API client, except the plain `queue add URI`)
-- Commands `playlist add`, `playlist content`, `playlist create`,
+- Commands `playlist add`, `playlist content`, `playlist copy`, `playlist create`,
   `playlist delete`, `playlist enqueue`, and `playlist remove`
   (all needing a WebSocket API client)
 - Option `-p/--position` of `playlist remove`, removing the items at
@@ -123,6 +123,8 @@ All notable changes to this project will be documented in this file.
 - `add_web_radio` and `remove_web_radio` of the WebSocket clients wait for
   the answer of the host, and `collection radio remove` reports a Web radio
   the host still lists after the removal
+- `create_playlist` of the WebSocket clients waits for the answer of the host,
+  and reports a playlist it did not create (a name already in use)
 
 
 ## [0.4.0] - 2026-09-04

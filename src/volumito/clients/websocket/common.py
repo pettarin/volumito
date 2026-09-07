@@ -972,6 +972,26 @@ class VolumioWebSocketCommon(VolumioCommon):
         self._log_debug(f'Browsing "{browsed}"')
         return {"uri": browsed}
 
+    def _check_created_playlist(self, name: str, answer: object) -> None:
+        """Check the answer of the host to the creation of a playlist.
+
+        The host answers with ``success`` and, when it refused, a ``reason``: a name
+        already in use, for instance.
+
+        Args:
+            name: The name of the playlist
+            answer: What the host answered the creation with
+
+        Raises:
+            VolumioAPIError: If the host did not create the playlist
+        """
+        if isinstance(answer, dict) and answer.get("success") is True:
+            return
+        reason = answer.get("reason") if isinstance(answer, dict) else None
+        detail = f": {reason}" if reason else ""
+        self._log_warning(f'The host did not create the playlist "{name}"{detail}')
+        raise VolumioAPIError(f'The host did not create the playlist "{name}"{detail}')
+
     def _cue_payload(self, uri: str, number: int, service: str | None = None) -> dict[str, Any]:
         """Build the payload naming a track inside a cue sheet.
 
