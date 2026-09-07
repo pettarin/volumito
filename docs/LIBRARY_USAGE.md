@@ -562,7 +562,6 @@ with VolumioWebSocketClient(host) as client:
 - `music_sources`
 - `rescan_library()`
 - `set_music_source_enabled(name, enabled)`
-- `update_all_metadata()`
 - `update_library(uri)`
 - `update_service_tracklist(service)`
 

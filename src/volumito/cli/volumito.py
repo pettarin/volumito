@@ -87,7 +87,6 @@ from volumito.cli.click_helpers import (
     option_last,
     option_limit,
     option_manifest_file,
-    option_metadata,
     option_next,
     option_number_retries_next_track,
     option_offset,
@@ -3562,14 +3561,12 @@ def collection_goto(
 @collection.command("update")
 @click.pass_context
 @click.argument("uri", required=False, default=None, type=str)
-@option_metadata
 @option_rescan
 @option_thumbnails
 @option_tracklist
 def collection_update(
     ctx: click.Context,
     uri: str | None,
-    metadata: bool,
     rescan: bool,
     thumbnails: bool,
     tracklist: str | None,
@@ -3577,20 +3574,18 @@ def collection_update(
     """Update the collection of the Volumio host, looking for changes.
 
     With URI, only its content is updated. The options select another refresh
-    instead, and take no URI: --metadata refreshes the metadata of the whole
-    collection, --rescan rescans it from scratch (slow on a large collection),
-    --thumbnails rebuilds the thumbnails of the album art, and --tracklist SERVICE
-    refreshes the tracks a music service offers. They are mutually exclusive.
+    instead, and take no URI: --rescan rescans the collection from scratch (slow on
+    a large collection), --thumbnails rebuilds the thumbnails of the album art, and
+    --tracklist SERVICE refreshes the tracks a music service offers. They are
+    mutually exclusive.
 
     Needs a WebSocket API client.
     """
-    if sum([metadata, rescan, thumbnails, tracklist is not None]) > 1:
+    if sum([rescan, thumbnails, tracklist is not None]) > 1:
         raise click.UsageError(COLLECTION_UPDATE_MODES_ERROR)
-    if uri is not None and (metadata or rescan or thumbnails or tracklist is not None):
+    if uri is not None and (rescan or thumbnails or tracklist is not None):
         raise click.UsageError(COLLECTION_UPDATE_URI_ERROR)
-    if metadata:
-        execute_command(ctx, "update metadata", lambda c: c.update_all_metadata())
-    elif rescan:
+    if rescan:
         execute_command(ctx, "rescan library", lambda c: c.rescan_library())
     elif thumbnails:
         execute_command(ctx, "regenerate thumbnails", lambda c: c.regenerate_thumbnails())

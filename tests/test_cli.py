@@ -9197,7 +9197,6 @@ class TestCollectionExtras:
         [
             ([], "update_library", (None,), "update library"),
             (["music-library"], "update_library", ("music-library",), "update library"),
-            (["--metadata"], "update_all_metadata", (), "update metadata"),
             (["--rescan"], "rescan_library", (), "rescan library"),
             (["--thumbnails"], "regenerate_thumbnails", (), "regenerate thumbnails"),
             (
@@ -9221,7 +9220,7 @@ class TestCollectionExtras:
         getattr(mock_client, member).assert_called_once_with(*called_with)
 
     @pytest.mark.parametrize(
-        "arguments", [["--metadata", "--rescan"], ["--thumbnails", "--tracklist", "qobuz"]]
+        "arguments", [["--rescan", "--thumbnails"], ["--thumbnails", "--tracklist", "qobuz"]]
     )
     def test_update_in_two_ways(self, runner: CliRunner, mocker: MockerFixture, arguments):
         """The refreshes are mutually exclusive."""
@@ -9230,7 +9229,7 @@ class TestCollectionExtras:
         result = runner.invoke(main, [*self._WEBSOCKET, "collection", "update", *arguments])
 
         assert result.exit_code == 2
-        assert "Expected at most one of the --metadata, --rescan, --thumbnails" in result.output
+        assert "Expected at most one of the --rescan, --thumbnails" in result.output
         mock_client.update_library.assert_not_called()
 
     def test_update_a_uri_with_a_refresh(self, runner: CliRunner, mocker: MockerFixture):

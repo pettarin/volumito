@@ -609,9 +609,6 @@ EVENT_UNMUTE = "unmute"
 EVENT_UPDATE = "update"
 """The event installing the update the host found."""
 
-EVENT_UPDATE_ALL_METADATA = "updateAllMetadata"
-"""The event refreshing the metadata of the whole collection."""
-
 EVENT_UPDATE_CHECK = "updateCheck"
 """The event checking whether an update is available."""
 

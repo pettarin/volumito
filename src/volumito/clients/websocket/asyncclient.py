@@ -200,7 +200,6 @@ from volumito.clients.websocket.common import (
     EVENT_UNINSTALL_PLUGIN,
     EVENT_UNMUTE,
     EVENT_UPDATE,
-    EVENT_UPDATE_ALL_METADATA,
     EVENT_UPDATE_CHECK,
     EVENT_UPDATE_CHECK_CACHE,
     EVENT_UPDATE_DB,
@@ -2863,14 +2862,6 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
         await self._emit(EVENT_UPDATE, {"ignoreIntegrityCheck": ignore_integrity_check})
-
-    async def update_all_metadata(self) -> None:
-        """Refresh the metadata of the whole collection of the Volumio instance.
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        await self._emit(EVENT_UPDATE_ALL_METADATA)
 
     async def update_library(self, uri: str | None = None) -> None:
         """Update the music collection of the Volumio instance, looking for changes.

@@ -1846,14 +1846,12 @@ class TestVolumioAsyncWebSocketClientLibrary:
         client, fake = await _client(mocker)
 
         await client.rescan_library()
-        await client.update_all_metadata()
         await client.update_library()
         await client.update_library("mpd://NAS/Music")
         await client.update_service_tracklist("qobuz")
 
         assert fake.calls == [
             _Call("rescanDb", None),
-            _Call("updateAllMetadata", None),
             _Call("updateDb", None),
             _Call("updateDb", "mpd://NAS/Music"),
             _Call("serviceUpdateTracklist", "qobuz"),

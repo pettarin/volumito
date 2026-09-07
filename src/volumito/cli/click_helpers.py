@@ -1990,16 +1990,6 @@ def option_manifest_file(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_metadata(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--metadata`` option to the collection update subcommand."""
-    return click.option(
-        "--metadata",
-        is_flag=True,
-        default=False,
-        help="Refresh the metadata of the whole collection, instead of looking for changes.",
-    )(func)
-
-
 def option_next(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--next`` option to the queue add subcommand."""
     return click.option(

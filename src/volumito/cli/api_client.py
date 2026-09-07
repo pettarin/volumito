@@ -1584,10 +1584,6 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def update_all_metadata(self) -> None:
-        """Refresh the metadata of the whole collection of the Volumio instance."""
-
-    @abstractmethod
     def update_library(self, uri: str | None = None) -> None:
         """Update the music collection of the Volumio instance, looking for changes.
 
@@ -2176,9 +2172,6 @@ class RESTAPIClient(APIClient):
 
     def update(self, ignore_integrity_check: bool = False) -> None:
         return self._fallback.client(UPDATE_OPERATION).update(ignore_integrity_check)
-
-    def update_all_metadata(self) -> None:
-        return self._fallback.client(COLLECTION_OPERATION).update_all_metadata()
 
     def update_library(self, uri: str | None = None) -> None:
         return self._fallback.client(COLLECTION_OPERATION).update_library(uri)
@@ -2873,9 +2866,6 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
 
     def update(self, ignore_integrity_check: bool = False) -> None:
         return self._client.update(ignore_integrity_check)
-
-    def update_all_metadata(self) -> None:
-        return self._client.update_all_metadata()
 
     def update_library(self, uri: str | None = None) -> None:
         return self._client.update_library(uri)
@@ -3640,9 +3630,6 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
 
     def update(self, ignore_integrity_check: bool = False) -> None:
         return self._run(self._client.update(ignore_integrity_check))
-
-    def update_all_metadata(self) -> None:
-        return self._run(self._client.update_all_metadata())
 
     def update_library(self, uri: str | None = None) -> None:
         return self._run(self._client.update_library(uri))

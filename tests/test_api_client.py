@@ -194,7 +194,6 @@ WEBSOCKET_METHODS = [
     ("super_search", ("query",), {}, COLLECTION_OPERATION),
     ("uninstall_plugin", ("category", "name"), {}, PLUGIN_OPERATION),
     ("update", (True,), {}, UPDATE_OPERATION),
-    ("update_all_metadata", (), {}, COLLECTION_OPERATION),
     ("update_library", ("uri",), {}, COLLECTION_OPERATION),
     ("update_plugin", ("category", "name", "url"), {}, PLUGIN_OPERATION),
     ("update_service_tracklist", ("service",), {}, COLLECTION_OPERATION),
