@@ -995,6 +995,34 @@ class VolumioWebSocketCommon(VolumioCommon):
             "uri": uri,
         }
 
+    def _delete_folder_payload(self, uri: str) -> dict[str, Any]:
+        """Build the payload deleting a folder of the local library.
+
+        The host deletes the folder the ``music-library/...`` URI names, then lists the
+        folder above it (``curUri``) as its answer. A URI naming the root of the
+        library, or a source right under it (``music-library/INTERNAL``), is refused:
+        the host maps the prefix to its mount point and removes whatever the rest
+        names.
+
+        Args:
+            uri: The URI of the folder, as a browse lists it
+
+        Returns:
+            The payload the delete event carries
+
+        Raises:
+            ValueError: If the URI is not that of a folder inside a source of the library
+        """
+        prefix = "music-library/"
+        segments = uri.removeprefix(prefix).split("/") if uri.startswith(prefix) else []
+        if len(segments) < 2 or any(segment in ("", ".", "..") for segment in segments):
+            self._log_warning(f'Refusing to delete the folder "{uri}"')
+            raise ValueError(
+                'The folder must be a "music-library/<source>/..." URI below a source, '
+                f'got "{uri}"'
+            )
+        return {"item": {"uri": uri}, "curUri": uri.rsplit("/", 1)[0]}
+
     @property
     def _endpoint_description(self) -> str:
         """The base URL a failing connection names as unreachable."""

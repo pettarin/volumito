@@ -32,6 +32,8 @@ All notable changes to this project will be documented in this file.
 - Option `--expand-tracks/--no-expand-tracks` of `playlist add`, adding the tracks
   a URI of a source other than the local library lists (an album, a playlist)
   instead of the URI as one item
+- Option `--update-library/--no-update-library` of `collection directory delete`,
+  updating the library at the directory above the deleted one
 - Commands `playback infinity` and `playback sleep`,
   and option `--volatile` of `playback play`
   (all needing a WebSocket API client)
@@ -40,7 +42,7 @@ All notable changes to this project will be documented in this file.
   (`add`, `list`, `remove`); all but the `list` commands
   need a WebSocket API client
 - Commands `collection goto` and `collection update`, command groups
-  `collection folder` (`delete`) and `collection source`
+  `collection directory` (`delete`) and `collection source`
   (`disable`, `enable`, `list`), and options `--last` and `--root`
   of `collection browse` and `--super` of `collection search`
   (all needing a WebSocket API client)
@@ -112,6 +114,9 @@ All notable changes to this project will be documented in this file.
   the answer of the host, which a read right after them took as its own
 - `add_to_playlist` and `remove_from_playlist` of the WebSocket clients wait for
   the answer of the host, so a read of the content right after them is current
+- `delete_folder` of the WebSocket clients sends the URI and the parent listing
+  the host reads (it ignored the previous payload), waits for its answer,
+  and refuses a URI above a directory of a source
 
 
 ## [0.4.0] - 2026-09-04

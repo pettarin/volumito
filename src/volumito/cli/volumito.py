@@ -137,6 +137,7 @@ from volumito.cli.click_helpers import (
     option_tracklist,
     option_tracks_only,
     option_unregister_url_on_exit,
+    option_update_library,
     option_url,
     option_volatile,
     option_wait_and_enable,
@@ -3466,29 +3467,38 @@ def collection_browse(
     render_browse_results(ctx, results, output_format, print_uri)
 
 
-@collection.group("folder")
+@collection.group("directory")
 @click.pass_context
-def folder(ctx: click.Context) -> None:
-    """Manage the folders of the collection."""
+def directory(ctx: click.Context) -> None:
+    """Manage the directories of the local library of the collection."""
     pass
 
 
-@folder.command("delete")
+@directory.command("delete")
 @click.pass_context
-@click.argument("path", type=str)
+@click.argument("uri", type=str)
+@option_update_library
 @option_yes
-def folder_delete(ctx: click.Context, path: str, yes: bool) -> None:
-    """Delete the folder at PATH from the collection of the Volumio host.
+def directory_delete(ctx: click.Context, uri: str, update_library: bool, yes: bool) -> None:
+    """Delete the directory at URI from the local library of the Volumio host.
 
-    IMPORTANT: the files of the folder are deleted from the host and cannot be
-    recovered; the folder is deleted only when -y/--yes is given.
+    A URI comes from "collection browse" (e.g., music-library/INTERNAL/music/old);
+    the root of the library and the sources right under it cannot be deleted. Once
+    the directory is deleted, the library is updated at the directory above it,
+    unless --no-update-library: the host lists a deleted directory until then.
+
+    IMPORTANT: the files of the directory are deleted from the host and cannot be
+    recovered; the directory is deleted only when -y/--yes is given.
 
     Needs a WebSocket API client.
     """
     if not yes:
-        error(f'Refusing to delete the folder without -y/--yes: "{path}"')
+        error(f'Refusing to delete the directory without -y/--yes: "{uri}"')
         sys.exit(1)
-    execute_command(ctx, f'delete folder "{path}"', lambda c: c.delete_folder(path))
+    execute_command(ctx, f'delete directory "{uri}"', lambda c: c.delete_folder(uri))
+    if update_library:
+        parent = uri.rsplit("/", 1)[0]
+        execute_command(ctx, f'update library "{parent}"', lambda c: c.update_library(parent))
 
 
 @collection.command("goto")

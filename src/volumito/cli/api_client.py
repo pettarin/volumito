@@ -526,11 +526,11 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def delete_folder(self, path: str) -> None:
-        """Delete a folder of the collection of the Volumio instance.
+    def delete_folder(self, uri: str) -> None:
+        """Delete a folder of the local library of the Volumio instance, files included.
 
         Args:
-            path: The path of the folder to delete
+            uri: The URI of the folder, as a browse lists it (``music-library/...``)
         """
 
     @abstractmethod
@@ -1879,8 +1879,8 @@ class RESTAPIClient(APIClient):
     def delete_background(self, name: str) -> None:
         return self._fallback.client(UI_OPERATION).delete_background(name)
 
-    def delete_folder(self, path: str) -> None:
-        return self._fallback.client(COLLECTION_OPERATION).delete_folder(path)
+    def delete_folder(self, uri: str) -> None:
+        return self._fallback.client(COLLECTION_OPERATION).delete_folder(uri)
 
     def delete_playlist(self, name: str | Playlist) -> None:
         return self._fallback.client(PLAYLIST_OPERATION).delete_playlist(name)
@@ -2555,8 +2555,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def delete_background(self, name: str) -> None:
         return self._client.delete_background(name)
 
-    def delete_folder(self, path: str) -> None:
-        return self._client.delete_folder(path)
+    def delete_folder(self, uri: str) -> None:
+        return self._client.delete_folder(uri)
 
     def delete_playlist(self, name: str | Playlist) -> None:
         return self._client.delete_playlist(name)
@@ -3325,8 +3325,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def delete_background(self, name: str) -> None:
         return self._run(self._client.delete_background(name))
 
-    def delete_folder(self, path: str) -> None:
-        return self._run(self._client.delete_folder(path))
+    def delete_folder(self, uri: str) -> None:
+        return self._run(self._client.delete_folder(uri))
 
     def delete_playlist(self, name: str | Playlist) -> None:
         return self._run(self._client.delete_playlist(name))

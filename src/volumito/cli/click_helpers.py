@@ -2560,6 +2560,19 @@ def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_update_library(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--update-library`` option to the collection directory delete subcommand."""
+    return click.option(
+        "--update-library/--no-update-library",
+        default=True,
+        show_default=True,
+        help=(
+            "Once the directory is deleted, update the library at the directory above it, "
+            "so that the deleted directory leaves its listing."
+        ),
+    )(func)
+
+
 def option_url(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--url`` option to the system plugin install and update subcommands."""
     return click.option(

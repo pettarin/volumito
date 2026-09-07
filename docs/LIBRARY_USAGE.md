@@ -586,7 +586,7 @@ system administration, and user interface preferences.
 - `check_for_update()`
 - `check_update_cache()`
 - `delete_background(name)`
-- `delete_folder(path)`
+- `delete_folder(uri)`
 - `delete_share(share_id)`
 - `disable_plugin(category, name)`
 - `discover_network_shares()`

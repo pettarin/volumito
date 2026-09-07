@@ -9245,29 +9245,61 @@ class TestCollectionExtras:
         assert "Expected the URI argument only without" in result.output
         mock_client.rescan_library.assert_not_called()
 
-    def test_folder_delete_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
+    def test_directory_delete_refused_without_yes(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
         """Without -y/--yes nothing is deleted."""
         mock_client = self._mock_websocket_client(mocker)
+        uri = "music-library/INTERNAL/music/old"
 
         result = runner.invoke(
-            main, [*self._WEBSOCKET, "collection", "folder", "delete", "INTERNAL/old"]
+            main, [*self._WEBSOCKET, "collection", "directory", "delete", uri]
         )
 
         assert result.exit_code == 1
-        assert 'Refusing to delete the folder without -y/--yes: "INTERNAL/old"' in result.output
+        assert f'Refusing to delete the directory without -y/--yes: "{uri}"' in result.output
         mock_client.delete_folder.assert_not_called()
 
-    def test_folder_delete(self, runner: CliRunner, mocker: MockerFixture):
-        """With -y/--yes the folder is deleted."""
+    def test_directory_delete(self, runner: CliRunner, mocker: MockerFixture):
+        """With -y/--yes the directory is deleted, by its URI."""
         mock_client = self._mock_websocket_client(mocker)
+        uri = "music-library/INTERNAL/music/old"
 
         result = runner.invoke(
-            main, [*self._WEBSOCKET, "collection", "folder", "delete", "INTERNAL/old", "-y"]
+            main, [*self._WEBSOCKET, "collection", "directory", "delete", uri, "-y"]
         )
 
         assert result.exit_code == 0
-        assert "Command 'delete folder \"INTERNAL/old\"' executed successfully" in result.output
-        mock_client.delete_folder.assert_called_once_with("INTERNAL/old")
+        assert f"Command 'delete directory \"{uri}\"' executed successfully" in result.output
+        mock_client.delete_folder.assert_called_once_with(uri)
+        # The library is then updated at the directory above, so the listing follows
+        parent = "music-library/INTERNAL/music"
+        assert f"Command 'update library \"{parent}\"' executed successfully" in result.output
+        mock_client.update_library.assert_called_once_with(parent)
+
+    def test_directory_delete_without_the_update(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """--no-update-library leaves the library as it is after the deletion."""
+        mock_client = self._mock_websocket_client(mocker)
+        uri = "music-library/INTERNAL/music/old"
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "collection",
+                "directory",
+                "delete",
+                uri,
+                "-y",
+                "--no-update-library",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.delete_folder.assert_called_once_with(uri)
+        mock_client.update_library.assert_not_called()
 
     def test_source_list_default_short_fields(self, runner: CliRunner, mocker: MockerFixture):
         """collection source list prints the short fields of each source as pretty JSON."""
@@ -9372,7 +9404,7 @@ class TestCollectionExtras:
             ["goto", "artist"],
             ["update"],
             ["update", "--rescan"],
-            ["folder", "delete", "INTERNAL/old", "-y"],
+            ["directory", "delete", "music-library/INTERNAL/music/old", "-y"],
             ["source", "list"],
             ["source", "enable", "qobuz"],
             ["search", "paolo conte", "--super"],

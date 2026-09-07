@@ -2238,12 +2238,56 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         ]
 
     async def test_delete_folder(self, mocker: MockerFixture):
-        """A folder is deleted by the path the host nests under "item"."""
-        client, fake = await _client(mocker)
+        """A folder is deleted by its URI, the host answering with the folder above."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"deleteFolder": ("pushBrowseLibrary", NAVIGATION_PAYLOAD)}
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.delete_folder("mpd://NAS/Old")
+        await client.delete_folder("music-library/INTERNAL/music/old")
 
-        assert fake.calls == [_Call("deleteFolder", {"item": {"path": "mpd://NAS/Old"}})]
+        assert fake.calls == [
+            _Call(
+                "deleteFolder",
+                {
+                    "item": {"uri": "music-library/INTERNAL/music/old"},
+                    "curUri": "music-library/INTERNAL/music",
+                },
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "music-library",
+            "music-library/",
+            "music-library/INTERNAL",
+            "INTERNAL/old",
+            "music-library/INTERNAL/../old",
+            "music-library/INTERNAL//old",
+        ],
+    )
+    async def test_delete_folder_refuses_a_uri_above_a_source(
+        self, mocker: MockerFixture, uri
+    ):
+        """The root of the library, a source, and a URI outside them are refused."""
+        logger = Mock()
+        client, fake = await _client(mocker, logger=logger)
+
+        with pytest.raises(ValueError, match="below a source"):
+            await client.delete_folder(uri)
+
+        assert fake.calls == []
+        logger.warning.assert_called_once()
+
+    async def test_delete_folder_waits_for_the_answer(self, mocker: MockerFixture):
+        """The listing the host answers a deletion with is waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.delete_folder("music-library/INTERNAL/music/old")
+
+        assert 'did not answer "deleteFolder" with "pushBrowseLibrary"' in str(excinfo.value)
 
     async def test_the_wireless_networks(self, mocker: MockerFixture):
         """Both the scan and the cache answer with the networks the host can see."""

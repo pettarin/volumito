@@ -905,16 +905,24 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         """
         await self._emit(EVENT_DELETE_BACKGROUND, {"name": name})
 
-    async def delete_folder(self, path: str) -> None:
-        """Delete a folder of the collection of the Volumio instance.
+    async def delete_folder(self, uri: str) -> None:
+        """Delete a folder of the local library of the Volumio instance, files included.
+
+        The host answers with the listing of the folder above, as the push a browse is
+        answered by, which is waited for and dropped: a browse right after is answered
+        by its own push.
 
         Args:
-            path: The path of the folder to delete
+            uri: The URI of the folder, as a browse lists it (``music-library/...``)
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the URI is not that of a folder inside a source of the library
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        await self._emit(EVENT_DELETE_FOLDER, {"item": {"path": path}})
+        await self._request(
+            EVENT_DELETE_FOLDER, EVENT_PUSH_BROWSE_LIBRARY, self._delete_folder_payload(uri)
+        )
 
     async def delete_playlist(self, name: str | Playlist) -> None:
         """Delete a saved playlist.
