@@ -11599,6 +11599,59 @@ class TestPlaylistCommands:
         assert 'Copying 1 items of "Rock" to "New"' in result.output
         mock_client.add_to_playlist.assert_called_once_with("New", "qobuz://track/2", "qobuz")
 
+    @pytest.mark.parametrize(
+        ("position", "uri", "service"),
+        [("1", "music-library/a.flac", "mpd"), ("2", "qobuz://track/2", "qobuz")],
+    )
+    def test_copy_by_position(
+        self, runner: CliRunner, mocker: MockerFixture, position, uri, service
+    ):
+        """-p/--position copies the item listed there only."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "copy", "Rock", "New", "-p", position,
+             "--no-print-resulting-content"],
+        )
+
+        assert result.exit_code == 0
+        assert 'Copying 1 items of "Rock" to "New"' in result.output
+        mock_client.create_playlist.assert_called_once_with("New")
+        mock_client.add_to_playlist.assert_called_once_with("New", uri, service)
+
+    def test_copy_by_a_selection_of_positions(self, runner: CliRunner, mocker: MockerFixture):
+        """A selection copies the items at every position it covers, in order."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "copy", "Rock", "New", "--position", "1-2",
+             "--no-print-resulting-content"],
+        )
+
+        assert result.exit_code == 0
+        assert 'Copying 2 items of "Rock" to "New"' in result.output
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("New", "music-library/a.flac", "mpd"),
+            mocker.call("New", "qobuz://track/2", "qobuz"),
+        ]
+
+    def test_copy_by_a_position_past_the_end(self, runner: CliRunner, mocker: MockerFixture):
+        """A position the source does not reach is an invalid value, and nothing is created."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "copy", "Rock", "New", "-p", "3"]
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'Invalid value: the playlist "Rock" lists 2 items, none at position 3'
+            in result.output
+        )
+        mock_client.create_playlist.assert_not_called()
+
     def test_rename(self, runner: CliRunner, mocker: MockerFixture):
         """playlist rename copies the source to the target, then deletes the source."""
         mock_client = self._mock_websocket_client(mocker)

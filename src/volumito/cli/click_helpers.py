@@ -2142,6 +2142,21 @@ def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_playlist_copy_position(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--position`` option to the playlist copy subcommand."""
+    return click.option(
+        "-p",
+        "--position",
+        type=TrackSelectionParamType(),
+        default=None,
+        help=(
+            "Copy the items at these positions of SOURCE (e.g., '1-3,6-8,12'), instead "
+            "of all of them (indexed according to "
+            "--position-starting-at-one/--position-starting-at-zero)."
+        ),
+    )(func)
+
+
 def option_playlist_position(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-p``/``--position`` option to the playlist remove subcommand."""
     return click.option(

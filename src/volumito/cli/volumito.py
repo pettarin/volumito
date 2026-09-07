@@ -100,6 +100,7 @@ from volumito.cli.click_helpers import (
     option_play,
     option_play_added,
     option_playlist,
+    option_playlist_copy_position,
     option_playlist_position,
     option_playlists_only,
     option_port,
@@ -4265,6 +4266,7 @@ def playlist_content(
 @option_check_playlist_name
 @option_fields
 @option_format
+@option_playlist_copy_position
 @option_print_resulting_content
 def playlist_copy(
     ctx: click.Context,
@@ -4273,19 +4275,22 @@ def playlist_copy(
     check_playlist_name: bool,
     fields: str,
     output_format: str,
+    position: set[int] | None,
     print_resulting_content: bool,
 ) -> None:
     """Copy the playlist SOURCE to the new playlist TARGET, with the same content.
 
     TARGET is created empty, which the Volumio host refuses when a playlist of that
     name exists, and the items of SOURCE are added to it one by one, by the URI and
-    the service each holds, as "playlist add" adds them without expanding. Once
-    done, the content of TARGET is printed as "playlist content" prints it, unless
-    --no-print-resulting-content.
+    the service each holds, as "playlist add" adds them without expanding: all of
+    them, or those at the positions -p/--position selects, such as "1-3,6-8,12"
+    (indexed according to --position-starting-at-one/--position-starting-at-zero).
+    Once done, the content of TARGET is printed as "playlist content" prints it,
+    unless --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
-    items = _playlist_items_to_copy(ctx, source, target, check_playlist_name)
+    items = _playlist_items_to_copy(ctx, source, target, check_playlist_name, position)
 
     def copy_items(client: APIClient) -> None:
         _fill_new_playlist(client, target, items)
@@ -4563,18 +4568,25 @@ def _playlist_items_from_file(file: str) -> list[tuple[str, str | None]]:
 
 
 def _playlist_items_to_copy(
-    ctx: click.Context, source: str, target: str, check_playlist_name: bool
+    ctx: click.Context,
+    source: str,
+    target: str,
+    check_playlist_name: bool,
+    position: set[int] | None = None,
 ) -> list[tuple[str, str | None]]:
     """Read the items of a playlist to copy them to another, or exit (1).
 
-    An item the host lists without a URI cannot be added elsewhere: it is skipped
-    with a warning.
+    Without positions, every item is copied, but one the host lists without a URI,
+    which cannot be added elsewhere and is skipped with a warning; with positions,
+    the items listed there, an item without a URI being an invalid value.
 
     Args:
         ctx: Click context object holding the shared options
         source: The name of the playlist to copy
         target: The name of the playlist to copy to, for the messages
         check_playlist_name: Whether to check that the source exists first
+        position: The positions of the items to copy, as the user counts them, or
+            None for all of them
 
     Returns:
         The URI of each item to copy, and the service it belongs to
@@ -4583,11 +4595,17 @@ def _playlist_items_to_copy(
         check_playlist_name_or_exit(ctx, source)
     tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(source)).tracks
     items: list[tuple[str, str | None]] = []
-    for index, track in enumerate(tracks, 1):
-        if track.uri is None:
-            warning(f'Skipping the item at position {index} of "{source}", which has no URI')
-            continue
-        items.append((track.uri, track.service))
+    if position is not None:
+        indices = {api_position(ctx, shown) for shown in sorted(position)}
+        items = playlist_items_at_or_exit(ctx, source, tracks, indices)
+    else:
+        for index, track in enumerate(tracks, 1):
+            if track.uri is None:
+                warning(
+                    f'Skipping the item at position {index} of "{source}", which has no URI'
+                )
+                continue
+            items.append((track.uri, track.service))
     info(f'Copying {len(items)} items of "{source}" to "{target}"')
     return items
 

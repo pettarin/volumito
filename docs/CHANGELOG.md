@@ -29,6 +29,8 @@ All notable changes to this project will be documented in this file.
 - Option `-p/--position` of `playlist remove`, removing the items at
   the selected positions of the playlist (e.g., `1-3,6-8,12`)
   instead of the one at a URI
+- Option `-p/--position` of `playlist copy`, copying only the items at the
+  selected positions of the source playlist
 - `playlist remove` warns when the removal would leave the playlist empty,
   which the Volumio host may refuse
 - Option `--expand-tracks/--no-expand-tracks` of `playlist add`, adding the tracks
