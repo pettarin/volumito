@@ -111,7 +111,6 @@ from volumito.cli.click_helpers import (
     option_print_uri_toggle,
     option_propagate_remote_exit_code,
     option_radio,
-    option_radio_name,
     option_recursive,
     option_register_url,
     option_register_url_full,
@@ -187,9 +186,11 @@ from volumito.cli.constants import (
     EVENT_PAYLOAD_ERROR,
     EXPERIENCE_VALUES,
     FAVOURITE_KEPT_BY_SOURCE_INFO,
-    FAVOURITE_NAME_OPTION_ERROR,
+    FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR,
     FAVOURITE_RADIO_NAME_ERROR,
     FAVOURITE_RADIO_OPTIONS_ERROR,
+    FAVOURITE_RADIO_TITLE_ERROR,
+    FAVOURITE_RADIO_UNKNOWN_ERROR,
     FAVOURITE_REMOVE_STILL_LISTED_ERROR,
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
@@ -3577,8 +3578,11 @@ def favourite_add(
     """Add the item at URI to the favourites, or a Web radio to the radio favourites.
 
     A URI comes from "collection browse" or "collection search". With --radio, URI is
-    the URL a Web radio streams from, and --albumart, --service, and --title are not
-    accepted.
+    the name or the URL of a Web radio of the host ("collection radio list"), whose
+    URL, name, and logo are used, or the URL any other Web radio streams from, which
+    needs --title, the name to list it under, and takes --albumart; --service is not
+    accepted. The radio favourites are read again once the host answers: a radio it
+    does not list is reported as an error.
 
     The Volumio host keeps its own favourites for the local library and the sources
     without favourites of their own; a source with some (Qobuz, Tidal) is given the
@@ -3588,11 +3592,18 @@ def favourite_add(
     Needs a WebSocket API client.
     """
     if radio:
-        if albumart is not None or service is not None or title is not None:
+        if service is not None:
             raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
+        stream, name, logo = _radio_favourite_details(ctx, uri, title, albumart)
         execute_command(
-            ctx, f'add radio favourite "{uri}"', lambda c: c.add_radio_favourite(uri)
+            ctx,
+            f'add radio favourite "{stream}"',
+            lambda c: c.add_radio_favourite(stream, name, logo),
         )
+        listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
+        if not any(item.uri == stream for item in listed.items):
+            error(FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR.format(uri=stream))
+            sys.exit(1)
     else:
         execute_command(
             ctx,
@@ -3660,33 +3671,33 @@ def favourite_play(
 @favourite.command("remove")
 @click.pass_context
 @click.argument("uri", type=str)
-@option_radio_name
 @option_radio
 @option_service_of_uri
-def favourite_remove(
-    ctx: click.Context, uri: str, name: str | None, radio: bool, service: str | None
-) -> None:
+def favourite_remove(ctx: click.Context, uri: str, radio: bool, service: str | None) -> None:
     """Remove the item at URI from the favourites, or a Web radio from the radio favourites.
 
     A URI comes from "collection favourite list", or from a browse for a file of the
-    local library. With --radio, URI is the URL the Web radio streams from, --name the
-    name it is a favourite under, and --service is not accepted; without --radio,
-    --name is not accepted, and the favourites are read again once the host answers:
-    an item it still lists is reported as an error.
+    local library. With --radio, URI is the name the Web radio is a favourite under
+    or the URL it streams from ("collection favourite list --radio"), and --service
+    is not accepted. The favourites are read again once the host answers: an item it
+    still lists is reported as an error.
 
     Needs a WebSocket API client.
     """
     if radio:
         if service is not None:
             raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
+        stream = _radio_favourite_uri_or_exit(ctx, uri)
         execute_command(
             ctx,
-            f'remove radio favourite "{uri}"',
-            lambda c: c.remove_radio_favourite(uri, name),
+            f'remove radio favourite "{stream}"',
+            lambda c: c.remove_radio_favourite(stream),
         )
+        listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
+        if any(item.uri == stream for item in listed.items):
+            error(FAVOURITE_REMOVE_STILL_LISTED_ERROR.format(uri=stream))
+            sys.exit(1)
     else:
-        if name is not None:
-            raise click.UsageError(FAVOURITE_NAME_OPTION_ERROR)
         execute_command(
             ctx, f'remove favourite "{uri}"', lambda c: c.remove_from_favourites(uri, service)
         )
@@ -3694,6 +3705,56 @@ def favourite_remove(
         if any(item.uri == stored_local_uri(uri) for item in listed.items):
             error(FAVOURITE_REMOVE_STILL_LISTED_ERROR.format(uri=uri))
             sys.exit(1)
+
+
+def _radio_favourite_details(
+    ctx: click.Context, radio: str, title: str | None, albumart: str | None
+) -> tuple[str, str | None, str | None]:
+    """Resolve the Web radio to make a favourite, or exit.
+
+    A radio the host lists among the Web radios of the user, by name or by URL, is
+    taken from there: its URL, and the name and the logo not given. Any other is the
+    URL given, which needs a title: the host lists a radio saved without one under
+    no name.
+
+    Args:
+        ctx: The click context
+        radio: The name or the URL of a Web radio of the host, or a URL
+        title: The name to list the radio under, when given
+        albumart: The URL of the logo to show for it, when given
+
+    Returns:
+        The URL the radio streams from, the name to list it under, and its logo
+    """
+    listed = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, None))
+    for item in listed.items:
+        if item.uri and radio in (item.title, item.uri):
+            return (
+                item.uri,
+                title if title is not None else item.title,
+                albumart if albumart is not None else item.albumart,
+            )
+    if title is None:
+        raise click.UsageError(FAVOURITE_RADIO_TITLE_ERROR)
+    return radio, title, albumart
+
+
+def _radio_favourite_uri_or_exit(ctx: click.Context, radio: str) -> str:
+    """Return the URL of the radio favourite named, or streaming from, RADIO, or exit.
+
+    Args:
+        ctx: The click context
+        radio: The name the radio is a favourite under, or the URL it streams from
+
+    Returns:
+        The URL the radio streams from, as the host lists it
+    """
+    listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
+    for item in listed.items:
+        if item.uri and radio in (item.title, item.uri):
+            return item.uri
+    error(FAVOURITE_RADIO_UNKNOWN_ERROR.format(radio=radio))
+    sys.exit(1)
 
 
 @collection.group("radio")

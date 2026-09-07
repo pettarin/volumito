@@ -20,7 +20,7 @@ from datetime import timedelta
 from types import ModuleType, TracebackType
 from typing import Any, Self, cast
 
-from volumito.clients.common import stored_local_uri
+from volumito.clients.common import SERVICE_WEB_RADIO, stored_local_uri
 from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
@@ -76,7 +76,6 @@ from volumito.clients.websocket.common import (
     EVENT_ADD_TO_FAVOURITES,
     EVENT_ADD_TO_PLAYLIST,
     EVENT_ADD_TO_QUEUE,
-    EVENT_ADD_TO_RADIO_FAVOURITES,
     EVENT_ADD_WEB_RADIO,
     EVENT_AUDIO_OUTPUT_PAUSE,
     EVENT_AUDIO_OUTPUT_PLAY,
@@ -167,7 +166,6 @@ from volumito.clients.websocket.common import (
     EVENT_REGENERATE_THUMBNAILS,
     EVENT_REMOVE_FROM_FAVOURITES,
     EVENT_REMOVE_FROM_PLAYLIST,
-    EVENT_REMOVE_FROM_RADIO_FAVOURITES,
     EVENT_REMOVE_QUEUE_ITEM,
     EVENT_REMOVE_WEB_RADIO,
     EVENT_REPLACE_AND_PLAY,
@@ -570,16 +568,28 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_ADD_PLAY_CUE, self._cue_payload(uri, number, service))
 
-    def add_radio_favourite(self, uri: str) -> None:
+    def add_radio_favourite(
+        self, uri: str, title: str | None = None, albumart: str | None = None
+    ) -> None:
         """Add a Web radio to the radio favourites.
+
+        The radio is given to the host as an item of the ``webradio`` service, the way
+        its Web UI does: the ``addToRadioFavourites`` event of the host names a service
+        it no longer has, and saves nothing. The host lists a radio saved without a
+        title under no name. It answers with the favourite status it broadcasts,
+        waited for and dropped.
 
         Args:
             uri: The URL the Web radio streams from
+            title: The name to list the radio under
+            albumart: The URL of the logo to show for it, when known
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_ADD_TO_RADIO_FAVOURITES, {"uri": uri})
+        payload = self._favourite_payload(uri, title, SERVICE_WEB_RADIO, albumart)
+        self._request(EVENT_ADD_TO_FAVOURITES, EVENT_URI_FAVOURITES, payload)
 
     def add_share(self, name: str, path: str, fstype: str, **options: str) -> None:
         """Mount a network share on the Volumio instance.
@@ -2155,18 +2165,23 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_REMOVE_QUEUE_ITEM, self._index_payload(position))
 
-    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
+    def remove_radio_favourite(self, uri: str) -> None:
         """Remove a Web radio from the radio favourites.
+
+        The host is asked the way its Web UI asks, as for an item of the ``webradio``
+        service: the ``removeFromRadioFavourites`` event of the host compares a
+        service it no longer has, and removes nothing. The host answers with the
+        listing of the favourites, waited for and dropped.
 
         Args:
             uri: The URL the Web radio streams from
-            name: The name it is a favourite under, when known
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        payload = {"uri": uri} if name is None else {"name": name, "uri": uri}
-        self._emit(EVENT_REMOVE_FROM_RADIO_FAVOURITES, payload)
+        payload = self._favourite_payload(uri, service=SERVICE_WEB_RADIO)
+        self._request(EVENT_REMOVE_FROM_FAVOURITES, EVENT_PUSH_BROWSE_LIBRARY, payload)
 
     def remove_web_radio(self, name: str) -> None:
         """Delete a Web radio of the user.

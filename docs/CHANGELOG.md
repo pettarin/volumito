@@ -132,6 +132,13 @@ All notable changes to this project will be documented in this file.
   lists matches; `remove_from_favourites` waits for the answer of the host,
   `collection favourite remove` reports a favourite the host still lists, and
   `collection favourite add` tells when the source keeps the favourite itself
+- `add_radio_favourite` and `remove_radio_favourite` of the WebSocket clients
+  edit the radio favourites the way the Web UI does (the radio favourite events
+  of the host save and remove nothing), waiting for the answer of the host;
+  `add_radio_favourite` takes the title and the logo of the radio, and
+  `remove_radio_favourite` no longer takes a name; `collection favourite
+  add/remove --radio` take a Web radio by name or by URL, and report a radio
+  the host does not list afterwards
 
 
 ## [0.4.0] - 2026-09-04

@@ -2268,16 +2268,6 @@ def option_radio(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_radio_name(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--name`` option to the collection favourite remove subcommand."""
-    return click.option(
-        "--name",
-        type=str,
-        default=None,
-        help="The name the Web radio is a favourite under, when known (only with --radio).",
-    )(func)
-
-
 def option_recursive(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--recursive`` option to an scp subcommand."""
     return click.option(

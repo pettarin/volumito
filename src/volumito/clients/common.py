@@ -30,6 +30,9 @@ QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
 """The keys of a browsed item a Volumio instance reads when queueing it: the others
 (the album art URL above all) only grow the payload toward the body size limit."""
 
+SERVICE_WEB_RADIO = "webradio"
+"""The name of the service of a Volumio instance the Web radios belong to."""
+
 
 def stored_local_uri(uri: str) -> str:
     """Return the form a file of the local library is stored under by a Volumio host.
@@ -423,7 +426,7 @@ class VolumioCommon(VolumioBaseClient):
             The name of the service (e.g., ``"mpd"``, ``"qobuz"``, ``"webradio"``)
         """
         if uri.startswith(("http://", "https://")):
-            service = "webradio"
+            service = SERVICE_WEB_RADIO
         elif uri.startswith("spotify:"):
             service = "spop"
         else:

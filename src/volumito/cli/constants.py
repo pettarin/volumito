@@ -104,16 +104,27 @@ FAVOURITE_KEPT_BY_SOURCE_INFO = (
 )
 """Message when "collection favourite add" finds the favourite kept by its source."""
 
-FAVOURITE_NAME_OPTION_ERROR = "Expected the --name option only together with --radio."
-"""Error message when "collection favourite remove" names a Web radio without --radio."""
+FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR = (
+    'The Volumio host does not list "{uri}" among its radio favourites after the add.'
+)
+"""Error message when "collection favourite add --radio" finds the radio not listed."""
 
 FAVOURITE_RADIO_NAME_ERROR = "Expected the NAME argument only without --radio."
 """Error message when "collection favourite play" is given a name together with --radio."""
 
-FAVOURITE_RADIO_OPTIONS_ERROR = (
-    "Expected the --albumart, --service, and --title options only without --radio."
+FAVOURITE_RADIO_OPTIONS_ERROR = "Expected the --service option only without --radio."
+"""Error message when a "collection favourite" subcommand gives a Web radio a service."""
+
+FAVOURITE_RADIO_TITLE_ERROR = (
+    "Expected the --title option with --radio, unless URI is the name or the URL of a "
+    'Web radio of the host ("collection radio list").'
 )
-"""Error message when a "collection favourite" subcommand details a Web radio."""
+"""Error message when "collection favourite add --radio" cannot name a Web radio."""
+
+FAVOURITE_RADIO_UNKNOWN_ERROR = (
+    'The Volumio host lists no radio favourite named, or streaming from, "{radio}".'
+)
+"""Error message when "collection favourite remove --radio" finds no such radio."""
 
 FAVOURITE_REMOVE_STILL_LISTED_ERROR = (
     'The Volumio host still lists "{uri}" among its favourites after the removal: '

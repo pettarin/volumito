@@ -9659,8 +9659,82 @@ class TestCollectionFavouriteAndRadio:
         assert result.exit_code == 0
         assert "among its own favourites" not in result.output
 
-    def test_favourite_add_radio(self, runner: CliRunner, mocker: MockerFixture):
-        """--radio adds the stream URL to the radio favourites."""
+    @pytest.mark.parametrize(
+        ("radio", "options", "title"),
+        [
+            ("Radio Uno", [], "Radio Uno"),
+            ("http://radio.example/uno", [], "Radio Uno"),
+            ("Radio Uno", ["--title", "Uno!"], "Uno!"),
+        ],
+    )
+    def test_favourite_add_radio(
+        self, runner: CliRunner, mocker: MockerFixture, radio, options, title
+    ):
+        """--radio adds a Web radio of the host, by name or URL, with its name and logo."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "add", radio, "--radio", *options],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'add radio favourite \"http://radio.example/uno\"'" in result.output
+        mock_client.add_radio_favourite.assert_called_once_with(
+            "http://radio.example/uno", title, None
+        )
+        mock_client.add_to_favourites.assert_not_called()
+        # The Web radios of the host resolve the radio, the radio favourites confirm it
+        assert mock_client.browse.call_args_list == [
+            mocker.call("radio/myWebRadio"),
+            mocker.call("radio/favourites"),
+        ]
+
+    def test_favourite_add_radio_by_url(self, runner: CliRunner, mocker: MockerFixture):
+        """A Web radio the host does not list is added by URL, with its title and logo."""
+        mock_client = self._mock_websocket_client(mocker)
+        listed = {
+            "navigation": {
+                "lists": [{"items": [{"service": "webradio", "uri": self._STREAM}]}]
+            }
+        }
+        mock_client.browse.side_effect = [
+            BrowseResults.from_envelope(self.ENVELOPE),
+            BrowseResults.from_envelope(listed),
+        ]
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "add", self._STREAM, "--radio",
+             "--title", "Radio Tre", "--albumart", "http://logo/tre"],
+        )
+
+        assert result.exit_code == 0
+        assert f"Command 'add radio favourite \"{self._STREAM}\"'" in result.output
+        mock_client.add_radio_favourite.assert_called_once_with(
+            self._STREAM, "Radio Tre", "http://logo/tre"
+        )
+
+    def test_favourite_add_radio_not_listed_afterwards(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A Web radio the host does not list after the add is reported."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "add", self._STREAM, "--radio",
+             "--title", "Radio Tre"],
+        )
+
+        assert result.exit_code == 1
+        assert f'does not list "{self._STREAM}" among its radio favourites' in result.output
+        mock_client.add_radio_favourite.assert_called_once_with(self._STREAM, "Radio Tre", None)
+
+    def test_favourite_add_radio_without_a_title(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A Web radio the host does not list needs a title."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
@@ -9668,30 +9742,24 @@ class TestCollectionFavouriteAndRadio:
             [*self._WEBSOCKET, "collection", "favourite", "add", self._STREAM, "--radio"],
         )
 
-        assert result.exit_code == 0
-        assert "Command 'add radio favourite" in result.output
-        mock_client.add_radio_favourite.assert_called_once_with(self._STREAM)
-        mock_client.add_to_favourites.assert_not_called()
+        assert result.exit_code == 2
+        assert "Expected the --title option with --radio" in result.output
+        mock_client.add_radio_favourite.assert_not_called()
 
-    @pytest.mark.parametrize(
-        "options", [["--title", "T"], ["--service", "mpd"], ["--albumart", "http://a"]]
-    )
-    def test_favourite_add_radio_with_details(
-        self, runner: CliRunner, mocker: MockerFixture, options
+    def test_favourite_add_radio_with_a_service(
+        self, runner: CliRunner, mocker: MockerFixture
     ):
-        """A Web radio takes no details."""
+        """A Web radio takes no service."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
             main,
             [*self._WEBSOCKET, "collection", "favourite", "add", self._STREAM, "--radio",
-             *options],
+             "--service", "mpd"],
         )
 
         assert result.exit_code == 2
-        assert "Expected the --albumart, --service, and --title options only without" in (
-            result.output
-        )
+        assert "Expected the --service option only without --radio" in result.output
         mock_client.add_radio_favourite.assert_not_called()
 
     @pytest.mark.parametrize(
@@ -9793,38 +9861,62 @@ class TestCollectionFavouriteAndRadio:
         assert f'The Volumio host still lists "{uri}" among its favourites' in result.output
         mock_client.remove_from_favourites.assert_called_once_with(uri, None)
 
-    def test_favourite_remove_with_a_name(self, runner: CliRunner, mocker: MockerFixture):
-        """A name only qualifies a Web radio."""
+    @pytest.mark.parametrize("radio", ["Radio Due", "http://radio.example/due"])
+    def test_favourite_remove_radio(self, runner: CliRunner, mocker: MockerFixture, radio):
+        """--radio drops a radio favourite, by name or URL, checking that it is gone."""
         mock_client = self._mock_websocket_client(mocker)
+        remaining = {
+            "navigation": {
+                "lists": [{"items": [self.ENVELOPE["navigation"]["lists"][0]["items"][0]]}]
+            }
+        }
+        mock_client.browse.side_effect = [
+            BrowseResults.from_envelope(self.ENVELOPE),
+            BrowseResults.from_envelope(remaining),
+        ]
 
         result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "collection", "favourite", "remove", self._URI, "--name", "N"],
-        )
-
-        assert result.exit_code == 2
-        assert "Expected the --name option only together with --radio" in result.output
-        mock_client.remove_from_favourites.assert_not_called()
-
-    @pytest.mark.parametrize(
-        ("options", "name"), [([], None), (["--name", "Radio Tre"], "Radio Tre")]
-    )
-    def test_favourite_remove_radio(
-        self, runner: CliRunner, mocker: MockerFixture, options, name
-    ):
-        """--radio drops the stream URL from the radio favourites, by name when given."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main,
-            [*self._WEBSOCKET, "collection", "favourite", "remove", self._STREAM, "--radio",
-             *options],
+            main, [*self._WEBSOCKET, "collection", "favourite", "remove", radio, "--radio"]
         )
 
         assert result.exit_code == 0
-        assert "Command 'remove radio favourite" in result.output
-        mock_client.remove_radio_favourite.assert_called_once_with(self._STREAM, name)
+        assert "Command 'remove radio favourite \"http://radio.example/due\"'" in result.output
+        mock_client.remove_radio_favourite.assert_called_once_with("http://radio.example/due")
         mock_client.remove_from_favourites.assert_not_called()
+        assert mock_client.browse.call_args_list == [
+            mocker.call("radio/favourites"),
+            mocker.call("radio/favourites"),
+        ]
+
+    def test_favourite_remove_radio_still_listed(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A radio favourite the host still lists after the removal is reported."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "remove", "Radio Due", "--radio"],
+        )
+
+        assert result.exit_code == 1
+        assert 'still lists "http://radio.example/due" among its favourites' in result.output
+        mock_client.remove_radio_favourite.assert_called_once_with("http://radio.example/due")
+
+    def test_favourite_remove_radio_unknown(self, runner: CliRunner, mocker: MockerFixture):
+        """A radio the host lists among no radio favourites is reported, and not removed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "remove", self._STREAM, "--radio"],
+        )
+
+        assert result.exit_code == 1
+        assert f'lists no radio favourite named, or streaming from, "{self._STREAM}"' in (
+            result.output
+        )
+        mock_client.remove_radio_favourite.assert_not_called()
 
     def test_favourite_remove_radio_with_a_service(
         self, runner: CliRunner, mocker: MockerFixture
@@ -9839,9 +9931,7 @@ class TestCollectionFavouriteAndRadio:
         )
 
         assert result.exit_code == 2
-        assert "Expected the --albumart, --service, and --title options only without" in (
-            result.output
-        )
+        assert "Expected the --service option only without --radio" in result.output
         mock_client.remove_radio_favourite.assert_not_called()
 
     def test_radio_add(self, runner: CliRunner, mocker: MockerFixture):
@@ -9955,11 +10045,11 @@ class TestCollectionFavouriteAndRadio:
         "arguments",
         [
             ["favourite", "add", _URI],
-            ["favourite", "add", _STREAM, "--radio"],
+            ["favourite", "add", "Radio Uno", "--radio"],
             ["favourite", "play", "--no-print-resulting-status"],
             ["favourite", "play", "--radio", "--no-print-resulting-status"],
             ["favourite", "remove", _URI],
-            ["favourite", "remove", _STREAM, "--radio"],
+            ["favourite", "remove", "Radio Uno", "--radio"],
             ["radio", "add", "Radio Tre", _STREAM],
             ["radio", "remove", "Radio Tre"],
         ],

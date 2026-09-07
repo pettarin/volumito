@@ -252,11 +252,15 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def add_radio_favourite(self, uri: str) -> None:
+    def add_radio_favourite(
+        self, uri: str, title: str | None = None, albumart: str | None = None
+    ) -> None:
         """Add a Web radio to the radio favourites.
 
         Args:
             uri: The URL the Web radio streams from
+            title: The name to list the radio under
+            albumart: The URL of the logo to show for it, when known
         """
 
     @abstractmethod
@@ -1173,12 +1177,11 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
+    def remove_radio_favourite(self, uri: str) -> None:
         """Remove a Web radio from the radio favourites.
 
         Args:
             uri: The URL the Web radio streams from
-            name: The name it is a favourite under, when known
         """
 
     @abstractmethod
@@ -1781,8 +1784,10 @@ class RESTAPIClient(APIClient):
     def add_cue_track(self, uri: str, number: int, service: str | None = None) -> None:
         return self._fallback.client(QUEUE_OPERATION).add_cue_track(uri, number, service)
 
-    def add_radio_favourite(self, uri: str) -> None:
-        return self._fallback.client(FAVOURITE_OPERATION).add_radio_favourite(uri)
+    def add_radio_favourite(
+        self, uri: str, title: str | None = None, albumart: str | None = None
+    ) -> None:
+        return self._fallback.client(FAVOURITE_OPERATION).add_radio_favourite(uri, title, albumart)
 
     def add_share(self, name: str, path: str, fstype: str, **options: str) -> None:
         return self._fallback.client(SHARE_OPERATION).add_share(name, path, fstype, **options)
@@ -2039,8 +2044,8 @@ class RESTAPIClient(APIClient):
     def remove_from_queue(self, position: int) -> None:
         return self._fallback.client(QUEUE_OPERATION).remove_from_queue(position)
 
-    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
-        return self._fallback.client(FAVOURITE_OPERATION).remove_radio_favourite(uri, name)
+    def remove_radio_favourite(self, uri: str) -> None:
+        return self._fallback.client(FAVOURITE_OPERATION).remove_radio_favourite(uri)
 
     def remove_web_radio(self, name: str) -> None:
         return self._fallback.client(FAVOURITE_OPERATION).remove_web_radio(name)
@@ -2441,8 +2446,10 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def add_cue_track(self, uri: str, number: int, service: str | None = None) -> None:
         return self._client.add_cue_track(uri, number, service)
 
-    def add_radio_favourite(self, uri: str) -> None:
-        return self._client.add_radio_favourite(uri)
+    def add_radio_favourite(
+        self, uri: str, title: str | None = None, albumart: str | None = None
+    ) -> None:
+        return self._client.add_radio_favourite(uri, title, albumart)
 
     def add_share(self, name: str, path: str, fstype: str, **options: str) -> None:
         return self._client.add_share(name, path, fstype, **options)
@@ -2733,8 +2740,8 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def remove_from_queue(self, position: int) -> None:
         return self._client.remove_from_queue(position)
 
-    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
-        return self._client.remove_radio_favourite(uri, name)
+    def remove_radio_favourite(self, uri: str) -> None:
+        return self._client.remove_radio_favourite(uri)
 
     def remove_web_radio(self, name: str) -> None:
         return self._client.remove_web_radio(name)
@@ -3209,8 +3216,10 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def add_cue_track(self, uri: str, number: int, service: str | None = None) -> None:
         return self._run(self._client.add_cue_track(uri, number, service))
 
-    def add_radio_favourite(self, uri: str) -> None:
-        return self._run(self._client.add_radio_favourite(uri))
+    def add_radio_favourite(
+        self, uri: str, title: str | None = None, albumart: str | None = None
+    ) -> None:
+        return self._run(self._client.add_radio_favourite(uri, title, albumart))
 
     def add_share(self, name: str, path: str, fstype: str, **options: str) -> None:
         return self._run(self._client.add_share(name, path, fstype, **options))
@@ -3494,8 +3503,8 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def remove_from_queue(self, position: int) -> None:
         return self._run(self._client.remove_from_queue(position))
 
-    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
-        return self._run(self._client.remove_radio_favourite(uri, name))
+    def remove_radio_favourite(self, uri: str) -> None:
+        return self._run(self._client.remove_radio_favourite(uri))
 
     def remove_web_radio(self, name: str) -> None:
         return self._run(self._client.remove_web_radio(name))

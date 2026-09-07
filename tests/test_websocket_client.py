@@ -1515,23 +1515,51 @@ class TestVolumioWebSocketClientFavourites:
         ]
 
     def test_the_radio_favourites(self, mocker: MockerFixture):
-        """A Web radio is made a favourite, played, and removed."""
-        client, fake = _client(mocker)
+        """A Web radio is made a favourite as a webradio item, played, and removed."""
+        fake = _FakeSocketIOClient(
+            answers={
+                "addToFavourites": ("urifavourites", {"favourite": False}),
+                "removeFromFavourites": ("pushBrowseLibrary", NAVIGATION_PAYLOAD),
+            }
+        )
+        client, fake = _client(mocker, fake)
 
-        client.add_radio_favourite("http://stream/1")
+        client.add_radio_favourite("http://stream/1", "Jazz FM")
+        client.add_radio_favourite("http://stream/2", "Rock FM", "http://logo/2")
         client.play_radio_favourites()
         client.remove_radio_favourite("http://stream/1")
-        client.remove_radio_favourite("http://stream/2", name="Jazz FM")
 
         assert fake.calls == [
-            _Call("addToRadioFavourites", {"uri": "http://stream/1"}),
-            _Call("playRadioFavourites", None),
-            _Call("removeFromRadioFavourites", {"uri": "http://stream/1"}),
             _Call(
-                "removeFromRadioFavourites",
-                {"name": "Jazz FM", "uri": "http://stream/2"},
+                "addToFavourites",
+                {"service": "webradio", "title": "Jazz FM", "uri": "http://stream/1"},
             ),
+            _Call(
+                "addToFavourites",
+                {
+                    "albumart": "http://logo/2",
+                    "service": "webradio",
+                    "title": "Rock FM",
+                    "uri": "http://stream/2",
+                },
+            ),
+            _Call("playRadioFavourites", None),
+            _Call("removeFromFavourites", {"service": "webradio", "uri": "http://stream/1"}),
         ]
+
+    def test_the_radio_favourites_wait_for_the_answer(self, mocker: MockerFixture):
+        """The answers of the host to a radio favourite add and removal are waited for."""
+        client, _ = _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.add_radio_favourite("http://stream/1", "Jazz FM")
+        assert 'did not answer "addToFavourites" with "urifavourites"' in str(excinfo.value)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.remove_radio_favourite("http://stream/1")
+        assert 'did not answer "removeFromFavourites" with "pushBrowseLibrary"' in str(
+            excinfo.value
+        )
 
     def test_the_web_radios_of_the_user(self, mocker: MockerFixture):
         """A Web radio is saved with its URL and deleted by name alone, the host answering."""

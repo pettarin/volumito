@@ -550,7 +550,7 @@ with VolumioWebSocketClient(host) as client:
 
 #### Favourites
 
-- `add_radio_favourite(uri)`
+- `add_radio_favourite(uri, title)`
 - `add_to_favourites(uri)`
 - `play_favourites()`
 - `play_radio_favourites()`
