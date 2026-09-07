@@ -9797,6 +9797,41 @@ class TestCollectionFavouriteAndRadio:
         assert result.exit_code == 0
         assert "Command 'remove web radio \"Radio Tre\"' executed successfully" in result.output
         mock_client.remove_web_radio.assert_called_once_with("Radio Tre")
+        # The Web radios are read again, to check that the radio is gone
+        mock_client.browse.assert_called_once_with("radio/myWebRadio")
+
+    def test_radio_remove_still_listed(self, runner: CliRunner, mocker: MockerFixture):
+        """A Web radio the host still lists after the removal is reported."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.browse.return_value = BrowseResults.from_envelope(
+            {
+                "navigation": {
+                    "lists": [
+                        {
+                            "items": [
+                                {
+                                    "service": "webradio",
+                                    "type": "mywebradio",
+                                    "title": "Radio Tre",
+                                    "uri": self._STREAM,
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "radio", "remove", "Radio Tre"]
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'The Volumio host still lists the Web radio "Radio Tre" after the removal'
+            in result.output
+        )
+        mock_client.remove_web_radio.assert_called_once_with("Radio Tre")
 
     @pytest.mark.parametrize(
         "arguments",

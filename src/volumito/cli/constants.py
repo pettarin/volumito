@@ -233,6 +233,12 @@ QUEUE_ADD_NEXT_OPTIONS_ERROR = "Expected the --album and --title options only to
 QUEUE_CUE_TRACK_SERVICE_ERROR = "Expected the --service option only together with --cue-track."
 """Error message when a "queue" subcommand is given a service without a cue track."""
 
+RADIO_REMOVE_STILL_LISTED_ERROR = (
+    'The Volumio host still lists the Web radio "{name}" after the removal: '
+    "a MyVolumio cloud device does not save an empty list of Web radios."
+)
+"""Error message when "collection radio remove" finds the Web radio still listed."""
+
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notification register" is given neither a URL nor --autocompose-url."""
 

@@ -117,6 +117,9 @@ All notable changes to this project will be documented in this file.
 - `delete_folder` of the WebSocket clients sends the URI and the parent listing
   the host reads (it ignored the previous payload), waits for its answer,
   and refuses a URI above a directory of a source
+- `add_web_radio` and `remove_web_radio` of the WebSocket clients wait for
+  the answer of the host, and `collection radio remove` reports a Web radio
+  the host still lists after the removal
 
 
 ## [0.4.0] - 2026-09-04

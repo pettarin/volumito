@@ -157,6 +157,7 @@ from volumito.clients.websocket.common import (
     EVENT_PLUGIN_MANAGER,
     EVENT_PREVIOUS,
     EVENT_PUSH_ADD_TO_PLAYLIST,
+    EVENT_PUSH_ADD_WEB_RADIO,
     EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_PUSH_INFINITY_PLAYBACK,
     EVENT_PUSH_SLEEP,
@@ -669,14 +670,20 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def add_web_radio(self, name: str, uri: str) -> None:
         """Save a Web radio of the user.
 
+        The host answers once the radio is saved, with a push of its own that is
+        waited for and dropped: a read of the Web radios right after sees the radio.
+
         Args:
             name: The name to save the Web radio under
             uri: The URL it streams from
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_ADD_WEB_RADIO, self._web_radio_payload(name, uri))
+        self._request(
+            EVENT_ADD_WEB_RADIO, EVENT_PUSH_ADD_WEB_RADIO, self._web_radio_payload(name, uri)
+        )
 
     @property
     def alarms(self) -> Alarms:
@@ -2146,13 +2153,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def remove_web_radio(self, name: str) -> None:
         """Delete a Web radio of the user.
 
+        The host answers once the radio is removed, with the listing of the Web radios
+        as the push a browse is answered by, which is waited for and dropped: a read
+        of the Web radios right after sees the removal, and a browse right after is
+        answered by its own push.
+
         Args:
             name: The name the Web radio was saved under
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_REMOVE_WEB_RADIO, self._web_radio_payload(name))
+        self._request(
+            EVENT_REMOVE_WEB_RADIO, EVENT_PUSH_BROWSE_LIBRARY, self._web_radio_payload(name)
+        )
 
     def repeat(self, value: bool | None = None) -> None:
         """Set or toggle the repeat mode.

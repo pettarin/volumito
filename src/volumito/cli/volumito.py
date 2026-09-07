@@ -207,6 +207,7 @@ from volumito.cli.constants import (
     QUEUE_ADD_MODES_ERROR,
     QUEUE_ADD_NEXT_OPTIONS_ERROR,
     QUEUE_CUE_TRACK_SERVICE_ERROR,
+    RADIO_REMOVE_STILL_LISTED_ERROR,
     REGISTER_ARGUMENT_ERROR,
     REPLACE_CUE_TRACK_ERROR,
     REPLACE_POSITION_ERROR,
@@ -3722,9 +3723,17 @@ def radio_list(
 def radio_remove(ctx: click.Context, name: str) -> None:
     """Delete the Web radio saved under NAME.
 
+    The Web radios are read again once the host answers: a radio it still lists is
+    reported as an error, which happens on a MyVolumio cloud device asked to remove
+    its last Web radio, since it does not save an empty list.
+
     Needs a WebSocket API client.
     """
     execute_command(ctx, f'remove web radio "{name}"', lambda c: c.remove_web_radio(name))
+    listed = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, None))
+    if any(item.title == name for item in listed.items):
+        error(RADIO_REMOVE_STILL_LISTED_ERROR.format(name=name))
+        sys.exit(1)
 
 
 @collection.command("search")

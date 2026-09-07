@@ -1307,8 +1307,14 @@ class TestVolumioAsyncWebSocketClientFavourites:
         ]
 
     async def test_the_web_radios_of_the_user(self, mocker: MockerFixture):
-        """A Web radio is saved with its URL and deleted by name alone."""
-        client, fake = await _client(mocker)
+        """A Web radio is saved with its URL and deleted by name alone, the host answering."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "addWebRadio": ("pushAddWebRadio", {"success": True}),
+                "removeWebRadio": ("pushBrowseLibrary", NAVIGATION_PAYLOAD),
+            }
+        )
+        client, fake = await _client(mocker, fake)
 
         await client.add_web_radio("Jazz FM", "http://stream/1")
         await client.remove_web_radio("Jazz FM")
@@ -1317,6 +1323,18 @@ class TestVolumioAsyncWebSocketClientFavourites:
             _Call("addWebRadio", {"name": "Jazz FM", "uri": "http://stream/1"}),
             _Call("removeWebRadio", {"name": "Jazz FM"}),
         ]
+
+    async def test_editing_the_web_radios_waits_for_the_answer(self, mocker: MockerFixture):
+        """The pushes the host answers a save and a removal with are waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.add_web_radio("Jazz FM", "http://stream/1")
+        assert 'did not answer "addWebRadio" with "pushAddWebRadio"' in str(excinfo.value)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.remove_web_radio("Jazz FM")
+        assert 'did not answer "removeWebRadio" with "pushBrowseLibrary"' in str(excinfo.value)
 
 
 class TestVolumioAsyncWebSocketClientBrowseSources:
