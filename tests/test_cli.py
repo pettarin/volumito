@@ -9762,24 +9762,31 @@ class TestCollectionFavouriteAndRadio:
         assert "Expected the --service option only without --radio" in result.output
         mock_client.add_radio_favourite.assert_not_called()
 
-    @pytest.mark.parametrize(
-        ("arguments", "name"), [([], None), (["Favourite Song"], "Favourite Song")]
-    )
-    def test_favourite_play(self, runner: CliRunner, mocker: MockerFixture, arguments, name):
-        """collection favourite play starts the favourites, from the named one when given."""
+    def test_favourite_play(self, runner: CliRunner, mocker: MockerFixture):
+        """collection favourite play starts the favourites from the named one."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
             main,
-            [*self._WEBSOCKET, "collection", "favourite", "play", *arguments,
+            [*self._WEBSOCKET, "collection", "favourite", "play", "Favourite Song",
              "--no-print-resulting-status"],
         )
 
         assert result.exit_code == 0
         assert "Command 'play favourites' executed successfully" in result.output
-        mock_client.play_favourites.assert_called_once_with(name)
+        mock_client.play_favourites.assert_called_once_with("Favourite Song")
         mock_client.play_radio_favourites.assert_not_called()
         mock_client.state_property.assert_not_called()
+
+    def test_favourite_play_without_a_name(self, runner: CliRunner, mocker: MockerFixture):
+        """The favourites play from a named one only."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "favourite", "play"])
+
+        assert result.exit_code == 2
+        assert "Expected the NAME argument without --radio" in result.output
+        mock_client.play_favourites.assert_not_called()
 
     def test_favourite_play_prints_the_resulting_status(
         self, runner: CliRunner, mocker: MockerFixture
@@ -9787,7 +9794,9 @@ class TestCollectionFavouriteAndRadio:
         """By default the resulting playback status is printed."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "favourite", "play"])
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "favourite", "play", "Favourite Song"]
+        )
 
         assert result.exit_code == 0
         assert "StatusMarkerArtist" in result.output
@@ -9808,16 +9817,41 @@ class TestCollectionFavouriteAndRadio:
         mock_client.play_radio_favourites.assert_called_once_with()
         mock_client.play_favourites.assert_not_called()
 
-    def test_favourite_play_radio_with_a_name(self, runner: CliRunner, mocker: MockerFixture):
-        """The radio favourites play from their start only."""
+    @pytest.mark.parametrize("radio", ["Radio Due", "http://radio.example/due"])
+    def test_favourite_play_radio_with_a_name(
+        self, runner: CliRunner, mocker: MockerFixture, radio
+    ):
+        """--radio NAME plays the radio favourites from the one named, or streaming from."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
-            main, [*self._WEBSOCKET, "collection", "favourite", "play", "Name", "--radio"]
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "play", radio, "--radio",
+             "--no-print-resulting-status"],
         )
 
-        assert result.exit_code == 2
-        assert "Expected the NAME argument only without --radio" in result.output
+        assert result.exit_code == 0
+        assert f"Command 'play radio favourite \"{radio}\"' executed successfully" in (
+            result.output
+        )
+        mock_client.browse.assert_called_once_with("radio/favourites")
+        mock_client.replace_queue_and_play.assert_called_once_with("radio/favourites", 1)
+        mock_client.play_radio_favourites.assert_not_called()
+
+    def test_favourite_play_radio_unknown(self, runner: CliRunner, mocker: MockerFixture):
+        """A radio the host lists among no radio favourites is reported, and not played."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "collection", "favourite", "play", self._STREAM, "--radio"],
+        )
+
+        assert result.exit_code == 1
+        assert f'lists no radio favourite named, or streaming from, "{self._STREAM}"' in (
+            result.output
+        )
+        mock_client.replace_queue_and_play.assert_not_called()
         mock_client.play_radio_favourites.assert_not_called()
 
     @pytest.mark.parametrize(("options", "service"), [([], None), (["--service", "mpd"], "mpd")])
@@ -10046,7 +10080,7 @@ class TestCollectionFavouriteAndRadio:
         [
             ["favourite", "add", _URI],
             ["favourite", "add", "Radio Uno", "--radio"],
-            ["favourite", "play", "--no-print-resulting-status"],
+            ["favourite", "play", "Favourite Song", "--no-print-resulting-status"],
             ["favourite", "play", "--radio", "--no-print-resulting-status"],
             ["favourite", "remove", _URI],
             ["favourite", "remove", "Radio Uno", "--radio"],

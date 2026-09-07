@@ -186,8 +186,8 @@ from volumito.cli.constants import (
     EVENT_PAYLOAD_ERROR,
     EXPERIENCE_VALUES,
     FAVOURITE_KEPT_BY_SOURCE_INFO,
+    FAVOURITE_PLAY_NAME_ERROR,
     FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR,
-    FAVOURITE_RADIO_NAME_ERROR,
     FAVOURITE_RADIO_OPTIONS_ERROR,
     FAVOURITE_RADIO_TITLE_ERROR,
     FAVOURITE_RADIO_UNKNOWN_ERROR,
@@ -3652,18 +3652,27 @@ def favourite_list(
 def favourite_play(
     ctx: click.Context, name: str | None, print_resulting_status: bool, radio: bool
 ) -> None:
-    """Play the favourites, or the radio favourites with --radio.
+    """Play the favourites from the one named NAME, or the radio favourites with --radio.
 
-    With NAME, the favourites play from the one so named; NAME is not accepted with
-    --radio.
+    NAME is required without --radio. With --radio, the radio favourites play from the
+    one named, or streaming from, NAME ("collection favourite list --radio"), or from
+    the first without NAME.
 
     Needs a WebSocket API client.
     """
     if radio:
-        if name is not None:
-            raise click.UsageError(FAVOURITE_RADIO_NAME_ERROR)
-        execute_command(ctx, "play radio favourites", lambda c: c.play_radio_favourites())
+        if name is None:
+            execute_command(ctx, "play radio favourites", lambda c: c.play_radio_favourites())
+        else:
+            index, _ = _radio_favourite_or_exit(ctx, name)
+            execute_command(
+                ctx,
+                f'play radio favourite "{name}"',
+                lambda c: c.replace_queue_and_play(URI_RADIO_FAVOURITES, index),
+            )
     else:
+        if name is None:
+            raise click.UsageError(FAVOURITE_PLAY_NAME_ERROR)
         execute_command(ctx, "play favourites", lambda c: c.play_favourites(name))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
@@ -3687,7 +3696,7 @@ def favourite_remove(ctx: click.Context, uri: str, radio: bool, service: str | N
     if radio:
         if service is not None:
             raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
-        stream = _radio_favourite_uri_or_exit(ctx, uri)
+        _, stream = _radio_favourite_or_exit(ctx, uri)
         execute_command(
             ctx,
             f'remove radio favourite "{stream}"',
@@ -3739,20 +3748,21 @@ def _radio_favourite_details(
     return radio, title, albumart
 
 
-def _radio_favourite_uri_or_exit(ctx: click.Context, radio: str) -> str:
-    """Return the URL of the radio favourite named, or streaming from, RADIO, or exit.
+def _radio_favourite_or_exit(ctx: click.Context, radio: str) -> tuple[int, str]:
+    """Find the radio favourite named, or streaming from, RADIO, or exit.
 
     Args:
         ctx: The click context
         radio: The name the radio is a favourite under, or the URL it streams from
 
     Returns:
-        The URL the radio streams from, as the host lists it
+        The position of the radio among the radio favourites (0-based), and the URL
+        it streams from, as the host lists it
     """
     listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
-    for item in listed.items:
+    for index, item in enumerate(listed.items):
         if item.uri and radio in (item.title, item.uri):
-            return item.uri
+            return index, item.uri
     error(FAVOURITE_RADIO_UNKNOWN_ERROR.format(radio=radio))
     sys.exit(1)
 

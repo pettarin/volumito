@@ -104,13 +104,13 @@ FAVOURITE_KEPT_BY_SOURCE_INFO = (
 )
 """Message when "collection favourite add" finds the favourite kept by its source."""
 
+FAVOURITE_PLAY_NAME_ERROR = "Expected the NAME argument without --radio."
+"""Error message when "collection favourite play" is given no name without --radio."""
+
 FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR = (
     'The Volumio host does not list "{uri}" among its radio favourites after the add.'
 )
 """Error message when "collection favourite add --radio" finds the radio not listed."""
-
-FAVOURITE_RADIO_NAME_ERROR = "Expected the NAME argument only without --radio."
-"""Error message when "collection favourite play" is given a name together with --radio."""
 
 FAVOURITE_RADIO_OPTIONS_ERROR = "Expected the --service option only without --radio."
 """Error message when a "collection favourite" subcommand gives a Web radio a service."""

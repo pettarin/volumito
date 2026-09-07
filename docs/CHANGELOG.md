@@ -139,6 +139,8 @@ All notable changes to this project will be documented in this file.
   `remove_radio_favourite` no longer takes a name; `collection favourite
   add/remove --radio` take a Web radio by name or by URL, and report a radio
   the host does not list afterwards
+- `collection favourite play` requires NAME without `--radio`, and with it
+  plays the radio favourites from the one named, or streaming from, NAME
 
 
 ## [0.4.0] - 2026-09-04
