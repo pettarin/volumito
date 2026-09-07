@@ -11498,6 +11498,141 @@ class TestPlaylistCommands:
         assert result.exit_code == 0
         assert "Command 'create playlist \"New\"' executed successfully" in result.output
         mock_client.create_playlist.assert_called_once_with("New")
+        mock_client.add_to_playlist.assert_not_called()
+        mock_client.get_playlist_content.assert_not_called()
+
+    def test_create_importing_a_file(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """-f/--import-from-file fills the new playlist with the items of the file."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "rock.json"
+        source.write_text(
+            json.dumps(
+                [
+                    {
+                        "album": "Album X",
+                        "artist": "Artist A",
+                        "duration": "00:01:01",
+                        "position": 1,
+                        "service": "mpd",
+                        "title": "Song A",
+                        "uri": "music-library/a.flac",
+                    },
+                    {"position": 2, "uri": "qobuz://track/2"},
+                ],
+                indent=4,
+            )
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "create", "New", "-f", str(source)]
+        )
+
+        assert result.exit_code == 0
+        assert f'Importing 2 items of "{source}" into "New"' in result.output
+        assert "Command 'create playlist \"New\"' executed successfully" in result.output
+        mock_client.create_playlist.assert_called_once_with("New")
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("New", "music-library/a.flac", "mpd"),
+            mocker.call("New", "qobuz://track/2", None),
+        ]
+        # The resulting content is printed, as "playlist content" prints it
+        mock_client.get_playlist_content.assert_called_once_with("New")
+        assert '"uri": "music-library/a.flac"' in result.output
+
+    def test_create_importing_a_raw_file(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
+        """A file in the raw format holds the envelope of the host, whose lists are read."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "rock.json"
+        source.write_text(json.dumps(self._CONTENT))
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "create",
+                "New",
+                "-f",
+                str(source),
+                "--no-print-resulting-content",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert f'Importing 2 items of "{source}" into "New"' in result.output
+        # The tracks of every list of the envelope, in order
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("New", "music-library/a.flac", "mpd"),
+            mocker.call("New", "qobuz://track/2", "qobuz"),
+        ]
+
+    def test_create_importing_a_file_without_the_resulting_content(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """--no-print-resulting-content skips the print after the import."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "rock.json"
+        source.write_text(json.dumps([{"uri": "qobuz://track/2", "service": "qobuz"}]))
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "create",
+                "New",
+                "--import-from-file",
+                str(source),
+                "--no-print-resulting-content",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.add_to_playlist.assert_called_once_with("New", "qobuz://track/2", "qobuz")
+        mock_client.get_playlist_content.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            '{"uri": "qobuz://track/2"}',
+            '{"name": "Rock", "lists": "none"}',
+            "[1]",
+            '[{"title": "No URI"}]',
+            '[{"uri": ""}]',
+            '[{"uri": "qobuz://track/2", "service": 3}]',
+        ],
+    )
+    def test_create_importing_a_file_of_another_shape(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path, content
+    ):
+        """A file that is not a list of items with a URI is a usage error."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "rock.json"
+        source.write_text(content)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "create", "New", "-f", str(source)]
+        )
+
+        assert result.exit_code == 2
+        assert "Expected FILE to hold a JSON list of playlist items" in result.output
+        mock_client.create_playlist.assert_not_called()
+
+    def test_create_importing_an_unreadable_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """A file that cannot be read, or is not JSON, ends the command before creating."""
+        mock_client = self._mock_websocket_client(mocker)
+        source = tmp_path / "rock.json"
+        source.write_text("not json")
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "create", "New", "-f", str(source)]
+        )
+
+        assert result.exit_code == 1
+        assert f'Cannot read playlist file "{source}"' in result.output
+        mock_client.create_playlist.assert_not_called()
 
     def test_delete_refused_without_yes(self, runner: CliRunner, mocker: MockerFixture):
         """Without -y/--yes nothing is deleted, nor looked up."""

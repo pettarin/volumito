@@ -67,6 +67,7 @@ CONFIGURATION_FILENAMES: list[str] = [
 CONTENT_COMMAND_PATHS: list[list[str]] = [
     ["playlist", "add"],
     ["playlist", "copy"],
+    ["playlist", "create"],
     ["playlist", "remove"],
     ["playlist", "rename"],
 ]
@@ -209,6 +210,7 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["playlist", "add"],
         ["playlist", "content"],
         ["playlist", "copy"],
+        ["playlist", "create"],
         ["playlist", "remove"],
         ["playlist", "rename"],
     ],

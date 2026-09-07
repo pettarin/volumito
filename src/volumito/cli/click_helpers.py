@@ -1936,6 +1936,21 @@ def option_ignore_integrity_check(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_import_from_file(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-f``/``--import-from-file`` option to the playlist create subcommand."""
+    return click.option(
+        "-f",
+        "--import-from-file",
+        type=str,
+        default=None,
+        metavar="FILE",
+        help=(
+            'Fill the new playlist with the items FILE lists, as "playlist content NAME '
+            '-L ALL" prints them in any of its formats.'
+        ),
+    )(func)
+
+
 def option_item_album(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--album`` option to the subcommands taking a single item."""
     return click.option(

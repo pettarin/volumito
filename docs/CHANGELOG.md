@@ -24,6 +24,8 @@ All notable changes to this project will be documented in this file.
 - Commands `playlist add`, `playlist content`, `playlist copy`, `playlist create`,
   `playlist delete`, `playlist enqueue`, `playlist remove`, and `playlist rename`
   (all needing a WebSocket API client)
+- Option `-f/--import-from-file` of `playlist create`, filling the new playlist
+  with the items a file lists, as `playlist content NAME -L ALL` prints them
 - Option `-p/--position` of `playlist remove`, removing the items at
   the selected positions of the playlist (e.g., `1-3,6-8,12`)
   instead of the one at a URI

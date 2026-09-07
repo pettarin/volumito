@@ -191,6 +191,9 @@ OUTPUT_FORMATS = [
 PLAY_VOLATILE_ERROR = "Expected a POSITION argument together with --volatile."
 """Error message when "playback play" is asked for the volatile source without a position."""
 
+PLAYLIST_FILE_ERROR = 'Expected FILE to hold a JSON list of playlist items, each with a "uri".'
+"""Error message when "playlist create" is given a file of another shape to import."""
+
 PLAYLIST_REMOVE_ARGUMENTS_ERROR = (
     "Expected either a URI argument or the -p/--position option, and not both."
 )

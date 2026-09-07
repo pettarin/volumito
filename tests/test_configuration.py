@@ -804,6 +804,7 @@ class TestBuildClickDefaultMap:
                 "add": formatting,
                 "content": formatting,
                 "copy": formatting,
+                "create": formatting,
                 "list": format_only,
                 "remove": formatting,
                 "rename": formatting,
@@ -1032,6 +1033,7 @@ class TestBuildClickDefaultMap:
             "playlist": {
                 "add": {"print_resulting_content": False},
                 "copy": {"print_resulting_content": False},
+                "create": {"print_resulting_content": False},
                 "remove": {"print_resulting_content": False},
                 "rename": {"print_resulting_content": False},
             },

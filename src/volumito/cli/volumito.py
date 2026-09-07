@@ -82,6 +82,7 @@ from volumito.cli.click_helpers import (
     option_format_table,
     option_idle_timeout,
     option_ignore_integrity_check,
+    option_import_from_file,
     option_item_album,
     option_item_albumart,
     option_item_title,
@@ -200,6 +201,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PLAY_VOLATILE_ERROR,
+    PLAYLIST_FILE_ERROR,
     PLAYLIST_REMOVE_ARGUMENTS_ERROR,
     PLAYLIST_REMOVE_EMPTY_WARNING,
     PLAYLIST_REMOVE_SERVICE_ERROR,
@@ -4211,12 +4213,40 @@ def playlist_copy(
 @playlist.command("create")
 @click.pass_context
 @click.argument("name", type=str)
-def playlist_create(ctx: click.Context, name: str) -> None:
-    """Create the empty playlist NAME.
+@option_fields
+@option_format
+@option_import_from_file
+@option_print_resulting_content
+def playlist_create(
+    ctx: click.Context,
+    name: str,
+    fields: str,
+    output_format: str,
+    import_from_file: str | None,
+    print_resulting_content: bool,
+) -> None:
+    """Create the empty playlist NAME, filled from FILE with -f/--import-from-file.
+
+    FILE holds the items as "playlist content NAME -L ALL" prints them, in any of
+    its formats (a JSON list, or the envelope of the host in the raw one): each item
+    is added by the "uri" and the "service" it holds, as "playlist add" adds them
+    without expanding, its other keys being ignored. The Volumio host refuses a name
+    already in use. Once filled from a file, the content of the playlist is printed
+    as "playlist content" prints it, unless --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
-    execute_command(ctx, f'create playlist "{name}"', lambda c: c.create_playlist(name))
+    items: list[tuple[str, str | None]] = []
+    if import_from_file is not None:
+        items = _playlist_items_from_file(import_from_file)
+        info(f'Importing {len(items)} items of "{import_from_file}" into "{name}"')
+
+    def create_items(client: APIClient) -> None:
+        _fill_new_playlist(client, name, items)
+
+    execute_command(ctx, f'create playlist "{name}"', create_items)
+    if import_from_file is not None and print_resulting_content:
+        _render_playlist_content(ctx, name, fields, output_format)
 
 
 @playlist.command("delete")
@@ -4404,6 +4434,47 @@ def _fill_new_playlist(
     client.create_playlist(target)
     for uri, service in items:
         client.add_to_playlist(target, uri, service)
+
+
+def _playlist_items_from_file(file: str) -> list[tuple[str, str | None]]:
+    """Read the items of a playlist out of a JSON file, or exit.
+
+    The file holds a list of items as "playlist content NAME -L ALL" prints them, or
+    the envelope of the host its raw format prints, whose lists hold the items: the
+    "uri" of each is required, its "service" is kept when given, and the other keys
+    are ignored. A file that cannot be read exits with 1, one of another shape is a
+    usage error.
+
+    Args:
+        file: The path of the file
+
+    Returns:
+        The URI of each item, and the service it belongs to (None when the file
+        gives none)
+    """
+    try:
+        with open(file, encoding="utf-8") as playlist_file:
+            entries = json.load(playlist_file)
+    except (OSError, ValueError) as e:
+        error(f'Cannot read playlist file "{file}": {e}')
+        sys.exit(1)
+    if isinstance(entries, dict) and isinstance(entries.get("lists"), list):
+        # The raw format is the envelope of the host: its lists hold the items
+        entries = [
+            item
+            for entry in entries["lists"]
+            for item in (entry if isinstance(entry, list) else [entry])
+        ]
+    items: list[tuple[str, str | None]] = []
+    if not isinstance(entries, list):
+        raise click.UsageError(PLAYLIST_FILE_ERROR)
+    for entry in entries:
+        uri = entry.get("uri") if isinstance(entry, dict) else None
+        service = entry.get("service") if isinstance(entry, dict) else None
+        if not isinstance(uri, str) or not uri or not isinstance(service, str | None):
+            raise click.UsageError(PLAYLIST_FILE_ERROR)
+        items.append((uri, service))
+    return items
 
 
 def _playlist_items_to_copy(
