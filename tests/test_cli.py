@@ -11106,7 +11106,9 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "--help"])
 
         assert result.exit_code == 0
-        for command in ("add", "content", "copy", "create", "delete", "enqueue", "remove"):
+        for command in (
+            "add", "content", "copy", "create", "delete", "enqueue", "remove", "rename"
+        ):
             assert f"  {command} " in result.output
 
     @pytest.mark.parametrize(
@@ -11426,6 +11428,57 @@ class TestPlaylistCommands:
         assert 'Copying 1 items of "Rock" to "New"' in result.output
         mock_client.add_to_playlist.assert_called_once_with("New", "qobuz://track/2", "qobuz")
 
+    def test_rename(self, runner: CliRunner, mocker: MockerFixture):
+        """playlist rename copies the source to the target, then deletes the source."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "rename", "Rock", "New"])
+
+        assert result.exit_code == 0
+        assert 'Copying 2 items of "Rock" to "New"' in result.output
+        assert "Command 'rename playlist \"Rock\" to \"New\"' executed successfully" in (
+            result.output
+        )
+        mock_client.create_playlist.assert_called_once_with("New")
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("New", "music-library/a.flac", "mpd"),
+            mocker.call("New", "qobuz://track/2", "qobuz"),
+        ]
+        mock_client.delete_playlist.assert_called_once_with("Rock")
+        # The source is deleted only once the target holds its items
+        calls = mock_client.mock_calls
+        assert calls.index(mocker.call.delete_playlist("Rock")) > calls.index(
+            mocker.call.add_to_playlist("New", "qobuz://track/2", "qobuz")
+        )
+        assert '"uri": "music-library/a.flac"' in result.output
+
+    def test_rename_to_a_name_the_host_refuses(self, runner: CliRunner, mocker: MockerFixture):
+        """A target the host does not create leaves the source in place."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.create_playlist.side_effect = VolumioAPIError(
+            'The host did not create the playlist "Jazz Classics": Playlist already exists'
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "rename", "Rock", "Jazz Classics"]
+        )
+
+        assert result.exit_code == 1
+        assert "API error: The host did not create the playlist" in result.output
+        mock_client.add_to_playlist.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
+    def test_rename_of_a_missing_source(self, runner: CliRunner, mocker: MockerFixture):
+        """A source the host does not list is refused before anything is created."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "rename", "Nope", "New"])
+
+        assert result.exit_code == 1
+        assert 'Playlist not found: "Nope"' in result.output
+        mock_client.create_playlist.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
     def test_copy_of_a_missing_source(self, runner: CliRunner, mocker: MockerFixture):
         """A source the host does not list is refused before anything is created."""
         mock_client = self._mock_websocket_client(mocker)
@@ -11730,6 +11783,7 @@ class TestPlaylistCommands:
             ["add", "Rock", _URI],
             ["content", "Rock"],
             ["copy", "Rock", "New"],
+            ["rename", "Rock", "New"],
             ["create", "New"],
             ["delete", "Rock", "-y"],
             ["enqueue", "Rock"],

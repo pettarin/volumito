@@ -806,6 +806,7 @@ class TestBuildClickDefaultMap:
                 "copy": formatting,
                 "list": format_only,
                 "remove": formatting,
+                "rename": formatting,
             },
             "multiroom": {"info": formatting, "set": format_only, "status": format_only},
             "system": {
@@ -1032,6 +1033,7 @@ class TestBuildClickDefaultMap:
                 "add": {"print_resulting_content": False},
                 "copy": {"print_resulting_content": False},
                 "remove": {"print_resulting_content": False},
+                "rename": {"print_resulting_content": False},
             },
         }
 

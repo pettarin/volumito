@@ -22,7 +22,7 @@ All notable changes to this project will be documented in this file.
   and `queue save`, and option `--cue-track` of `queue replace`
   (all needing a WebSocket API client, except the plain `queue add URI`)
 - Commands `playlist add`, `playlist content`, `playlist copy`, `playlist create`,
-  `playlist delete`, `playlist enqueue`, and `playlist remove`
+  `playlist delete`, `playlist enqueue`, `playlist remove`, and `playlist rename`
   (all needing a WebSocket API client)
 - Option `-p/--position` of `playlist remove`, removing the items at
   the selected positions of the playlist (e.g., `1-3,6-8,12`)

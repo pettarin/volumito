@@ -68,6 +68,7 @@ CONTENT_COMMAND_PATHS: list[list[str]] = [
     ["playlist", "add"],
     ["playlist", "copy"],
     ["playlist", "remove"],
+    ["playlist", "rename"],
 ]
 """--print-resulting-content lives on the playlist editing commands."""
 
@@ -209,6 +210,7 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["playlist", "content"],
         ["playlist", "copy"],
         ["playlist", "remove"],
+        ["playlist", "rename"],
     ],
     "playlist-list": [
         ["playlist", "list"],

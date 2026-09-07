@@ -4198,21 +4198,10 @@ def playlist_copy(
 
     Needs a WebSocket API client.
     """
-    if check_playlist_name:
-        check_playlist_name_or_exit(ctx, source)
-    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(source)).tracks
-    items: list[tuple[str, str | None]] = []
-    for index, track in enumerate(tracks, 1):
-        if track.uri is None:
-            warning(f'Skipping the item at position {index} of "{source}", which has no URI')
-            continue
-        items.append((track.uri, track.service))
-    info(f'Copying {len(items)} items of "{source}" to "{target}"')
+    items = _playlist_items_to_copy(ctx, source, target, check_playlist_name)
 
     def copy_items(client: APIClient) -> None:
-        client.create_playlist(target)
-        for uri, service in items:
-            client.add_to_playlist(target, uri, service)
+        _fill_new_playlist(client, target, items)
 
     execute_command(ctx, f'copy playlist "{source}" to "{target}"', copy_items)
     if print_resulting_content:
@@ -4362,6 +4351,89 @@ def playlist_remove(
     execute_command(ctx, f'remove from playlist "{name}"', remove_items)
     if print_resulting_content:
         _render_playlist_content(ctx, name, fields, output_format)
+
+
+@playlist.command("rename")
+@click.pass_context
+@click.argument("source", type=str)
+@click.argument("target", type=str)
+@option_check_playlist_name
+@option_fields
+@option_format
+@option_print_resulting_content
+def playlist_rename(
+    ctx: click.Context,
+    source: str,
+    target: str,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    print_resulting_content: bool,
+) -> None:
+    """Rename the playlist SOURCE to TARGET, copying it and deleting the original.
+
+    TARGET is created and filled as "playlist copy" does, which the Volumio host
+    refuses when a playlist of that name exists; SOURCE is then deleted, without the
+    confirmation "playlist delete" asks for, since its content lives on in TARGET.
+    Once done, the content of TARGET is printed as "playlist content" prints it,
+    unless --no-print-resulting-content.
+
+    Needs a WebSocket API client.
+    """
+    items = _playlist_items_to_copy(ctx, source, target, check_playlist_name)
+
+    def rename_items(client: APIClient) -> None:
+        _fill_new_playlist(client, target, items)
+        client.delete_playlist(source)
+
+    execute_command(ctx, f'rename playlist "{source}" to "{target}"', rename_items)
+    if print_resulting_content:
+        _render_playlist_content(ctx, target, fields, output_format)
+
+
+def _fill_new_playlist(
+    client: APIClient, target: str, items: list[tuple[str, str | None]]
+) -> None:
+    """Create a playlist and add some items to it, one by one.
+
+    Args:
+        client: The API client to send the events through
+        target: The name of the playlist to create
+        items: The URI of each item to add, and the service it belongs to
+    """
+    client.create_playlist(target)
+    for uri, service in items:
+        client.add_to_playlist(target, uri, service)
+
+
+def _playlist_items_to_copy(
+    ctx: click.Context, source: str, target: str, check_playlist_name: bool
+) -> list[tuple[str, str | None]]:
+    """Read the items of a playlist to copy them to another, or exit (1).
+
+    An item the host lists without a URI cannot be added elsewhere: it is skipped
+    with a warning.
+
+    Args:
+        ctx: Click context object holding the shared options
+        source: The name of the playlist to copy
+        target: The name of the playlist to copy to, for the messages
+        check_playlist_name: Whether to check that the source exists first
+
+    Returns:
+        The URI of each item to copy, and the service it belongs to
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, source)
+    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(source)).tracks
+    items: list[tuple[str, str | None]] = []
+    for index, track in enumerate(tracks, 1):
+        if track.uri is None:
+            warning(f'Skipping the item at position {index} of "{source}", which has no URI')
+            continue
+        items.append((track.uri, track.service))
+    info(f'Copying {len(items)} items of "{source}" to "{target}"')
+    return items
 
 
 def _render_playlist_content(
