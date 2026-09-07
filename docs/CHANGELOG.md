@@ -90,6 +90,8 @@ All notable changes to this project will be documented in this file.
 - `add_to_queue`, `add_and_play`, and `replace_queue_and_play` without an index
   (`queue add` and `queue replace`) no longer browse a URI of a source other than
   the local library before queueing it, which failed for a single track
+- `set_sleep_timer` and `set_infinity_playback` of the WebSocket clients wait for
+  the answer of the host, which a read right after them took as its own
 
 
 ## [0.4.0] - 2026-09-04

@@ -1066,26 +1066,25 @@ def sleep(ctx: click.Context, value: timedelta | str | None, output_format: str)
     Without VALUE, print the sleep timer: whether it is armed, and the delay left
     before the Volumio host stops. Otherwise VALUE is the delay from now (not a
     clock time) after which the host stops, as a number of minutes or as H:MM, or
-    "off" to disarm the timer.
+    "off" to disarm the timer; the timer is printed once armed or disarmed.
 
     The timer comes from the alarm-clock plugin. Needs a WebSocket API client.
     """
-    if value is None:
-        timer = fetch_or_exit(ctx, lambda c: c.sleep_timer)
-        if output_format == "raw":
-            data = timer.raw
-        else:
-            delay = timer.delay
-            data = {
-                "enabled": timer.enabled,
-                "time": timer.time,
-                "minutes": int(delay.total_seconds() // 60) if delay is not None else None,
-            }
-        render_payload(ctx, data, output_format, heading="Volumio Sleep Timer")
-        return
-    delay = value if isinstance(value, timedelta) else None
-    label = "sleep off" if delay is None else f"sleep {int(delay.total_seconds() // 60)}"
-    execute_command(ctx, label, lambda c: c.set_sleep_timer(delay))
+    if value is not None:
+        delay = value if isinstance(value, timedelta) else None
+        label = "sleep off" if delay is None else f"sleep {int(delay.total_seconds() // 60)}"
+        execute_command(ctx, label, lambda c: c.set_sleep_timer(delay))
+    timer = fetch_or_exit(ctx, lambda c: c.sleep_timer)
+    if output_format == "raw":
+        data = timer.raw
+    else:
+        left = timer.delay
+        data = {
+            "enabled": timer.enabled,
+            "time": timer.time,
+            "minutes": int(left.total_seconds() // 60) if left is not None else None,
+        }
+    render_payload(ctx, data, output_format, heading="Volumio Sleep Timer")
 
 
 @playback.command("is_muted")

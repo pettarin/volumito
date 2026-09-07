@@ -15761,15 +15761,16 @@ class TestPlaybackExtras:
     def test_sleep_arms_or_disarms_the_timer(
         self, runner: CliRunner, mocker: MockerFixture, value, delay, label
     ):
-        """A value arms the timer with the delay, or disarms it."""
+        """A value arms the timer with the delay, or disarms it, and prints the timer."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(main, [*self._WEBSOCKET, "playback", "sleep", value])
 
         assert result.exit_code == 0
         assert f"Command '{label}' executed successfully" in result.output
+        assert '"minutes": 90' in result.output
         mock_client.set_sleep_timer.assert_called_once_with(delay)
-        mock_client.sleep_timer_property.assert_not_called()
+        mock_client.sleep_timer_property.assert_called_once()
 
     def test_sleep_invalid_value(self, runner: CliRunner, mocker: MockerFixture):
         """A value that is not a delay nor off is a usage error."""

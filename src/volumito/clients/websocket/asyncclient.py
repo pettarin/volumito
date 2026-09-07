@@ -155,6 +155,8 @@ from volumito.clients.websocket.common import (
     EVENT_PLAY_RADIO_FAVOURITES,
     EVENT_PLUGIN_MANAGER,
     EVENT_PREVIOUS,
+    EVENT_PUSH_INFINITY_PLAYBACK,
+    EVENT_PUSH_SLEEP,
     EVENT_REBOOT,
     EVENT_REGENERATE_THUMBNAILS,
     EVENT_REMOVE_FROM_FAVOURITES,
@@ -2597,13 +2599,20 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def set_infinity_playback(self, enabled: bool) -> None:
         """Turn infinity playback on or off.
 
+        The host answers with the setting it applied, pushed to every client: it is
+        waited for and dropped, since a read of :meth:`get_infinity_playback` right after
+        would take it for its own answer otherwise.
+
         Args:
             enabled: True to enable infinity playback, False to disable it
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        await self._emit(EVENT_SET_INFINITY_PLAYBACK, {"enabled": enabled})
+        await self._request(
+            EVENT_SET_INFINITY_PLAYBACK, EVENT_PUSH_INFINITY_PLAYBACK, {"enabled": enabled}
+        )
 
     async def set_language(self, code: str, language: str | None = None) -> None:
         """Choose the language of the user interface of the Volumio instance.
@@ -2694,14 +2703,19 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         The timer comes from the ``alarm-clock`` plugin, and so does
         :meth:`get_sleep_timer`.
 
+        The host answers with an empty push of its own: it is waited for and dropped,
+        since a read of :meth:`get_sleep_timer` right after would take it for its own
+        answer otherwise.
+
         Args:
             delay: How long from now the host should stop, or None to disarm the timer
 
         Raises:
             ValueError: If the delay is negative
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        await self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
+        await self._request(EVENT_SET_SLEEP, EVENT_PUSH_SLEEP, self._sleep_payload(delay))
 
     async def set_timezone(self, value: str) -> None:
         """Move the Volumio instance to another time zone.

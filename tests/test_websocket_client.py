@@ -1571,11 +1571,21 @@ class TestVolumioWebSocketClientSleepAndAlarms:
     )
     def test_set_sleep_timer(self, mocker: MockerFixture, delay, expected):
         """A duration is rendered to the "H:MM" a Volumio host reads as a delay."""
-        client, fake = _client(mocker)
+        fake = _FakeSocketIOClient(answers={"setSleep": ("pushSleep", {})})
+        client, fake = _client(mocker, fake)
 
         client.set_sleep_timer(delay)
 
         assert fake.calls == [_Call("setSleep", expected)]
+
+    def test_set_sleep_timer_waits_for_the_answer(self, mocker: MockerFixture):
+        """The empty push the host answers with is waited for, so a read after it is clean."""
+        client, _ = _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.set_sleep_timer(timedelta(minutes=30))
+
+        assert 'did not answer "setSleep" with "pushSleep"' in str(excinfo.value)
 
     def test_set_sleep_timer_refuses_a_negative_delay(self, mocker: MockerFixture):
         """A negative delay is refused before anything is sent."""
@@ -2583,8 +2593,16 @@ class TestVolumioWebSocketClientUiPreferences:
     def test_infinity_playback(self, mocker: MockerFixture):
         """The setting is read, and turned on."""
         fake = _FakeSocketIOClient(
-            answers={"getInfinityPlayback": ("pushInfinityPlayback",
-                                             {"available": True, "enabled": False})}
+            answers={
+                "getInfinityPlayback": (
+                    "pushInfinityPlayback",
+                    {"available": True, "enabled": False},
+                ),
+                "setInfinityPlayback": (
+                    "pushInfinityPlayback",
+                    {"available": True, "enabled": True},
+                ),
+            }
         )
         client, fake = _client(mocker, fake)
 
@@ -2594,6 +2612,17 @@ class TestVolumioWebSocketClientUiPreferences:
         assert playback.available is True
         assert playback.enabled is False
         assert fake.calls[-1] == _Call("setInfinityPlayback", {"enabled": True})
+
+    def test_set_infinity_playback_waits_for_the_answer(self, mocker: MockerFixture):
+        """The setting the host pushes back is waited for, so a read after it is clean."""
+        client, _ = _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.set_infinity_playback(True)
+
+        assert 'did not answer "setInfinityPlayback" with "pushInfinityPlayback"' in str(
+            excinfo.value
+        )
 
     def test_experience_settings(self, mocker: MockerFixture):
         """The setting is read, and the full set of options chosen."""
