@@ -2094,6 +2094,21 @@ def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_playlist_position(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--position`` option to the playlist remove subcommand."""
+    return click.option(
+        "-p",
+        "--position",
+        type=TrackSelectionParamType(),
+        default=None,
+        help=(
+            "Remove the items at these positions of the playlist (e.g., '1-3,6-8,12'), "
+            "instead of the one at URI (indexed according to "
+            "--position-starting-at-one/--position-starting-at-zero)."
+        ),
+    )(func)
+
+
 def option_playlists_only(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-Y``/``--playlists-only`` option to the collection search subcommand."""
     return click.option(
@@ -2590,6 +2605,60 @@ def option_yes(func: Callable[..., None]) -> Callable[..., None]:
         show_default=True,
         help="Really perform the operation on the Volumio host.",
     )(func)
+
+
+def playlist_items_at_or_exit(
+    ctx: click.Context, name: str, positions: set[int]
+) -> list[tuple[str, str | None]]:
+    """Return the URI and service of the items at some positions of a playlist, or exit (1).
+
+    The content of the playlist is read from the Volumio instance. A position past
+    its end, or an item the host lists without a URI, is reported as an invalid
+    value, the positions displayed according to
+    ``--position-starting-at-one``/``--position-starting-at-zero``.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist
+        positions: The 0-based positions of the items
+
+    Returns:
+        The URI of each item and the service it belongs to (None when the host
+        reports none), in position order
+    """
+    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name)).tracks
+    starting_at_one = ctx.obj["position_starting_at_one"]
+    items: list[tuple[str, str | None]] = []
+    missing: list[int] = []
+    without_uri: list[int] = []
+    for position in sorted(positions):
+        shown = display_position(position, starting_at_one)
+        if position >= len(tracks):
+            missing.append(shown)
+            continue
+        track = tracks[position]
+        if track.uri is None:
+            without_uri.append(shown)
+        else:
+            items.append((track.uri, track.service))
+    if missing:
+        label = "position" if len(missing) == 1 else "positions"
+        listed = ", ".join(str(shown) for shown in missing)
+        error(
+            f'Invalid value: the playlist "{name}" lists {len(tracks)} items, '
+            f"none at {label} {listed}"
+        )
+        sys.exit(1)
+    if without_uri:
+        one = len(without_uri) == 1
+        listed = ", ".join(str(shown) for shown in without_uri)
+        error(
+            f"Invalid value: the {'item' if one else 'items'} at "
+            f"{'position' if one else 'positions'} {listed} of the playlist \"{name}\" "
+            f"{'has' if one else 'have'} no URI"
+        )
+        sys.exit(1)
+    return items
 
 
 def read_queue_log(path: str) -> dict[str, Any] | None:

@@ -200,6 +200,16 @@ OUTPUT_FORMATS = [
 PLAY_VOLATILE_ERROR = "Expected a POSITION argument together with --volatile."
 """Error message when "playback play" is asked for the volatile source without a position."""
 
+PLAYLIST_REMOVE_ARGUMENTS_ERROR = (
+    "Expected either a URI argument or the -p/--position option, and not both."
+)
+"""Error message when "playlist remove" is given neither a URI nor a position, or both."""
+
+PLAYLIST_REMOVE_SERVICE_ERROR = (
+    "Expected the --service option only together with a URI argument."
+)
+"""Error message when "playlist remove" is given a service with a position instead of a URI."""
+
 PLUGIN_INSTALL_WAIT_INTERVAL = 5.0
 """Seconds between two looks at the installed plugins while waiting for an install."""
 

@@ -97,6 +97,7 @@ from volumito.cli.click_helpers import (
     option_play,
     option_play_added,
     option_playlist,
+    option_playlist_position,
     option_playlists_only,
     option_port,
     option_position,
@@ -141,6 +142,7 @@ from volumito.cli.click_helpers import (
     option_wireless_password,
     option_with_albumart,
     option_yes,
+    playlist_items_at_or_exit,
     read_queue_log,
     render_browse_results,
     render_fields,
@@ -195,6 +197,8 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PLAY_VOLATILE_ERROR,
+    PLAYLIST_REMOVE_ARGUMENTS_ERROR,
+    PLAYLIST_REMOVE_SERVICE_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
     QUEUE_ADD_MODES_ERROR,
@@ -4229,37 +4233,55 @@ def playlist_play(
 @playlist.command("remove")
 @click.pass_context
 @click.argument("name", type=str)
-@click.argument("uri", type=str)
+@click.argument("uri", type=str, required=False, default=None)
 @option_check_playlist_name
 @option_fields
 @option_format
+@option_playlist_position
 @option_print_resulting_content
 @option_service_of_uri
 def playlist_remove(
     ctx: click.Context,
     name: str,
-    uri: str,
+    uri: str | None,
     check_playlist_name: bool,
     fields: str,
     output_format: str,
+    position: set[int] | None,
     print_resulting_content: bool,
     service: str | None,
 ) -> None:
-    """Remove the item at URI from the playlist NAME.
+    """Remove the item at URI, or the items at -p/--position, from the playlist NAME.
 
-    A URI comes from "playlist content". Once the item is removed, the content of the
-    playlist is printed as "playlist content" prints it, unless
-    --no-print-resulting-content.
+    A URI comes from "playlist content", and so do the positions of a selection such
+    as "1-3,6-8,12" (indexed according to
+    --position-starting-at-one/--position-starting-at-zero), each standing for the
+    URI and the service of the item listed there. The Volumio host removes the first
+    item at each URI, of the service --service names or the URI tells. Once the items
+    are removed, the content of the playlist is printed as "playlist content" prints
+    it, unless --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
+    if uri is not None and position is not None:
+        raise click.UsageError(PLAYLIST_REMOVE_ARGUMENTS_ERROR)
+    if service is not None and uri is None:
+        raise click.UsageError(PLAYLIST_REMOVE_SERVICE_ERROR)
     if check_playlist_name:
         check_playlist_name_or_exit(ctx, name)
-    execute_command(
-        ctx,
-        f'remove from playlist "{name}"',
-        lambda c: c.remove_from_playlist(name, uri, service),
-    )
+    if position is not None:
+        indices = {api_position(ctx, shown) for shown in sorted(position)}
+        items = playlist_items_at_or_exit(ctx, name, indices)
+    elif uri is not None:
+        items = [(uri, service)]
+    else:
+        raise click.UsageError(PLAYLIST_REMOVE_ARGUMENTS_ERROR)
+
+    def remove_items(client: APIClient) -> None:
+        for item_uri, item_service in items:
+            client.remove_from_playlist(name, item_uri, item_service)
+
+    execute_command(ctx, f'remove from playlist "{name}"', remove_items)
     if print_resulting_content:
         _render_playlist_content(ctx, name, fields, output_format)
 

@@ -11226,6 +11226,158 @@ class TestPlaylistCommands:
         mock_client.get_playlist_content.assert_called_once_with("Rock")
 
     @pytest.mark.parametrize(
+        ("position", "uri", "service"),
+        [("1", "music-library/a.flac", "mpd"), ("2", "qobuz://track/2", "qobuz")],
+    )
+    def test_remove_by_position(
+        self, runner: CliRunner, mocker: MockerFixture, position, uri, service
+    ):
+        """-p/--position removes the item listed there, by the URI and service it holds."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", position]
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'remove from playlist \"Rock\"' executed successfully" in result.output
+        mock_client.remove_from_playlist.assert_called_once_with("Rock", uri, service)
+        # One content read resolves the position, one prints the resulting content
+        assert mock_client.get_playlist_content.call_count == 2
+
+    def test_remove_by_position_starting_at_zero(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The position is read according to the indexing base in use."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                "--position-starting-at-zero",
+                *self._WEBSOCKET,
+                "playlist",
+                "remove",
+                "Rock",
+                "--position",
+                "0",
+            ],
+        )
+
+        assert result.exit_code == 0
+        mock_client.remove_from_playlist.assert_called_once_with(
+            "Rock", "music-library/a.flac", "mpd"
+        )
+
+    def test_remove_by_a_selection_of_positions(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A selection removes every item listed there, in position order."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "2,1-1"]
+        )
+
+        assert result.exit_code == 0
+        assert result.output.count("executed successfully") == 1
+        assert mock_client.remove_from_playlist.call_args_list == [
+            mocker.call("Rock", "music-library/a.flac", "mpd"),
+            mocker.call("Rock", "qobuz://track/2", "qobuz"),
+        ]
+        assert mock_client.get_playlist_content.call_count == 2
+
+    def test_remove_by_a_selection_past_the_end(self, runner: CliRunner, mocker: MockerFixture):
+        """Every position the playlist does not reach is named, and nothing is removed."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "1,3-4"]
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'Invalid value: the playlist "Rock" lists 2 items, none at positions 3, 4'
+            in result.output
+        )
+        mock_client.remove_from_playlist.assert_not_called()
+
+    def test_remove_by_a_malformed_selection(self, runner: CliRunner, mocker: MockerFixture):
+        """A selection that is not positions and ranges is a usage error."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "1,two"]
+        )
+
+        assert result.exit_code == 2
+        assert "invalid item 'two'" in result.output
+        mock_client.remove_from_playlist.assert_not_called()
+
+    def test_remove_by_a_position_past_the_end(self, runner: CliRunner, mocker: MockerFixture):
+        """A position the playlist does not reach is an invalid value."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "3"])
+
+        assert result.exit_code == 1
+        assert (
+            'Invalid value: the playlist "Rock" lists 2 items, none at position 3'
+            in result.output
+        )
+        mock_client.remove_from_playlist.assert_not_called()
+
+    def test_remove_by_the_position_of_an_item_without_a_uri(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """An item the host lists without a URI cannot be removed by position."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {"name": "Rock", "lists": [[{"title": "No URI", "service": "mpd"}]]}
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "1"])
+
+        assert result.exit_code == 1
+        assert 'the item at position 1 of the playlist "Rock" has no URI' in result.output
+        mock_client.remove_from_playlist.assert_not_called()
+
+    def test_remove_by_the_positions_of_items_without_a_uri(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Every selected item the host lists without a URI is named."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {"name": "Rock", "lists": [[{"title": "One"}, {"title": "Two"}]]}
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "1-2"]
+        )
+
+        assert result.exit_code == 1
+        assert 'the items at positions 1, 2 of the playlist "Rock" have no URI' in result.output
+        mock_client.remove_from_playlist.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["Rock"],
+            ["Rock", _URI, "-p", "1"],
+            ["Rock", "-p", "1", "--service", "qobuz"],
+        ],
+    )
+    def test_remove_usage_errors(self, runner: CliRunner, mocker: MockerFixture, arguments):
+        """A URI or a position is expected, not both, and --service goes with the URI."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "remove", *arguments])
+
+        assert result.exit_code == 2
+        assert "Expected" in result.output
+        mock_client.remove_from_playlist.assert_not_called()
+
+    @pytest.mark.parametrize(
         "arguments",
         [
             ["add", "Rock", _URI],
