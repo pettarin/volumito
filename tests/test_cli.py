@@ -15808,15 +15808,16 @@ class TestPlaybackExtras:
     def test_infinity_sets_the_mode(
         self, runner: CliRunner, mocker: MockerFixture, spelling, expected
     ):
-        """A value turns infinity playback on or off."""
+        """A value turns infinity playback on or off, and prints the setting once set."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(main, [*self._WEBSOCKET, "playback", "infinity", spelling])
 
         assert result.exit_code == 0
         assert f"Command 'infinity {spelling}' executed successfully" in result.output
+        assert '"enabled": false' in result.output
         mock_client.set_infinity_playback.assert_called_once_with(expected)
-        mock_client.infinity_playback_property.assert_not_called()
+        mock_client.infinity_playback_property.assert_called_once()
 
     def test_infinity_invalid_value(self, runner: CliRunner, mocker: MockerFixture):
         """A value that is not an on/off spelling is a usage error."""

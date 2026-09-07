@@ -1040,18 +1040,20 @@ def infinity(ctx: click.Context, value: bool | None, output_format: str) -> None
     """Print or set the infinity playback mode.
 
     Without VALUE, print whether infinity playback is available and enabled.
-    Otherwise VALUE is "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0".
+    Otherwise VALUE is "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0", and the
+    setting is printed once set.
 
     Needs a WebSocket API client.
     """
-    if value is None:
-        setting = fetch_or_exit(ctx, lambda c: c.infinity_playback)
-        render_payload(ctx, setting.raw, output_format, heading="Volumio Infinity Playback")
-        return
-    enabled = value
-    execute_command(
-        ctx, f"infinity {'on' if enabled else 'off'}", lambda c: c.set_infinity_playback(enabled)
-    )
+    if value is not None:
+        enabled = value
+        execute_command(
+            ctx,
+            f"infinity {'on' if enabled else 'off'}",
+            lambda c: c.set_infinity_playback(enabled),
+        )
+    setting = fetch_or_exit(ctx, lambda c: c.infinity_playback)
+    render_payload(ctx, setting.raw, output_format, heading="Volumio Infinity Playback")
 
 
 @playback.command()
