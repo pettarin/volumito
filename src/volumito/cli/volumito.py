@@ -185,7 +185,6 @@ from volumito.cli.constants import (
     DEFAULT_VOLUMIO_VERSION,
     EVENT_PAYLOAD_ERROR,
     EXPERIENCE_VALUES,
-    FAVOURITE_KEPT_BY_SOURCE_INFO,
     FAVOURITE_PLAY_NAME_ERROR,
     FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR,
     FAVOURITE_RADIO_OPTIONS_ERROR,
@@ -3587,7 +3586,7 @@ def favourite_add(
     The Volumio host keeps its own favourites for the local library and the sources
     without favourites of their own; a source with some (Qobuz, Tidal) is given the
     item to keep among them, browsable from the root of the source, and not among
-    those "collection favourite list" lists, which the command tells.
+    those "collection favourite list" lists.
 
     Needs a WebSocket API client.
     """
@@ -3610,10 +3609,6 @@ def favourite_add(
             f'add favourite "{uri}"',
             lambda c: c.add_to_favourites(uri, title, service, albumart),
         )
-        sleep_between_api_calls(ctx)
-        listed = fetch_or_exit(ctx, lambda c: c.browse(URI_FAVOURITES, None))
-        if not any(item.uri == stored_local_uri(uri) for item in listed.items):
-            info(FAVOURITE_KEPT_BY_SOURCE_INFO.format(uri=uri))
 
 
 @favourite.command("list")

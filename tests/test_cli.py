@@ -9634,30 +9634,7 @@ class TestCollectionFavouriteAndRadio:
         assert f"Command 'add favourite \"{self._URI}\"' executed successfully" in result.output
         mock_client.add_to_favourites.assert_called_once_with(self._URI, *details)
         mock_client.add_radio_favourite.assert_not_called()
-        # The favourites are read again: the URI is not among them, so its source keeps it
-        mock_client.browse.assert_called_once_with("favourites")
-        assert f'did not list "{self._URI}" among its own favourites' in result.output
-
-    @pytest.mark.parametrize(
-        ("uri", "listed"),
-        [
-            ("qobuz://track/3", "qobuz://track/3"),
-            ("music-library/INTERNAL/a.flac", "mnt/INTERNAL/a.flac"),
-        ],
-    )
-    def test_favourite_add_listed_afterwards(
-        self, runner: CliRunner, mocker: MockerFixture, uri, listed
-    ):
-        """A favourite the host lists afterwards, under the URI it stores, needs no note."""
-        mock_client = self._mock_websocket_client(mocker)
-        mock_client.browse.return_value = BrowseResults.from_envelope(
-            {"navigation": {"lists": [{"items": [{"service": "x", "uri": listed}]}]}}
-        )
-
-        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "favourite", "add", uri])
-
-        assert result.exit_code == 0
-        assert "among its own favourites" not in result.output
+        mock_client.browse.assert_not_called()
 
     @pytest.mark.parametrize(
         ("radio", "options", "title"),

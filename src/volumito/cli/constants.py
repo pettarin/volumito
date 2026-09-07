@@ -98,12 +98,6 @@ EXPERIENCE_VALUES = [
 ]
 """Accepted values of the VALUE argument of the "system ui experience" command."""
 
-FAVOURITE_KEPT_BY_SOURCE_INFO = (
-    'The Volumio host did not list "{uri}" among its own favourites: a source with '
-    "favourites of its own (Qobuz, Tidal) keeps them, browse them from its root."
-)
-"""Message when "collection favourite add" finds the favourite kept by its source."""
-
 FAVOURITE_PLAY_NAME_ERROR = "Expected the NAME argument without --radio."
 """Error message when "collection favourite play" is given no name without --radio."""
 
