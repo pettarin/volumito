@@ -209,6 +209,14 @@ OUTPUT_FORMATS = [
 PLAY_VOLATILE_ERROR = "Expected a POSITION argument together with --volatile."
 """Error message when "playback play" is asked for the volatile source without a position."""
 
+PLAYLIST_DELETE_ATTEMPTS = 3
+"""How many times "playlist delete" reads the playlists, waiting for the deletion."""
+
+PLAYLIST_DELETE_STILL_LISTED_ERROR = (
+    'The Volumio host still lists the playlist "{name}" after the deletion.'
+)
+"""Error message when "playlist delete" finds the playlist still listed."""
+
 PLAYLIST_FILE_ERROR = 'Expected FILE to hold a JSON list of playlist items, each with a "uri".'
 """Error message when "playlist create" is given a file of another shape to import."""
 

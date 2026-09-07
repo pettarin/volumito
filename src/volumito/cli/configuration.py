@@ -438,14 +438,18 @@ per-command subsections override the display keys (fields/format). color, verbos
 machine-readable, position-starting-at-one, pager, and
 strict-parsing-configuration-file are global; print-resulting-status applies to the
 playback and queue action commands, print-resulting-content to the playlist editing
-ones, and print-resulting-list to the Web radio editing ones.
+ones, and print-resulting-list to the Web radio editing ones and to the playlist
+create and delete ones.
 """
 
-RADIO_COMMAND_PATHS: list[list[str]] = [
+LIST_COMMAND_PATHS: list[list[str]] = [
     ["collection", "radio", "add"],
     ["collection", "radio", "remove"],
+    ["playlist", "create"],
+    ["playlist", "delete"],
 ]
-"""--print-resulting-list lives on the Web radio editing commands."""
+"""--print-resulting-list lives on the commands listing the Web radios or the playlists
+once done."""
 
 NOTIFICATION_KEY_PATHS: dict[str, list[list[str]]] = {
     "endpoint": [
@@ -735,7 +739,7 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
             for command_path in CONTENT_COMMAND_PATHS:
                 _assign_nested(result, command_path, _param_name(key), value)
         elif key == "print-resulting-list":
-            for command_path in RADIO_COMMAND_PATHS:
+            for command_path in LIST_COMMAND_PATHS:
                 _assign_nested(result, command_path, _param_name(key), value)
     shared_display = {k: v for k, v in output.items() if k in DISPLAY_KEYS}
     _apply_hierarchical(

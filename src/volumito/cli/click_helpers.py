@@ -2231,6 +2231,16 @@ def option_print_resulting_list(func: Callable[..., None]) -> Callable[..., None
     )(func)
 
 
+def option_print_resulting_playlists(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--print-resulting-list`` option to the playlist create and delete subcommands."""
+    return click.option(
+        "--print-resulting-list/--no-print-resulting-list",
+        default=True,
+        show_default=True,
+        help="After executing the command, print the resulting list of playlists.",
+    )(func)
+
+
 def option_print_resulting_status(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-r``/``--print-resulting-status`` option to a playback subcommand."""
     return click.option(

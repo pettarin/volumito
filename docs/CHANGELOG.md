@@ -31,6 +31,9 @@ All notable changes to this project will be documented in this file.
   instead of the one at a URI
 - Option `-p/--position` of `playlist copy`, copying only the items at the
   selected positions of the source playlist
+- `playlist create` and `playlist delete` list the playlists once done, as
+  `playlist list` does, unless `--no-print-resulting-list`; `playlist delete`
+  waits for the host to drop the playlist, and reports one still listed
 - `playlist remove` warns when the removal would leave the playlist empty,
   which the Volumio host may refuse
 - Option `--expand-tracks/--no-expand-tracks` of `playlist add`, adding the tracks

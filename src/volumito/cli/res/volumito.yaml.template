@@ -323,7 +323,8 @@ output:
   # After a playlist editing command like add or remove, print the resulting playlist content
   print-resulting-content: true
 
-  # After a Web radio command like add or remove, print the resulting list of Web radios
+  # After a Web radio command like add or remove, print the resulting list of Web radios;
+  # after playlist create or delete, print the resulting list of playlists
   print-resulting-list: true
 
   # After a playback or queue command like pause or clear, print the resulting playback status

@@ -11724,6 +11724,22 @@ class TestPlaylistCommands:
         mock_client.create_playlist.assert_called_once_with("New")
         mock_client.add_to_playlist.assert_not_called()
         mock_client.get_playlist_content.assert_not_called()
+        # The playlists are listed once done
+        mock_client.playlists_property.assert_called_once()
+        assert "Jazz Classics" in result.output
+
+    def test_create_without_the_resulting_list(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-list skips the listing of the playlists."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "create", "New", "--no-print-resulting-list"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.create_playlist.assert_called_once_with("New")
+        mock_client.playlists_property.assert_not_called()
+        assert "Jazz Classics" not in result.output
 
     def test_create_importing_a_file(self, runner: CliRunner, mocker: MockerFixture, tmp_path):
         """-f/--import-from-file fills the new playlist with the items of the file."""
@@ -11869,28 +11885,82 @@ class TestPlaylistCommands:
         mock_client.playlists_property.assert_not_called()
         mock_client.delete_playlist.assert_not_called()
 
+    _REMAINING = ["Jazz Classics", "Ambient"]
+    """The playlists once "Rock" is deleted."""
+
     def test_delete(self, runner: CliRunner, mocker: MockerFixture):
-        """With -y/--yes the playlist is deleted, after the name check."""
+        """With -y/--yes the playlist is deleted, after the name check, and the rest listed."""
         mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", side_effect=[self.PLAYLISTS, self._REMAINING])
 
         result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "delete", "Rock", "-y"])
 
         assert result.exit_code == 0
         assert "Command 'delete playlist \"Rock\"' executed successfully" in result.output
-        mock_client.playlists_property.assert_called_once()
         mock_client.delete_playlist.assert_called_once_with("Rock")
+        # The playlists are read for the check, then once the deletion is seen, and listed
+        assert mock_client.playlists_property.call_count == 2
+        assert '    "Jazz Classics"' in result.output
+        assert '    "Rock"' not in result.output
+
+    def test_delete_waits_for_the_deletion(self, runner: CliRunner, mocker: MockerFixture):
+        """The playlists are read again while the host still lists the deleted one."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client,
+            "playlists",
+            side_effect=[self.PLAYLISTS, self.PLAYLISTS, self.PLAYLISTS, self._REMAINING],
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "delete", "Rock", "-y"])
+
+        assert result.exit_code == 0
+        assert mock_client.playlists_property.call_count == 4
+        assert '    "Rock"' not in result.output
+
+    def test_delete_still_listed(self, runner: CliRunner, mocker: MockerFixture):
+        """A playlist the host keeps listing after a few reads is reported."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "delete", "Rock", "-y"])
+
+        assert result.exit_code == 1
+        assert 'The Volumio host still lists the playlist "Rock" after the deletion' in (
+            result.output
+        )
+        mock_client.delete_playlist.assert_called_once_with("Rock")
+        # One read for the check, then the bounded reads waiting for the deletion
+        assert mock_client.playlists_property.call_count == 4
+        assert '    "Jazz Classics"' not in result.output
+
+    def test_delete_without_the_resulting_list(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-print-resulting-list skips the listing of the playlists."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", side_effect=[self.PLAYLISTS, self._REMAINING])
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "delete", "Rock", "-y", "--no-print-resulting-list"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.delete_playlist.assert_called_once_with("Rock")
+        assert mock_client.playlists_property.call_count == 2
+        assert '    "Jazz Classics"' not in result.output
 
     def test_delete_without_the_check(self, runner: CliRunner, mocker: MockerFixture):
-        """--no-check-playlist-name deletes without looking the name up."""
+        """--no-check-playlist-name deletes without looking the name up first."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
             main,
-            [*self._WEBSOCKET, "playlist", "delete", "Gone", "-y", "--no-check-playlist-name"],
+            [*self._WEBSOCKET, "playlist", "delete", "Gone", "-y", "--no-check-playlist-name",
+             "--no-print-resulting-list"],
         )
 
         assert result.exit_code == 0
-        mock_client.playlists_property.assert_not_called()
+        # The only read waits for the deletion
+        mock_client.playlists_property.assert_called_once()
         mock_client.delete_playlist.assert_called_once_with("Gone")
 
     def test_enqueue(self, runner: CliRunner, mocker: MockerFixture):

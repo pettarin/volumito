@@ -1039,8 +1039,8 @@ class TestBuildClickDefaultMap:
             },
         }
 
-    def test_print_resulting_list_replicated_under_web_radio_commands(self):
-        """print-resulting-list is nested under collection radio add and remove only."""
+    def test_print_resulting_list_replicated_under_the_listing_commands(self):
+        """print-resulting-list is nested under the radio and playlist commands listing them."""
         result = build_click_default_map({"output": {"print-resulting-list": False}})
 
         assert result == {
@@ -1049,6 +1049,10 @@ class TestBuildClickDefaultMap:
                     "add": {"print_resulting_list": False},
                     "remove": {"print_resulting_list": False},
                 },
+            },
+            "playlist": {
+                "create": {"print_resulting_list": False},
+                "delete": {"print_resulting_list": False},
             },
         }
 

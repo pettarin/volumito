@@ -107,6 +107,7 @@ from volumito.cli.click_helpers import (
     option_position,
     option_print_resulting_content,
     option_print_resulting_list,
+    option_print_resulting_playlists,
     option_print_resulting_status,
     option_print_uri,
     option_print_uri_toggle,
@@ -204,6 +205,8 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PLAY_VOLATILE_ERROR,
+    PLAYLIST_DELETE_ATTEMPTS,
+    PLAYLIST_DELETE_STILL_LISTED_ERROR,
     PLAYLIST_FILE_ERROR,
     PLAYLIST_REMOVE_ARGUMENTS_ERROR,
     PLAYLIST_REMOVE_EMPTY_WARNING,
@@ -4307,6 +4310,7 @@ def playlist_copy(
 @option_format
 @option_import_from_file
 @option_print_resulting_content
+@option_print_resulting_playlists
 def playlist_create(
     ctx: click.Context,
     name: str,
@@ -4314,6 +4318,7 @@ def playlist_create(
     output_format: str,
     import_from_file: str | None,
     print_resulting_content: bool,
+    print_resulting_list: bool,
 ) -> None:
     """Create the empty playlist NAME, filled from FILE with -f/--import-from-file.
 
@@ -4322,7 +4327,9 @@ def playlist_create(
     is added by the "uri" and the "service" it holds, as "playlist add" adds them
     without expanding, its other keys being ignored. The Volumio host refuses a name
     already in use. Once filled from a file, the content of the playlist is printed
-    as "playlist content" prints it, unless --no-print-resulting-content.
+    as "playlist content" prints it, unless --no-print-resulting-content; once done,
+    the playlists are listed as "playlist list" lists them, unless
+    --no-print-resulting-list.
 
     Needs a WebSocket API client.
     """
@@ -4337,18 +4344,33 @@ def playlist_create(
     execute_command(ctx, f'create playlist "{name}"', create_items)
     if import_from_file is not None and print_resulting_content:
         _render_playlist_content(ctx, name, fields, output_format)
+    if print_resulting_list:
+        _render_playlists(ctx, output_format)
 
 
 @playlist.command("delete")
 @click.pass_context
 @click.argument("name", type=str)
 @option_check_playlist_name
+@option_format
+@option_print_resulting_playlists
 @option_yes
-def playlist_delete(ctx: click.Context, name: str, check_playlist_name: bool, yes: bool) -> None:
+def playlist_delete(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    output_format: str,
+    print_resulting_list: bool,
+    yes: bool,
+) -> None:
     """Delete the playlist NAME.
 
     IMPORTANT: the playlist cannot be recovered; it is deleted only when -y/--yes is
-    given.
+    given. The Volumio host answers a deletion with nothing and deletes in the
+    background: the playlists are read again, after the configured sleep, until the
+    playlist is gone, which is reported as an error when it still is after a few
+    reads. Once deleted, the playlists are listed as "playlist list" lists them,
+    unless --no-print-resulting-list.
 
     Needs a WebSocket API client.
     """
@@ -4358,6 +4380,9 @@ def playlist_delete(ctx: click.Context, name: str, check_playlist_name: bool, ye
     if check_playlist_name:
         check_playlist_name_or_exit(ctx, name)
     execute_command(ctx, f'delete playlist "{name}"', lambda c: c.delete_playlist(name))
+    names = _playlist_names_after_deletion_or_exit(ctx, name)
+    if print_resulting_list:
+        render_names(ctx, names, output_format, "Volumio Playlists")
 
 
 @playlist.command("enqueue")
@@ -4386,8 +4411,7 @@ def playlist_enqueue(
 @option_format
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the Volumio playlists saved by the current user."""
-    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-    render_names(ctx, names, output_format, "Volumio Playlists")
+    _render_playlists(ctx, output_format)
 
 
 @playlist.command("play")
@@ -4610,6 +4634,29 @@ def _playlist_items_to_copy(
     return items
 
 
+def _playlist_names_after_deletion_or_exit(ctx: click.Context, name: str) -> list[str]:
+    """Read the playlists until the host no longer lists a deleted one, or exit (1).
+
+    The host answers a deletion with nothing, and deletes in the background (through
+    the cloud on a MyVolumio device): the playlists are read after the configured
+    sleep, up to PLAYLIST_DELETE_ATTEMPTS times.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the deleted playlist
+
+    Returns:
+        The names of the playlists, without the deleted one
+    """
+    for _ in range(PLAYLIST_DELETE_ATTEMPTS):
+        sleep_between_api_calls(ctx)
+        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+        if name not in names:
+            return names
+    error(PLAYLIST_DELETE_STILL_LISTED_ERROR.format(name=name))
+    sys.exit(1)
+
+
 def _render_playlist_content(
     ctx: click.Context, name: str, fields: str, output_format: str
 ) -> None:
@@ -4631,6 +4678,17 @@ def _render_playlist_content(
         SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
         f'Volumio Playlist "{name}"',
     )
+
+
+def _render_playlists(ctx: click.Context, output_format: str) -> None:
+    """Read the names of the playlists and print them as "playlist list" prints them.
+
+    Args:
+        ctx: Click context object holding the shared options
+        output_format: The -F/--format option value
+    """
+    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+    render_names(ctx, names, output_format, "Volumio Playlists")
 
 
 @playlist.command("download")
