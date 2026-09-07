@@ -4207,18 +4207,6 @@ def playlist_enqueue(
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
-@playlist.command("import")
-@click.pass_context
-def playlist_import(ctx: click.Context) -> None:
-    """Import the playlists the music services of the Volumio host expose.
-
-    The imported playlists appear in "playlist list" afterwards.
-
-    Needs a WebSocket API client.
-    """
-    execute_command(ctx, "import playlists", lambda c: c.import_service_playlists())
-
-
 @playlist.command("list")
 @click.pass_context
 @option_format

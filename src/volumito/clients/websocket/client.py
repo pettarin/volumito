@@ -138,7 +138,6 @@ from volumito.clients.websocket.common import (
     EVENT_GET_WIRELESS_NETWORKS,
     EVENT_GET_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO,
-    EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_INSTALL_PLUGIN,
     EVENT_LIST_PLAYLIST,
     EVENT_MANAGE_BACKUP,
@@ -1455,14 +1454,6 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If an answer is of an unexpected shape
         """
         return bool(self.queue_status["has_previous"])
-
-    def import_service_playlists(self) -> None:
-        """Import the playlists the music services of the host expose.
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_IMPORT_SERVICE_PLAYLISTS)
 
     def increase_volume(self) -> None:
         """Increase the playback volume by one step.

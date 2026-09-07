@@ -1383,14 +1383,6 @@ class TestVolumioWebSocketClientPlaylistEditing:
 
         assert fake.calls == [_Call("enqueue", {"name": "jazz"})]
 
-    def test_import_service_playlists(self, mocker: MockerFixture):
-        """The import carries nothing."""
-        client, fake = _client(mocker)
-
-        client.import_service_playlists()
-
-        assert fake.calls == [_Call("importServicePlaylists", None)]
-
     def test_get_playlist_content(self, mocker: MockerFixture):
         """The tracks are read out of the one list per source the host groups them in."""
         fake = _FakeSocketIOClient(

@@ -10984,7 +10984,7 @@ class TestPlaylistCommands:
         result = runner.invoke(main, ["playlist", "--help"])
 
         assert result.exit_code == 0
-        for command in ("add", "content", "create", "delete", "enqueue", "import", "remove"):
+        for command in ("add", "content", "create", "delete", "enqueue", "remove"):
             assert f"  {command} " in result.output
 
     @pytest.mark.parametrize(
@@ -11313,16 +11313,6 @@ class TestPlaylistCommands:
         assert "StatusMarkerArtist" in result.output
         mock_client.state_property.assert_called_once()
 
-    def test_import(self, runner: CliRunner, mocker: MockerFixture):
-        """playlist import asks the host to import the playlists of its services."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "import"])
-
-        assert result.exit_code == 0
-        assert "Command 'import playlists' executed successfully" in result.output
-        mock_client.import_service_playlists.assert_called_once_with()
-
     @pytest.mark.parametrize(
         ("options", "service"), [([], None), (["--service", "qobuz"], "qobuz")]
     )
@@ -11548,7 +11538,6 @@ class TestPlaylistCommands:
             ["create", "New"],
             ["delete", "Rock", "-y"],
             ["enqueue", "Rock"],
-            ["import"],
             ["remove", "Rock", _URI],
         ],
     )
@@ -11568,11 +11557,13 @@ class TestPlaylistCommands:
         rest.logger = LOGGER
         websocket = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, ["--allow-fallback-to-websocket-api", "playlist", "import"])
+        result = runner.invoke(
+            main, ["--allow-fallback-to-websocket-api", "playlist", "create", "New"]
+        )
 
         assert result.exit_code == 0
         assert "Falling back to the WebSocket API client for the playlist edits" in result.output
-        websocket.import_service_playlists.assert_called_once_with()
+        websocket.create_playlist.assert_called_once_with("New")
         websocket.disconnect.assert_called_once_with()
         rest.close.assert_called_once_with()
 

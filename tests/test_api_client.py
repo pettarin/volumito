@@ -149,7 +149,6 @@ WEBSOCKET_METHODS = [
     ("get_plugin_config", ("page",), {}, PLUGIN_OPERATION),
     ("get_share", ("share",), {}, SHARE_OPERATION),
     ("goto", ("artist", "value"), {}, COLLECTION_OPERATION),
-    ("import_service_playlists", (), {}, PLAYLIST_OPERATION),
     ("install_plugin", ("url",), {}, PLUGIN_OPERATION),
     ("manage_plugin", ("enable", "category", "name"), {}, PLUGIN_OPERATION),
     ("modify_plugin_status", ("category", "name", True), {}, PLUGIN_OPERATION),

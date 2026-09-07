@@ -255,9 +255,6 @@ EVENT_GET_WIRELESS_NETWORKS_CACHE = "getWirelessNetworksCache"
 EVENT_GO_TO = "goTo"
 """The event browsing to the artist or the album of what is playing."""
 
-EVENT_IMPORT_SERVICE_PLAYLISTS = "importServicePlaylists"
-"""The event importing the playlists of the music services."""
-
 EVENT_INSTALL_PLUGIN = "installPlugin"
 """The event installing a plugin from a URL."""
 

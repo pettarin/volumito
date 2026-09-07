@@ -643,7 +643,6 @@ system administration, and user interface preferences.
 - `delete_playlist(name)`
 - `enqueue_playlist(name)`
 - `get_playlist_content(name)`
-- `import_service_playlists()`
 - `remove_from_playlist(name, uri)`
 
 #### Queue
@@ -711,7 +710,7 @@ with VolumioWebSocketClient(host) as client:
     # {'enabled': False, 'time': '0:0', ...}
 
     # an event that answers nothing at all
-    client.emit("importServicePlaylists")
+    client.emit("updateDb")
 ```
 
 The second argument of `request` names the event carrying the answer.

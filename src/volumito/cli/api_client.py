@@ -777,10 +777,6 @@ class APIClient(ABC):
         return self._wrapped.host_configuration
 
     @abstractmethod
-    def import_service_playlists(self) -> None:
-        """Import the playlists the music services of the host expose."""
-
-    @abstractmethod
     def increase_volume(self) -> CommandResponse | None:
         """Increase the playback volume by one step."""
 
@@ -1954,9 +1950,6 @@ class RESTAPIClient(APIClient):
     def goto(self, kind: str, value: str) -> BrowseResults:
         return self._fallback.client(COLLECTION_OPERATION).goto(kind, value)
 
-    def import_service_playlists(self) -> None:
-        return self._fallback.client(PLAYLIST_OPERATION).import_service_playlists()
-
     @property
     def infinity_playback(self) -> InfinityPlayback:
         return self._fallback.client(PLAYBACK_OPERATION).infinity_playback
@@ -2646,9 +2639,6 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
 
     def goto(self, kind: str, value: str) -> BrowseResults:
         return self._client.goto(kind, value)
-
-    def import_service_playlists(self) -> None:
-        return self._client.import_service_playlists()
 
     @property
     def infinity_playback(self) -> InfinityPlayback:
@@ -3419,9 +3409,6 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
 
     def goto(self, kind: str, value: str) -> BrowseResults:
         return self._run(self._client.goto(kind, value))
-
-    def import_service_playlists(self) -> None:
-        return self._run(self._client.import_service_playlists())
 
     @property
     def infinity_playback(self) -> InfinityPlayback:
