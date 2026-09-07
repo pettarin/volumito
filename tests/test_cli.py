@@ -8946,7 +8946,10 @@ class TestCollectionBrowseLastAndRoot:
         result = runner.invoke(main, [*self._WEBSOCKET, "collection", "browse", *arguments])
 
         assert result.exit_code == 2
-        assert "Expected the --last and --root options alone" in result.output
+        assert (
+            "Expected the --current-track-album, --current-track-artist, --last, and --root"
+            in result.output
+        )
         mock_client.browse.assert_not_called()
 
     @pytest.mark.parametrize("option", ["--last", "--root"])
@@ -9042,7 +9045,8 @@ class TestCollectionCommands:
 
 
 class TestCollectionExtras:
-    """Test cases for collection goto, update, folder, source, and search --super."""
+    """Test cases for collection browse --current-track-*, update, directory, source,
+    and search --super."""
 
     MUSIC_SOURCES = {
         "plugins": [
@@ -9117,53 +9121,62 @@ class TestCollectionExtras:
         )
         return mock_client
 
-    def test_goto_with_a_value(self, runner: CliRunner, mocker: MockerFixture):
-        """collection goto browses to the named artist, printed like a browse."""
+    @pytest.mark.parametrize(
+        ("option", "kind", "value"),
+        [
+            ("--current-track-artist", "artist", "Paolo Conte"),
+            ("--current-track-album", "album", "Aguaplano"),
+        ],
+    )
+    def test_browse_to_the_current_track(
+        self, runner: CliRunner, mocker: MockerFixture, option, kind, value
+    ):
+        """The artist or the album of the current track is browsed to, as a browse prints."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "collection", "goto", "artist", "Enzo Jannacci"]
-        )
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "browse", option])
 
         assert result.exit_code == 0
         lines = result.output.splitlines()
         assert "1. Aguaplano - Paolo Conte" in lines
         assert "   music-library/INTERNAL/music/001___Aguaplano.flac" in lines
-        mock_client.goto.assert_called_once_with("artist", "Enzo Jannacci")
-        mock_client.state_property.assert_not_called()
-
-    @pytest.mark.parametrize(("kind", "value"), [("artist", "Paolo Conte"), ("album", "Aguaplano")])
-    def test_goto_defaults_to_the_current_track(
-        self, runner: CliRunner, mocker: MockerFixture, kind, value
-    ):
-        """Without a value, the artist or the album of the current track is browsed to."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "goto", kind, "-F", "json"])
-
-        assert result.exit_code == 0
-        assert json.loads(result.output)["info"]["title"] == "Aguaplano"
         mock_client.state_property.assert_called_once()
         mock_client.goto.assert_called_once_with(kind, value)
+        mock_client.browse.assert_not_called()
 
-    def test_goto_without_the_metadata(self, runner: CliRunner, mocker: MockerFixture):
+    def test_browse_to_the_current_track_without_the_metadata(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
         """A current track without the album cannot be browsed to."""
         mock_client = self._mock_websocket_client(mocker, state={"title": "A stream"})
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "goto", "album"])
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "browse", "--current-track-album"]
+        )
 
         assert result.exit_code == 1
-        assert "The current track does not provide the album to go to" in result.output
+        assert "The current track does not provide the album to browse to" in result.output
         mock_client.goto.assert_not_called()
 
-    def test_goto_with_the_browse_options(self, runner: CliRunner, mocker: MockerFixture):
-        """The kind and limit options act on the listing, like in a browse."""
+    def test_browse_to_the_current_track_with_the_browse_options(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """The kind and limit options act on the listing, like on any browse."""
         self._mock_websocket_client(mocker)
 
         result = runner.invoke(
             main,
-            [*self._WEBSOCKET, "collection", "goto", "album", "Aguaplano", "-T", "-l", "1",
-             "-F", "json"],
+            [
+                *self._WEBSOCKET,
+                "collection",
+                "browse",
+                "--current-track-album",
+                "-T",
+                "-l",
+                "1",
+                "-F",
+                "json",
+            ],
         )
 
         assert result.exit_code == 0
@@ -9171,25 +9184,26 @@ class TestCollectionExtras:
             "Aguaplano"
         ]
 
-    def test_goto_rejects_an_unknown_kind(self, runner: CliRunner, mocker: MockerFixture):
-        """KIND is artist or album."""
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            ["--current-track-artist", "--current-track-album"],
+            ["--current-track-artist", "--last"],
+            ["--current-track-album", "--root"],
+            ["music-library", "--current-track-artist"],
+            ["--current-track-album", "-o", "2"],
+        ],
+    )
+    def test_browse_to_the_current_track_alone(
+        self, runner: CliRunner, mocker: MockerFixture, arguments
+    ):
+        """The current-track options stand alone, like --last and --root."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "goto", "label", "X"])
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "browse", *arguments])
 
         assert result.exit_code == 2
-        mock_client.goto.assert_not_called()
-
-    def test_goto_rejects_two_limits(self, runner: CliRunner, mocker: MockerFixture):
-        """The best result only and a limit are two limits, like in a browse."""
-        mock_client = self._mock_websocket_client(mocker)
-
-        result = runner.invoke(
-            main, [*self._WEBSOCKET, "collection", "goto", "artist", "X", "-1", "-l", "2"]
-        )
-
-        assert result.exit_code == 2
-        assert "Expected the -1/--best-result-only or the -l/--limit option" in result.output
+        assert "Expected the --current-track-album, --current-track-artist" in result.output
         mock_client.goto.assert_not_called()
 
     @pytest.mark.parametrize(
@@ -9392,8 +9406,7 @@ class TestCollectionExtras:
     @pytest.mark.parametrize(
         "arguments",
         [
-            ["goto", "artist", "Paolo Conte"],
-            ["goto", "artist"],
+            ["browse", "--current-track-artist"],
             ["update"],
             ["update", "--rescan"],
             ["directory", "delete", "music-library/INTERNAL/music/old", "-y"],
@@ -18788,7 +18801,6 @@ class TestConfigurationCommands:
                     # except the two collection ones pinning their table format.
                     "collection-browse": {"format": "table"},
                     "collection-favourite-list": {"format": "table"},
-                    "collection-goto": {"format": "table"},
                     "collection-radio-list": {"format": "table"},
                     "collection-search": {"format": "table"},
                     "collection-source-list": None,

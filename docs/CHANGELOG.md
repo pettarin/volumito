@@ -41,9 +41,9 @@ All notable changes to this project will be documented in this file.
   with `--radio` for the radio favourites) and `collection radio`
   (`add`, `list`, `remove`); all but the `list` commands
   need a WebSocket API client
-- Commands `collection goto` and `collection update`, command groups
-  `collection directory` (`delete`) and `collection source`
-  (`disable`, `enable`, `list`), and options `--last` and `--root`
+- Command `collection update`, command groups `collection directory` (`delete`)
+  and `collection source` (`disable`, `enable`, `list`), and options
+  `--current-track-album`, `--current-track-artist`, `--last`, and `--root`
   of `collection browse` and `--super` of `collection search`
   (all needing a WebSocket API client)
 - Command group `system audio` (`disable`, `dsp`, `enable`, `inputs`,

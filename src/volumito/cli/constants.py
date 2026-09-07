@@ -45,17 +45,20 @@ API_CLIENT_SYNCHRONOUS_REST = "synchronous_rest"
 API_CLIENT_SYNCHRONOUS_WEBSOCKET = "synchronous_websocket"
 """The -C/--api-client value selecting the synchronous WebSocket API client."""
 
+BROWSE_ALONE_OPTIONS_ERROR = (
+    "Expected the --current-track-album, --current-track-artist, --last, and --root "
+    "options alone: without each other, the URI argument, and the -o/--offset option."
+)
+"""Error message when "collection browse" combines a standalone option with the other inputs."""
+
+BROWSE_CURRENT_TRACK_ERROR = "The current track does not provide the {kind} to browse to."
+"""Error message when "collection browse" is asked for metadata the current track lacks."""
+
 BROWSE_KINDS_ERROR = (
     "Expected the --result-kinds, --albums-only, --artists-only, --playlists-only, "
     "and --tracks-only options to agree on the kinds to keep."
 )
 """Error message when "collection browse" is asked for two different kinds of result."""
-
-BROWSE_LAST_ROOT_ERROR = (
-    "Expected the --last and --root options alone: without each other, the URI argument, "
-    "and the -o/--offset option."
-)
-"""Error message when "collection browse" combines --last or --root with the other inputs."""
 
 COLLECTION_UPDATE_MODES_ERROR = "Expected at most one of the --rescan and --thumbnails options."
 """Error message when "collection update" is asked for two refreshes at once."""
@@ -108,15 +111,6 @@ FAVOURITE_RADIO_OPTIONS_ERROR = (
 
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
-
-GOTO_KINDS = [
-    "album",
-    "artist",
-]
-"""Accepted values of the KIND argument of the "collection goto" command."""
-
-GOTO_METADATA_ERROR = "The current track does not provide the {kind} to go to."
-"""Error message when "collection goto" is given no value and the current track has none."""
 
 MAX_HTTP_HEADERS = 10000
 """Maximum number of headers accepted in an HTTP response (the Python default is 100)."""

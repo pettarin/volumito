@@ -69,6 +69,8 @@ from volumito.cli.click_helpers import (
     option_create_download_manifest,
     option_cue_track,
     option_current_track,
+    option_current_track_album,
+    option_current_track_artist,
     option_disabled,
     option_end_time,
     option_endpoint,
@@ -174,7 +176,8 @@ from volumito.cli.configuration import (
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
     ALARM_FILE_ERROR,
-    BROWSE_LAST_ROOT_ERROR,
+    BROWSE_ALONE_OPTIONS_ERROR,
+    BROWSE_CURRENT_TRACK_ERROR,
     COLLECTION_UPDATE_MODES_ERROR,
     COLLECTION_UPDATE_URI_ERROR,
     DEFAULT_API_CLIENT,
@@ -184,8 +187,6 @@ from volumito.cli.constants import (
     FAVOURITE_NAME_OPTION_ERROR,
     FAVOURITE_RADIO_NAME_ERROR,
     FAVOURITE_RADIO_OPTIONS_ERROR,
-    GOTO_KINDS,
-    GOTO_METADATA_ERROR,
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
@@ -3398,6 +3399,8 @@ def collection(ctx: click.Context) -> None:
 @option_albums_only
 @option_artists_only
 @option_best_result_only
+@option_current_track_album
+@option_current_track_artist
 @option_format_table
 @option_last
 @option_limit
@@ -3413,6 +3416,8 @@ def collection_browse(
     albums_only: bool,
     artists_only: bool,
     best_result_only: bool,
+    current_track_album: bool,
+    current_track_artist: bool,
     output_format: str,
     last: bool,
     limit: int | None,
@@ -3432,13 +3437,16 @@ def collection_browse(
     each list, before the kind options act, and not at the root; the WebSocket API
     clients apply it themselves, the root included.
 
-    With --last, the listing the host pushed last to any of its clients is printed
-    instead; with --root, the browse sources are, as the root lists them. Both take
-    neither URI nor -o/--offset, and need a WebSocket API client."""
+    With --current-track-artist or --current-track-album, the artist or the album of
+    the current track is browsed to instead, as the host resolves them; with --last,
+    the listing the host pushed last to any of its clients is printed; with --root,
+    the browse sources are, as the root lists them. These four take neither URI nor
+    -o/--offset, and need a WebSocket API client."""
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
-    if (last or root) and (last and root or uri is not None or offset is not None):
-        raise click.UsageError(BROWSE_LAST_ROOT_ERROR)
+    alone = [current_track_album, current_track_artist, last, root]
+    if sum(alone) > 1 or (any(alone) and (uri is not None or offset is not None)):
+        raise click.UsageError(BROWSE_ALONE_OPTIONS_ERROR)
     kinds = browse_kinds(result_kinds, albums_only, artists_only, playlists_only, tracks_only)
 
     if root:
@@ -3452,6 +3460,15 @@ def collection_browse(
         )
     elif last:
         results = fetch_or_exit(ctx, lambda c: c.last_browse)
+    elif current_track_artist or current_track_album:
+        kind = "artist" if current_track_artist else "album"
+        state = fetch_state_or_exit(ctx)
+        value = state.artist if current_track_artist else state.album
+        if not value:
+            error(BROWSE_CURRENT_TRACK_ERROR.format(kind=kind))
+            sys.exit(1)
+        target = value
+        results = fetch_or_exit(ctx, lambda c: c.goto(kind, target))
     else:
         results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
 
@@ -3497,64 +3514,6 @@ def directory_delete(ctx: click.Context, uri: str, update_library: bool, yes: bo
     if update_library:
         parent = uri.rsplit("/", 1)[0]
         execute_command(ctx, f'update library "{parent}"', lambda c: c.update_library(parent))
-
-
-@collection.command("goto")
-@click.pass_context
-@click.argument("kind", type=click.Choice(GOTO_KINDS, case_sensitive=True))
-@click.argument("value", required=False, default=None, type=str)
-@option_albums_only
-@option_artists_only
-@option_best_result_only
-@option_format_table
-@option_limit
-@option_playlists_only
-@option_print_uri_toggle
-@option_result_kinds
-@option_tracks_only
-def collection_goto(
-    ctx: click.Context,
-    kind: str,
-    value: str | None,
-    albums_only: bool,
-    artists_only: bool,
-    best_result_only: bool,
-    output_format: str,
-    limit: int | None,
-    playlists_only: bool,
-    print_uri: bool,
-    result_kinds: set[SearchResultItemKind] | None,
-    tracks_only: bool,
-) -> None:
-    """Browse to the artist or the album named VALUE, printed like "collection browse".
-
-    KIND is "artist" or "album". Without VALUE, the artist or the album of the
-    current track is browsed to.
-
-    Needs a WebSocket API client.
-    """
-    if best_result_only and limit is not None:
-        raise click.UsageError(SEARCH_LIMIT_ERROR)
-    kinds = browse_kinds(result_kinds, albums_only, artists_only, playlists_only, tracks_only)
-
-    if value is None:
-        state = fetch_state_or_exit(ctx)
-        value = state.artist if kind == "artist" else state.album
-        if not value:
-            error(GOTO_METADATA_ERROR.format(kind=kind))
-            sys.exit(1)
-    target = value
-
-    results = fetch_or_exit(ctx, lambda c: c.goto(kind, target))
-
-    if kinds is not None:
-        results = results.filtered(kinds=kinds)
-
-    kept = 1 if best_result_only else limit
-    if kept is not None:
-        results = results.limited(kept)
-
-    render_browse_results(ctx, results, output_format, print_uri)
 
 
 @collection.command("update")

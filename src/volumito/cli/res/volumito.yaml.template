@@ -236,7 +236,6 @@ output:
   # overrides can be specified under the following sections:
   # - collection-browse
   # - collection-favourite-list
-  # - collection-goto
   # - collection-radio-list
   # - collection-search
   # - collection-source-list
@@ -341,12 +340,6 @@ output:
 
   collection-favourite-list:
     # Listing is meant for humans, so the table is its default format
-    format: table
-
-    # Add your own overrides here
-
-  collection-goto:
-    # Browsing is meant for humans, so the table is its default format
     format: table
 
     # Add your own overrides here

@@ -1787,6 +1787,26 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_current_track_album(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--current-track-album`` option to the collection browse subcommand."""
+    return click.option(
+        "--current-track-album",
+        is_flag=True,
+        default=False,
+        help="Browse to the album of the current track, instead of a URI.",
+    )(func)
+
+
+def option_current_track_artist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--current-track-artist`` option to the collection browse subcommand."""
+    return click.option(
+        "--current-track-artist",
+        is_flag=True,
+        default=False,
+        help="Browse to the artist of the current track, instead of a URI.",
+    )(func)
+
+
 def option_disabled(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--disabled`` option to the system alarm add subcommand."""
     return click.option(

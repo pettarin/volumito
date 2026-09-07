@@ -529,7 +529,6 @@ class TestDefaultConfigurationTemplate:
                 # The listing collection subsections pin their table format
                 "collection-browse": {"format": "table"},
                 "collection-favourite-list": {"format": "table"},
-                "collection-goto": {"format": "table"},
                 "collection-radio-list": {"format": "table"},
                 "collection-search": {"format": "table"},
             },
@@ -842,7 +841,6 @@ class TestBuildClickDefaultMap:
             "collection": {
                 "browse": format_only,
                 "favourite": {"list": format_only},
-                "goto": format_only,
                 "radio": {"list": format_only},
                 "search": format_only,
                 "source": {"list": formatting},
