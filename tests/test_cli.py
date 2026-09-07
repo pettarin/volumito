@@ -10998,6 +10998,8 @@ class TestPlaylistCommands:
         assert tracks[0]["duration"] == "00:01:01"
         # The local files report their title under "name"
         assert tracks[1]["name"] == "Song B"
+        # The URI of each track is part of the short field set of a playlist
+        assert [track["uri"] for track in tracks] == ["music-library/a.flac", "qobuz://track/2"]
         mock_client.playlists_property.assert_called_once()
         mock_client.get_playlist_content.assert_called_once_with("Rock")
 
@@ -17012,6 +17014,18 @@ class TestQueueHelperFunctions:
         assert "extra_field" not in result[0]
         assert "another_field" not in result[0]
 
+    def test_filter_queue_fields_short_with_a_custom_list(self):
+        """A short field list of the caller replaces the queue list one."""
+        queue_data = {
+            "queue": [
+                {"title": "Song", "artist": "A", "uri": "music-library/a.flac", "service": "mpd"}
+            ]
+        }
+
+        result = filter_queue_fields(queue_data, "SHORT", ["position", "title", "uri"])
+
+        assert result == [{"position": 1, "title": "Song", "uri": "music-library/a.flac"}]
+
     def test_filter_queue_fields_short_keeps_track_and_volume_numbers(self):
         """The SHORT field set includes tracknumber and volumeNumber when present."""
         queue_data = {
@@ -17115,7 +17129,7 @@ class TestQueueHelperFunctions:
         assert "Another Song" in result
 
     def test_format_queue_as_table_optional_fields(self):
-        """The service and audio-quality fields are printed when present."""
+        """The service, URI, and audio-quality fields are printed when present."""
         tracks = [
             {
                 "position": 1,
@@ -17123,6 +17137,7 @@ class TestQueueHelperFunctions:
                 "artist": "Test Artist",
                 "duration": 180,
                 "service": "mpd",
+                "uri": "music-library/a.flac",
                 "samplerate": "44.1 kHz",
                 "bitdepth": "16 bit",
                 "channels": 2,
@@ -17133,6 +17148,7 @@ class TestQueueHelperFunctions:
 
         assert "   Duration: 00:03:00" in result
         assert "   Service: mpd" in result
+        assert "   URI    : music-library/a.flac" in result
         assert "   Sample Rate: 44.1 kHz" in result
         assert "   Bit Depth: 16 bit" in result
         assert "   Channels: 2" in result

@@ -79,6 +79,7 @@ All notable changes to this project will be documented in this file.
 - `modify_plugin_status` of the WebSocket clients starts or stops the plugin,
   and `update_plugin` takes the URL of the package
 - The table of `playback status` lists the audio-quality fields of its short set
+- The short field set of `playlist content` includes the URI of each track
 - `queue consume`, `queue randomize`, and `queue repeat` without a value print
   the mode instead of toggling it, and print it once set instead of the playback
   status (no `--print-resulting-status` option any more), with a `-F/--format`

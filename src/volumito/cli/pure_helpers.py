@@ -244,7 +244,9 @@ def filter_fields(
 
 
 def filter_queue_fields(
-    queue_data: dict[str, Any], fields: str
+    queue_data: dict[str, Any],
+    fields: str,
+    short_fields: list[str] = SHORT_FORMAT_FIELDS_QUEUE_LIST,
 ) -> list[dict[str, Any]]:
     """Filter queue items based on the fields option.
 
@@ -255,12 +257,13 @@ def filter_queue_fields(
     Args:
         queue_data: The queue data dictionary from the Volumio API (contains "queue" key)
         fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
+        short_fields: The list of keys to keep for the ``SHORT`` keyword
 
     Returns:
         A list of filtered queue item dictionaries, in the requested order
     """
     queue = queue_data.get("queue", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_LIST)
+    selected = resolve_output_fields(fields, short_fields)
     filtered_queue = []
 
     for index, item in enumerate(queue):
@@ -603,6 +606,7 @@ def format_queue_as_table(tracks: list[dict[str, Any]], heading: str = "Volumio 
         volume_number = track.get("volumeNumber")
         duration = track.get("duration")
         service = track.get("service", "")
+        uri = track.get("uri", "")
 
         lines.append(f"\n{position:>{width}}. {title}")
         if artist:
@@ -617,6 +621,8 @@ def format_queue_as_table(tracks: list[dict[str, Any]], heading: str = "Volumio 
             lines.append(f"{indent}Duration: {format_duration(duration)}")
         if service:
             lines.append(f"{indent}Service: {service}")
+        if uri:
+            lines.append(f"{indent}URI    : {uri}")
 
         # Add optional audio quality fields if present
         samplerate = track.get("samplerate")

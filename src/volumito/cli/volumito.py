@@ -208,6 +208,8 @@ from volumito.cli.constants import (
     SHARE_EDIT_FIELDS_ERROR,
     SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
+    SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
     SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST,
     SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
@@ -1396,7 +1398,13 @@ def queue_list(
     queue_data = fetch_or_exit(ctx, lambda c: c.queue.raw)
     debug("Successfully retrieved queue")
     render_tracks(
-        ctx, queue_data, queue_data.get("queue", []), fields, output_format, "Volumio Queue"
+        ctx,
+        queue_data,
+        queue_data.get("queue", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_QUEUE_LIST,
+        "Volumio Queue",
     )
 
 
@@ -4118,6 +4126,7 @@ def playlist_content(
         [track.raw for track in content.tracks],
         fields,
         output_format,
+        SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
         f'Volumio Playlist "{name}"',
     )
 

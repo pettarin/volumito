@@ -3142,6 +3142,7 @@ def render_tracks(
     tracks: list[dict[str, Any]],
     fields: str,
     output_format: str,
+    short_fields: list[str],
     heading: str,
 ) -> None:
     """Print a list of tracks (queue items) in the requested format.
@@ -3158,13 +3159,14 @@ def render_tracks(
         tracks: The tracks, as the Volumio instance reports them
         fields: The -L/--fields option value
         output_format: The -F/--format option value
+        short_fields: The list of keys to keep when ``fields`` is "short"
         heading: The heading of the table format
     """
     position_starting_at_one = ctx.obj["position_starting_at_one"]
     if output_format == "raw":
         output = json.dumps(payload)
     else:
-        filtered = filter_queue_fields({"queue": tracks}, fields)
+        filtered = filter_queue_fields({"queue": tracks}, fields, short_fields)
         if output_format == "json":
             output = json.dumps(filtered, indent=2)
         elif output_format == "pretty":

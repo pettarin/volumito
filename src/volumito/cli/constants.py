@@ -313,6 +313,21 @@ SHORT_FORMAT_FIELDS_PLAYER_STATE = [
 ]
 """Short fields list for the "playback status" command."""
 
+# The track fields must stay in sync with SHORT_FORMAT_FIELDS_QUEUE_LIST
+SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT = [
+    "position",
+    "title",
+    # The local files (the "mpd" service) report their title under "name"
+    "name",
+    "artist",
+    "album",
+    "volumeNumber",
+    "tracknumber",
+    "duration",
+    "uri",
+]
+"""Short fields list for the "playlist content" command: the queue list ones, and the URI."""
+
 SHORT_FORMAT_FIELDS_QUEUE_LIST = [
     "position",
     "title",
