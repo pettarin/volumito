@@ -205,6 +205,13 @@ PLAYLIST_REMOVE_ARGUMENTS_ERROR = (
 )
 """Error message when "playlist remove" is given neither a URI nor a position, or both."""
 
+PLAYLIST_REMOVE_EMPTY_WARNING = (
+    'The removal would leave the playlist "{name}" empty, which the Volumio host may '
+    'refuse: to empty a playlist, delete it with "playlist delete" and create it again '
+    'with "playlist create".'
+)
+"""Warning when "playlist remove" is asked to remove every item of a playlist."""
+
 PLAYLIST_REMOVE_SERVICE_ERROR = (
     "Expected the --service option only together with a URI argument."
 )

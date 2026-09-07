@@ -116,7 +116,13 @@ from volumito.clients import (
 )
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
-from volumito.clients.models import BrowseResults, PlayerState, SearchResultItemKind, Story
+from volumito.clients.models import (
+    BrowseResults,
+    PlayerState,
+    QueueTrack,
+    SearchResultItemKind,
+    Story,
+)
 from volumito.clients.websocket.common import BACKUP_KINDS
 
 
@@ -2608,25 +2614,24 @@ def option_yes(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def playlist_items_at_or_exit(
-    ctx: click.Context, name: str, positions: set[int]
+    ctx: click.Context, name: str, tracks: list[QueueTrack], positions: set[int]
 ) -> list[tuple[str, str | None]]:
     """Return the URI and service of the items at some positions of a playlist, or exit (1).
 
-    The content of the playlist is read from the Volumio instance. A position past
-    its end, or an item the host lists without a URI, is reported as an invalid
-    value, the positions displayed according to
+    A position past the end of the playlist, or an item the host lists without a
+    URI, is reported as an invalid value, the positions displayed according to
     ``--position-starting-at-one``/``--position-starting-at-zero``.
 
     Args:
         ctx: Click context object holding the shared options
-        name: The name of the playlist
+        name: The name of the playlist, for the messages
+        tracks: The content of the playlist, as read from the Volumio instance
         positions: The 0-based positions of the items
 
     Returns:
         The URI of each item and the service it belongs to (None when the host
         reports none), in position order
     """
-    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name)).tracks
     starting_at_one = ctx.obj["position_starting_at_one"]
     items: list[tuple[str, str | None]] = []
     missing: list[int] = []

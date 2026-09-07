@@ -10983,7 +10983,8 @@ class TestPlaylistCommands:
         assert result.exit_code == 0
         assert "executed successfully" in result.output
         assert '"uri"' not in result.output
-        mock_client.get_playlist_content.assert_not_called()
+        # A removal still reads the content once, to check what it leaves behind
+        assert mock_client.get_playlist_content.call_count == (1 if command == "remove" else 0)
 
     def test_editing_prints_the_resulting_content_as_a_table(
         self, runner: CliRunner, mocker: MockerFixture
@@ -11223,7 +11224,9 @@ class TestPlaylistCommands:
         assert '"uri": "music-library/a.flac"' in result.output
         mock_client.playlists_property.assert_called_once()
         mock_client.remove_from_playlist.assert_called_once_with("Rock", self._URI, service)
-        mock_client.get_playlist_content.assert_called_once_with("Rock")
+        # One content read checks the removal, one prints the resulting content
+        assert mock_client.get_playlist_content.call_count == 2
+        assert "leave the playlist" not in result.output
 
     @pytest.mark.parametrize(
         ("position", "uri", "service"),
@@ -11241,9 +11244,53 @@ class TestPlaylistCommands:
 
         assert result.exit_code == 0
         assert "Command 'remove from playlist \"Rock\"' executed successfully" in result.output
+        assert "leave the playlist" not in result.output
         mock_client.remove_from_playlist.assert_called_once_with("Rock", uri, service)
         # One content read resolves the position, one prints the resulting content
         assert mock_client.get_playlist_content.call_count == 2
+
+    def test_remove_the_last_item_warns(self, runner: CliRunner, mocker: MockerFixture):
+        """Removing the only item of a playlist warns that the host may refuse it."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {"name": "Rock", "lists": [[{"title": "Only", "service": "mpd", "uri": "mpd://a"}]]}
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "mpd://a"])
+
+        assert result.exit_code == 0
+        assert (
+            'The removal would leave the playlist "Rock" empty, which the Volumio host may '
+            'refuse: to empty a playlist, delete it with "playlist delete" and create it '
+            'again with "playlist create".'
+        ) in result.output
+        mock_client.remove_from_playlist.assert_called_once_with("Rock", "mpd://a", None)
+
+    def test_remove_another_uri_from_a_one_item_playlist_does_not_warn(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A URI the only item does not hold cannot empty the playlist."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {"name": "Rock", "lists": [[{"title": "Only", "service": "mpd", "uri": "mpd://a"}]]}
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "mpd://b"])
+
+        assert result.exit_code == 0
+        assert "leave the playlist" not in result.output
+
+    def test_remove_by_every_position_warns(self, runner: CliRunner, mocker: MockerFixture):
+        """A selection covering the whole playlist warns that the host may refuse it."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "remove", "Rock", "-p", "1-2"]
+        )
+
+        assert result.exit_code == 0
+        assert 'The removal would leave the playlist "Rock" empty' in result.output
+        assert mock_client.remove_from_playlist.call_count == 2
 
     def test_remove_by_position_starting_at_zero(
         self, runner: CliRunner, mocker: MockerFixture

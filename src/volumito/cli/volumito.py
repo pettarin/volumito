@@ -198,6 +198,7 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     PLAY_VOLATILE_ERROR,
     PLAYLIST_REMOVE_ARGUMENTS_ERROR,
+    PLAYLIST_REMOVE_EMPTY_WARNING,
     PLAYLIST_REMOVE_SERVICE_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
@@ -4261,6 +4262,9 @@ def playlist_remove(
     are removed, the content of the playlist is printed as "playlist content" prints
     it, unless --no-print-resulting-content.
 
+    A removal that would leave the playlist empty is warned about, since the host may
+    refuse it: delete the playlist instead, and create it again for an empty one.
+
     Needs a WebSocket API client.
     """
     if uri is not None and position is not None:
@@ -4269,13 +4273,18 @@ def playlist_remove(
         raise click.UsageError(PLAYLIST_REMOVE_SERVICE_ERROR)
     if check_playlist_name:
         check_playlist_name_or_exit(ctx, name)
+    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name)).tracks
     if position is not None:
         indices = {api_position(ctx, shown) for shown in sorted(position)}
-        items = playlist_items_at_or_exit(ctx, name, indices)
+        items = playlist_items_at_or_exit(ctx, name, tracks, indices)
+        empties = len(items) == len(tracks)
     elif uri is not None:
         items = [(uri, service)]
+        empties = len(tracks) == 1 and tracks[0].uri == uri
     else:
         raise click.UsageError(PLAYLIST_REMOVE_ARGUMENTS_ERROR)
+    if empties:
+        warning(PLAYLIST_REMOVE_EMPTY_WARNING.format(name=name))
 
     def remove_items(client: APIClient) -> None:
         for item_uri, item_service in items:
