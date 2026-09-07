@@ -17,6 +17,7 @@ from datetime import timedelta
 from types import ModuleType, TracebackType
 from typing import Any, Self, cast
 
+from volumito.clients.common import stored_local_uri
 from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
@@ -205,6 +206,7 @@ from volumito.clients.websocket.common import (
     EVENT_UPDATE_CHECK_CACHE,
     EVENT_UPDATE_DB,
     EVENT_UPDATE_PLUGIN,
+    EVENT_URI_FAVOURITES,
     EVENT_VOLATILE_PLAY,
     EVENT_VOLUME,
     EVENT_WRITE_MULTIROOM,
@@ -2187,21 +2189,29 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         """Remove an item from the favourites.
 
+        A file of the local library is named as the host stores it (see
+        :func:`stored_local_uri`), so that the URI a browse lists matches. The host
+        answers with the favourite status it broadcasts, waited for and dropped: a
+        read of the favourites right after sees the removal.
+
         Args:
             uri: The URI of the item to remove
             service: The service the URI belongs to, derived from it when not given
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        payload = self._favourite_payload(uri, service=service)
-        await self._emit(EVENT_REMOVE_FROM_FAVOURITES, payload)
+        payload = self._favourite_payload(stored_local_uri(uri), service=service)
+        await self._request(EVENT_REMOVE_FROM_FAVOURITES, EVENT_URI_FAVOURITES, payload)
 
     async def remove_from_playlist(
         self, name: str | Playlist, uri: str, service: str | None = None
     ) -> None:
         """Remove an item from a saved playlist.
 
+        A file of the local library is named as the host stores it (see
+        :func:`stored_local_uri`), so that the URI a browse lists matches.
         The host answers once the item is removed, with the listing of the playlist as
         the push a browse is answered by, which is waited for and dropped:
         :meth:`get_playlist_content` right after sees the removal, and a browse right
@@ -2220,7 +2230,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         await self._request(
             EVENT_REMOVE_FROM_PLAYLIST,
             EVENT_PUSH_BROWSE_LIBRARY,
-            self._playlist_item_payload(name, uri, service),
+            self._playlist_item_payload(name, stored_local_uri(uri), service),
         )
 
     async def remove_from_queue(self, position: int) -> None:

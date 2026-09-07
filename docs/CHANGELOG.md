@@ -127,6 +127,11 @@ All notable changes to this project will be documented in this file.
   the host still lists after the removal
 - `create_playlist` of the WebSocket clients waits for the answer of the host,
   and reports a playlist it did not create (a name already in use)
+- `remove_from_favourites` and `remove_from_playlist` of the WebSocket clients
+  name a file of the local library as the host stores it, so the URI a browse
+  lists matches; `remove_from_favourites` waits for the answer of the host,
+  `collection favourite remove` reports a favourite the host still lists, and
+  `collection favourite add` tells when the source keeps the favourite itself
 
 
 ## [0.4.0] - 2026-09-04

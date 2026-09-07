@@ -1365,6 +1365,8 @@ class TestVolumioWebSocketClientPlaylistEditing:
 
         client.add_to_playlist("jazz", "qobuz://track/1")
         client.remove_from_playlist("jazz", "mpd://NAS/a.flac")
+        # A file of the local library is named as the host stores it
+        client.remove_from_playlist("jazz", "music-library/INTERNAL/a.flac")
 
         assert fake.calls == [
             _Call(
@@ -1374,6 +1376,10 @@ class TestVolumioWebSocketClientPlaylistEditing:
             _Call(
                 "removeFromPlaylist",
                 {"name": "jazz", "service": "mpd", "uri": "mpd://NAS/a.flac"},
+            ),
+            _Call(
+                "removeFromPlaylist",
+                {"name": "jazz", "service": "mpd", "uri": "mnt/INTERNAL/a.flac"},
             ),
         ]
 
@@ -1458,15 +1464,35 @@ class TestVolumioWebSocketClientFavourites:
             _Call("addToFavourites", {"service": "mpd", "uri": "mpd://NAS/a.flac"}),
         ]
 
-    def test_remove_from_favourites(self, mocker: MockerFixture):
-        """Removing a favourite carries the URI and its service."""
-        client, fake = _client(mocker)
+    @pytest.mark.parametrize(
+        ("uri", "sent", "service"),
+        [
+            ("qobuz://track/1", "qobuz://track/1", "qobuz"),
+            ("music-library/INTERNAL/a.flac", "mnt/INTERNAL/a.flac", "mpd"),
+            ("mnt/INTERNAL/a.flac", "mnt/INTERNAL/a.flac", "mpd"),
+        ],
+    )
+    def test_remove_from_favourites(self, mocker: MockerFixture, uri, sent, service):
+        """Removing a favourite carries the URI as the host stores it, and its service."""
+        fake = _FakeSocketIOClient(
+            answers={"removeFromFavourites": ("urifavourites", {"favourite": False})}
+        )
+        client, fake = _client(mocker, fake)
 
-        client.remove_from_favourites("qobuz://track/1")
+        client.remove_from_favourites(uri)
 
-        assert fake.calls == [
-            _Call("removeFromFavourites", {"service": "qobuz", "uri": "qobuz://track/1"})
-        ]
+        assert fake.calls == [_Call("removeFromFavourites", {"service": service, "uri": sent})]
+
+    def test_remove_from_favourites_waits_for_the_answer(self, mocker: MockerFixture):
+        """The favourite status the host broadcasts after a removal is waited for."""
+        client, _ = _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            client.remove_from_favourites("qobuz://track/1")
+
+        assert 'did not answer "removeFromFavourites" with "urifavourites"' in str(
+            excinfo.value
+        )
 
     def test_an_explicit_service_wins(self, mocker: MockerFixture):
         """A service given by the caller is not derived from the URI."""

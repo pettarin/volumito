@@ -98,6 +98,12 @@ EXPERIENCE_VALUES = [
 ]
 """Accepted values of the VALUE argument of the "system ui experience" command."""
 
+FAVOURITE_KEPT_BY_SOURCE_INFO = (
+    'The Volumio host did not list "{uri}" among its own favourites: a source with '
+    "favourites of its own (Qobuz, Tidal) keeps them, browse them from its root."
+)
+"""Message when "collection favourite add" finds the favourite kept by its source."""
+
 FAVOURITE_NAME_OPTION_ERROR = "Expected the --name option only together with --radio."
 """Error message when "collection favourite remove" names a Web radio without --radio."""
 
@@ -108,6 +114,13 @@ FAVOURITE_RADIO_OPTIONS_ERROR = (
     "Expected the --albumart, --service, and --title options only without --radio."
 )
 """Error message when a "collection favourite" subcommand details a Web radio."""
+
+FAVOURITE_REMOVE_STILL_LISTED_ERROR = (
+    'The Volumio host still lists "{uri}" among its favourites after the removal: '
+    "the URI may not match the one listed, or a MyVolumio cloud device may not save "
+    "an empty list of favourites."
+)
+"""Error message when "collection favourite remove" finds the favourite still listed."""
 
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""

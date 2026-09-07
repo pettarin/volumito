@@ -90,6 +90,7 @@ from volumito.clients import (
     SearchResults,
     VolumioHostConfiguration,
 )
+from volumito.clients.common import stored_local_uri
 from volumito.clients.errors import (
     VolumioAsyncError,
     VolumioSCPError,
@@ -1453,6 +1454,24 @@ class TestIsExpandableUri:
     def test_is_expandable_uri(self, uri, expected):
         """Only the containers of the sources other than the local library expand."""
         assert is_expandable_uri(uri) is expected
+
+
+class TestStoredLocalUri:
+    """Test cases for stored_local_uri."""
+
+    @pytest.mark.parametrize(
+        ("uri", "expected"),
+        [
+            ("music-library/INTERNAL/music/a.flac", "mnt/INTERNAL/music/a.flac"),
+            ("mnt/INTERNAL/music/a.flac", "mnt/INTERNAL/music/a.flac"),
+            ("qobuz://track/3", "qobuz://track/3"),
+            ("albums://X/Y", "albums://X/Y"),
+            ("http://stream.example/radio", "http://stream.example/radio"),
+        ],
+    )
+    def test_stored_local_uri(self, uri, expected):
+        """Only the browse form of a local file is converted, to its mount path."""
+        assert stored_local_uri(uri) == expected
 
 
 class TestParseTrackSelection:
@@ -9506,6 +9525,7 @@ class TestCollectionFavouriteAndRadio:
 
     def _mock_websocket_client(self, mocker: MockerFixture):
         """Mock VolumioWebSocketClient answering the browses and the state reads."""
+        mocker.patch("volumito.cli.click_helpers.time.sleep")
         mock_client = mocker.Mock()
         mock_client.logger = LOGGER
         mock_client.browse.return_value = BrowseResults.from_envelope(self.ENVELOPE)
@@ -9614,6 +9634,30 @@ class TestCollectionFavouriteAndRadio:
         assert f"Command 'add favourite \"{self._URI}\"' executed successfully" in result.output
         mock_client.add_to_favourites.assert_called_once_with(self._URI, *details)
         mock_client.add_radio_favourite.assert_not_called()
+        # The favourites are read again: the URI is not among them, so its source keeps it
+        mock_client.browse.assert_called_once_with("favourites")
+        assert f'did not list "{self._URI}" among its own favourites' in result.output
+
+    @pytest.mark.parametrize(
+        ("uri", "listed"),
+        [
+            ("qobuz://track/3", "qobuz://track/3"),
+            ("music-library/INTERNAL/a.flac", "mnt/INTERNAL/a.flac"),
+        ],
+    )
+    def test_favourite_add_listed_afterwards(
+        self, runner: CliRunner, mocker: MockerFixture, uri, listed
+    ):
+        """A favourite the host lists afterwards, under the URI it stores, needs no note."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.browse.return_value = BrowseResults.from_envelope(
+            {"navigation": {"lists": [{"items": [{"service": "x", "uri": listed}]}]}}
+        )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "favourite", "add", uri])
+
+        assert result.exit_code == 0
+        assert "among its own favourites" not in result.output
 
     def test_favourite_add_radio(self, runner: CliRunner, mocker: MockerFixture):
         """--radio adds the stream URL to the radio favourites."""
@@ -9722,6 +9766,32 @@ class TestCollectionFavouriteAndRadio:
         assert f"Command 'remove favourite \"{self._URI}\"' executed" in result.output
         mock_client.remove_from_favourites.assert_called_once_with(self._URI, service)
         mock_client.remove_radio_favourite.assert_not_called()
+        # The favourites are read again, to check that the item is gone
+        mock_client.browse.assert_called_once_with("favourites")
+
+    @pytest.mark.parametrize(
+        ("uri", "listed"),
+        [
+            ("qobuz://track/3", "qobuz://track/3"),
+            ("music-library/INTERNAL/a.flac", "mnt/INTERNAL/a.flac"),
+        ],
+    )
+    def test_favourite_remove_still_listed(
+        self, runner: CliRunner, mocker: MockerFixture, uri, listed
+    ):
+        """A favourite the host still lists after the removal is reported."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.browse.return_value = BrowseResults.from_envelope(
+            {"navigation": {"lists": [{"items": [{"service": "x", "uri": listed}]}]}}
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "favourite", "remove", uri]
+        )
+
+        assert result.exit_code == 1
+        assert f'The Volumio host still lists "{uri}" among its favourites' in result.output
+        mock_client.remove_from_favourites.assert_called_once_with(uri, None)
 
     def test_favourite_remove_with_a_name(self, runner: CliRunner, mocker: MockerFixture):
         """A name only qualifies a Web radio."""

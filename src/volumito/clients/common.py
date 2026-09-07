@@ -31,6 +31,23 @@ QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
 (the album art URL above all) only grow the payload toward the body size limit."""
 
 
+def stored_local_uri(uri: str) -> str:
+    """Return the form a file of the local library is stored under by a Volumio host.
+
+    The host keeps such files in its playlists and favourites under their mount path
+    (``mnt/...``), converting the ``music-library/...`` URI a browse lists when it
+    adds them, but it compares what a removal names to what it stored, as it is.
+
+    Args:
+        uri: A URI, of the local library or of any source
+
+    Returns:
+        The URI as the host stores it, unchanged unless it is of the browse form
+    """
+    prefix = "music-library/"
+    return f"mnt/{uri.removeprefix(prefix)}" if uri.startswith(prefix) else uri
+
+
 class VolumioCommon(VolumioBaseClient):
     """The transport-independent half every Volumio client shares.
 
