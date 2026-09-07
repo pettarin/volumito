@@ -29,6 +29,9 @@ All notable changes to this project will be documented in this file.
   instead of the one at a URI
 - `playlist remove` warns when the removal would leave the playlist empty,
   which the Volumio host may refuse
+- Option `--expand-tracks/--no-expand-tracks` of `playlist add`, adding the tracks
+  a URI of a source other than the local library lists (an album, a playlist)
+  instead of the URI as one item
 - Commands `playback infinity` and `playback sleep`,
   and option `--volatile` of `playback play`
   (all needing a WebSocket API client)

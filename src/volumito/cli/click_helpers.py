@@ -85,6 +85,7 @@ from volumito.cli.pure_helpers import (
     format_items_as_table,
     format_names_as_table,
     format_queue_as_table,
+    is_expandable_uri,
     parse_result_kinds,
     parse_time_to_seconds,
     parse_track_selection,
@@ -1819,6 +1820,20 @@ def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_expand_tracks(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--expand-tracks`` option to the playlist add subcommand."""
+    return click.option(
+        "--expand-tracks/--no-expand-tracks",
+        default=True,
+        show_default=True,
+        help=(
+            "Expand URI into the tracks it lists first (the tracks of an album or a "
+            "playlist of a source other than the local library), adding each of them; "
+            "without, URI is added as one item."
+        ),
+    )(func)
+
+
 def option_extended(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--extended`` option to the system audio device list subcommand."""
     return click.option(
@@ -2664,6 +2679,43 @@ def playlist_items_at_or_exit(
         )
         sys.exit(1)
     return items
+
+
+def playlist_tracks_of_uri_or_exit(
+    ctx: click.Context, uri: str, service: str | None
+) -> list[tuple[str, str | None]]:
+    """Return the items a URI is added to a playlist as, or exit (1).
+
+    A URI of a source other than the local library that does not name a track (see
+    ``is_expandable_uri``) is browsed, and the tracks it lists are what is added,
+    each with the service it reports (or the given one); a URI listing no track, and
+    any other URI, is added as itself. A browse the host does not answer ends the
+    command with an error.
+
+    Args:
+        ctx: Click context object holding the shared options
+        uri: The URI to be added
+        service: The service the URI belongs to, when given
+
+    Returns:
+        The URI of each item to add and the service it belongs to (None when
+        derived from the URI at sending time)
+    """
+    if not is_expandable_uri(uri):
+        debug(f'"{uri}" names a track, or the host expands it: added as itself')
+        return [(uri, service)]
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri))
+    tracks = [
+        (item.uri, item.service if item.service is not None else service)
+        for item in results.items
+        if item.kind == SearchResultItemKind.TRACK and item.uri is not None
+    ]
+    if not tracks:
+        debug(f'"{uri}" lists no track: added as itself')
+        return [(uri, service)]
+    label = "track" if len(tracks) == 1 else "tracks"
+    info(f'Adding the {len(tracks)} {label} listed at "{uri}"')
+    return tracks
 
 
 def read_queue_log(path: str) -> dict[str, Any] | None:

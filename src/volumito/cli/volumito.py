@@ -72,6 +72,7 @@ from volumito.cli.click_helpers import (
     option_disabled,
     option_end_time,
     option_endpoint,
+    option_expand_tracks,
     option_extended,
     option_fields,
     option_file_name_template,
@@ -143,6 +144,7 @@ from volumito.cli.click_helpers import (
     option_with_albumart,
     option_yes,
     playlist_items_at_or_exit,
+    playlist_tracks_of_uri_or_exit,
     read_queue_log,
     render_browse_results,
     render_fields,
@@ -4084,6 +4086,7 @@ def playlist(ctx: click.Context) -> None:
 @click.argument("name", type=str)
 @click.argument("uri", type=str)
 @option_check_playlist_name
+@option_expand_tracks
 @option_fields
 @option_format
 @option_print_resulting_content
@@ -4093,25 +4096,38 @@ def playlist_add(
     name: str,
     uri: str,
     check_playlist_name: bool,
+    expand_tracks: bool,
     fields: str,
     output_format: str,
     print_resulting_content: bool,
     service: str | None,
 ) -> None:
-    """Add the item at URI to the playlist NAME.
+    """Add the item at URI, or the tracks it lists, to the playlist NAME.
 
-    A URI comes from "collection browse" or "collection search". The Volumio host
-    creates the playlist when it does not exist, which --no-check-playlist-name allows.
-    Once the item is added, the content of the playlist is printed as "playlist
-    content" prints it, unless --no-print-resulting-content.
+    A URI comes from "collection browse" or "collection search". With
+    --expand-tracks, a URI of a source other than the local library that does not
+    name a track (an album or a playlist of Qobuz, for instance) is browsed first,
+    and the tracks it lists are added one by one; the Volumio host would store such a
+    URI as one item otherwise, while it expands the containers of its local library
+    by itself. The host creates the playlist when it does not exist, which
+    --no-check-playlist-name allows. Once the items are added, the content of the
+    playlist is printed as "playlist content" prints it, unless
+    --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
     if check_playlist_name:
         check_playlist_name_or_exit(ctx, name)
-    execute_command(
-        ctx, f'add to playlist "{name}"', lambda c: c.add_to_playlist(name, uri, service)
-    )
+    if expand_tracks:
+        items = playlist_tracks_of_uri_or_exit(ctx, uri, service)
+    else:
+        items = [(uri, service)]
+
+    def add_items(client: APIClient) -> None:
+        for item_uri, item_service in items:
+            client.add_to_playlist(name, item_uri, item_service)
+
+    execute_command(ctx, f'add to playlist "{name}"', add_items)
     if print_resulting_content:
         _render_playlist_content(ctx, name, fields, output_format)
 

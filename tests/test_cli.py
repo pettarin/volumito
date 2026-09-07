@@ -66,6 +66,7 @@ from volumito.cli.pure_helpers import (
     format_queue_as_table,
     format_search_results_as_table,
     format_termination_conditions,
+    is_expandable_uri,
     is_mbid,
     manifest_matches_queue,
     parse_result_kinds,
@@ -1422,6 +1423,36 @@ class TestResultKindsParamType:
             ResultKindsParamType().get_metavar(None, None)
             == "[album|artist|other|playlist|track]"
         )
+
+
+class TestIsExpandableUri:
+    """Test cases for is_expandable_uri."""
+
+    @pytest.mark.parametrize(
+        ("uri", "expected"),
+        [
+            ("qobuz://album/0884977674569", True),
+            ("qobuz://playlist/19844454", True),
+            ("qobuz://artist/178398", True),
+            ("tidal://album/123", True),
+            ("spotify:album:abc", True),
+            ("qobuz://song/2210819", False),
+            ("tidal://song/123", False),
+            ("other://track/9", False),
+            ("spotify:track:abc", False),
+            ("http://opml.radiotime.com/Tune.ashx?id=s339255", False),
+            ("https://stream.example/radio", False),
+            ("music-library/INTERNAL/music/track.flac", False),
+            ("music-library/INTERNAL/music", False),
+            ("albums://Paolo%20Conte/Aguaplano", False),
+            ("artists://Paolo%20Conte", False),
+            ("genres://Jazz", False),
+            ("playlists://jazz", False),
+        ],
+    )
+    def test_is_expandable_uri(self, uri, expected):
+        """Only the containers of the sources other than the local library expand."""
+        assert is_expandable_uri(uri) is expected
 
 
 class TestParseTrackSelection:
@@ -10688,6 +10719,35 @@ class TestPlaylistCommands:
     }
     """The content of a playlist as a Volumio host answers it: one list per source."""
 
+    _ALBUM_LISTING = {
+        "navigation": {
+            "lists": [
+                {
+                    "items": [
+                        {
+                            "service": "qobuz",
+                            "type": "song",
+                            "title": "One",
+                            "uri": "qobuz://song/1",
+                        },
+                        {
+                            "type": "song",
+                            "title": "Two",
+                            "uri": "qobuz://song/2",
+                        },
+                        {
+                            "service": "qobuz",
+                            "type": "folder-with-favourites",
+                            "title": "Related album",
+                            "uri": "qobuz://album/9",
+                        },
+                    ]
+                }
+            ]
+        }
+    }
+    """What a Volumio host lists at an album of another source: its songs, and more."""
+
     _REFUSAL = (
         "API client error: The synchronous REST API client does not offer the playlist edits: "
         "use --api-client synchronous_websocket or asynchronous_websocket, "
@@ -10906,6 +10966,7 @@ class TestPlaylistCommands:
         mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
             self._CONTENT
         )
+        mock_client.browse.return_value = BrowseResults.from_envelope(self._ALBUM_LISTING)
         _attach_property(
             mock_client,
             "state",
@@ -10942,8 +11003,63 @@ class TestPlaylistCommands:
         # The resulting content is printed, as "playlist content" prints it
         assert '"uri": "music-library/a.flac"' in result.output
         mock_client.playlists_property.assert_called_once()
+        # A track URI is not browsed, even with the default --expand-tracks
+        mock_client.browse.assert_not_called()
         mock_client.add_to_playlist.assert_called_once_with("Rock", self._URI, service)
         mock_client.get_playlist_content.assert_called_once_with("Rock")
+
+    @pytest.mark.parametrize(
+        ("options", "service"), [([], None), (["--service", "qobuz"], "qobuz")]
+    )
+    def test_add_expands_an_album(
+        self, runner: CliRunner, mocker: MockerFixture, options, service
+    ):
+        """An album of another source is browsed, and the tracks it lists are added."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "add", "Rock", "qobuz://album/1", *options]
+        )
+
+        assert result.exit_code == 0
+        assert 'Adding the 2 tracks listed at "qobuz://album/1"' in result.output
+        assert result.output.count("executed successfully") == 1
+        mock_client.browse.assert_called_once_with("qobuz://album/1")
+        # A track without a service takes the given one, or none, to be derived
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("Rock", "qobuz://song/1", "qobuz"),
+            mocker.call("Rock", "qobuz://song/2", service),
+        ]
+        mock_client.get_playlist_content.assert_called_once_with("Rock")
+
+    def test_add_without_expanding(self, runner: CliRunner, mocker: MockerFixture):
+        """--no-expand-tracks adds the URI as one item, without browsing it."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "add", "Rock", "qobuz://album/1", "--no-expand-tracks"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_not_called()
+        mock_client.add_to_playlist.assert_called_once_with("Rock", "qobuz://album/1", None)
+
+    def test_add_a_uri_listing_no_track(self, runner: CliRunner, mocker: MockerFixture):
+        """A URI listing no track (an artist, its albums) is added as itself."""
+        mock_client = self._mock_websocket_client(mocker)
+        albums_only = self._ALBUM_LISTING["navigation"]["lists"][0]["items"][2:]
+        mock_client.browse.return_value = BrowseResults.from_envelope(
+            {"navigation": {"lists": [{"items": albums_only}]}}
+        )
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "add", "Rock", "qobuz://artist/1"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.browse.assert_called_once_with("qobuz://artist/1")
+        mock_client.add_to_playlist.assert_called_once_with("Rock", "qobuz://artist/1", None)
 
     def test_add_to_a_new_playlist_without_the_check(
         self, runner: CliRunner, mocker: MockerFixture

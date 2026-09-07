@@ -20,6 +20,7 @@ from volumito.cli.constants import (
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
 )
 from volumito.clients import VolumioHostConfiguration
+from volumito.clients.common import MPD_LIBRARY_SCHEMES
 from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKind
 from volumito.clients.remote import is_local_file_uri
 
@@ -767,6 +768,33 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
         A formatted string representation of the zones
     """
     return format_items_as_table(zones, "Volumio Multiroom Zones")
+
+
+def is_expandable_uri(uri: str) -> bool:
+    """Return whether a URI may list tracks a client has to expand it into.
+
+    A Volumio host adding a URI to a playlist expands the containers of its local
+    library by itself (a folder, an ``albums://`` album, and so on), and stores the
+    URI of any other source as one item, whatever it lists. So a URI is expandable
+    when it belongs to another source, and does not name a single track already: a
+    Web URL (a stream), a ``spotify:track:`` URI, or a URI whose path starts with
+    ``song/`` or ``track/`` (``qobuz://song/...``, ``tidal://song/...``) is a track.
+
+    Args:
+        uri: The URI to be added to a playlist
+
+    Returns:
+        True if the URI belongs to a source other than the local library and may
+        list tracks
+    """
+    if uri.startswith(("http://", "https://")):
+        return False
+    if uri.startswith("spotify:"):
+        return not uri.startswith("spotify:track:")
+    scheme, separator, path = uri.partition("://")
+    if not separator or scheme in MPD_LIBRARY_SCHEMES:
+        return False
+    return not path.startswith(("song/", "track/"))
 
 
 def is_mbid(text: str) -> bool:
