@@ -165,7 +165,7 @@ class VolumioRESTAPICommon(VolumioCommon):
         label = f"{browsed}{skipped}"
         return f"{PATH_BROWSE}?uri={label}", label
 
-    def _check_post_body(self, payload: dict[str, Any] | list[dict[str, Any]]) -> None:
+    def _check_post_body(self, payload: dict[str, Any]) -> None:
         """Check that a JSON body is not larger than the Volumio instance accepts.
 
         Args:

@@ -848,7 +848,7 @@ class TestVolumioAsyncWebSocketClientCommands:
 
 
 class TestVolumioAsyncWebSocketClientQueueing:
-    """Adding to the queue and replacing it, which browse a container first."""
+    """Adding to the queue and replacing it, which browse only to play at an index."""
 
     async def test_add_a_local_uri_as_itself(self, mocker: MockerFixture):
         """A URI of the local library is queued as itself, without a browse."""
@@ -860,28 +860,14 @@ class TestVolumioAsyncWebSocketClientQueueing:
             _Call("addToQueue", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
         ]
 
-    async def test_add_a_container_of_another_source(self, mocker: MockerFixture):
-        """A container of another source is browsed and queued as its items."""
-        client, fake = await _browse_client(mocker)
+    @pytest.mark.parametrize("uri", ["qobuz://album/1", "qobuz://track/1"])
+    async def test_add_a_uri_of_another_source_as_itself(self, mocker: MockerFixture, uri):
+        """A URI of another source is queued as itself, a container included."""
+        client, fake = await _client(mocker)
 
-        await client.add_to_queue("qobuz://album/1")
+        await client.add_to_queue(uri)
 
-        assert fake.calls[-1] == _Call(
-            "addToQueue", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
-        )
-
-    async def test_add_a_container_listing_nothing(self, mocker: MockerFixture):
-        """A URI of another source that lists nothing is queued as itself."""
-        fake = _FakeAsyncSocketIOClient(
-            answers={EVENT_BROWSE_LIBRARY: (EVENT_PUSH_BROWSE_LIBRARY, EMPTY_NAVIGATION)}
-        )
-        client, _ = await _client(mocker, fake)
-
-        await client.add_to_queue("qobuz://track/1")
-
-        assert fake.calls[-1] == _Call(
-            "addToQueue", {"service": "qobuz", "uri": "qobuz://track/1"}
-        )
+        assert fake.calls == [_Call("addToQueue", {"service": "qobuz", "uri": uri})]
 
     async def test_replace_with_a_local_uri(self, mocker: MockerFixture):
         """A URI of the local library replaces the queue as a single item."""
@@ -893,15 +879,15 @@ class TestVolumioAsyncWebSocketClientQueueing:
             _Call("replaceAndPlay", {"item": {"service": "mpd", "uri": "mpd://NAS/album"}})
         ]
 
-    async def test_replace_with_a_browsed_container(self, mocker: MockerFixture):
-        """A container of another source is browsed and sent as its items."""
-        client, fake = await _browse_client(mocker)
+    async def test_replace_with_a_container_of_another_source(self, mocker: MockerFixture):
+        """A container of another source replaces the queue as a single item too."""
+        client, fake = await _client(mocker)
 
         await client.replace_queue_and_play("qobuz://album/1")
 
-        assert fake.calls[-1].event == "replaceAndPlay"
-        assert fake.calls[-1].payload["index"] == 0
-        assert len(fake.calls[-1].payload["list"]) == 1
+        assert fake.calls == [
+            _Call("replaceAndPlay", {"item": {"service": "qobuz", "uri": "qobuz://album/1"}})
+        ]
 
     async def test_replace_at_an_index(self, mocker: MockerFixture):
         """An index browses the URI and sends the listing along with it."""
@@ -1038,14 +1024,12 @@ class TestVolumioAsyncWebSocketClientQueueEditing:
         ]
 
     async def test_add_and_play_a_container(self, mocker: MockerFixture):
-        """A container of another source is browsed and played as its items."""
-        client, fake = await _browse_client(mocker)
+        """A container of another source is queued as itself and played."""
+        client, fake = await _client(mocker)
 
         await client.add_and_play("qobuz://album/1")
 
-        assert fake.calls[-1] == _Call(
-            "addPlay", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
-        )
+        assert fake.calls == [_Call("addPlay", {"service": "qobuz", "uri": "qobuz://album/1"})]
 
     async def test_save_queue_as_playlist(self, mocker: MockerFixture):
         """The queue is saved under a name, given as a string or as a playlist."""

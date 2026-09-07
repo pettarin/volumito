@@ -346,31 +346,6 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
         self._client.on(event, self._receiver(event))
         self._registered.add(event)
 
-    async def _queue_payload_items(self, uri: str) -> list[dict[str, Any]] | None:
-        """Return the browsed items a URI must be queued as, or None for the URI itself.
-
-        A Volumio instance explodes the URIs of its local library (``mpd``) into
-        tracks by itself, while the plugins of the other sources leave a container
-        URI silently unexploded, reporting a success and queueing nothing: for those,
-        the URI is browsed here and the items it lists are queued instead. A URI
-        listing nothing (a single track, for instance) is queued as itself.
-
-        Args:
-            uri: The URI to be queued
-
-        Returns:
-            The items to queue in place of the URI, or None to queue the URI itself
-        """
-        if self._uri_service(uri) == "mpd":
-            self._log_debug("The URI belongs to the local library: queueing it as itself")
-            return None
-        self._log_debug("Browsing the URI to queue the items it lists...")
-        items = await self._browse_items(uri)
-        self._log_debug(
-            f"Browsing the URI to queue the items it lists... done ({len(items)} items)"
-        )
-        return items or None
-
     async def _read_array(self, event: str, payload: object = None) -> list[Any]:
         """Read an event answered by a JSON array.
 
@@ -573,20 +548,17 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def add_and_play(self, uri: str) -> None:
         """Add the content of a URI to the queue and start playing it.
 
-        Like :meth:`add_to_queue`, the URI of a container of a source other than the
-        local library is browsed first and queued as the items it lists.
+        Like :meth:`add_to_queue`, the URI is queued as itself, along with the service
+        its scheme names, and the host explodes a container into its tracks.
 
         Args:
             uri: The URI whose content to add and play, from a browse or a search
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
-            VolumioAPIError: If the browse of a container answers something unexpected
         """
         self._log_debug(f'Adding "{uri}" to the queue and playing it...')
-        items = await self._queue_payload_items(uri)
-        payload: object = items if items is not None else self._queue_uri_item(uri)
-        await self._emit(EVENT_ADD_PLAY, payload)
+        await self._emit(EVENT_ADD_PLAY, self._queue_uri_item(uri))
         self._log_debug(f'Adding "{uri}" to the queue and playing it... done')
 
     async def add_cue_track(self, uri: str, number: int, service: str | None = None) -> None:
@@ -669,21 +641,18 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def add_to_queue(self, uri: str) -> None:
         """Add the content of a URI to the end of the queue, without touching playback.
 
-        The URI of a container of a source other than the local library is browsed
-        first and queued as the items it lists, since only the local library explodes
-        its containers by itself.
+        The URI is queued as itself, along with the service its scheme names: the host
+        hands it to the plugin of that service, which explodes a container (an album,
+        a playlist) into its tracks.
 
         Args:
             uri: The URI whose content to add, from a browse or a search
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
-            VolumioAPIError: If the browse of a container answers something unexpected
         """
         self._log_debug(f'Adding "{uri}" to the queue...')
-        items = await self._queue_payload_items(uri)
-        payload: object = items if items is not None else self._queue_uri_item(uri)
-        await self._emit(EVENT_ADD_TO_QUEUE, payload)
+        await self._emit(EVENT_ADD_TO_QUEUE, self._queue_uri_item(uri))
         self._log_debug(f'Adding "{uri}" to the queue... done')
 
     async def add_uids_to_queue(self, uids: list[str]) -> None:
@@ -2278,6 +2247,14 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     async def replace_queue_and_play(self, uri: str, index: int | None = None) -> None:
         """Replace the queue with the content of a URI and start playing it.
 
+        Without an index, the URI is sent as itself, along with the service its scheme
+        names, and the host explodes a container into its tracks and plays the first.
+        With an index, the URI is browsed first and its items are sent along with the
+        index, since that is the only payload the Volumio API starts at a chosen item
+        with; a URI listing nothing (a single track, for instance) falls back to the
+        payload without an index when the index is 0, whose first item is the wanted
+        one.
+
         Args:
             uri: The URI whose content to play, from a browse or a search
             index: The position of the item to play first (0-based), or None for
@@ -2299,13 +2276,6 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
                 return
             if items or index > 0:
                 self._fail_short_listing(len(items), index)
-        else:
-            listed = await self._queue_payload_items(uri)
-            if listed is not None:
-                self._log_debug(f"Sending the {len(listed)} listed items, playing the first")
-                await self._emit(EVENT_REPLACE_AND_PLAY, {"list": listed, "index": 0})
-                self._log_debug(f'Replacing the queue with "{uri}"... done')
-                return
         self._log_debug("Sending the URI as a single item, playing its first element")
         await self._emit(EVENT_REPLACE_AND_PLAY, {"item": self._queue_uri_item(uri)})
         self._log_debug(f'Replacing the queue with "{uri}"... done')

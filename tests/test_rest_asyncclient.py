@@ -530,7 +530,6 @@ class TestVolumioAsyncRESTAPIClientTransport:
 
     async def test_an_oversized_payload_is_refused(self, mocker: MockerFixture):
         """A body larger than the instance accepts never leaves the client."""
-        client, session = _client(mocker, _json_response({"response": "success"}))
         item = {"service": "qobuz", "type": "song", "title": "x" * 500, "uri": "qobuz://1"}
         listing = {"navigation": {"lists": [{"items": [item] * 400}]}}
         client, session = _client(
@@ -539,7 +538,7 @@ class TestVolumioAsyncRESTAPIClientTransport:
         )
 
         with pytest.raises(VolumioAPIError) as excinfo:
-            await client.add_to_queue("qobuz://album/123")
+            await client.replace_queue_and_play("qobuz://album/123", 0)
 
         assert "larger than the" in str(excinfo.value)
         assert len(session.calls) == 1
@@ -940,7 +939,7 @@ class TestVolumioAsyncRESTAPIClientCommands:
 
 
 class TestVolumioAsyncRESTAPIClientQueueing:
-    """The members that browse a URI before queueing what it lists."""
+    """The members queueing a URI, and the ones browsing it to play at an index."""
 
     async def test_add_a_local_uri(self, mocker: MockerFixture):
         """A local library URI is queued as itself, without a browse."""
@@ -955,46 +954,26 @@ class TestVolumioAsyncRESTAPIClientQueueing:
             "uri": "mpd://NAS/music/track.flac",
         }
 
-    async def test_add_a_container_of_another_source(self, mocker: MockerFixture):
-        """A non-local container is browsed and queued as the items it lists."""
-        item = {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
-        listing = {"navigation": {"lists": [{"items": [item]}]}}
-        client, session = _client(
-            mocker, [_json_response(listing), _json_response({"response": "success"})]
-        )
+    @pytest.mark.parametrize("uri", ["qobuz://album/123", "qobuz://song/1"])
+    async def test_add_a_uri_of_another_source_as_itself(self, mocker: MockerFixture, uri):
+        """A URI of another source is queued as itself, a container included."""
+        client, session = _client(mocker, _json_response({"response": "success"}))
 
-        await client.add_to_queue("qobuz://album/123")
+        await client.add_to_queue(uri)
 
-        assert len(session.calls) == 2
-        assert session.calls[1].kwargs["json"] == [item]
+        assert len(session.calls) == 1
+        assert session.calls[0].kwargs["json"] == {"service": "qobuz", "uri": uri}
 
-    async def test_add_a_uri_listing_nothing(self, mocker: MockerFixture):
-        """A URI that lists nothing is queued as itself."""
-        listing = {"navigation": {"lists": [{"items": []}]}}
-        client, session = _client(
-            mocker, [_json_response(listing), _json_response({"response": "success"})]
-        )
-
-        await client.add_to_queue("qobuz://song/1")
-
-        assert session.calls[1].kwargs["json"] == {"service": "qobuz", "uri": "qobuz://song/1"}
-
-    async def test_adding_a_container_logs_the_decision(self, mocker: MockerFixture):
-        """Queueing a non-local container logs the browse-to-queue path taken."""
-        item = {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
-        listing = {"navigation": {"lists": [{"items": [item]}]}}
+    async def test_adding_a_uri_logs_the_service(self, mocker: MockerFixture):
+        """Queueing a URI logs the service it is routed to."""
         logger = Mock()
-        client, _ = _client(
-            mocker,
-            [_json_response(listing), _json_response({"response": "success"})],
-            logger=logger,
-        )
+        client, _ = _client(mocker, _json_response({"response": "success"}), logger=logger)
 
         await client.add_to_queue("qobuz://album/123")
 
         debugged = [call.args[0] for call in logger.debug.call_args_list]
         assert 'Service of "qobuz://album/123": qobuz' in debugged
-        assert "Browsing the URI to queue the items it lists... done (1 items)" in debugged
+        assert 'Adding "qobuz://album/123" to the queue... done' in debugged
 
     async def test_replace_with_a_local_uri(self, mocker: MockerFixture):
         """A local URI is sent as a single item, playing its first element."""
@@ -1009,16 +988,15 @@ class TestVolumioAsyncRESTAPIClientQueueing:
         }
 
     async def test_replace_with_a_container_of_another_source(self, mocker: MockerFixture):
-        """A non-local container is browsed and sent as the items it lists."""
-        item = {"service": "qobuz", "type": "song", "title": "One", "uri": "qobuz://song/1"}
-        listing = {"navigation": {"lists": [{"items": [item]}]}}
-        client, session = _client(
-            mocker, [_json_response(listing), _json_response({"response": "success"})]
-        )
+        """Without an index, a container of another source is sent as an item, not browsed."""
+        client, session = _client(mocker, _json_response({"response": "success"}))
 
         await client.replace_queue_and_play("qobuz://album/123")
 
-        assert session.calls[1].kwargs["json"] == {"list": [item], "index": 0}
+        assert len(session.calls) == 1
+        assert session.calls[0].kwargs["json"] == {
+            "item": {"service": "qobuz", "uri": "qobuz://album/123"}
+        }
 
     async def test_replace_at_an_index(self, mocker: MockerFixture):
         """With an index the URI is browsed and its items travel with it."""

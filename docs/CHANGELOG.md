@@ -87,6 +87,9 @@ All notable changes to this project will be documented in this file.
   `audio_output_pause`, `set_audio_output_volume`, `enable_plugin`,
   `disable_plugin`, `modify_plugin_status`, and `update_plugin`
   of the WebSocket clients send what the host reads
+- `add_to_queue`, `add_and_play`, and `replace_queue_and_play` without an index
+  (`queue add` and `queue replace`) no longer browse a URI of a source other than
+  the local library before queueing it, which failed for a single track
 
 
 ## [0.4.0] - 2026-09-04

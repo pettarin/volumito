@@ -234,8 +234,8 @@ class APIClient(ABC):
     def add_and_play(self, uri: str) -> None:
         """Add the content of a URI to the queue and start playing it.
 
-        Like :meth:`add_to_queue`, the URI of a container of a source other than the
-        local library is browsed first and queued as the items it lists.
+        Like :meth:`add_to_queue`, the URI is queued as itself, along with the service
+        its scheme names, and the host explodes a container into its tracks.
 
         Args:
             uri: The URI whose content to add and play, from a browse or a search

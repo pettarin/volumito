@@ -1038,7 +1038,7 @@ class TestVolumioWebSocketClientCommands:
 
 
 class TestVolumioWebSocketClientQueueing:
-    """Adding to the queue and replacing it, which browse a container first."""
+    """Adding to the queue and replacing it, which browse only to play at an index."""
 
     def test_add_a_local_uri_as_itself(self, mocker: MockerFixture):
         """A URI of the local library is queued as itself, without a browse."""
@@ -1050,26 +1050,14 @@ class TestVolumioWebSocketClientQueueing:
             _Call("addToQueue", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
         ]
 
-    def test_add_a_container_of_another_source(self, mocker: MockerFixture):
-        """A container of another source is browsed and queued as its items."""
-        client, fake = _browse_client(mocker)
+    @pytest.mark.parametrize("uri", ["qobuz://album/1", "qobuz://track/1"])
+    def test_add_a_uri_of_another_source_as_itself(self, mocker: MockerFixture, uri):
+        """A URI of another source is queued as itself, a container included."""
+        client, fake = _client(mocker)
 
-        client.add_to_queue("qobuz://album/1")
+        client.add_to_queue(uri)
 
-        assert fake.calls[-1] == _Call(
-            "addToQueue", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
-        )
-
-    def test_add_a_container_listing_nothing(self, mocker: MockerFixture):
-        """A URI of another source that lists nothing is queued as itself."""
-        fake = _FakeSocketIOClient(
-            answers={EVENT_BROWSE_LIBRARY: (EVENT_PUSH_BROWSE_LIBRARY, EMPTY_NAVIGATION)}
-        )
-        client, _ = _client(mocker, fake)
-
-        client.add_to_queue("qobuz://track/1")
-
-        assert fake.calls[-1] == _Call("addToQueue", {"service": "qobuz", "uri": "qobuz://track/1"})
+        assert fake.calls == [_Call("addToQueue", {"service": "qobuz", "uri": uri})]
 
     def test_replace_with_a_local_uri(self, mocker: MockerFixture):
         """A URI of the local library replaces the queue as a single item."""
@@ -1081,21 +1069,15 @@ class TestVolumioWebSocketClientQueueing:
             _Call("replaceAndPlay", {"item": {"service": "mpd", "uri": "mpd://NAS/album"}})
         ]
 
-    def test_replace_with_a_browsed_container(self, mocker: MockerFixture):
-        """A container of another source is browsed and sent as its items."""
-        client, fake = _browse_client(mocker)
+    def test_replace_with_a_container_of_another_source(self, mocker: MockerFixture):
+        """A container of another source replaces the queue as a single item too."""
+        client, fake = _client(mocker)
 
         client.replace_queue_and_play("qobuz://album/1")
 
-        assert fake.calls[-1] == _Call(
-            "replaceAndPlay",
-            {
-                "list": [
-                    {"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}
-                ],
-                "index": 0,
-            },
-        )
+        assert fake.calls == [
+            _Call("replaceAndPlay", {"item": {"service": "qobuz", "uri": "qobuz://album/1"}})
+        ]
 
     def test_replace_at_an_index(self, mocker: MockerFixture):
         """An index browses the URI and sends the listing along with it."""
@@ -1209,14 +1191,12 @@ class TestVolumioWebSocketClientQueueEditing:
         ]
 
     def test_add_and_play_a_container(self, mocker: MockerFixture):
-        """A container of another source is browsed and played as its items."""
-        client, fake = _browse_client(mocker)
+        """A container of another source is queued as itself and played."""
+        client, fake = _client(mocker)
 
         client.add_and_play("qobuz://album/1")
 
-        assert fake.calls[-1] == _Call(
-            "addPlay", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
-        )
+        assert fake.calls == [_Call("addPlay", {"service": "qobuz", "uri": "qobuz://album/1"})]
 
     def test_save_queue_as_playlist(self, mocker: MockerFixture):
         """The queue is saved under a name, given as a string or as a playlist."""
