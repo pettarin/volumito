@@ -563,7 +563,6 @@ with VolumioWebSocketClient(host) as client:
 - `rescan_library()`
 - `set_music_source_enabled(name, enabled)`
 - `update_library(uri)`
-- `update_service_tracklist(service)`
 
 > [!NOTE]
 > `set_music_source_enabled` reads `music_sources` first:

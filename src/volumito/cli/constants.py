@@ -57,14 +57,11 @@ BROWSE_LAST_ROOT_ERROR = (
 )
 """Error message when "collection browse" combines --last or --root with the other inputs."""
 
-COLLECTION_UPDATE_MODES_ERROR = (
-    "Expected at most one of the --rescan, --thumbnails, and --tracklist options."
-)
+COLLECTION_UPDATE_MODES_ERROR = "Expected at most one of the --rescan and --thumbnails options."
 """Error message when "collection update" is asked for two refreshes at once."""
 
 COLLECTION_UPDATE_URI_ERROR = (
-    "Expected the URI argument only without the --rescan, --thumbnails, "
-    "and --tracklist options."
+    "Expected the URI argument only without the --rescan and --thumbnails options."
 )
 """Error message when "collection update" is given a URI together with a refresh option."""
 

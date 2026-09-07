@@ -9199,12 +9199,6 @@ class TestCollectionExtras:
             (["music-library"], "update_library", ("music-library",), "update library"),
             (["--rescan"], "rescan_library", (), "rescan library"),
             (["--thumbnails"], "regenerate_thumbnails", (), "regenerate thumbnails"),
-            (
-                ["--tracklist", "qobuz"],
-                "update_service_tracklist",
-                ("qobuz",),
-                'update tracklist "qobuz"',
-            ),
         ],
     )
     def test_update(
@@ -9219,17 +9213,16 @@ class TestCollectionExtras:
         assert f"Command '{label}' executed successfully" in result.output
         getattr(mock_client, member).assert_called_once_with(*called_with)
 
-    @pytest.mark.parametrize(
-        "arguments", [["--rescan", "--thumbnails"], ["--thumbnails", "--tracklist", "qobuz"]]
-    )
-    def test_update_in_two_ways(self, runner: CliRunner, mocker: MockerFixture, arguments):
+    def test_update_in_two_ways(self, runner: CliRunner, mocker: MockerFixture):
         """The refreshes are mutually exclusive."""
         mock_client = self._mock_websocket_client(mocker)
 
-        result = runner.invoke(main, [*self._WEBSOCKET, "collection", "update", *arguments])
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "collection", "update", "--rescan", "--thumbnails"]
+        )
 
         assert result.exit_code == 2
-        assert "Expected at most one of the --rescan, --thumbnails" in result.output
+        assert "Expected at most one of the --rescan and --thumbnails" in result.output
         mock_client.update_library.assert_not_called()
 
     def test_update_a_uri_with_a_refresh(self, runner: CliRunner, mocker: MockerFixture):

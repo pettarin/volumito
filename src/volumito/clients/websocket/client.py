@@ -176,7 +176,6 @@ from volumito.clients.websocket.common import (
     EVENT_SAVE_WIRELESS_NETWORK_SETTINGS,
     EVENT_SEARCH,
     EVENT_SEEK,
-    EVENT_SERVICE_UPDATE_TRACKLIST,
     EVENT_SET_AS_MULTIROOM_CLIENT,
     EVENT_SET_AS_MULTIROOM_SERVER,
     EVENT_SET_AS_MULTIROOM_SINGLE,
@@ -2879,17 +2878,6 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         payload = {**self._plugin_payload(category, name), "url": url}
         self._emit(EVENT_UPDATE_PLUGIN, payload)
-
-    def update_service_tracklist(self, service: str) -> None:
-        """Refresh the tracks one music service of the Volumio instance offers.
-
-        Args:
-            service: The name of the service to refresh
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_SERVICE_UPDATE_TRACKLIST, service)
 
     @property
     def updater_channel(self) -> UpdaterChannel:

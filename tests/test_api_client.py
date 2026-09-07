@@ -196,7 +196,6 @@ WEBSOCKET_METHODS = [
     ("update", (True,), {}, UPDATE_OPERATION),
     ("update_library", ("uri",), {}, COLLECTION_OPERATION),
     ("update_plugin", ("category", "name", "url"), {}, PLUGIN_OPERATION),
-    ("update_service_tracklist", ("service",), {}, COLLECTION_OPERATION),
     ("write_multiroom", ({"k": "v"},), {}, MULTIROOM_OPERATION),
 ]
 """The methods the REST API does not offer: name, positional and keyword arguments, and

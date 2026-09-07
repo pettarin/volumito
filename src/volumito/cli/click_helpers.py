@@ -2518,17 +2518,6 @@ def option_track(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
-def option_tracklist(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--tracklist`` option to the collection update subcommand."""
-    return click.option(
-        "--tracklist",
-        type=str,
-        default=None,
-        metavar="SERVICE",
-        help="Refresh the tracks this music service offers, instead of looking for changes.",
-    )(func)
-
-
 def option_tracks_only(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-T``/``--tracks-only`` option to the collection search subcommand."""
     return click.option(

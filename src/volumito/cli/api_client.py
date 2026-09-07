@@ -1601,14 +1601,6 @@ class APIClient(ABC):
             url: The URL of the package, as the plugin store of the host lists it
         """
 
-    @abstractmethod
-    def update_service_tracklist(self, service: str) -> None:
-        """Refresh the tracks one music service of the Volumio instance offers.
-
-        Args:
-            service: The name of the service to refresh
-        """
-
     @property
     @abstractmethod
     def updater_channel(self) -> UpdaterChannel:
@@ -2178,9 +2170,6 @@ class RESTAPIClient(APIClient):
 
     def update_plugin(self, category: str, name: str, url: str) -> None:
         return self._fallback.client(PLUGIN_OPERATION).update_plugin(category, name, url)
-
-    def update_service_tracklist(self, service: str) -> None:
-        return self._fallback.client(COLLECTION_OPERATION).update_service_tracklist(service)
 
     @property
     def updater_channel(self) -> UpdaterChannel:
@@ -2872,9 +2861,6 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
 
     def update_plugin(self, category: str, name: str, url: str) -> None:
         return self._client.update_plugin(category, name, url)
-
-    def update_service_tracklist(self, service: str) -> None:
-        return self._client.update_service_tracklist(service)
 
     @property
     def updater_channel(self) -> UpdaterChannel:
@@ -3636,9 +3622,6 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
 
     def update_plugin(self, category: str, name: str, url: str) -> None:
         return self._run(self._client.update_plugin(category, name, url))
-
-    def update_service_tracklist(self, service: str) -> None:
-        return self._run(self._client.update_service_tracklist(service))
 
     @property
     def updater_channel(self) -> UpdaterChannel:

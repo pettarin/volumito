@@ -531,9 +531,6 @@ EVENT_SEARCH = "search"
 EVENT_SEEK = "seek"
 """The event seeking to an absolute position."""
 
-EVENT_SERVICE_UPDATE_TRACKLIST = "serviceUpdateTracklist"
-"""The event refreshing the tracks of one music service."""
-
 EVENT_SET_AS_MULTIROOM_CLIENT = "setAsMultiroomClient"
 """The event making the host a multiroom client."""
 

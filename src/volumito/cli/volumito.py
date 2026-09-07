@@ -133,7 +133,6 @@ from volumito.cli.click_helpers import (
     option_thumbnails,
     option_timeout,
     option_track,
-    option_tracklist,
     option_tracks_only,
     option_unregister_url_on_exit,
     option_update_library,
@@ -3563,37 +3562,26 @@ def collection_goto(
 @click.argument("uri", required=False, default=None, type=str)
 @option_rescan
 @option_thumbnails
-@option_tracklist
 def collection_update(
-    ctx: click.Context,
-    uri: str | None,
-    rescan: bool,
-    thumbnails: bool,
-    tracklist: str | None,
+    ctx: click.Context, uri: str | None, rescan: bool, thumbnails: bool
 ) -> None:
     """Update the collection of the Volumio host, looking for changes.
 
     With URI, only its content is updated. The options select another refresh
     instead, and take no URI: --rescan rescans the collection from scratch (slow on
-    a large collection), --thumbnails rebuilds the thumbnails of the album art, and
-    --tracklist SERVICE refreshes the tracks a music service offers. They are
-    mutually exclusive.
+    a large collection), and --thumbnails rebuilds the thumbnails of the album art.
+    They are mutually exclusive.
 
     Needs a WebSocket API client.
     """
-    if sum([rescan, thumbnails, tracklist is not None]) > 1:
+    if rescan and thumbnails:
         raise click.UsageError(COLLECTION_UPDATE_MODES_ERROR)
-    if uri is not None and (rescan or thumbnails or tracklist is not None):
+    if uri is not None and (rescan or thumbnails):
         raise click.UsageError(COLLECTION_UPDATE_URI_ERROR)
     if rescan:
         execute_command(ctx, "rescan library", lambda c: c.rescan_library())
     elif thumbnails:
         execute_command(ctx, "regenerate thumbnails", lambda c: c.regenerate_thumbnails())
-    elif tracklist is not None:
-        service = tracklist
-        execute_command(
-            ctx, f'update tracklist "{service}"', lambda c: c.update_service_tracklist(service)
-        )
     else:
         execute_command(ctx, "update library", lambda c: c.update_library(uri))
 

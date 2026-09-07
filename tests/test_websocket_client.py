@@ -2037,13 +2037,11 @@ class TestVolumioWebSocketClientLibrary:
         client.rescan_library()
         client.update_library()
         client.update_library("mpd://NAS/Music")
-        client.update_service_tracklist("qobuz")
 
         assert fake.calls == [
             _Call("rescanDb", None),
             _Call("updateDb", None),
             _Call("updateDb", "mpd://NAS/Music"),
-            _Call("serviceUpdateTracklist", "qobuz"),
         ]
 
 
