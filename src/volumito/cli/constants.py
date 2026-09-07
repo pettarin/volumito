@@ -46,7 +46,7 @@ API_CLIENT_SYNCHRONOUS_WEBSOCKET = "synchronous_websocket"
 """The -C/--api-client value selecting the synchronous WebSocket API client."""
 
 BROWSE_ALONE_OPTIONS_ERROR = (
-    "Expected the --current-track-album, --current-track-artist, --last, and --root "
+    "Expected the -b/--current-track-album, -a/--current-track-artist, --last, and --root "
     "options alone: without each other, the URI argument, and the -o/--offset option."
 )
 """Error message when "collection browse" combines a standalone option with the other inputs."""

@@ -3437,8 +3437,8 @@ def collection_browse(
     each list, before the kind options act, and not at the root; the WebSocket API
     clients apply it themselves, the root included.
 
-    With --current-track-artist or --current-track-album, the artist or the album of
-    the current track is browsed to instead, as the host resolves them; with --last,
+    With -a/--current-track-artist or -b/--current-track-album, the artist or the
+    album of the current track is browsed to instead, as the host resolves them; with --last,
     the listing the host pushed last to any of its clients is printed; with --root,
     the browse sources are, as the root lists them. These four take neither URI nor
     -o/--offset, and need a WebSocket API client."""

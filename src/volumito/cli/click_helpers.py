@@ -1788,8 +1788,9 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
 
 
 def option_current_track_album(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--current-track-album`` option to the collection browse subcommand."""
+    """Add the ``-b``/``--current-track-album`` option to the collection browse subcommand."""
     return click.option(
+        "-b",
         "--current-track-album",
         is_flag=True,
         default=False,
@@ -1798,8 +1799,9 @@ def option_current_track_album(func: Callable[..., None]) -> Callable[..., None]
 
 
 def option_current_track_artist(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--current-track-artist`` option to the collection browse subcommand."""
+    """Add the ``-a``/``--current-track-artist`` option to the collection browse subcommand."""
     return click.option(
+        "-a",
         "--current-track-artist",
         is_flag=True,
         default=False,

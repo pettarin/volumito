@@ -8947,7 +8947,7 @@ class TestCollectionBrowseLastAndRoot:
 
         assert result.exit_code == 2
         assert (
-            "Expected the --current-track-album, --current-track-artist, --last, and --root"
+            "Expected the -b/--current-track-album, -a/--current-track-artist, --last, and --root"
             in result.output
         )
         mock_client.browse.assert_not_called()
@@ -9125,7 +9125,9 @@ class TestCollectionExtras:
         ("option", "kind", "value"),
         [
             ("--current-track-artist", "artist", "Paolo Conte"),
+            ("-a", "artist", "Paolo Conte"),
             ("--current-track-album", "album", "Aguaplano"),
+            ("-b", "album", "Aguaplano"),
         ],
     )
     def test_browse_to_the_current_track(
@@ -9203,7 +9205,7 @@ class TestCollectionExtras:
         result = runner.invoke(main, [*self._WEBSOCKET, "collection", "browse", *arguments])
 
         assert result.exit_code == 2
-        assert "Expected the --current-track-album, --current-track-artist" in result.output
+        assert "Expected the -b/--current-track-album, -a/--current-track-artist" in result.output
         mock_client.goto.assert_not_called()
 
     @pytest.mark.parametrize(
