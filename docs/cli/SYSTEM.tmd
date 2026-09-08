@@ -3,9 +3,7 @@
 #### System Info
 
 The `system info` command (and its alias `info`)
-returns the response from the same-name endpoint
-of the Volumio REST API, containing a summary
-of the state of the Volumio host:
+returns a summary of the state of the Volumio host:
 
 ```bash lucio command=execute
 volumito system info

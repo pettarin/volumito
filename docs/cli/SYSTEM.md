@@ -5,9 +5,7 @@
 #### System Info
 
 The `system info` command (and its alias `info`)
-returns the response from the same-name endpoint
-of the Volumio REST API, containing a summary
-of the state of the Volumio host:
+returns a summary of the state of the Volumio host:
 
 ```bash
 volumito system info
@@ -23,11 +21,11 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
+        "albumart": "https://static.qobuz.com/images/covers/64/04/0639842660464_600.jpg",
+        "artist": "Mango",
         "mute": false,
         "status": "play",
-        "track": "Va tutto bene",
+        "track": "Sirtaki",
         "volume": 19
     },
     "systemversion": "4.119",
@@ -47,8 +45,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-08T09:35:39.106Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-08T09:35:39.106Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T12:37:22.274Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T12:37:22.274Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -116,7 +114,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-08T09:35:41.960Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-08T12:37:25.100Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!WARNING]
@@ -130,7 +128,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "bluetooth-cache\ncrashdump\ngetvolume\nhls\nlastcrash\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-347f4ab945fe433397c750851942b2e2-bluealsa.service-BkMGfq\nsystemd-private-347f4ab945fe433397c750851942b2e2-haveged.service-Or4rIc\nsystemd-private-347f4ab945fe433397c750851942b2e2-ntpsec.service-JvcKaN\nsystemd-private-347f4ab945fe433397c750851942b2e2-systemd-logind.service-6NVO5G\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-bluealsa.service-5XSmiv\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-haveged.service-PX51QE\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-ntpsec.service-BzIMOF\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-systemd-logind.service-Jg3zeI\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -141,10 +139,8 @@ volumito system execute "ls /tmp/" --yes
 ```bash
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
 bluetooth-cache
-crashdump
 getvolume
 hls
-lastcrash
 multiroom
 myvolumio-remote.json
 networkstatus
@@ -156,10 +152,10 @@ shairport-sync-metadata
 shairport-sync.conf
 snapfifo
 sshtunnel.sh
-systemd-private-347f4ab945fe433397c750851942b2e2-bluealsa.service-BkMGfq
-systemd-private-347f4ab945fe433397c750851942b2e2-haveged.service-Or4rIc
-systemd-private-347f4ab945fe433397c750851942b2e2-ntpsec.service-JvcKaN
-systemd-private-347f4ab945fe433397c750851942b2e2-systemd-logind.service-6NVO5G
+systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-bluealsa.service-5XSmiv
+systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-haveged.service-PX51QE
+systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-ntpsec.service-BzIMOF
+systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-systemd-logind.service-Jg3zeI
 tisoc-controller
 updater
 upmpdcli.conf
