@@ -159,8 +159,9 @@ from volumito.cli.click_helpers import (
     render_state,
     render_story,
     render_tracks,
+    resolve_available_plugin_url_or_exit,
+    resolve_installed_plugin_or_exit,
     resolve_output_conflict,
-    resolve_plugin_or_exit,
     resolve_story_album_entities,
     resolve_story_entity,
     sleep_between_api_calls,
@@ -2587,7 +2588,7 @@ def system_plugin_configuration(ctx: click.Context, name: str, output_format: st
 
     Needs a WebSocket API client.
     """
-    plugin = resolve_plugin_or_exit(ctx, name)
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
     config = fetch_or_exit(ctx, lambda c: c.get_plugin_config(plugin.endpoint))
     render_payload(
         ctx,
@@ -2607,7 +2608,7 @@ def system_plugin_disable(ctx: click.Context, name: str, fields: str, output_for
 
     NAME is what "system plugin list" prints. Needs a WebSocket API client.
     """
-    plugin = resolve_plugin_or_exit(ctx, name)
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
     plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("disable", plugin.category, name))
     _render_plugins(ctx, plugins, fields, output_format)
 
@@ -2622,7 +2623,7 @@ def system_plugin_enable(ctx: click.Context, name: str, fields: str, output_form
 
     NAME is what "system plugin list" prints. Needs a WebSocket API client.
     """
-    plugin = resolve_plugin_or_exit(ctx, name)
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
     plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("enable", plugin.category, name))
     _render_plugins(ctx, plugins, fields, output_format)
 
@@ -2650,9 +2651,7 @@ def system_plugin_install(
     if not yes:
         error(f'Refusing to install the plugin without -y/--yes: "{name}"')
         sys.exit(1)
-    package = url
-    if package is None:
-        package = resolve_plugin_or_exit(ctx, name, installed=False, available=True).url
+    package = url if url is not None else resolve_available_plugin_url_or_exit(ctx, name)
     execute_command(ctx, f'install plugin "{name}"', lambda c: c.install_plugin(package))
     if wait_and_enable:
         plugin = wait_for_installed_plugin_or_exit(ctx, name)
@@ -2690,7 +2689,7 @@ def system_plugin_uninstall(ctx: click.Context, name: str, yes: bool) -> None:
     if not yes:
         error(f'Refusing to uninstall the plugin without -y/--yes: "{name}"')
         sys.exit(1)
-    plugin = resolve_plugin_or_exit(ctx, name)
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
     execute_command(
         ctx,
         f'uninstall plugin "{plugin.endpoint}"',
@@ -2715,8 +2714,8 @@ def system_plugin_update(ctx: click.Context, name: str, url: str | None, yes: bo
     if not yes:
         error(f'Refusing to update the plugin without -y/--yes: "{name}"')
         sys.exit(1)
-    plugin = resolve_plugin_or_exit(ctx, name, available=url is None)
-    package = url if url is not None else plugin.url
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
+    package = url if url is not None else resolve_available_plugin_url_or_exit(ctx, name)
     execute_command(
         ctx,
         f'update plugin "{plugin.endpoint}"',

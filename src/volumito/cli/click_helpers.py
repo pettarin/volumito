@@ -224,11 +224,8 @@ class PluginReference(NamedTuple):
     name: str
     """The name of the plugin, as it is identified."""
 
-    category: str | None
-    """The category the plugin belongs to, when read from the installed plugins."""
-
-    url: str | None
-    """The URL of the package of the plugin, when read from the store."""
+    category: str
+    """The category the plugin belongs to, as the installed plugins list it."""
 
     @property
     def endpoint(self) -> str:
@@ -3173,6 +3170,53 @@ def render_story(
     echo_data(ctx, output)
 
 
+def resolve_available_plugin_url_or_exit(ctx: click.Context, name: str) -> str:
+    """Resolve the name of a plugin into the URL of its package in the store, or exit.
+
+    The store is what "system plugin available" prints, which the host lists only
+    when it is logged in to MyVolumio.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+
+    Returns:
+        The URL of the package of the plugin
+
+    Raises:
+        SystemExit: If the store does not list the plugin, or lists it without a URL
+    """
+    offered = fetch_or_exit(ctx, lambda c: c.available_plugins).find(name)
+    if offered is None or offered.url is None:
+        error(f'Plugin not found: "{name}" (see "system plugin available")')
+        sys.exit(1)
+    return offered.url
+
+
+def resolve_installed_plugin_or_exit(ctx: click.Context, name: str) -> PluginReference:
+    """Resolve the name of a plugin into what the plugin commands need, or exit.
+
+    The category comes from the plugins installed on the host, as "system plugin
+    list" prints them.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+
+    Returns:
+        The plugin, with its category
+
+    Raises:
+        SystemExit: If the host does not list the plugin as installed
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+    plugin = next((p for p in plugins if p.name == name), None)
+    if plugin is None or plugin.category is None:
+        error(f'Plugin not installed: "{name}" (see "system plugin list")')
+        sys.exit(1)
+    return PluginReference(name, plugin.category)
+
+
 def resolve_output_conflict(
     ctx: click.Context, output_file: str | None, output_directory: str | None
 ) -> tuple[str | None, str | None]:
@@ -3203,45 +3247,6 @@ def resolve_output_conflict(
     if directory_explicit and not file_explicit:
         return None, output_directory
     raise click.UsageError(MUTUALLY_EXCLUSIVE_OUTPUT_ERROR)
-
-
-def resolve_plugin_or_exit(
-    ctx: click.Context, name: str, installed: bool = True, available: bool = False
-) -> PluginReference:
-    """Resolve the name of a plugin into what the plugin commands need, or exit.
-
-    With ``installed``, the category comes from the plugins installed on the host, as
-    "system plugin list" prints them; with ``available``, the URL of the package comes
-    from the store, as "system plugin available" prints it, which the host lists only
-    when it is logged in to MyVolumio.
-
-    Args:
-        ctx: Click context object containing shared options
-        name: The name of the plugin, as it is identified
-        installed: Whether to read the category from the installed plugins
-        available: Whether to read the URL of the package from the store
-
-    Returns:
-        The plugin, with the parts asked for
-
-    Raises:
-        SystemExit: If the host does not list the plugin where it was looked up
-    """
-    category, url = None, None
-    if installed:
-        plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
-        plugin = next((p for p in plugins if p.name == name), None)
-        if plugin is None or plugin.category is None:
-            error(f'Plugin not installed: "{name}" (see "system plugin list")')
-            sys.exit(1)
-        category = plugin.category
-    if available:
-        offered = fetch_or_exit(ctx, lambda c: c.available_plugins).find(name)
-        if offered is None or offered.url is None:
-            error(f'Plugin not found: "{name}" (see "system plugin available")')
-            sys.exit(1)
-        url = offered.url
-    return PluginReference(name, category, url)
 
 
 def resolve_story_album_entities(
@@ -3435,7 +3440,7 @@ def wait_for_installed_plugin_or_exit(ctx: click.Context, name: str) -> PluginRe
         plugin = next((p for p in plugins if p.name == name), None)
         if plugin is not None and plugin.category is not None and plugin.enabled is not None:
             info(f'Waiting for the plugin "{name}" to be installed... done')
-            return PluginReference(name, plugin.category, None)
+            return PluginReference(name, plugin.category)
         debug(
             f'The host does not list the plugin "{name}" as installed yet ({attempt}/{retries})'
         )

@@ -894,7 +894,9 @@ class VolumioWebSocketCommon(VolumioCommon):
         Returns:
             The payload the volume event carries
         """
-        payload = {key: output[key] for key in ("host", "id", "isSelf", "type") if key in output}
+        payload: dict[str, Any] = {
+            key: output[key] for key in ("host", "id", "isSelf", "type") if key in output
+        }
         return {**payload, "mute": False, "volume": volume}
 
     def _background_color_payload(self, color: str) -> dict[str, str]:
