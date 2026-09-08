@@ -4,7 +4,7 @@ rules:
   # "hwUuid": "6f05 ... 8d37",
   # with
   # "hwUuid": "<REDACTED>",
-  - id: replace_hwUuid
+  - id: redact_volumio_hwUuid
     type: re
     streams:
       - include
@@ -20,7 +20,7 @@ rules:
   # "id": "d08f41df-c0d9-4b14-8e34-4d656ac203ec",
   # with
   # "id": "<REDACTED>",
-  - id: replace_id
+  - id: redact_volumio_id
     type: re
     streams:
       - include
@@ -31,3 +31,37 @@ rules:
     count: all
     mode: multiline
     case: respect
+
+  # replace lines composed by URLs starting with:
+  # https://static.qobuz.com
+  # with
+  # <REDACTED URL>
+  - id: redact_qobuz_url_1
+    type: re
+    streams:
+      - include
+      - stderr
+      - stdout
+    target: '^https://static.qobuz.com/.*$'
+    replacement: '<REDACTED URL>'
+    count: all
+    mode: multiline
+    case: respect
+
+  # replace lines composed by URLs starting with:
+  # https://streaming-qobuz-std.akamaized.net/
+  # with
+  # <REDACTED URL>
+  - id: redact_qobuz_url_2
+    type: re
+    streams:
+      - include
+      - stderr
+      - stdout
+    target: '^https://streaming-qobuz-std.akamaized.net/.*$'
+    replacement: '<REDACTED URL>'
+    count: all
+    mode: multiline
+    case: respect
+
+
