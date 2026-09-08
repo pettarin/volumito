@@ -19,6 +19,13 @@ Options:
                                   through a REST API client, instead of
                                   failing them.  [default: no-allow-fallback-
                                   to-rest-api]
+  --allow-fallback-to-websocket-api / --no-allow-fallback-to-websocket-api
+                                  When a REST API client is selected, serve
+                                  the commands the REST API does not offer
+                                  (the ones needing a WebSocket API client)
+                                  through a WebSocket API client, instead of
+                                  failing them.  [default: no-allow-fallback-
+                                  to-websocket-api]
   -C, --api-client [synchronous_rest|asynchronous_rest|synchronous_websocket|asynchronous_websocket]
                                   API client used to talk to the Volumio
                                   instance.  [default: synchronous_rest]
@@ -88,14 +95,14 @@ Commands:
   configuration  Create, check, and search for volumito configuration files.
   info           Print the system information.
   multiroom      Query the multiroom state.
-  notification   Manage the URLs receiving the push notifications.
+  notification   Manage the URLs receiving the push notifications, and...
   playback       Control the playback.
-  playlist       Query, play, and download the saved playlists.
-  queue          Manage the playback queue.
+  playlist       Query, play, edit, and download the saved playlists.
+  queue          Manage the playback queue and its current track.
   scp            Copy files and directories from and to the Volumio host.
   story          Retrieve stories about albums, artists, labels, or places.
   system         Query Volumio system utilities.
-  track          Query the current track (information, audio, album art).
+  track          Query the current track of the queue (information,...
   version        Print the volumito version.
 ```
 
@@ -103,15 +110,23 @@ Commands:
 volumito playlist --help
 Usage: volumito playlist [OPTIONS] COMMAND [ARGS]...
 
-  Query, play, and download the saved playlists.
+  Query, play, edit, and download the saved playlists.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
+  add       Add the item at URI, or the tracks it lists, to the playlist...
+  content   Print the tracks of the playlist NAME.
+  copy      Copy the playlist SOURCE to the new playlist TARGET, with the...
+  create    Create the empty playlist NAME, filled from FILE with...
+  delete    Delete the playlist NAME.
   download  Download every track of the playlist specified by NAME.
+  enqueue   Append the playlist NAME to the queue, leaving the playback...
   list      List the Volumio playlists saved by the current user.
   play      Start playback of the playlist specified by NAME.
+  remove    Remove the item at URI, or the items at -p/--position, from...
+  rename    Rename the playlist SOURCE to TARGET, copying it and deleting...
 ```
 
 ```bash
@@ -121,13 +136,18 @@ Usage: volumito playback play [OPTIONS] [POSITION]
   Start playback.
 
   With POSITION, play the track at that position of the queue (indexed
-  according to --position-starting-at-one/--position-starting-at-zero).
+  according to --position-starting-at-one/--position-starting-at-zero). With
+  --volatile, POSITION is a position of the volatile source (e.g., Spotify
+  Connect) to start instead, which needs a WebSocket API client.
 
 Options:
   -r, --print-resulting-status / --no-print-resulting-status
                                   After executing the command, print the
                                   resulting playback status.  [default: print-
                                   resulting-status]
+  --volatile                      Start the volatile source (e.g., Spotify
+                                  Connect) at POSITION, instead of the queue
+                                  (needs a WebSocket API client).
   --help                          Show this message and exit.
 ```
 
@@ -138,8 +158,24 @@ volumito command list
 volumito
     collection (c)
         browse (cb)
+        directory
+            delete
+        favourite
+            add
+            list
+            play
+            remove
+        radio
+            add
+            list
+            remove
         search (cs)
+        source
+            disable
+            enable
+            list
         statistics
+        update
     command (cmd)
         alias (cmda)
         list (cmdl)
@@ -149,13 +185,24 @@ volumito
         search
     info (i)
     multiroom (mlt)
-        zones (mltz)
+        client
+        info
+        server
+        set
+        single
+        status
+        write
     notification (not)
+        event
+            emit
+            listen
+            request
         list (notl)
         listen (notlis)
         register (notr)
         unregister (notu)
     playback (p)
+        infinity
         is_muted
         is_paused
         is_playing
@@ -166,25 +213,43 @@ volumito
         play (play, pplay)
         previous (pprev, prev)
         seek (pseek, seek)
+        sleep
         status (ps)
         stop (pstop, stop)
         toggle (pt, toggle)
         unmute (pu, unmute)
         volume (pv, vol)
     playlist (pl)
+        add
+        content
+        copy
+        create
+        delete
         download (pld)
+        enqueue
         list (pll)
         play (plp)
+        remove
+        rename
     queue (q)
+        add
         clear (qc)
+        consume
         download (qd)
-        has_next
-        has_previous
         list (ql)
+        move
         randomize
+        remove
         repeat
         replace (qr)
+        save
         status (qs)
+        track (qt)
+            albumart (qtc)
+            audio (qta)
+            has_next
+            has_previous
+            info (qti)
     scp
         get
         put
@@ -195,14 +260,92 @@ volumito
         label (slab)
         place (spla)
     system (sys)
+        alarm
+            add
+            clear
+            disable
+            enable
+            list
+            remove
+            set
+        audio
+            device
+                list
+                set
+            disable
+            dsp
+            enable
+            inputs
+            outputs
+            pause
+            play
+            volume
+        backup
+            create
+            restore
+            save
         execute (exec, syse)
         info (sysi)
+        name
+        network
+            info
+            join
+            wireless
         ping (ping, sysp)
+        plugin
+            available
+            configuration
+            disable
+            enable
+            install
+            list
+            uninstall
+            update
+        power
+            modes
+            reboot
+            shutdown
+            standby
+        share
+            add
+            discover
+            edit
+            info
+            list
+            remove
+        timezone
+            list
+            set
+        ui
+            background
+                delete
+                list
+                set
+            experience
+            language
+                list
+                set
+            privacy
+            settings
+        update
+            automatic
+                disable
+                enable
+            channel
+                list
+                set
+            check
+            install
+        usb
+            eject
+            list
         version (sysv)
-    track (t)
-        albumart (tc)
-        audio (ta)
-        info (ti)
+    track
+        albumart
+        audio
+        has_next
+        has_previous
+        info
     version
 ```
 
@@ -224,7 +367,6 @@ cs : collection search
 exec : system execute
 i : info
 mlt : multiroom
-mltz : multiroom zones
 mute : playback mute
 next : playback next
 not : notification
@@ -258,6 +400,10 @@ qd : queue download
 ql : queue list
 qr : queue replace
 qs : queue status
+qt : queue track
+qta : queue track audio
+qtc : queue track albumart
+qti : queue track info
 s : story
 salb : story album
 sart : story artist
@@ -271,10 +417,6 @@ syse : system execute
 sysi : system info
 sysp : system ping
 sysv : system version
-t : track
-ta : track audio
-tc : track albumart
-ti : track info
 toggle : playback toggle
 unmute : playback unmute
 vol : playback volume
