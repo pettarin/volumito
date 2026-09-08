@@ -23,6 +23,7 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Play Track At A Given Position](#play-track-at-a-given-position)
   - [Seeking](#seeking)
   - [Volume Control](#volume-control)
+  - [Playback Sleep](#playback-sleep)
   - [Playback Help](#playback-help)
 - [Inspect The Current Track](#inspect-the-current-track)
   - [Track Info](#track-info)

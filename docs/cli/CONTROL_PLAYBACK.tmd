@@ -1,3 +1,8 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
 ## Control The Playback
 
 ### Playback Status
@@ -147,6 +152,38 @@ volumito playback mute
 
 ```bash lucio command=execute
 volumito playback unmute
+```
+
+### Playback Sleep
+
+It is possible to set a "playback sleep",
+that is, an amount of time after which the playback is stopped
+and the Volumio host is put to sleep (if supported) or shut down (otherwise).
+
+> [! NOTE]
+> This functionality is available only when using a WebSocket client.
+> The next examples set `-C aw` to remind of that.
+
+To check if the playback sleep is set, run without arguments:
+
+```bash lucio command=execute
+volumito -C aw playback sleep
+```
+
+To set it, provide the amount of time in either minutes or `HH:MM` format:
+
+```bash lucio command=execute
+volumito -C aw playback sleep 42
+```
+
+```bash lucio command=execute
+volumito -C aw playback sleep 120
+```
+
+To disable the sleep, use the special value `off`:
+
+```bash lucio command=execute
+volumito -C aw playback sleep off
 ```
 
 ### Playback Help

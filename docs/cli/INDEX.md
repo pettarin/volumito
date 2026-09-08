@@ -25,6 +25,7 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Play Track At A Given Position](#play-track-at-a-given-position)
   - [Seeking](#seeking)
   - [Volume Control](#volume-control)
+  - [Playback Sleep](#playback-sleep)
   - [Playback Help](#playback-help)
 - [Inspect The Current Track](#inspect-the-current-track)
   - [Track Info](#track-info)
@@ -868,19 +869,19 @@ issue the `playback status` command:
 ```bash
 volumito playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:23.417",
+    "seek": "00:00:01.250",
     "status": "play",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
 }
 ```
 
@@ -892,14 +893,14 @@ Volumio Status
 ==================================================
 Status              : play
 Position            : 1
-Title               : Nella mia città
-Artist              : Mango
-Album               : Sirtaki
-Duration            : 00:06:59
-Seek                : 00:02:23.918
-Volume              : 55
+Title               : Va tutto bene
+Artist              : Enrico Ruggeri
+Album               : Polvere
+Duration            : 00:03:16
+Seek                : 00:00:01.751
+Volume              : 20
 Mute                : False
-Tracktype           : flac
+Tracktype           : qobuz
 Samplerate          : 44.1 kHz
 Bitdepth            : 16 bit
 Channels            : 2
@@ -911,31 +912,32 @@ from the REST API:
 ```bash
 volumito playback status --fields ALL
 {
-    "album": "Sirtaki",
-    "albumart": "/albumart?cacheid=208&web=Mango/Sirtaki/extralarge&path=%2FINTERNAL%2Fmusic%2FMango%2FSirtaki&metadata=false",
-    "artist": "Mango",
+    "album": "Polvere",
+    "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
+    "bitrate": "1 Kbps",
     "channels": 2,
-    "consume": false,
+    "consume": true,
     "dbVolume": null,
     "disableVolumeControl": false,
-    "duration": "00:06:59",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "random": false,
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:24.668",
-    "service": "mpd",
+    "seek": "00:00:02.501",
+    "service": "qobuz",
     "status": "play",
-    "stream": "flac",
-    "title": "Nella mia città",
-    "trackType": "flac",
+    "stream": false,
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
     "updatedb": false,
-    "uri": "mnt/INTERNAL/music/Mango/Sirtaki/001___Nella_mia_città.flac",
+    "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 55
+    "volume": 20
 }
 ```
 
@@ -954,7 +956,7 @@ volumito playback status --fields ALL
 
 ```bash
 volumito -m playback status -F raw -L ALL
-{"status": "play", "position": 0, "title": "Nella mia citt\u00e0", "artist": "Mango", "album": "Sirtaki", "albumart": "/albumart?cacheid=208&web=Mango/Sirtaki/extralarge&path=%2FINTERNAL%2Fmusic%2FMango%2FSirtaki&metadata=false", "uri": "mnt/INTERNAL/music/Mango/Sirtaki/001___Nella_mia_citt\u00e0.flac", "trackType": "flac", "seek": 145168, "duration": 419, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "random": false, "repeat": false, "repeatSingle": false, "consume": false, "volume": 55, "dbVolume": null, "disableVolumeControl": false, "mute": false, "stream": "flac", "updatedb": false, "volatile": false, "service": "mpd"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 3004, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Pause And Stop
@@ -964,21 +966,21 @@ To pause the playback, use `playback pause`:
 ```bash
 volumito playback pause
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:25.918",
+    "seek": "00:00:05.480",
     "status": "pause",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:46:48.888Z] [INFO] Command 'pause' executed successfully
+[2026-09-08T13:08:22.629Z] [INFO] Command 'pause' executed successfully
 ```
 
 By default, the resulting status of the playback is printed.
@@ -990,21 +992,21 @@ To toggle between pause and play, use `playback toggle`:
 ```bash
 volumito playback toggle
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:27.919",
+    "seek": "00:00:07.483",
     "status": "play",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:46:51.522Z] [INFO] Command 'toggle' executed successfully
+[2026-09-08T13:08:25.246Z] [INFO] Command 'toggle' executed successfully
 ```
 
 To stop the playback, use `playback stop`:
@@ -1012,21 +1014,21 @@ To stop the playback, use `playback stop`:
 ```bash
 volumito playback stop
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.252",
-    "status": "stop",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "seek": "00:00:00.250",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:46:54.162Z] [INFO] Command 'stop' executed successfully
+[2026-09-08T13:08:27.878Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Play Track At A Given Position
@@ -1036,21 +1038,21 @@ The `playback play` command starts playing the current queue.
 ```bash
 volumito playback play
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.001",
+    "seek": "00:00:02.260",
     "status": "play",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:46:56.778Z] [INFO] Command 'play' executed successfully
+[2026-09-08T13:08:30.494Z] [INFO] Command 'play' executed successfully
 ```
 
 It accepts an optional positional argument
@@ -1061,21 +1063,21 @@ For example, to play the third track:
 ```bash
 volumito playback play 3
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.096",
+    "seek": "00:00:00.500",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:46:59.450Z] [INFO] Command 'play' executed successfully
+[2026-09-08T13:08:33.301Z] [INFO] Command 'play' executed successfully
 ```
 
 ### Seeking
@@ -1085,7 +1087,7 @@ can be queried with `playback seek`:
 
 ```bash
 volumito playback seek
-00:00:03.598
+00:00:01.004
 ```
 
 and it can be set by providing a new value,
@@ -1094,21 +1096,21 @@ either in seconds:
 ```bash
 volumito playback seek 42
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:43.944",
+    "seek": "00:00:44.058",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:02.671Z] [INFO] Command 'seek 42' executed successfully
+[2026-09-08T13:08:36.568Z] [INFO] Command 'seek 42' executed successfully
 ```
 
 or in `HH:MM:SS` format:
@@ -1116,21 +1118,21 @@ or in `HH:MM:SS` format:
 ```bash
 volumito playback seek 00:01:42
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:44.001",
+    "seek": "00:01:44.024",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:05.611Z] [INFO] Command 'seek 102' executed successfully
+[2026-09-08T13:08:39.221Z] [INFO] Command 'seek 102' executed successfully
 ```
 
 or `plus/increase/up/forward` and `minus/decrease/down/backward`:
@@ -1138,41 +1140,41 @@ or `plus/increase/up/forward` and `minus/decrease/down/backward`:
 ```bash
 volumito playback seek forward
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.723",
+    "seek": "00:01:56.626",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:08.263Z] [INFO] Command 'seek plus' executed successfully
+[2026-09-08T13:08:41.842Z] [INFO] Command 'seek plus' executed successfully
 ```
 
 ```bash
 volumito playback seek minus
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:50.503",
+    "seek": "00:01:49.270",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:10.907Z] [INFO] Command 'seek minus' executed successfully
+[2026-09-08T13:08:44.476Z] [INFO] Command 'seek minus' executed successfully
 ```
 
 ### Volume Control
@@ -1183,7 +1185,7 @@ can be queried with `playback volume`:
 
 ```bash
 volumito playback volume
-55
+20
 ```
 
 and it can be set by providing a new value, either numerical:
@@ -1191,21 +1193,21 @@ and it can be set by providing a new value, either numerical:
 ```bash
 volumito playback volume 20
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:54.525",
+    "seek": "00:01:52.379",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-08T08:47:14.114Z] [INFO] Command 'volume 20' executed successfully
+[2026-09-08T13:08:47.694Z] [INFO] Command 'volume 20' executed successfully
 ```
 
 or `plus/increase/up` and `minus/decrease/down`:
@@ -1213,41 +1215,41 @@ or `plus/increase/up` and `minus/decrease/down`:
 ```bash
 volumito playback volume plus
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:57.181",
+    "seek": "00:01:55.127",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 20
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 21
 }
-[2026-09-08T08:47:16.767Z] [INFO] Command 'volume plus' executed successfully
+[2026-09-08T13:08:50.322Z] [INFO] Command 'volume plus' executed successfully
 ```
 
 ```bash
 volumito playback volume down
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:59.796",
+    "seek": "00:01:57.643",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 19
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:19.405Z] [INFO] Command 'volume minus' executed successfully
+[2026-09-08T13:08:52.940Z] [INFO] Command 'volume minus' executed successfully
 ```
 
 The playback volume can be muted and unmuted with
@@ -1256,41 +1258,96 @@ The playback volume can be muted and unmuted with
 ```bash
 volumito playback mute
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": true,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:02.546",
+    "seek": "00:02:00.380",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 19
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:22.040Z] [INFO] Command 'volume mute' executed successfully
+[2026-09-08T13:08:55.578Z] [INFO] Command 'volume mute' executed successfully
 ```
 
 ```bash
 volumito playback unmute
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:05:18",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:05.160",
+    "seek": "00:02:02.927",
     "status": "play",
-    "title": "Terra bianca",
-    "trackType": "flac",
-    "volume": 19
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 20
 }
-[2026-09-08T08:47:24.702Z] [INFO] Command 'volume unmute' executed successfully
+[2026-09-08T13:08:58.182Z] [INFO] Command 'volume unmute' executed successfully
+```
+
+### Playback Sleep
+
+It is possible to set a "playback sleep",
+that is, an amount of time after which the playback is stopped
+and the Volumio host is put to sleep (if supported) or shut down (otherwise).
+
+> [! NOTE]
+> This functionality is available only when using a WebSocket client.
+> The next examples set `-C aw` to remind of that.
+
+To check if the playback sleep is set, run without arguments:
+
+```bash
+volumito -C aw playback sleep
+{
+    "enabled": false,
+    "minutes": 0,
+    "time": "0:0"
+}
+```
+
+To set it, provide the amount of time in either minutes or `HH:MM` format:
+
+```bash
+volumito -C aw playback sleep 42
+{
+    "enabled": true,
+    "minutes": 41,
+    "time": "0:41"
+}
+[2026-09-08T13:09:01.642Z] [INFO] Command 'sleep 42' executed successfully
+```
+
+```bash
+volumito -C aw playback sleep 120
+{
+    "enabled": true,
+    "minutes": 119,
+    "time": "1:59"
+}
+[2026-09-08T13:09:02.369Z] [INFO] Command 'sleep 120' executed successfully
+```
+
+To disable the sleep, use the special value `off`:
+
+```bash
+volumito -C aw playback sleep off
+{
+    "enabled": false,
+    "minutes": 0,
+    "time": "0:0"
+}
+[2026-09-08T13:09:03.109Z] [INFO] Command 'sleep off' executed successfully
 ```
 
 ### Playback Help
