@@ -1584,10 +1584,10 @@ QOBUZ Artists
    qobuz://artist/972325
 3. The Beatles The Beatles
    qobuz://artist/11334236
-4. The Beatles Tribute Band
-   qobuz://artist/2741971
-5. The Beatles Tribute Project
+4. The Beatles Tribute Project
    qobuz://artist/2749534
+5. The Beatles Tribute Band
+   qobuz://artist/2741971
 ```
 
 ### List Albums Of An Artist
@@ -1600,14 +1600,14 @@ Volumio Search Results
 QOBUZ Albums
 1. Abbey Road - The Beatles
    qobuz://album/trrcz9pvaaz6b
-2. The Beatles 1962 – 1966 - The Beatles
-   qobuz://album/sixjslxc22vhb
+2. Sgt. Pepper's Lonely Hearts Club Band - The Beatles
+   qobuz://album/g0tont0oqabmc
 3. The Beatles - The Beatles
    qobuz://album/0060254767017
-4. Rubber Soul - The Beatles
-   qobuz://album/0060254767015
-5. Revolver - The Beatles
-   qobuz://album/h37m83cfcns7b
+4. The Beatles 1962 – 1966 - The Beatles
+   qobuz://album/sixjslxc22vhb
+5. The Beatles 1967 – 1970 - The Beatles
+   qobuz://album/rlrv742tr79jb
 ```
 
 ### List Tracks Of An Artist
@@ -1691,15 +1691,15 @@ MPD Albums
    albums://Enrico%20Ruggeri/Polvere
 
 MPD Tracks
-1. 1 - La Vie En Rouge - Enrico Ruggeri - La Vie En Rouge
+1. La Vie En Rouge - Enrico Ruggeri - La Vie En Rouge
    music-library/INTERNAL/music/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac
-2. 2 - Rien Ne Va Plus - Enrico Ruggeri - La Vie En Rouge
+2. Rien Ne Va Plus - Enrico Ruggeri - La Vie En Rouge
    music-library/INTERNAL/music/Enrico_Ruggeri/La_Vie_En_Rouge/1/002___Rien_Ne_Va_Plus.flac
-3. 3 - Certe Donne - Enrico Ruggeri - La Vie En Rouge
+3. Certe Donne - Enrico Ruggeri - La Vie En Rouge
    music-library/INTERNAL/music/Enrico_Ruggeri/La_Vie_En_Rouge/1/003___Certe_Donne.flac
-4. 4 - Quello Che Le Donne Non Dicono - Enrico Ruggeri - La Vie En Rouge
+4. Quello Che Le Donne Non Dicono - Enrico Ruggeri - La Vie En Rouge
    music-library/INTERNAL/music/Enrico_Ruggeri/La_Vie_En_Rouge/1/004___Quello_Che_Le_Donne_Non_Dicono.flac
-5. 5 - Bratiska - Enrico Ruggeri - La Vie En Rouge
+5. Bratiska - Enrico Ruggeri - La Vie En Rouge
    music-library/INTERNAL/music/Enrico_Ruggeri/La_Vie_En_Rouge/1/005___Bratiska.flac
 
 QOBUZ Artists
@@ -1755,13 +1755,13 @@ volumito queue replace "qobuz://album/sixjslxc22vhb"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:01.000",
+    "seek": "00:00:00.500",
     "status": "play",
     "title": "Love Me Do",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-08-13T08:49:34.628Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T09:30:24.560Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -1771,6 +1771,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:25",
+        "name": "Love Me Do",
         "position": 1,
         "title": "Love Me Do",
         "tracknumber": 1,
@@ -1780,6 +1781,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:00",
+        "name": "Please Please Me",
         "position": 2,
         "title": "Please Please Me",
         "tracknumber": 2,
@@ -1789,6 +1791,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:53",
+        "name": "I Saw Her Standing There",
         "position": 3,
         "title": "I Saw Her Standing There",
         "tracknumber": 3,
@@ -1798,6 +1801,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:34",
+        "name": "Twist And Shout",
         "position": 4,
         "title": "Twist And Shout",
         "tracknumber": 4,
@@ -1807,6 +1811,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:01:57",
+        "name": "From Me To You",
         "position": 5,
         "title": "From Me To You",
         "tracknumber": 5,
@@ -1816,6 +1821,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:22",
+        "name": "She Loves You",
         "position": 6,
         "title": "She Loves You",
         "tracknumber": 6,
@@ -1825,6 +1831,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:26",
+        "name": "I Want To Hold Your Hand",
         "position": 7,
         "title": "I Want To Hold Your Hand",
         "tracknumber": 7,
@@ -1834,6 +1841,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:19",
+        "name": "This Boy",
         "position": 8,
         "title": "This Boy",
         "tracknumber": 8,
@@ -1843,6 +1851,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:08",
+        "name": "All My Loving",
         "position": 9,
         "title": "All My Loving",
         "tracknumber": 9,
@@ -1852,6 +1861,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:45",
+        "name": "Roll Over Beethoven",
         "position": 10,
         "title": "Roll Over Beethoven",
         "tracknumber": 10,
@@ -1861,6 +1871,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:03:01",
+        "name": "You Really Got A Hold On Me",
         "position": 11,
         "title": "You Really Got A Hold On Me",
         "tracknumber": 11,
@@ -1870,6 +1881,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:13",
+        "name": "Can't Buy Me Love",
         "position": 12,
         "title": "Can't Buy Me Love",
         "tracknumber": 12,
@@ -1879,6 +1891,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:33",
+        "name": "You Can't Do That",
         "position": 13,
         "title": "You Can't Do That",
         "tracknumber": 13,
@@ -1888,6 +1901,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:35",
+        "name": "A Hard Day's Night",
         "position": 14,
         "title": "A Hard Day's Night",
         "tracknumber": 14,
@@ -1897,6 +1911,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:32",
+        "name": "And I Love Her",
         "position": 15,
         "title": "And I Love Her",
         "tracknumber": 15,
@@ -1906,6 +1921,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:44",
+        "name": "Eight Days A Week",
         "position": 16,
         "title": "Eight Days A Week",
         "tracknumber": 16,
@@ -1915,6 +1931,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:20",
+        "name": "I Feel Fine",
         "position": 17,
         "title": "I Feel Fine",
         "tracknumber": 17,
@@ -1924,6 +1941,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:03:11",
+        "name": "Ticket To Ride",
         "position": 18,
         "title": "Ticket To Ride",
         "tracknumber": 18,
@@ -1933,6 +1951,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:04",
+        "name": "Yesterday",
         "position": 19,
         "title": "Yesterday",
         "tracknumber": 19,
@@ -1942,6 +1961,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:19",
+        "name": "Help!",
         "position": 20,
         "title": "Help!",
         "tracknumber": 1,
@@ -1951,6 +1971,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:11",
+        "name": "You've Got To Hide Your Love Away",
         "position": 21,
         "title": "You've Got To Hide Your Love Away",
         "tracknumber": 2,
@@ -1960,6 +1981,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:16",
+        "name": "We Can Work It Out",
         "position": 22,
         "title": "We Can Work It Out",
         "tracknumber": 3,
@@ -1969,6 +1991,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:49",
+        "name": "Day Tripper",
         "position": 23,
         "title": "Day Tripper",
         "tracknumber": 4,
@@ -1978,6 +2001,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:28",
+        "name": "Drive My Car",
         "position": 24,
         "title": "Drive My Car",
         "tracknumber": 5,
@@ -1987,6 +2011,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:05",
+        "name": "Norwegian Wood (This Bird Has Flown)",
         "position": 25,
         "title": "Norwegian Wood (This Bird Has Flown)",
         "tracknumber": 6,
@@ -1996,6 +2021,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:44",
+        "name": "Nowhere Man",
         "position": 26,
         "title": "Nowhere Man",
         "tracknumber": 7,
@@ -2005,6 +2031,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:42",
+        "name": "Michelle",
         "position": 27,
         "title": "Michelle",
         "tracknumber": 8,
@@ -2014,6 +2041,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:27",
+        "name": "In My Life",
         "position": 28,
         "title": "In My Life",
         "tracknumber": 9,
@@ -2023,6 +2051,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:23",
+        "name": "If I Needed Someone",
         "position": 29,
         "title": "If I Needed Someone",
         "tracknumber": 10,
@@ -2032,6 +2061,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:31",
+        "name": "Girl",
         "position": 30,
         "title": "Girl",
         "tracknumber": 11,
@@ -2041,6 +2071,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:19",
+        "name": "Paperback Writer",
         "position": 31,
         "title": "Paperback Writer",
         "tracknumber": 12,
@@ -2050,6 +2081,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:08",
+        "name": "Eleanor Rigby",
         "position": 32,
         "title": "Eleanor Rigby",
         "tracknumber": 13,
@@ -2059,6 +2091,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:38",
+        "name": "Yellow Submarine",
         "position": 33,
         "title": "Yellow Submarine",
         "tracknumber": 14,
@@ -2068,6 +2101,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:38",
+        "name": "Taxman",
         "position": 34,
         "title": "Taxman",
         "tracknumber": 15,
@@ -2077,6 +2111,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:27",
+        "name": "Got To Get You Into My Life",
         "position": 35,
         "title": "Got To Get You Into My Life",
         "tracknumber": 16,
@@ -2086,6 +2121,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:58",
+        "name": "I'm Only Sleeping",
         "position": 36,
         "title": "I'm Only Sleeping",
         "tracknumber": 17,
@@ -2095,6 +2131,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:24",
+        "name": "Here, There And Everywhere",
         "position": 37,
         "title": "Here, There And Everywhere",
         "tracknumber": 18,
@@ -2104,6 +2141,7 @@ volumito queue list
         "album": "The Beatles 1962 – 1966",
         "artist": "The Beatles",
         "duration": "00:02:57",
+        "name": "Tomorrow Never Knows",
         "position": 38,
         "title": "Tomorrow Never Knows",
         "tracknumber": 19,
@@ -2117,21 +2155,21 @@ To play just the song "Here Comes The Sun - The Beatles - Abbey Road":
 ```bash
 volumito queue replace "qobuz://song/64868961"
 {
-    "album": "Abbey Road",
+    "album": "The Beatles 1962 – 1966",
     "artist": "The Beatles",
     "bitdepth": "24 bit",
     "channels": 2,
-    "duration": "00:03:06",
+    "duration": "00:02:26",
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.137",
+    "seek": "00:00:02.002",
     "status": "play",
-    "title": "Here Comes The Sun",
+    "title": "Love Me Do",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-08-13T08:49:37.718Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T09:30:28.139Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2141,6 +2179,7 @@ volumito queue list
         "album": "Abbey Road",
         "artist": "The Beatles",
         "duration": "00:03:05",
+        "name": "Here Comes The Sun",
         "position": 1,
         "title": "Here Comes The Sun",
         "tracknumber": 7,
@@ -2162,13 +2201,13 @@ volumito queue replace "albums://Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.935",
+    "seek": "00:00:02.002",
     "status": "play",
-    "title": "1 - Nella mia città",
+    "title": "Nella mia città",
     "trackType": "flac",
-    "volume": 20
+    "volume": 19
 }
-[2026-08-13T08:49:40.775Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T09:30:31.458Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2182,13 +2221,13 @@ volumito queue replace "artists://Enrico%20Ruggeri"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.849",
+    "seek": "00:00:03.216",
     "status": "play",
-    "title": "1 - La Vie En Rouge",
+    "title": "La Vie En Rouge",
     "trackType": "flac",
-    "volume": 20
+    "volume": 19
 }
-[2026-08-13T08:49:43.354Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T09:30:34.385Z] [INFO] Command 'replace' executed successfully
 ```
 
 
