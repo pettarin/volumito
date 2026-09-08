@@ -10,7 +10,7 @@ to the Volumio host through its REST API, synchronously.
 You can tell it by enabling verbose log:
 
 ```bash lucio command=execute
-volumito -v -C synchronous_rest info
+volumito -v info
 ```
 
 The `-C / --api-client` option allows you to select
@@ -31,13 +31,14 @@ another of the clients of the `volumito` library:
 > For example, `pip install volumito[async_websocket]`
 > to run the next example.
 
-To issue the `info` command over the WebSocket API, asynchronously:
+To issue the `info` command over the WebSocket API, asynchronously,
+specify `-C asynchronous_websocket`:
 
 ```bash lucio command=execute
 volumito -v -C asynchronous_websocket info
 ```
 
-or
+or its short form `-C aw`:
 
 ```bash lucio command=execute
 volumito -v -C aw info
@@ -54,7 +55,7 @@ By default, commands that are not available with the selected client
 return an error similar to the following:
 
 ```bash lucio command=execute exit=1
-volumito -C sr collection radio add "Radio Volumito Docs" "https://some.url"
+volumito collection radio add "Radio Volumito Docs" "https://some.url"
 ```
 
 It is possible to fall back to the appropriate client
@@ -63,7 +64,7 @@ by using issuing the `--allow-fallback-to-rest-api` and/or
 or setting the corresponding keys in the configuration file to `true`:
 
 ```bash lucio command=execute
-volumito -C sr --allow-fallback-to-websocket-api collection radio add "Radio Volumito Docs" "https://some.url"
+volumito --allow-fallback-to-websocket-api collection radio add "Radio Volumito Docs" "https://some.url"
 ```
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false

@@ -76,11 +76,12 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Ignore All Configuration Files](#ignore-all-configuration-files)
     - [Priority](#priority)
   - [Multiroom Zones](#multiroom-zones)
-  - [Notifications](#notifications)
+  - [Notifications (REST API only)](#notifications-rest-api-only)
     - [Notification List](#notification-list)
     - [Notification Register](#notification-register)
     - [Notification Unregister](#notification-unregister)
     - [Notification Listen](#notification-listen)
+  - [Notifications (WebSocket API only)](#notifications-websocket-api-only)
   - [Copying Files With SCP](#copying-files-with-scp)
     - [SSH Connection Parameters](#ssh-connection-parameters)
     - [SCP Put](#scp-put)
@@ -666,7 +667,7 @@ to the Volumio host through its REST API, synchronously.
 You can tell it by enabling verbose log:
 
 ```bash
-volumito -v -C synchronous_rest info
+volumito -v info
 {
     "builddate": "Tue Mar 24 17:20:52 UTC 2026",
     "hardware": "pi",
@@ -690,19 +691,19 @@ volumito -v -C synchronous_rest info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T11:57:51.138Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T11:57:51.139Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T11:57:51.139Z] [DEBU] Initializing the REST API client...
-[2026-09-08T11:57:51.139Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T11:57:51.139Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T11:57:51.139Z] [DEBU] Opening the HTTP session...
-[2026-09-08T11:57:51.139Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T11:57:51.139Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
-[2026-09-08T11:57:51.171Z] [DEBU] Response status: 200
-[2026-09-08T11:57:51.171Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
-[2026-09-08T11:57:51.173Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T11:57:51.174Z] [DEBU] Closing the HTTP session...
-[2026-09-08T11:57:51.174Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T12:13:50.613Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
+[2026-09-08T12:13:50.614Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:13:50.614Z] [DEBU] Initializing the REST API client...
+[2026-09-08T12:13:50.614Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T12:13:50.614Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T12:13:50.614Z] [DEBU] Opening the HTTP session...
+[2026-09-08T12:13:50.614Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T12:13:50.614Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
+[2026-09-08T12:13:50.642Z] [DEBU] Response status: 200
+[2026-09-08T12:13:50.642Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
+[2026-09-08T12:13:50.646Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:13:50.646Z] [DEBU] Closing the HTTP session...
+[2026-09-08T12:13:50.647Z] [DEBU] Closing the HTTP session... done
 ```
 
 The `-C / --api-client` option allows you to select
@@ -723,7 +724,8 @@ another of the clients of the `volumito` library:
 > For example, `pip install volumito[async_websocket]`
 > to run the next example.
 
-To issue the `info` command over the WebSocket API, asynchronously:
+To issue the `info` command over the WebSocket API, asynchronously,
+specify `-C asynchronous_websocket`:
 
 ```bash
 volumito -v -C asynchronous_websocket info
@@ -750,28 +752,28 @@ volumito -v -C asynchronous_websocket info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T11:57:51.722Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T11:57:51.722Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T11:57:51.722Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-08T11:57:51.722Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-08T11:57:51.723Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-08T11:57:51.723Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-08T11:57:51.723Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-08T11:57:51.834Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-08T11:57:51.874Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-08T11:57:51.875Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-08T11:57:51.875Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-08T11:57:51.875Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-08T11:57:51.899Z] [DEBU] Received "pushSystemInfo"
-[2026-09-08T11:57:51.899Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-08T11:57:51.903Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T11:57:51.903Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-08T11:57:51.912Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-08T11:57:51.913Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-08T11:57:51.915Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:13:51.197Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
+[2026-09-08T12:13:51.198Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:13:51.198Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T12:13:51.198Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T12:13:51.198Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T12:13:51.198Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:13:51.199Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:13:51.311Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T12:13:51.350Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T12:13:51.351Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T12:13:51.351Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T12:13:51.351Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T12:13:51.373Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T12:13:51.374Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T12:13:51.379Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:13:51.380Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T12:13:51.391Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T12:13:51.392Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:13:51.394Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
 ```
 
-or
+or its short form `-C aw`:
 
 ```bash
 volumito -v -C aw info
@@ -798,25 +800,25 @@ volumito -v -C aw info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T11:57:52.503Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T11:57:52.503Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T11:57:52.503Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-08T11:57:52.503Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-08T11:57:52.503Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-08T11:57:52.503Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-08T11:57:52.504Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-08T11:57:52.619Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-08T11:57:52.657Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-08T11:57:52.657Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-08T11:57:52.658Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-08T11:57:52.658Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-08T11:57:52.679Z] [DEBU] Received "pushSystemInfo"
-[2026-09-08T11:57:52.680Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-08T11:57:52.683Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T11:57:52.683Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-08T11:57:52.693Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-08T11:57:52.694Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-08T11:57:52.696Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:13:52.000Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
+[2026-09-08T12:13:52.000Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:13:52.000Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T12:13:52.000Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T12:13:52.000Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T12:13:52.000Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:13:52.001Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:13:52.114Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T12:13:52.152Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T12:13:52.152Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T12:13:52.152Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T12:13:52.153Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T12:13:52.172Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T12:13:52.172Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T12:13:52.176Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:13:52.177Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T12:13:52.186Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T12:13:52.187Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:13:52.188Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
 ```
 
 Most of the commands that `volumito` provides are available
@@ -830,8 +832,8 @@ By default, commands that are not available with the selected client
 return an error similar to the following:
 
 ```bash
-volumito -C sr collection radio add "Radio Volumito Docs" "https://some.url"
-[2026-09-08T11:57:53.285Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
+volumito collection radio add "Radio Volumito Docs" "https://some.url"
+[2026-09-08T12:13:52.796Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
 ```
 
 It is possible to fall back to the appropriate client
@@ -840,7 +842,7 @@ by using issuing the `--allow-fallback-to-rest-api` and/or
 or setting the corresponding keys in the configuration file to `true`:
 
 ```bash
-volumito -C sr --allow-fallback-to-websocket-api collection radio add "Radio Volumito Docs" "https://some.url"
+volumito --allow-fallback-to-websocket-api collection radio add "Radio Volumito Docs" "https://some.url"
 Volumio Browse Results
 ==================================================
 
@@ -850,8 +852,8 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-08T11:57:53.963Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
-[2026-09-08T11:57:54.223Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-08T12:13:53.481Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
+[2026-09-08T12:13:53.745Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 
@@ -4947,7 +4949,7 @@ Commands:
   write   Write the multiroom configuration, without waiting for the host...
 ```
 
-### Notifications
+### Notifications (REST API Only)
 
 Instead of constantly polling the Volumio REST API,
 you can register a URL which Volumio can call to notify
@@ -4977,9 +4979,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito notification register http://192.168.1.2:4567/notif/volumio
 volumito notification register http://192.168.1.2:5678/anothercallbackurl
 volumito notification register http://192.168.1.2:5678/yetanother
-[2026-09-08T09:27:50.580Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-08T09:27:51.141Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T09:27:51.713Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T12:13:58.867Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T12:13:59.436Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T12:13:59.995Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -4987,7 +4989,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito notification register --autocompose-url
-[2026-09-08T09:27:52.297Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T12:14:00.567Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -5010,16 +5012,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-08T09:27:53.447Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T12:14:01.707Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito notification unregister --all
-[2026-09-08T09:27:54.048Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T09:27:54.048Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-08T09:27:54.049Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T12:14:02.327Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T12:14:02.327Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T12:14:02.328Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -5046,7 +5048,6 @@ volumito notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "channels": 2,
         "consume": false,
         "dbVolume": null,
         "disableVolumeControl": false,
@@ -5057,7 +5058,7 @@ volumito notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 22,
+        "seek": 500,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -5087,7 +5088,7 @@ volumito notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 22,
+        "seek": 45,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -5117,7 +5118,7 @@ volumito notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 178,
+        "seek": 45,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -5130,11 +5131,140 @@ volumito notification listen --register-url --timeout 10.0
     },
     "item": "state"
 }
-[2026-09-08T09:28:00.051Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-08T09:28:00.051Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-08T09:28:00.051Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T09:28:10.065Z] [INFO] Timed out after 10 seconds
-[2026-09-08T09:28:10.084Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T12:14:08.209Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T12:14:08.210Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-08T12:14:08.210Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T12:14:18.213Z] [INFO] Timed out after 10 seconds
+[2026-09-08T12:14:18.240Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+```
+
+### Notifications (WebSocket API Only)
+
+When using a WebSocket API client,
+the `notification event` command group provides
+facilities to emit an event (`emit`),
+to emit an event and wait for a certain response (`request`),
+or to list to all events (`listen`):
+
+```bash
+volumito -C aw notification event --help
+Usage: volumito notification event [OPTIONS] COMMAND [ARGS]...
+
+  Send and receive the events of the WebSocket API of the Volumio host.
+
+  The events are the push channel of the WebSocket API, as the notification
+  URLs are the one of the REST API; every event the host listens for can be
+  sent, and every one it pushes can be received, including the ones no other
+  command covers. This is a first implementation: the subgroup may move, or
+  merge with "notification listen", in a later release.
+
+  Needs a WebSocket API client.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  emit     Send EVENT to the Volumio host, carrying the JSON PAYLOAD when...
+  listen   Print the events the Volumio host pushes, EVENT by name...
+  request  Send EVENT, carrying the JSON PAYLOAD when given, and print...
+```
+
+For example:
+
+```bash
+volumito -C aw notification event listen --timeout 10.0
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 516,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 19
+    },
+    "event": "pushState"
+}
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 19
+    },
+    "event": "pushState"
+}
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 19
+    },
+    "event": "pushState"
+}
+[2026-09-08T12:14:24.951Z] [INFO] Listening for the events: pushState
+[2026-09-08T12:14:24.951Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T12:14:34.952Z] [INFO] Timed out after 10 seconds
 ```
 
 ### Copying Files With SCP
