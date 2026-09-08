@@ -186,6 +186,32 @@ To disable the sleep, use the special value `off`:
 volumito -C aw playback sleep off
 ```
 
+### Infinity Playback
+
+It is possible to inspect the "infinity playback" function
+(i.e., playing other music suggested by Volumio based
+on the current queue and music library of the user).
+
+> [! NOTE]
+> This functionality is available only when using a WebSocket client.
+> The next examples set `-C aw` to remind of that.
+
+To inspect its state, run without arguments:
+
+```bash lucio command=execute
+volumito -C aw playback infinity
+```
+
+Passing the `on` or `off` value enables or disables it:
+
+```bash lucio command=execute
+volumito -C aw playback infinity on
+```
+
+```bash lucio command=execute
+volumito -C aw playback infinity off
+```
+
 ### Playback Help
 
 These are all the subcommands of the `playback` group:
