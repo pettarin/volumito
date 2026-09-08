@@ -166,6 +166,11 @@ and the Volumio host is put to sleep (if supported) or shut down (otherwise).
 
 To check if the playback sleep is set, run without arguments:
 
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure sleep is off
+volumito -C aw playback sleep off
+```
+
 ```bash lucio command=execute
 volumito -C aw playback sleep
 ```
@@ -197,6 +202,11 @@ on the current queue and music library of the user).
 > The next examples set `-C aw` to remind of that.
 
 To inspect its state, run without arguments:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure infinity is off
+volumito -C aw playback infinity off
+```
 
 ```bash lucio command=execute
 volumito -C aw playback infinity
