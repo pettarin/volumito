@@ -3,7 +3,7 @@
 volumito playlist play "volumito test qobuz multiple albums"
 ```
 
-### Notifications (REST API Only)
+### Notifications (REST API)
 
 ```markdown lucio command=include path="./ONLY_REST_API_CLIENT.md" style=literal
 ```

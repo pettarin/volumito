@@ -84,12 +84,12 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Ignore All Configuration Files](#ignore-all-configuration-files)
     - [Priority](#priority)
   - [Multiroom Audio](#multiroom-audio)
-  - [Notifications (REST API only)](#notifications-rest-api-only)
+  - [Notifications (REST API)](#notifications-rest-api)
     - [Notification List](#notification-list)
     - [Notification Register](#notification-register)
     - [Notification Unregister](#notification-unregister)
     - [Notification Listen](#notification-listen)
-  - [Notifications (WebSocket API only)](#notifications-websocket-api-only)
+  - [Notifications (WebSocket API)](#notifications-websocket-api)
   - [Copying Files With SCP](#copying-files-with-scp)
     - [SSH Connection Parameters](#ssh-connection-parameters)
     - [SCP Put](#scp-put)
@@ -5471,7 +5471,7 @@ Options:
   --help  Show this message and exit.
 ```
 
-### Notifications (REST API Only)
+### Notifications (REST API)
 
 > [!NOTE]
 > This functionality is available only when using a REST API client.
@@ -5505,9 +5505,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
 volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
 volumito -C sr notification register http://192.168.1.2:5678/yetanother
-[2026-09-08T14:31:10.730Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-08T14:31:11.311Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T14:31:11.901Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T14:33:40.605Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T14:33:41.151Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T14:33:41.785Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -5515,7 +5515,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito -C sr notification register --autocompose-url
-[2026-09-08T14:31:12.500Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:33:42.432Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -5538,16 +5538,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-08T14:31:13.681Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T14:33:43.729Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito -C sr notification unregister --all
-[2026-09-08T14:31:14.272Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T14:31:14.273Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-08T14:31:14.273Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:33:44.305Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T14:33:44.305Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T14:33:44.305Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -5586,7 +5586,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 194372,
+        "seek": 194404,
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -5617,7 +5617,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 194372,
+        "seek": 194404,
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -5646,7 +5646,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 501,
+        "seek": 505,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -5659,14 +5659,14 @@ volumito -C sr notification listen --register-url --timeout 10.0
     },
     "item": "state"
 }
-[2026-09-08T14:31:20.169Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-08T14:31:20.170Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-08T14:31:20.170Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T14:31:30.189Z] [INFO] Timed out after 10 seconds
-[2026-09-08T14:31:30.212Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:33:50.119Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:33:50.119Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:33:50.119Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T14:34:00.135Z] [INFO] Timed out after 10 seconds
+[2026-09-08T14:34:00.159Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
-### Notifications (WebSocket API Only)
+### Notifications (WebSocket API)
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -5711,19 +5711,19 @@ volumito -C aw notification event listen --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
+        "bitrate": "865 Kbps",
         "channels": 2,
         "consume": true,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 196,
+        "duration": 236,
         "mute": false,
         "position": 0,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 0,
+        "seek": 194319,
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -5742,19 +5742,19 @@ volumito -C aw notification event listen --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
+        "bitrate": "865 Kbps",
         "channels": 2,
         "consume": true,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 196,
+        "duration": 236,
         "mute": false,
         "position": 0,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 0,
+        "seek": 194319,
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -5767,9 +5767,38 @@ volumito -C aw notification event listen --timeout 10.0
     },
     "event": "pushState"
 }
-[2026-09-08T14:31:39.610Z] [INFO] Listening for the events: pushState
-[2026-09-08T14:31:39.610Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T14:31:49.611Z] [INFO] Timed out after 10 seconds
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 501,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 20
+    },
+    "event": "pushState"
+}
+[2026-09-08T14:34:10.448Z] [INFO] Listening for the events: pushState
+[2026-09-08T14:34:10.448Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T14:34:20.449Z] [INFO] Timed out after 10 seconds
 ```
 
 ### Copying Files With SCP
