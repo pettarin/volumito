@@ -23,12 +23,12 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/cb/no/qx6utqbc2nocb_600.jpg",
-        "artist": "Muse",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
         "mute": false,
-        "status": "stop",
-        "track": "Intro",
-        "volume": 55
+        "status": "play",
+        "track": "Va tutto bene",
+        "volume": 19
     },
     "systemversion": "4.119",
     "type": "device",
@@ -47,8 +47,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-08T08:36:10.289Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-08T08:36:10.290Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T09:35:39.106Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T09:35:39.106Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -116,7 +116,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-08T08:36:13.110Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-08T09:35:41.960Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!WARNING]
