@@ -1,0 +1,22 @@
+### Collection Update
+
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+The `collection update` command allows updating the music collection.
+
+```bash lucio command=execute
+volumito -C aw collection update
+```
+
+The `--thumbnails` option regenerates only the thumbnails:
+
+```bash lucio command=execute
+volumito -C aw collection update --thumbnails
+```
+
+To force a full refresh of the music collect, pass the `--rescan` option:
+
+```bash lucio command=execute
+volumito -C aw collection update --rescan
+```

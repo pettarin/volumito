@@ -80,6 +80,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Collection Source List](#collection-source-list)
     - [Collection Source Disable](#collection-source-disable)
     - [Collection Source Enable](#collection-source-enable)
+  - [Collection Update](#collection-update)
   - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
     - [List All The Aliases](#list-all-the-aliases)
@@ -4302,6 +4303,33 @@ volumito -C aw collection source list
         "prettyName": "Tidal Connect"
     }
 ]
+```
+
+### Collection Update
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+The `collection update` command allows updating the music collection.
+
+```bash
+volumito -C aw collection update
+[2026-09-08T15:16:04.087Z] [INFO] Command 'update library' executed successfully
+```
+
+The `--thumbnails` option regenerates only the thumbnails:
+
+```bash
+volumito -C aw collection update --thumbnails
+[2026-09-08T15:16:04.815Z] [INFO] Command 'regenerate thumbnails' executed successfully
+```
+
+To force a full refresh of the music collect, pass the `--rescan` option:
+
+```bash
+volumito -C aw collection update --rescan
+[2026-09-08T15:16:05.558Z] [INFO] Command 'rescan library' executed successfully
 ```
 
 ### Command Discovery

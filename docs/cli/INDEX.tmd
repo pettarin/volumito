@@ -78,6 +78,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Collection Source List](#collection-source-list)
     - [Collection Source Disable](#collection-source-disable)
     - [Collection Source Enable](#collection-source-enable)
+  - [Collection Update](#collection-update)
   - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
     - [List All The Aliases](#list-all-the-aliases)
@@ -166,6 +167,9 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 ```markdown lucio command=include path="./COLLECTION_SOURCE.md" style=literal
+```
+
+```markdown lucio command=include path="./COLLECTION_UPDATE.md" style=literal
 ```
 
 ```markdown lucio command=include path="./COMMANDS.md" style=literal
