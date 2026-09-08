@@ -4406,33 +4406,33 @@ volumito --ignore-configuration-file info
 
 Volumio supports multiroom zones,
 and can discover Volumio hosts on your local network.
-Issue the `multiroom zones` command to see them:
+Issue the `multiroom info` command to see them:
 
 ```bash
-volumito multiroom zones
+volumito multiroom info
 [
     {
-        "host": "http://192.168.1.122",
+        "host": "http://192.168.1.19",
         "isSelf": true,
-        "name": "Volumio3b",
+        "name": "Volumitotester",
         "state": {
-            "artist": "Mango",
+            "artist": "Muse",
             "mute": false,
-            "status": "play",
-            "track": "Sirtaki",
-            "volume": 20
+            "status": "stop",
+            "track": "Intro",
+            "volume": 55
         }
     },
     {
         "host": "http://192.168.1.123",
         "isSelf": false,
-        "name": "Volumio4b",
+        "name": "Euterpe",
         "state": {
-            "artist": "András Schiff",
+            "artist": "John Williams",
             "mute": false,
             "status": "stop",
-            "track": "J.S. Bach: The Well-Tempered Clavier, Book 1: Prelude No. 1 in C Major, BWV 846/1",
-            "volume": 100
+            "track": "Main Title",
+            "volume": 87
         }
     }
 ]
@@ -4726,21 +4726,21 @@ volumito system info
 {
     "builddate": "Tue Mar 24 17:20:52 UTC 2026",
     "hardware": "pi",
-    "host": "http://192.168.1.122",
+    "host": "http://192.168.1.19",
     "hwUuid": "<REDACTED>",
     "id": "<REDACTED>",
     "isPremiumDevice": false,
     "isVolumioProduct": false,
-    "name": "Volumio3b",
+    "name": "volumitotester",
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/32/58/0060253735832_600.jpg",
-        "artist": "Paolo Conte",
+        "albumart": "https://static.qobuz.com/images/covers/cb/no/qx6utqbc2nocb_600.jpg",
+        "artist": "Muse",
         "mute": false,
-        "status": "play",
-        "track": "Il Treno Va",
-        "volume": 87
+        "status": "stop",
+        "track": "Intro",
+        "volume": 55
     },
     "systemversion": "4.119",
     "type": "device",
@@ -4759,8 +4759,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-04T12:42:34.774Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-04T12:42:34.774Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T08:36:10.289Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T08:36:10.290Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -4798,7 +4798,7 @@ For the `volumito` (client) version, use the `version` command:
 
 ```bash
 volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 #### System Execute
@@ -4828,7 +4828,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-04T12:42:37.452Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-08T08:36:13.110Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!WARNING]
@@ -4842,7 +4842,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\norg.chromium.Chromium.hKcqm2\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nserverauth.GJLdEDyOLQ\nsetvolume\nshairport-sync-metadata\nsnapfifo\nssh-IaEdzg1AJMiG\nsshtunnel.sh\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-bluealsa.service-zBpS8K\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-haveged.service-WZtla1\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-ntpsec.service-alBLg6\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-systemd-logind.service-00Dnse\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-upower.service-RpPBtu\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ncrashdump\ngetvolume\nhls\nlastcrash\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-347f4ab945fe433397c750851942b2e2-bluealsa.service-BkMGfq\nsystemd-private-347f4ab945fe433397c750851942b2e2-haveged.service-Or4rIc\nsystemd-private-347f4ab945fe433397c750851942b2e2-ntpsec.service-JvcKaN\nsystemd-private-347f4ab945fe433397c750851942b2e2-systemd-logind.service-6NVO5G\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -4853,26 +4853,26 @@ volumito system execute "ls /tmp/" --yes
 ```bash
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
 bluetooth-cache
+crashdump
 getvolume
 hls
+lastcrash
 multiroom
 myvolumio-remote.json
 networkstatus
-org.chromium.Chromium.hKcqm2
 presentation.html
 qbz-connect.cfg
 qbz-connect.socket
-serverauth.GJLdEDyOLQ
 setvolume
 shairport-sync-metadata
+shairport-sync.conf
 snapfifo
-ssh-IaEdzg1AJMiG
 sshtunnel.sh
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-bluealsa.service-zBpS8K
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-haveged.service-WZtla1
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-ntpsec.service-alBLg6
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-systemd-logind.service-00Dnse
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-upower.service-RpPBtu
+systemd-private-347f4ab945fe433397c750851942b2e2-bluealsa.service-BkMGfq
+systemd-private-347f4ab945fe433397c750851942b2e2-haveged.service-Or4rIc
+systemd-private-347f4ab945fe433397c750851942b2e2-ntpsec.service-JvcKaN
+systemd-private-347f4ab945fe433397c750851942b2e2-systemd-logind.service-6NVO5G
+tisoc-controller
 updater
 upmpdcli.conf
 upmpdclicache

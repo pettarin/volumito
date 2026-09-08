@@ -4,33 +4,33 @@
 
 Volumio supports multiroom zones,
 and can discover Volumio hosts on your local network.
-Issue the `multiroom zones` command to see them:
+Issue the `multiroom info` command to see them:
 
 ```bash
-volumito multiroom zones
+volumito multiroom info
 [
     {
-        "host": "http://192.168.1.122",
+        "host": "http://192.168.1.19",
         "isSelf": true,
-        "name": "Volumio3b",
+        "name": "Volumitotester",
         "state": {
-            "artist": "Mango",
+            "artist": "Muse",
             "mute": false,
-            "status": "play",
-            "track": "Sirtaki",
-            "volume": 20
+            "status": "stop",
+            "track": "Intro",
+            "volume": 55
         }
     },
     {
         "host": "http://192.168.1.123",
         "isSelf": false,
-        "name": "Volumio4b",
+        "name": "Euterpe",
         "state": {
-            "artist": "András Schiff",
+            "artist": "John Williams",
             "mute": false,
             "status": "stop",
-            "track": "J.S. Bach: The Well-Tempered Clavier, Book 1: Prelude No. 1 in C Major, BWV 846/1",
-            "volume": 100
+            "track": "Main Title",
+            "volume": 87
         }
     }
 ]
