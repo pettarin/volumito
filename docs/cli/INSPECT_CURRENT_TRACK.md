@@ -59,7 +59,7 @@ volumito queue track info --fields ALL
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.509",
+    "seek": "00:00:02.755",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -74,12 +74,29 @@ volumito queue track info --fields ALL
 
 ```bash
 volumito -m queue track info -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 2011, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 3300, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+```
+
+### Track Has Previous, Has Next
+
+To know whether a previous or next track to the current track
+exists in the current queue,
+the commands `queue track has_previous` and `queue track has_next`
+are available:
+
+```bash
+volumito queue track has_previous
+False
+```
+
+```bash
+volumito queue track has_next
+True
 ```
 
 ### Track Help
 
-These are all the subcommands of the `track` group:
+These are all the subcommands of the `queue track` group:
 
 ```bash
 volumito queue track --help
@@ -100,3 +117,14 @@ Commands:
 
 The `albumart` and `audio` subcommands are described
 in the Section [Download](#download) below.
+
+> [!NOTE]
+> The `queue track` command group is also available
+> as top-level `track`, via an hard-coded alias, for convenience of use.
+> Therefore for example `volumito track info` and `volumito queue track info`
+> are equivalent commands.
+>
+> Note, however, that the concept of "track" here
+> really means "current track of the current queue",
+> thus making the `queue track` the "canonical" placement
+> within the `volumito` command tree.

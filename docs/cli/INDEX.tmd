@@ -26,6 +26,7 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Playback Help](#playback-help)
 - [Inspect The Current Track](#inspect-the-current-track)
   - [Track Info](#track-info)
+  - [Track Has Previous, Has Next](#track-has-previous-has-next)
   - [Track Help](#track-help)
 - [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
