@@ -2054,14 +2054,16 @@ volumito collection browse --limit 5
 Volumio Browse Results
 ==================================================
 
-1. Playlists
+1. Favorites
+   favourites
+2. Playlists
    playlists
-2. Music Library
+3. Music Library
    music-library
-3. Web Radio
-   radio
-4. QOBUZ
-   qobuz://
+4. Artists
+   artists://
+5. Albums
+   albums://
 ```
 
 ```bash
@@ -2100,16 +2102,16 @@ Volumio Browse Results
 ==================================================
 
 My Artists
-1. Enrico Ruggeri
-   qobuz://artist/178398
-2. Paul McCartney
-   qobuz://artist/35554
-3. The Future / The Human League
-   qobuz://artist/4116256
-4. Gipsy Kings
-   qobuz://artist/82308
-5. Norah Jones
-   qobuz://artist/34525
+1. Whitney Houston
+   qobuz://artist/62399
+2. Muse
+   qobuz://artist/75739
+3. Alice
+   qobuz://artist/25016545
+4. Eagles
+   qobuz://artist/51290
+5. The Doors
+   qobuz://artist/41736
 ```
 
 ```bash
@@ -2157,14 +2159,16 @@ volumito collection browse --limit 5
 Volumio Browse Results
 ==================================================
 
-1. Playlists
+1. Favorites
+   favourites
+2. Playlists
    playlists
-2. Music Library
+3. Music Library
    music-library
-3. Web Radio
-   radio
-4. QOBUZ
-   qobuz://
+4. Artists
+   artists://
+5. Albums
+   albums://
 ```
 
 ```bash
@@ -2235,15 +2239,15 @@ volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango/Sirtaki
 Volumio Browse Results
 ==================================================
 
-1. 1 - Nella mia città - Mango - Sirtaki
+1. Nella mia città - Mango - Sirtaki
    music-library/INTERNAL/music/Mango/Sirtaki/001___Nella_mia_città.flac
-2. 2 - I giochi del vento sul lago salato - Mango - Sirtaki
+2. I giochi del vento sul lago salato - Mango - Sirtaki
    music-library/INTERNAL/music/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac
-3. 3 - Terra bianca - Mango - Sirtaki
+3. Terra bianca - Mango - Sirtaki
    music-library/INTERNAL/music/Mango/Sirtaki/003___Terra_bianca.flac
-4. 4 - Ma com'è rossa la ciliegia - Mango - Sirtaki
+4. Ma com'è rossa la ciliegia - Mango - Sirtaki
    music-library/INTERNAL/music/Mango/Sirtaki/004___Ma_com'è_rossa_la_ciliegia.flac
-5. 5 - Tu... si - Mango - Sirtaki
+5. Tu... si - Mango - Sirtaki
    music-library/INTERNAL/music/Mango/Sirtaki/005___Tu..._si.flac
 ```
 
@@ -2265,13 +2269,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.253",
+    "seek": "00:00:00.253",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 55
 }
-[2026-08-13T13:54:29.058Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T08:44:18.137Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -2287,13 +2291,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.751",
+    "seek": "00:00:01.469",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 55
 }
-[2026-08-13T13:54:31.631Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T08:44:20.962Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -2309,13 +2313,13 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.894",
+    "seek": "00:00:02.966",
     "status": "play",
-    "title": "1 - Nella mia città",
+    "title": "Nella mia città",
     "trackType": "flac",
-    "volume": 20
+    "volume": 55
 }
-[2026-08-13T13:54:34.372Z] [INFO] Command 'replace' executed successfully
+[2026-09-08T08:44:24.036Z] [INFO] Command 'replace' executed successfully
 ```
 
 ### Collection Statistics
