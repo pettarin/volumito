@@ -3,6 +3,10 @@
 rm -rf /tmp/cover.jpg /tmp/cover.jpg.json
 rm -rf /tmp/audio.flac /tmp/audio.flac.json
 rm -rf /tmp/o/
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
 volumito playlist play "volumito test qobuz multiple albums 4 tracks"
 ```
 

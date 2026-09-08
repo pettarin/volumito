@@ -168,10 +168,10 @@ volumito queue clear
     "seek": "00:00:00.000",
     "status": "stop",
     "title": "",
-    "volume": 20
+    "volume": 19
 }
-[2026-08-14T13:17:31.280Z] [INFO] Command 'clear' executed successfully
-[2026-08-14T13:17:33.299Z] [INFO] Command 'stop' executed successfully
+[2026-09-08T09:15:31.669Z] [INFO] Command 'clear' executed successfully
+[2026-09-08T09:15:33.687Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
@@ -182,21 +182,25 @@ These are all the subcommands of the `queue` group:
 volumito queue --help
 Usage: volumito queue [OPTIONS] COMMAND [ARGS]...
 
-  Manage the playback queue.
+  Manage the playback queue and its current track.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
-  clear         Clear the playback queue.
-  download      Download every track of the current queue.
-  has_next      Print whether the current track has a next track in the...
-  has_previous  Print whether the current track has a previous track in...
-  list          Print the playback queue.
-  randomize     Set or toggle the random (shuffle) mode.
-  repeat        Set or toggle the repeat mode.
-  replace       Replace the queue with the content of URI, playing it...
-  status        Print the current track with the position, length, and...
+  add        Add the content of URI to the end of the queue, leaving the...
+  clear      Clear the playback queue.
+  consume    Print or set the consume mode, which drops each track from...
+  download   Download every track of the current queue.
+  list       Print the playback queue.
+  move       Move the track at SOURCE to TARGET in the queue.
+  randomize  Print or set the random (shuffle) mode.
+  remove     Remove the track at POSITION from the queue.
+  repeat     Print or set the repeat mode.
+  replace    Replace the queue with the content of URI, playing it unless...
+  save       Save the current queue as the playlist NAME, replacing it if...
+  status     Print the current track with the position, length, and...
+  track      Query the current track of the queue (information, audio,...
 ```
 
 The `download` and `replace` subcommands are described
