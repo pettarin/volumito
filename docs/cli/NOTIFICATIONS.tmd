@@ -1,3 +1,9 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+volumito playback seek 03:10
+```
+
 ### Notifications
 
 Instead of constantly polling the Volumio REST API,
@@ -73,6 +79,13 @@ however you can have it quit after a certain number of events are received
 or no events are received for a specified amount of time
 (e.g., `--idle-timeout 20.0`: exit if 20 seconds passed with no event received),
 or after a specified timeout (e.g., `--timeout 60.0`: exit after one minute).
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing,
+# near the end of the first track, so that we capture some events
+volumito playlist play "volumito test qobuz multiple albums"
+volumito playback seek 03:10
+```
 
 ```bash lucio command=execute
 volumito notification listen --register-url --timeout 10.0

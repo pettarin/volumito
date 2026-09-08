@@ -4758,9 +4758,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito notification register http://192.168.1.2:4567/notif/volumio
 volumito notification register http://192.168.1.2:5678/anothercallbackurl
 volumito notification register http://192.168.1.2:5678/yetanother
-[2026-08-13T13:32:01.559Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-08-13T13:32:02.080Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-08-13T13:32:02.617Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T09:24:28.786Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T09:24:29.357Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T09:24:29.941Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -4768,7 +4768,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito notification register --autocompose-url
-[2026-08-13T13:32:03.151Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T09:24:30.523Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -4791,16 +4791,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-08-13T13:32:04.148Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T09:24:31.765Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito notification unregister --all
-[2026-08-13T13:32:04.624Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-08-13T13:32:04.625Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-08-13T13:32:04.625Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T09:24:32.391Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T09:24:32.391Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T09:24:32.391Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -4827,28 +4827,26 @@ volumito notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
-        "channels": 2,
-        "consume": true,
+        "consume": false,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 196,
+        "duration": 236,
         "mute": false,
-        "position": 3,
+        "position": 1,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 286114,
-        "service": "mpd",
+        "samplerate": "44 KHz",
+        "seek": 505,
+        "service": "qobuz",
         "status": "play",
-        "stream": false,
-        "title": "Va tutto bene",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833718",
+        "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 19
     },
     "item": "state"
 }
@@ -4858,36 +4856,65 @@ volumito notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": "1 Kbps",
         "channels": 2,
-        "consume": true,
+        "consume": false,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 196,
+        "duration": 236,
         "mute": false,
-        "position": 3,
+        "position": 1,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 289869,
-        "service": "mpd",
-        "status": "pause",
-        "stream": false,
-        "title": "Va tutto bene",
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833718",
+        "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 19
     },
     "item": "state"
 }
-[2026-08-13T13:32:05.095Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-08-13T13:32:05.096Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-08-13T13:32:05.096Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-08-13T13:32:15.103Z] [INFO] Timed out after 10 seconds
-[2026-08-13T13:32:15.118Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 19
+    },
+    "item": "state"
+}
+[2026-09-08T09:24:38.320Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T09:24:38.320Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-08T09:24:38.320Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T09:24:48.353Z] [INFO] Timed out after 10 seconds
+[2026-09-08T09:24:48.370Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 ### Copying Files With SCP
