@@ -21,12 +21,12 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/64/04/0639842660464_600.jpg",
-        "artist": "Mango",
+        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
+        "artist": "Enrico Ruggeri",
         "mute": false,
-        "status": "play",
-        "track": "Sirtaki",
-        "volume": 19
+        "status": "stop",
+        "track": "Rien Ne Va Plus",
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
@@ -45,8 +45,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-08T12:37:22.274Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-08T12:37:22.274Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T15:11:08.383Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-08T15:11:08.383Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -114,7 +114,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-08T12:37:25.100Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-08T15:11:11.192Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!WARNING]
@@ -162,4 +162,56 @@ upmpdcli.conf
 upmpdclicache
 volume
 wireless.log
+```
+
+#### System Help
+
+These are all the subcommands of the `system` group:
+
+```bash
+volumito system --help
+Usage: volumito system [OPTIONS] COMMAND [ARGS]...
+
+  Query Volumio system utilities.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  alarm     Manage the alarms of the Volumio host (alarm-clock plugin).
+  audio     Manage the audio outputs, the output devices, and the input...
+  backup    Back up and restore the playlists and favourites of the...
+  execute   Execute COMMAND on the Volumio host, printing what it returned.
+  info      Print the system information.
+  name      Print or set the name of the Volumio host.
+  network   Query the network of the Volumio host, and join a wireless...
+  ping      Ping the Volumio instance, printing 'pong' on success.
+  plugin    Manage the plugins of the Volumio host.
+  power     Power the Volumio host down, or restart it.
+  share     Manage the network shares mounted by the Volumio host.
+  timezone  Print the time zone of the Volumio host, or manage it with...
+  ui        Manage the user interface of the Volumio host.
+  update    Check for, and install, the updates of the Volumio host.
+  usb       Manage the USB drives attached to the Volumio host.
+  version   Print the system version.
+```
+
+All commands, with the exception of those listed above
+(`sytstem execute`, `system info`, `system ping`, `system version`),
+require a WebSocket API client, as their help message tells:
+
+```bash
+volumito system timezone --help
+Usage: volumito system timezone [OPTIONS] [COMMAND] [ARGS]...
+
+  Print the time zone of the Volumio host, or manage it with the subcommands.
+
+  Needs a WebSocket API client.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list  Print the time zones the Volumio host can be set to.
+  set   Move the Volumio host to the time zone VALUE, one of "system...
 ```

@@ -96,3 +96,18 @@ volumito system execute "ls /tmp/" --yes
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
 ```
 
+#### System Help
+
+These are all the subcommands of the `system` group:
+
+```bash lucio command=execute
+volumito system --help
+```
+
+All commands, with the exception of those listed above
+(`sytstem execute`, `system info`, `system ping`, `system version`),
+require a WebSocket API client, as their help message tells:
+
+```bash lucio command=execute
+volumito system timezone --help
+```

@@ -105,6 +105,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [System Ping](#system-ping)
     - [System Version](#system-version)
     - [System Execute](#system-execute)
+    - [System Help](#system-help)
 
 
 ```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
