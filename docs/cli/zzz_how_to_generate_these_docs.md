@@ -29,6 +29,21 @@ is read implicitly and `make` targets are available.
    make build-all
    ```
 
+> [!NOTE]
+> The `build-all` target will build only the modified `*.tmd` files,
+> and then the main `INDEX.tmd` including the generated `*.md` files,
+> to produce the final `INDEX.md` file.
+
+To force a rebuild of single documents, even if not modified:
+```bash
+make build-only CONFIGURATION_FILE.tmd
+make build-only COMMANDS.tmd
+...
+
+# remember to regenerate the INDEX.md as well!
+make build-only INDEX.tmd
+```
+
 To force a rebuild of all documents:
 ```bash
 make rebuild-all
