@@ -183,14 +183,14 @@ to check whether you already have a configuration file in your system:
 ```bash
 volumito configuration search
 Configuration file locations, in probing order, in decreasing order of priority:
-  /home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml
-  /home/alberto/projects/volumito/volumito/docs/cli/.volumito.yaml
-  /home/alberto/volumito.yaml
-  /home/alberto/.volumito.yaml (found, used)
-  /home/alberto/.volumito/volumito.yaml
-  /home/alberto/.volumito/.volumito.yaml
-  /home/alberto/.config/volumito/volumito.yaml
-  /home/alberto/.config/volumito/.volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/.volumito.yaml
+  /home/user/volumito.yaml
+  /home/user/.volumito.yaml (found, used)
+  /home/user/.volumito/volumito.yaml
+  /home/user/.volumito/.volumito.yaml
+  /home/user/.config/volumito/volumito.yaml
+  /home/user/.config/volumito/.volumito.yaml
   /etc/volumito.yaml
   /etc/.volumito.yaml
   /etc/volumito/volumito.yaml
@@ -205,7 +205,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-09-08T09:31:40.803Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-09-08T12:57:00.316Z] [INFO] Created configuration file "/home/user/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -214,7 +214,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T09:31:41.352Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-08T12:57:00.863Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
@@ -692,19 +692,19 @@ volumito -v info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T12:13:50.613Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T12:13:50.614Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T12:13:50.614Z] [DEBU] Initializing the REST API client...
-[2026-09-08T12:13:50.614Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T12:13:50.614Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T12:13:50.614Z] [DEBU] Opening the HTTP session...
-[2026-09-08T12:13:50.614Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T12:13:50.614Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
-[2026-09-08T12:13:50.642Z] [DEBU] Response status: 200
-[2026-09-08T12:13:50.642Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
-[2026-09-08T12:13:50.646Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T12:13:50.646Z] [DEBU] Closing the HTTP session...
-[2026-09-08T12:13:50.647Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T12:57:20.624Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-08T12:57:20.625Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:57:20.625Z] [DEBU] Initializing the REST API client...
+[2026-09-08T12:57:20.625Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T12:57:20.625Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T12:57:20.625Z] [DEBU] Opening the HTTP session...
+[2026-09-08T12:57:20.625Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T12:57:20.625Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
+[2026-09-08T12:57:20.656Z] [DEBU] Response status: 200
+[2026-09-08T12:57:20.656Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
+[2026-09-08T12:57:20.658Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:57:20.658Z] [DEBU] Closing the HTTP session...
+[2026-09-08T12:57:20.658Z] [DEBU] Closing the HTTP session... done
 ```
 
 The `-C / --api-client` option allows you to select
@@ -753,25 +753,25 @@ volumito -v -C asynchronous_websocket info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T12:13:51.197Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T12:13:51.198Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T12:13:51.198Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-08T12:13:51.198Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-08T12:13:51.198Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-08T12:13:51.198Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:51.199Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-08T12:13:51.311Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-08T12:13:51.350Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-08T12:13:51.351Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-08T12:13:51.351Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-08T12:13:51.351Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-08T12:13:51.373Z] [DEBU] Received "pushSystemInfo"
-[2026-09-08T12:13:51.374Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-08T12:13:51.379Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T12:13:51.380Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-08T12:13:51.391Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-08T12:13:51.392Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:51.394Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:21.206Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-08T12:57:21.207Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:57:21.207Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T12:57:21.207Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T12:57:21.207Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T12:57:21.207Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:21.208Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:21.320Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T12:57:21.356Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T12:57:21.357Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T12:57:21.357Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T12:57:21.357Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T12:57:21.369Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T12:57:21.369Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T12:57:21.371Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:57:21.371Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T12:57:21.377Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T12:57:21.378Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:21.378Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
 ```
 
 or its short form `-C aw`:
@@ -801,25 +801,25 @@ volumito -v -C aw info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T12:13:52.000Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T12:13:52.000Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T12:13:52.000Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-08T12:13:52.000Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-08T12:13:52.000Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-08T12:13:52.000Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:52.001Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-08T12:13:52.114Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-08T12:13:52.152Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-08T12:13:52.152Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-08T12:13:52.152Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-08T12:13:52.153Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-08T12:13:52.172Z] [DEBU] Received "pushSystemInfo"
-[2026-09-08T12:13:52.172Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-08T12:13:52.176Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T12:13:52.177Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-08T12:13:52.186Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-08T12:13:52.187Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:52.188Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:21.969Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-08T12:57:21.970Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:57:21.970Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T12:57:21.970Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T12:57:21.970Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T12:57:21.970Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:21.971Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:22.083Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T12:57:22.113Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T12:57:22.114Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T12:57:22.114Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T12:57:22.114Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T12:57:22.125Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T12:57:22.125Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T12:57:22.128Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:57:22.128Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T12:57:22.134Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T12:57:22.134Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:22.135Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
 ```
 
 Most of the commands that `volumito` provides are available
@@ -834,7 +834,7 @@ return an error similar to the following:
 
 ```bash
 volumito collection radio add "Radio Volumito Docs" "https://some.url"
-[2026-09-08T12:13:52.796Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
+[2026-09-08T12:57:22.722Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
 ```
 
 It is possible to fall back to the appropriate client
@@ -853,8 +853,8 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-08T12:13:53.481Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
-[2026-09-08T12:13:53.745Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-08T12:57:23.412Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
+[2026-09-08T12:57:23.686Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 
@@ -4511,20 +4511,20 @@ You can list all probed paths by running the `configuration search` command:
 
 ```bash
 pwd
-/home/alberto/projects/volumito/volumito/docs/cli
+/home/user/projects/volumito/volumito/docs/cli
 ```
 
 ```bash
 volumito configuration search
 Configuration file locations, in probing order, in decreasing order of priority:
-  /home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml
-  /home/alberto/projects/volumito/volumito/docs/cli/.volumito.yaml
-  /home/alberto/volumito.yaml (found, used)
-  /home/alberto/.volumito.yaml (found, NOT used)
-  /home/alberto/.volumito/volumito.yaml
-  /home/alberto/.volumito/.volumito.yaml
-  /home/alberto/.config/volumito/volumito.yaml
-  /home/alberto/.config/volumito/.volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/.volumito.yaml
+  /home/user/volumito.yaml (found, used)
+  /home/user/.volumito.yaml (found, NOT used)
+  /home/user/.volumito/volumito.yaml
+  /home/user/.volumito/.volumito.yaml
+  /home/user/.config/volumito/volumito.yaml
+  /home/user/.config/volumito/.volumito.yaml
   /etc/volumito.yaml
   /etc/.volumito.yaml
   /etc/volumito/volumito.yaml
@@ -4545,7 +4545,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T08:45:51.143Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-08T12:56:16.281Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -4555,7 +4555,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T08:45:51.689Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-08T12:56:16.829Z] [ERRO] File already exists: "/home/user/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -4570,7 +4570,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-09-08T08:45:52.228Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-09-08T12:56:17.372Z] [INFO] Created configuration file "/home/user/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -4711,7 +4711,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-08T08:45:52.794Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-09-08T12:56:17.939Z] [INFO] Configuration file "/home/user/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -4794,7 +4794,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-08T08:45:53.348Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-09-08T12:56:18.494Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -4808,19 +4808,19 @@ To achieve that, the `-i / --ignore-configuration-file` global option is availab
 ```bash
 volumito -i -H volumitotester.local playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:01:31.091",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:02:29.213",
     "status": "play",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 19
 }
 ```
 
@@ -4829,67 +4829,67 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:01:31.591",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:02:29.713",
     "status": "play",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 19
 }
-[2026-09-08T08:45:54.791Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-09-08T08:45:54.791Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T08:45:54.792Z] [DEBU] Initializing the REST API client...
-[2026-09-08T08:45:54.792Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T08:45:54.792Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T08:45:54.792Z] [DEBU] Opening the HTTP session...
-[2026-09-08T08:45:54.792Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T08:45:54.792Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-08T08:45:54.814Z] [DEBU] Response status: 200
-[2026-09-08T08:45:54.814Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-08T08:45:54.816Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T08:45:54.817Z] [DEBU] Successfully retrieved state
-[2026-09-08T08:45:54.817Z] [DEBU] Closing the HTTP session...
-[2026-09-08T08:45:54.817Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T12:56:19.881Z] [DEBU] Using configuration file: "/home/user/volumito.yaml"
+[2026-09-08T12:56:19.882Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:56:19.882Z] [DEBU] Initializing the REST API client...
+[2026-09-08T12:56:19.882Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T12:56:19.882Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T12:56:19.882Z] [DEBU] Opening the HTTP session...
+[2026-09-08T12:56:19.883Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T12:56:19.883Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-08T12:56:19.899Z] [DEBU] Response status: 200
+[2026-09-08T12:56:19.899Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-08T12:56:19.901Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:56:19.902Z] [DEBU] Successfully retrieved state
+[2026-09-08T12:56:19.902Z] [DEBU] Closing the HTTP session...
+[2026-09-08T12:56:19.902Z] [DEBU] Closing the HTTP session... done
 ```
 
 ```bash
 volumito -v -i -H volumitotester.local playback status
 {
-    "album": "Sirtaki",
-    "artist": "Mango",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:06:59",
+    "duration": "00:04:08",
     "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:01:32.342",
+    "position": 3,
+    "samplerate": "44 KHz",
+    "seek": "00:02:30.464",
     "status": "play",
-    "title": "Nella mia città",
-    "trackType": "flac",
-    "volume": 55
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 19
 }
-[2026-09-08T08:45:55.345Z] [DEBU] Ignoring configuration files
-[2026-09-08T08:45:55.345Z] [DEBU] Connecting to http://volumitotester.local:3000...
-[2026-09-08T08:45:55.345Z] [DEBU] Initializing the REST API client...
-[2026-09-08T08:45:55.345Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T08:45:55.345Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T08:45:55.346Z] [DEBU] Opening the HTTP session...
-[2026-09-08T08:45:55.346Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T08:45:55.346Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState...
-[2026-09-08T08:45:55.378Z] [DEBU] Response status: 200
-[2026-09-08T08:45:55.378Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState... done
-[2026-09-08T08:45:55.380Z] [DEBU] Connecting to http://volumitotester.local:3000... done
-[2026-09-08T08:45:55.380Z] [DEBU] Successfully retrieved state
-[2026-09-08T08:45:55.380Z] [DEBU] Closing the HTTP session...
-[2026-09-08T08:45:55.380Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T12:56:20.426Z] [DEBU] Ignoring configuration files
+[2026-09-08T12:56:20.426Z] [DEBU] Connecting to http://volumitotester.local:3000...
+[2026-09-08T12:56:20.426Z] [DEBU] Initializing the REST API client...
+[2026-09-08T12:56:20.427Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T12:56:20.427Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T12:56:20.427Z] [DEBU] Opening the HTTP session...
+[2026-09-08T12:56:20.427Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T12:56:20.427Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState...
+[2026-09-08T12:56:20.462Z] [DEBU] Response status: 200
+[2026-09-08T12:56:20.462Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState... done
+[2026-09-08T12:56:20.464Z] [DEBU] Connecting to http://volumitotester.local:3000... done
+[2026-09-08T12:56:20.464Z] [DEBU] Successfully retrieved state
+[2026-09-08T12:56:20.464Z] [DEBU] Closing the HTTP session...
+[2026-09-08T12:56:20.464Z] [DEBU] Closing the HTTP session... done
 ```
 
 #### Priority

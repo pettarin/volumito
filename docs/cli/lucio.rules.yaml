@@ -64,4 +64,16 @@ rules:
     mode: multiline
     case: respect
 
+  # replace /home/alberto/ with /home/user/
+  - id: redact_home_directory
+    type: str
+    streams:
+      - include
+      - stderr
+      - stdout
+    target: "/home/alberto/"
+    replacement: "/home/user/"
+    count: all
+    mode: multiline
+    case: respect
 

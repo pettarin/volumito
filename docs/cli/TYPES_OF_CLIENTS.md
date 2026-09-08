@@ -31,19 +31,19 @@ volumito -v info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T12:13:50.613Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T12:13:50.614Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T12:13:50.614Z] [DEBU] Initializing the REST API client...
-[2026-09-08T12:13:50.614Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T12:13:50.614Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T12:13:50.614Z] [DEBU] Opening the HTTP session...
-[2026-09-08T12:13:50.614Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T12:13:50.614Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
-[2026-09-08T12:13:50.642Z] [DEBU] Response status: 200
-[2026-09-08T12:13:50.642Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
-[2026-09-08T12:13:50.646Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T12:13:50.646Z] [DEBU] Closing the HTTP session...
-[2026-09-08T12:13:50.647Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T12:57:20.624Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-08T12:57:20.625Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:57:20.625Z] [DEBU] Initializing the REST API client...
+[2026-09-08T12:57:20.625Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T12:57:20.625Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T12:57:20.625Z] [DEBU] Opening the HTTP session...
+[2026-09-08T12:57:20.625Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T12:57:20.625Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
+[2026-09-08T12:57:20.656Z] [DEBU] Response status: 200
+[2026-09-08T12:57:20.656Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
+[2026-09-08T12:57:20.658Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:57:20.658Z] [DEBU] Closing the HTTP session...
+[2026-09-08T12:57:20.658Z] [DEBU] Closing the HTTP session... done
 ```
 
 The `-C / --api-client` option allows you to select
@@ -92,25 +92,25 @@ volumito -v -C asynchronous_websocket info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T12:13:51.197Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T12:13:51.198Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T12:13:51.198Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-08T12:13:51.198Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-08T12:13:51.198Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-08T12:13:51.198Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:51.199Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-08T12:13:51.311Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-08T12:13:51.350Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-08T12:13:51.351Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-08T12:13:51.351Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-08T12:13:51.351Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-08T12:13:51.373Z] [DEBU] Received "pushSystemInfo"
-[2026-09-08T12:13:51.374Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-08T12:13:51.379Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T12:13:51.380Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-08T12:13:51.391Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-08T12:13:51.392Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:51.394Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:21.206Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-08T12:57:21.207Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:57:21.207Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T12:57:21.207Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T12:57:21.207Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T12:57:21.207Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:21.208Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:21.320Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T12:57:21.356Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T12:57:21.357Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T12:57:21.357Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T12:57:21.357Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T12:57:21.369Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T12:57:21.369Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T12:57:21.371Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:57:21.371Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T12:57:21.377Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T12:57:21.378Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:21.378Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
 ```
 
 or its short form `-C aw`:
@@ -140,25 +140,25 @@ volumito -v -C aw info
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-08T12:13:52.000Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
-[2026-09-08T12:13:52.000Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T12:13:52.000Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-08T12:13:52.000Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-08T12:13:52.000Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-08T12:13:52.000Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:52.001Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-08T12:13:52.114Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-08T12:13:52.152Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-08T12:13:52.152Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-08T12:13:52.152Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-08T12:13:52.153Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-08T12:13:52.172Z] [DEBU] Received "pushSystemInfo"
-[2026-09-08T12:13:52.172Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-08T12:13:52.176Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T12:13:52.177Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-08T12:13:52.186Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-08T12:13:52.187Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-08T12:13:52.188Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:21.969Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-08T12:57:21.970Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T12:57:21.970Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T12:57:21.970Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T12:57:21.970Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T12:57:21.970Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:21.971Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T12:57:22.083Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T12:57:22.113Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T12:57:22.114Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T12:57:22.114Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T12:57:22.114Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T12:57:22.125Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T12:57:22.125Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T12:57:22.128Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T12:57:22.128Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T12:57:22.134Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T12:57:22.134Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T12:57:22.135Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
 ```
 
 Most of the commands that `volumito` provides are available
@@ -173,7 +173,7 @@ return an error similar to the following:
 
 ```bash
 volumito collection radio add "Radio Volumito Docs" "https://some.url"
-[2026-09-08T12:13:52.796Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
+[2026-09-08T12:57:22.722Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
 ```
 
 It is possible to fall back to the appropriate client
@@ -192,6 +192,6 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-08T12:13:53.481Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
-[2026-09-08T12:13:53.745Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-08T12:57:23.412Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
+[2026-09-08T12:57:23.686Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```

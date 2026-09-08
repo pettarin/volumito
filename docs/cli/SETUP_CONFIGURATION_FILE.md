@@ -18,14 +18,14 @@ to check whether you already have a configuration file in your system:
 ```bash
 volumito configuration search
 Configuration file locations, in probing order, in decreasing order of priority:
-  /home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml
-  /home/alberto/projects/volumito/volumito/docs/cli/.volumito.yaml
-  /home/alberto/volumito.yaml
-  /home/alberto/.volumito.yaml (found, used)
-  /home/alberto/.volumito/volumito.yaml
-  /home/alberto/.volumito/.volumito.yaml
-  /home/alberto/.config/volumito/volumito.yaml
-  /home/alberto/.config/volumito/.volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/.volumito.yaml
+  /home/user/volumito.yaml
+  /home/user/.volumito.yaml (found, used)
+  /home/user/.volumito/volumito.yaml
+  /home/user/.volumito/.volumito.yaml
+  /home/user/.config/volumito/volumito.yaml
+  /home/user/.config/volumito/.volumito.yaml
   /etc/volumito.yaml
   /etc/.volumito.yaml
   /etc/volumito/volumito.yaml
@@ -40,7 +40,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-09-08T09:31:40.803Z] [INFO] Created configuration file "/home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-09-08T12:57:00.316Z] [INFO] Created configuration file "/home/user/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -49,7 +49,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T09:31:41.352Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-08T12:57:00.863Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
