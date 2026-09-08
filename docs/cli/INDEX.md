@@ -188,6 +188,25 @@ volumito -C asynchronous_websocket info
 volumito -C aw info
 ```
 
+> [!NOTE]
+> Most of the commands that `volumito` provides are available
+> when using any of the clients listed above.
+> However, certain commands are supported only by the REST API clients,
+> and others only by the WebSocket API clients:
+> in the remainder of this document, they are suitably marked as
+> "REST API only" or "WebSocket API only".
+>
+> By default, commands that are not available with the selected client
+> return an error similar to the following:
+> ```bash
+> volumito collection radio add "My Radio" "https://some.url"
+> [2026-09-08T11:39:56.286Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
+> ```
+>
+> It is possible to fall back to the appropriate client
+> by using issuing the `--allow-fallback-to-rest-api` and/or
+> `--allow-fallback-to-websocket-api` options.
+
 
 ## Check Your Volumito Configuration File
 
