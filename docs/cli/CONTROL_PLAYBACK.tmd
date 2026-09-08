@@ -177,7 +177,7 @@ volumito -C aw playback sleep 42
 ```
 
 ```bash lucio command=execute
-volumito -C aw playback sleep 120
+volumito -C aw playback sleep 02:00
 ```
 
 To disable the sleep, use the special value `off`:
@@ -188,7 +188,7 @@ volumito -C aw playback sleep off
 
 ### Infinity Playback
 
-It is possible to inspect the "infinity playback" function
+It is possible to inspect and toggle the "infinity playback" function
 (i.e., playing other music suggested by Volumio based
 on the current queue and music library of the user).
 
