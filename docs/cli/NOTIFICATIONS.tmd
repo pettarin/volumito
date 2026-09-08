@@ -1,7 +1,6 @@
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to ensure a certain queue is playing
 volumito playlist play "volumito test qobuz multiple albums"
-volumito playback seek 03:10
 ```
 
 ### Notifications

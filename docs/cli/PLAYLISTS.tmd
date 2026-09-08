@@ -1,3 +1,8 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
 ## Playlists
 
 > [!NOTE]
@@ -29,7 +34,7 @@ replacing the current playback queue,
 issue the `playlist play` command followed by the playlist identifier:
 
 ```bash lucio command=execute
-volumito playlist play "qobuz queue test"
+volumito playlist play "volumito test qobuz multiple albums"
 ```
 
 > [!TIP]

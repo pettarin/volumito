@@ -23,11 +23,13 @@ of all the available playlists:
 ```bash
 volumito playlist list
 [
-    "int fdg titanic 5",
-    "qobuz fdg titanic",
-    "qobuz norah hd five tracks",
-    "qobuz queue test",
-    "trptk elegy"
+    "volumito test alarm",
+    "volumito test local album",
+    "volumito test qobuz 5 hd tracks",
+    "volumito test qobuz multiple albums",
+    "volumito test qobuz multiple albums 4 tracks",
+    "volumito test qobuz single album",
+    "volumito test qobuz single album 3 tracks"
 ]
 ```
 
@@ -38,7 +40,7 @@ replacing the current playback queue,
 issue the `playlist play` command followed by the playlist identifier:
 
 ```bash
-volumito playlist play "qobuz queue test"
+volumito playlist play "volumito test qobuz multiple albums"
 {
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
@@ -48,13 +50,13 @@ volumito playlist play "qobuz queue test"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.390",
+    "seek": "00:00:00.121",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-08-14T13:14:43.498Z] [INFO] Command 'playplaylist "qobuz queue test"' executed successfully
+[2026-09-08T09:27:43.770Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 > [!TIP]
@@ -69,15 +71,23 @@ These are all the subcommands of the `playlist` group:
 volumito playlist --help
 Usage: volumito playlist [OPTIONS] COMMAND [ARGS]...
 
-  Query, play, and download the saved playlists.
+  Query, play, edit, and download the saved playlists.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
+  add       Add the item at URI, or the tracks it lists, to the playlist...
+  content   Print the tracks of the playlist NAME.
+  copy      Copy the playlist SOURCE to the new playlist TARGET, with the...
+  create    Create the empty playlist NAME, filled from FILE with...
+  delete    Delete the playlist NAME.
   download  Download every track of the playlist specified by NAME.
+  enqueue   Append the playlist NAME to the queue, leaving the playback...
   list      List the Volumio playlists saved by the current user.
   play      Start playback of the playlist specified by NAME.
+  remove    Remove the item at URI, or the items at -p/--position, from...
+  rename    Rename the playlist SOURCE to TARGET, copying it and deleting...
 ```
 
 The `download` subcommand is described
