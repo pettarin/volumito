@@ -735,7 +735,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T07:53:46.847Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-08T08:45:51.143Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -745,7 +745,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T07:53:47.388Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-08T08:45:51.689Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -760,7 +760,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-09-08T07:53:47.931Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-09-08T08:45:52.228Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -901,7 +901,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-08T07:53:48.497Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-09-08T08:45:52.794Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -984,7 +984,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-08T07:53:49.055Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-09-08T08:45:53.348Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -998,17 +998,18 @@ To achieve that, the `-i / --ignore-configuration-file` global option is availab
 ```bash
 volumito -i -H volumitotester.local playback status
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "Sirtaki",
+    "artist": "Mango",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:06:59",
     "mute": false,
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "seek": "00:00:00.000",
-    "status": "stop",
-    "title": "Intro",
-    "trackType": "qobuz",
+    "samplerate": "44.1 kHz",
+    "seek": "00:01:31.091",
+    "status": "play",
+    "title": "Nella mia città",
+    "trackType": "flac",
     "volume": 55
 }
 ```
@@ -1018,65 +1019,67 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "Sirtaki",
+    "artist": "Mango",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:06:59",
     "mute": false,
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "seek": "00:00:00.000",
-    "status": "stop",
-    "title": "Intro",
-    "trackType": "qobuz",
+    "samplerate": "44.1 kHz",
+    "seek": "00:01:31.591",
+    "status": "play",
+    "title": "Nella mia città",
+    "trackType": "flac",
     "volume": 55
 }
-[2026-09-08T07:53:50.165Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-09-08T07:53:50.166Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-08T07:53:50.166Z] [DEBU] Initializing the REST API client...
-[2026-09-08T07:53:50.166Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T07:53:50.166Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T07:53:50.166Z] [DEBU] Opening the HTTP session...
-[2026-09-08T07:53:50.166Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T07:53:50.166Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-08T07:53:50.189Z] [DEBU] Response status: 200
-[2026-09-08T07:53:50.189Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-08T07:53:50.191Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-08T07:53:50.191Z] [DEBU] Successfully retrieved state
-[2026-09-08T07:53:50.191Z] [DEBU] Closing the HTTP session...
-[2026-09-08T07:53:50.192Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T08:45:54.791Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-09-08T08:45:54.791Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T08:45:54.792Z] [DEBU] Initializing the REST API client...
+[2026-09-08T08:45:54.792Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T08:45:54.792Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T08:45:54.792Z] [DEBU] Opening the HTTP session...
+[2026-09-08T08:45:54.792Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T08:45:54.792Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-08T08:45:54.814Z] [DEBU] Response status: 200
+[2026-09-08T08:45:54.814Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-08T08:45:54.816Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T08:45:54.817Z] [DEBU] Successfully retrieved state
+[2026-09-08T08:45:54.817Z] [DEBU] Closing the HTTP session...
+[2026-09-08T08:45:54.817Z] [DEBU] Closing the HTTP session... done
 ```
 
 ```bash
 volumito -v -i -H volumitotester.local playback status
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "Sirtaki",
+    "artist": "Mango",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:06:59",
     "mute": false,
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "seek": "00:00:00.000",
-    "status": "stop",
-    "title": "Intro",
-    "trackType": "qobuz",
+    "samplerate": "44.1 kHz",
+    "seek": "00:01:32.342",
+    "status": "play",
+    "title": "Nella mia città",
+    "trackType": "flac",
     "volume": 55
 }
-[2026-09-08T07:53:50.730Z] [DEBU] Ignoring configuration files
-[2026-09-08T07:53:50.731Z] [DEBU] Connecting to http://volumitotester.local:3000...
-[2026-09-08T07:53:50.731Z] [DEBU] Initializing the REST API client...
-[2026-09-08T07:53:50.731Z] [DEBU] Initializing the REST API client... done
-[2026-09-08T07:53:50.731Z] [DEBU] Using the synchronous REST API client
-[2026-09-08T07:53:50.731Z] [DEBU] Opening the HTTP session...
-[2026-09-08T07:53:50.731Z] [DEBU] Opening the HTTP session... done
-[2026-09-08T07:53:50.731Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState...
-[2026-09-08T07:53:50.769Z] [DEBU] Response status: 200
-[2026-09-08T07:53:50.769Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState... done
-[2026-09-08T07:53:50.771Z] [DEBU] Connecting to http://volumitotester.local:3000... done
-[2026-09-08T07:53:50.771Z] [DEBU] Successfully retrieved state
-[2026-09-08T07:53:50.771Z] [DEBU] Closing the HTTP session...
-[2026-09-08T07:53:50.772Z] [DEBU] Closing the HTTP session... done
+[2026-09-08T08:45:55.345Z] [DEBU] Ignoring configuration files
+[2026-09-08T08:45:55.345Z] [DEBU] Connecting to http://volumitotester.local:3000...
+[2026-09-08T08:45:55.345Z] [DEBU] Initializing the REST API client...
+[2026-09-08T08:45:55.345Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T08:45:55.345Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T08:45:55.346Z] [DEBU] Opening the HTTP session...
+[2026-09-08T08:45:55.346Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T08:45:55.346Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState...
+[2026-09-08T08:45:55.378Z] [DEBU] Response status: 200
+[2026-09-08T08:45:55.378Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState... done
+[2026-09-08T08:45:55.380Z] [DEBU] Connecting to http://volumitotester.local:3000... done
+[2026-09-08T08:45:55.380Z] [DEBU] Successfully retrieved state
+[2026-09-08T08:45:55.380Z] [DEBU] Closing the HTTP session...
+[2026-09-08T08:45:55.380Z] [DEBU] Closing the HTTP session... done
 ```
 
 #### Priority
