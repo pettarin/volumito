@@ -14,7 +14,7 @@ printing the version of the `volumito` tool itself:
 
 ```bash
 volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 Check that you can connect to the Volumio host by issuing the `info` command:
@@ -24,21 +24,21 @@ volumito --host volumio.local info
 {
     "builddate": "Tue Mar 24 17:20:52 UTC 2026",
     "hardware": "pi",
-    "host": "http://192.168.1.122",
+    "host": "http://192.168.1.19",
     "hwUuid": "<REDACTED>",
     "id": "<REDACTED>",
     "isPremiumDevice": false,
     "isVolumioProduct": false,
-    "name": "Volumio3b",
+    "name": "volumitotester",
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/21/63/0743215086321_600.jpg",
-        "artist": "Giorgia",
+        "albumart": "https://static.qobuz.com/images/covers/cb/no/qx6utqbc2nocb_600.jpg",
+        "artist": "Muse",
         "mute": false,
         "status": "stop",
-        "track": "Un Amore Da Favola",
-        "volume": 87
+        "track": "Intro",
+        "volume": 55
     },
     "systemversion": "4.119",
     "type": "device",

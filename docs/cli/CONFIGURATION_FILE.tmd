@@ -175,7 +175,7 @@ for all the commands and options.
 To achieve that, the `-i / --ignore-configuration-file` global option is available:
 
 ```bash lucio command=execute
-volumito -i -H volumio3b.local playback status
+volumito -i -H volumitotester.local playback status
 ```
 
 The effect is clear with the `-v / --verbose` option specified:
@@ -185,7 +185,7 @@ volumito -v playback status
 ```
 
 ```bash lucio command=execute
-volumito -v -i -H volumio3b.local playback status
+volumito -v -i -H volumitotester.local playback status
 ```
 
 #### Priority

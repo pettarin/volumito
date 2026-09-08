@@ -29,7 +29,7 @@ file that looks like this:
 ```yaml
 # volumito CLI configuration file
 #
-# Generated with default values for version 0.4.0: edit as needed (and remove this comment)
+# Generated with default values for version 0.5.0: edit as needed (and remove this comment)
 
 aliases:
   # Aliases/shorthands for existing command paths (groups, commands, subcommands).
@@ -48,7 +48,6 @@ aliases:
   # exec: system execute
   # i: info
   # mlt: multiroom
-  # mltz: multiroom zones
   # mute: playback mute
   # next: playback next
   # not: notification
@@ -82,6 +81,10 @@ aliases:
   # ql: queue list
   # qr: queue replace
   # qs: queue status
+  # qt: queue track
+  # qta: queue track audio
+  # qtc: queue track albumart
+  # qti: queue track info
   # s: story
   # salb: story album
   # sart: story artist
@@ -95,10 +98,6 @@ aliases:
   # sysi: system info
   # sysp: system ping
   # sysv: system version
-  # t: track
-  # ta: track audio
-  # tc: track albumart
-  # ti: track info
   # toggle: playback toggle
   # unmute: playback unmute
   # vol: playback volume
@@ -209,7 +208,7 @@ miscellaneous:
   # Check that each queue-download track's metadata are current before downloading it
   check-next-track: true
 
-  # Check that the playlist name exists before playing it
+  # Check that the playlist name exists before using it
   check-playlist-name: true
 
   # Check that the seek position is within the duration of the current track
@@ -222,13 +221,24 @@ miscellaneous:
 
 notification:
   # A key here applies to the listen, register, and unregister commands;
-  # the keys of the options only "listen" has are under its own section
+  # the keys of the options only "listen" and "event listen" have
+  # are under their own sections
 
   # Path served by the local notification listener
   endpoint: /volumionotifications
 
   # Port the local notification listener binds to
   port: 3003
+
+  event-listen:
+    # Stop after receiving this number of events
+    count: null
+
+    # Stop after this number of seconds without receiving an event
+    idle-timeout: null
+
+    # Stop after listening for this number of seconds
+    timeout: null
 
   listen:
     # Stop after receiving this number of notifications
@@ -254,23 +264,61 @@ output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
   # - collection-browse
+  # - collection-favourite-list
+  # - collection-radio-list
   # - collection-search
+  # - collection-source-list
   # - collection-statistics
   # - command-list
-  # - multiroom-zones
+  # - multiroom-info
+  # - multiroom-set
+  # - multiroom-status
+  # - notification-event-listen
+  # - notification-event-request
   # - notification-list
   # - notification-listen
+  # - playback-infinity
+  # - playback-sleep
   # - playback-status
+  # - playlist-content
   # - playlist-list
+  # - queue-consume
   # - queue-list
+  # - queue-randomize
+  # - queue-repeat
   # - queue-status
   # - story-album
   # - story-artist
   # - story-credits
   # - story-label
   # - story-place
+  # - system-alarm-list
+  # - system-audio-device-list
+  # - system-audio-dsp
+  # - system-audio-inputs
+  # - system-audio-outputs
+  # - system-backup-create
   # - system-execute
   # - system-info
+  # - system-network-info
+  # - system-network-wireless
+  # - system-plugin-configuration
+  # - system-plugin-disable
+  # - system-plugin-enable
+  # - system-plugin-list
+  # - system-power-modes
+  # - system-share-discover
+  # - system-share-info
+  # - system-share-list
+  # - system-timezone-list
+  # - system-ui-background-list
+  # - system-ui-experience
+  # - system-ui-language-list
+  # - system-ui-privacy
+  # - system-ui-settings
+  # - system-update-channel-list
+  # - system-update-check
+  # - system-usb-list
   # - system-version
   # - track-info
 
@@ -301,6 +349,13 @@ output:
   # Index queue positions starting at one (true) or zero (false)
   position-starting-at-one: true
 
+  # After a playlist editing command like add or remove, print the resulting playlist content
+  print-resulting-content: true
+
+  # After a Web radio command like add or remove, print the resulting list of Web radios;
+  # after playlist create or delete, print the resulting list of playlists
+  print-resulting-list: true
+
   # After a playback or queue command like pause or clear, print the resulting playback status
   print-resulting-status: true
 
@@ -316,10 +371,25 @@ output:
 
     # Add your own overrides here
 
+  collection-favourite-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
+  collection-radio-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
   collection-search:
     # Searching is meant for humans, so the table is its default format
     format: table
 
+    # Add your own overrides here
+
+  collection-source-list:
     # Add your own overrides here
 
   collection-statistics:
@@ -334,7 +404,19 @@ output:
 
     # Add your own overrides here
 
-  multiroom-zones:
+  multiroom-info:
+    # Add your own overrides here
+
+  multiroom-set:
+    # Add your own overrides here
+
+  multiroom-status:
+    # Add your own overrides here
+
+  notification-event-listen:
+    # Add your own overrides here
+
+  notification-event-request:
     # Add your own overrides here
 
   notification-list:
@@ -343,13 +425,31 @@ output:
   notification-listen:
     # Add your own overrides here
 
+  playback-infinity:
+    # Add your own overrides here
+
+  playback-sleep:
+    # Add your own overrides here
+
   playback-status:
+    # Add your own overrides here
+
+  playlist-content:
     # Add your own overrides here
 
   playlist-list:
     # Add your own overrides here
 
+  queue-consume:
+    # Add your own overrides here
+
   queue-list:
+    # Add your own overrides here
+
+  queue-randomize:
+    # Add your own overrides here
+
+  queue-repeat:
     # Add your own overrides here
 
   queue-status:
@@ -370,10 +470,85 @@ output:
   story-place:
     # Add your own overrides here
 
+  system-alarm-list:
+    # Add your own overrides here
+
+  system-audio-device-list:
+    # Add your own overrides here
+
+  system-audio-dsp:
+    # Add your own overrides here
+
+  system-audio-inputs:
+    # Add your own overrides here
+
+  system-audio-outputs:
+    # Add your own overrides here
+
+  system-backup-create:
+    # Add your own overrides here
+
   system-execute:
     # Add your own overrides here
 
   system-info:
+    # Add your own overrides here
+
+  system-network-info:
+    # Add your own overrides here
+
+  system-network-wireless:
+    # Add your own overrides here
+
+  system-plugin-configuration:
+    # Add your own overrides here
+
+  system-plugin-disable:
+    # Add your own overrides here
+
+  system-plugin-enable:
+    # Add your own overrides here
+
+  system-plugin-list:
+    # Add your own overrides here
+
+  system-power-modes:
+    # Add your own overrides here
+
+  system-share-discover:
+    # Add your own overrides here
+
+  system-share-info:
+    # Add your own overrides here
+
+  system-share-list:
+    # Add your own overrides here
+
+  system-timezone-list:
+    # Add your own overrides here
+
+  system-ui-background-list:
+    # Add your own overrides here
+
+  system-ui-experience:
+    # Add your own overrides here
+
+  system-ui-language-list:
+    # Add your own overrides here
+
+  system-ui-privacy:
+    # Add your own overrides here
+
+  system-ui-settings:
+    # Add your own overrides here
+
+  system-update-channel-list:
+    # Add your own overrides here
+
+  system-update-check:
+    # Add your own overrides here
+
+  system-usb-list:
     # Add your own overrides here
 
   system-version:
@@ -411,6 +586,12 @@ volumio:
   # - true: allow using a REST API client (with a warning);
   # - false: error out
   allow-fallback-to-rest-api: false
+
+  # If a REST API client is selected,
+  # and a command that only the WebSocket API can satisfy is issued:
+  # - true: allow using a WebSocket API client (with a warning);
+  # - false: error out
+  allow-fallback-to-websocket-api: false
 
   # API client used to talk to the Volumio host, one of:
   # - synchronous_rest (default; short forms: sync_rest, sr)
@@ -554,7 +735,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-04T13:56:28.959Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-08T07:53:46.847Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -564,7 +745,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-04T13:56:29.480Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-08T07:53:47.388Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 After creating your configuration file,
@@ -579,7 +760,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-09-04T13:56:30.001Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-09-08T07:53:47.931Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -600,7 +781,6 @@ aliases.cs = collection search
 aliases.exec = system execute
 aliases.i = info
 aliases.mlt = multiroom
-aliases.mltz = multiroom zones
 aliases.mute = playback mute
 aliases.next = playback next
 aliases.not = notification
@@ -634,6 +814,10 @@ aliases.qd = queue download
 aliases.ql = queue list
 aliases.qr = queue replace
 aliases.qs = queue status
+aliases.qt = queue track
+aliases.qta = queue track audio
+aliases.qtc = queue track albumart
+aliases.qti = queue track info
 aliases.s = story
 aliases.salb = story album
 aliases.sart = story artist
@@ -647,10 +831,6 @@ aliases.syse = system execute
 aliases.sysi = system info
 aliases.sysp = system ping
 aliases.sysv = system version
-aliases.t = track
-aliases.ta = track audio
-aliases.tc = track albumart
-aliases.ti = track info
 aliases.toggle = playback toggle
 aliases.unmute = playback unmute
 aliases.vol = playback volume
@@ -681,6 +861,9 @@ miscellaneous.check-playlist-name = True
 miscellaneous.check-seek-position = True
 miscellaneous.propagate-remote-exit-code = True
 notification.endpoint = /volumionotifications
+notification.event-listen.count = None
+notification.event-listen.idle-timeout = None
+notification.event-listen.timeout = None
 notification.listen.count = None
 notification.listen.idle-timeout = None
 notification.listen.register-url = False
@@ -689,6 +872,8 @@ notification.listen.timeout = None
 notification.listen.unregister-url-on-exit = True
 notification.port = 3003
 output.collection-browse.format = table
+output.collection-favourite-list.format = table
+output.collection-radio-list.format = table
 output.collection-search.format = table
 output.color = True
 output.fields = SHORT
@@ -706,6 +891,7 @@ timeouts.retries-on-unexpected-state = 3
 timeouts.sleep-before-next-api-call = 2.0
 timeouts.websocket-timeout = 5.0
 volumio.allow-fallback-to-rest-api = False
+volumio.allow-fallback-to-websocket-api = False
 volumio.api-client = synchronous_rest
 volumio.host = volumio.local
 volumio.mpd-port = 6600
@@ -715,7 +901,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-04T13:56:30.530Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-09-08T07:53:48.497Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -756,6 +942,9 @@ miscellaneous.check-playlist-name = True
 miscellaneous.check-seek-position = True
 miscellaneous.propagate-remote-exit-code = True
 notification.endpoint = /volumionotifications
+notification.event-listen.count = None
+notification.event-listen.idle-timeout = None
+notification.event-listen.timeout = None
 notification.listen.count = None
 notification.listen.idle-timeout = None
 notification.listen.register-url = False
@@ -764,6 +953,8 @@ notification.listen.timeout = None
 notification.listen.unregister-url-on-exit = True
 notification.port = 3003
 output.collection-browse.format = table
+output.collection-favourite-list.format = table
+output.collection-radio-list.format = table
 output.collection-search.format = table
 output.color = True
 output.fields = SHORT
@@ -771,6 +962,8 @@ output.format = pretty
 output.machine-readable = False
 output.pager = False
 output.position-starting-at-one = True
+output.print-resulting-content = True
+output.print-resulting-list = True
 output.print-resulting-status = True
 output.strict-parsing-configuration-file = False
 output.verbose = False
@@ -781,6 +974,7 @@ timeouts.retries-on-unexpected-state = 3
 timeouts.sleep-before-next-api-call = 2.0
 timeouts.websocket-timeout = 5.0
 volumio.allow-fallback-to-rest-api = False
+volumio.allow-fallback-to-websocket-api = False
 volumio.api-client = synchronous_rest
 volumio.host = volumio.local
 volumio.mpd-port = 6600
@@ -790,7 +984,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-04T13:56:31.084Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-09-08T07:53:49.055Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -802,20 +996,20 @@ for all the commands and options.
 To achieve that, the `-i / --ignore-configuration-file` global option is available:
 
 ```bash
-volumito -i -H volumio3b.local playback status
+volumito -i -H volumitotester.local playback status
 {
-    "album": "Alice: Solo Grandi Successi",
-    "artist": "Alice",
+    "album": "Absolution XX Anniversary",
+    "artist": "Muse",
     "bitdepth": "16 bit",
-    "duration": "00:03:48",
+    "duration": "00:00:22",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 KHz",
     "seek": "00:00:00.000",
     "status": "stop",
-    "title": "Chan-Son Egocentrique",
+    "title": "Intro",
     "trackType": "qobuz",
-    "volume": 50
+    "volume": 55
 }
 ```
 
@@ -824,57 +1018,65 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Mangio Troppa Cioccolata",
-    "artist": "Giorgia",
+    "album": "Absolution XX Anniversary",
+    "artist": "Muse",
     "bitdepth": "16 bit",
-    "duration": "00:03:34",
+    "duration": "00:00:22",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:01.290",
+    "samplerate": "44.1 KHz",
+    "seek": "00:00:00.000",
     "status": "stop",
-    "title": "Un Amore Da Favola",
+    "title": "Intro",
     "trackType": "qobuz",
-    "volume": 87
+    "volume": 55
 }
-[2026-09-04T13:56:32.210Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-09-04T13:56:32.211Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-04T13:56:32.211Z] [DEBU] Initializing the REST API client...
-[2026-09-04T13:56:32.211Z] [DEBU] Initializing the REST API client... done
-[2026-09-04T13:56:32.211Z] [DEBU] Using the synchronous REST API client
-[2026-09-04T13:56:32.211Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-04T13:56:32.231Z] [DEBU] Response status: 200
-[2026-09-04T13:56:32.231Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-04T13:56:32.233Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-04T13:56:32.234Z] [DEBU] Successfully retrieved state
+[2026-09-08T07:53:50.165Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
+[2026-09-08T07:53:50.166Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T07:53:50.166Z] [DEBU] Initializing the REST API client...
+[2026-09-08T07:53:50.166Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T07:53:50.166Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T07:53:50.166Z] [DEBU] Opening the HTTP session...
+[2026-09-08T07:53:50.166Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T07:53:50.166Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-08T07:53:50.189Z] [DEBU] Response status: 200
+[2026-09-08T07:53:50.189Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-08T07:53:50.191Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T07:53:50.191Z] [DEBU] Successfully retrieved state
+[2026-09-08T07:53:50.191Z] [DEBU] Closing the HTTP session...
+[2026-09-08T07:53:50.192Z] [DEBU] Closing the HTTP session... done
 ```
 
 ```bash
-volumito -v -i -H volumio3b.local playback status
+volumito -v -i -H volumitotester.local playback status
 {
-    "album": "Alice: Solo Grandi Successi",
-    "artist": "Alice",
+    "album": "Absolution XX Anniversary",
+    "artist": "Muse",
     "bitdepth": "16 bit",
-    "duration": "00:03:48",
+    "duration": "00:00:22",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:01.193",
+    "samplerate": "44.1 KHz",
+    "seek": "00:00:00.000",
     "status": "stop",
-    "title": "Chan-Son Egocentrique",
+    "title": "Intro",
     "trackType": "qobuz",
-    "volume": 50
+    "volume": 55
 }
-[2026-09-04T13:56:32.751Z] [DEBU] Ignoring configuration files
-[2026-09-04T13:56:32.751Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-09-04T13:56:32.751Z] [DEBU] Initializing the REST API client...
-[2026-09-04T13:56:32.751Z] [DEBU] Initializing the REST API client... done
-[2026-09-04T13:56:32.751Z] [DEBU] Using the synchronous REST API client
-[2026-09-04T13:56:32.752Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-09-04T13:56:32.762Z] [DEBU] Response status: 200
-[2026-09-04T13:56:32.762Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-09-04T13:56:32.765Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-09-04T13:56:32.765Z] [DEBU] Successfully retrieved state
+[2026-09-08T07:53:50.730Z] [DEBU] Ignoring configuration files
+[2026-09-08T07:53:50.731Z] [DEBU] Connecting to http://volumitotester.local:3000...
+[2026-09-08T07:53:50.731Z] [DEBU] Initializing the REST API client...
+[2026-09-08T07:53:50.731Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T07:53:50.731Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T07:53:50.731Z] [DEBU] Opening the HTTP session...
+[2026-09-08T07:53:50.731Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T07:53:50.731Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState...
+[2026-09-08T07:53:50.769Z] [DEBU] Response status: 200
+[2026-09-08T07:53:50.769Z] [DEBU] Requesting GET http://volumitotester.local:3000/api/v1/getState... done
+[2026-09-08T07:53:50.771Z] [DEBU] Connecting to http://volumitotester.local:3000... done
+[2026-09-08T07:53:50.771Z] [DEBU] Successfully retrieved state
+[2026-09-08T07:53:50.771Z] [DEBU] Closing the HTTP session...
+[2026-09-08T07:53:50.772Z] [DEBU] Closing the HTTP session... done
 ```
 
 #### Priority
