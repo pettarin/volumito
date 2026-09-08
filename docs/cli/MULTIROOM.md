@@ -67,7 +67,7 @@ Commands:
 ```
 
 All commands, with the exception of `multiroom info`,
-require a WebSocket client, as their help message tells:
+require a WebSocket API client, as their help message tells:
 
 ```bash
 volumito multiroom client --help
