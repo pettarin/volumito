@@ -6,23 +6,24 @@
 > This functionality is available only when using a WebSocket API client.
 > The examples in this section set `-C aw` to remind of that.
 
-The `collection update` command allows updating the music collection.
+The `collection update` command without options
+updates the music collection:
 
 ```bash
 volumito -C aw collection update
-[2026-09-08T15:16:04.087Z] [INFO] Command 'update library' executed successfully
+[2026-09-08T15:18:28.199Z] [INFO] Command 'update library' executed successfully
 ```
 
-The `--thumbnails` option regenerates only the thumbnails:
+Pass the `--thumbnails` option to regenerate only the thumbnails:
 
 ```bash
 volumito -C aw collection update --thumbnails
-[2026-09-08T15:16:04.815Z] [INFO] Command 'regenerate thumbnails' executed successfully
+[2026-09-08T15:18:28.950Z] [INFO] Command 'regenerate thumbnails' executed successfully
 ```
 
-To force a full refresh of the music collect, pass the `--rescan` option:
+Pass the `--rescan` option to force a full refresh of the music collection:
 
 ```bash
 volumito -C aw collection update --rescan
-[2026-09-08T15:16:05.558Z] [INFO] Command 'rescan library' executed successfully
+[2026-09-08T15:18:29.688Z] [INFO] Command 'rescan library' executed successfully
 ```
