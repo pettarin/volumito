@@ -1,0 +1,49 @@
+## Collection Source
+
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+The `collection source` command group allows inspecting
+and controlling the sources of the music collection.
+
+### Collection Source List
+
+List all the available sources of the music collection:
+
+```bash lucio command=execute
+volumito -C aw collection source list
+```
+
+### Collection Source Disable
+
+To disable a source:
+
+```bash lucio command=execute
+volumito -C aw collection source disable "bluetooth"
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure the source shows up with the expected state
+sleep 10
+```
+
+```bash lucio command=execute
+volumito -C aw collection source list
+```
+
+### Collection Source Enable
+
+To enable a source:
+
+```bash lucio command=execute
+volumito -C aw collection source enable "bluetooth"
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure the source shows up with the expected state
+sleep 10
+```
+
+```bash lucio command=execute
+volumito -C aw collection source list
+```
