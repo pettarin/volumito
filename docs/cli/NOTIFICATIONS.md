@@ -2,6 +2,10 @@
 
 ### Notifications (REST API Only)
 
+> [!NOTE]
+> This functionality is available only when using a REST API client.
+> The examples in this section set `-C sr` to remind of that.
+
 Instead of constantly polling the Volumio REST API,
 you can register a URL which Volumio can call to notify
 about state changes in the playback or queue state or multiroom zones.
@@ -15,7 +19,7 @@ To list the callback URLs currently registered,
 issue the `notification list` command:
 
 ```bash
-volumito notification list
+volumito -C sr notification list
 []
 ```
 
@@ -27,27 +31,27 @@ providing the full URL: name or IP (`192.168.1.2` in the example),
 port (`4567`), and endpoint (`/notif/volumio`):
 
 ```bash
-volumito notification register http://192.168.1.2:4567/notif/volumio
-volumito notification register http://192.168.1.2:5678/anothercallbackurl
-volumito notification register http://192.168.1.2:5678/yetanother
-[2026-09-08T12:13:58.867Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-08T12:13:59.436Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T12:13:59.995Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
+volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
+volumito -C sr notification register http://192.168.1.2:5678/yetanother
+[2026-09-08T14:18:59.751Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T14:19:00.311Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T14:19:00.872Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
 by issuing the `-A / --autocompose-url` option:
 
 ```bash
-volumito notification register --autocompose-url
-[2026-09-08T12:14:00.567Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+volumito -C sr notification register --autocompose-url
+[2026-09-08T14:19:01.445Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
 now shows the registered callback URLs:
 
 ```bash
-volumito notification list
+volumito -C sr notification list
 [
     "http://192.168.1.2:4567/notif/volumio",
     "http://192.168.1.2:5678/anothercallbackurl",
@@ -62,17 +66,17 @@ To unregister a callback URL,
 simply pass it to the `notification unregister` command:
 
 ```bash
-volumito notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-08T12:14:01.707Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
+[2026-09-08T14:19:02.595Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
-volumito notification unregister --all
-[2026-09-08T12:14:02.327Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T12:14:02.327Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-08T12:14:02.328Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+volumito -C sr notification unregister --all
+[2026-09-08T14:19:03.209Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T14:19:03.209Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T14:19:03.210Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -92,7 +96,69 @@ or no events are received for a specified amount of time
 or after a specified timeout (e.g., `--timeout 60.0`: exit after one minute).
 
 ```bash
-volumito notification listen --register-url --timeout 10.0
+volumito -C sr notification listen --register-url --timeout 10.0
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "bitrate": "865 Kbps",
+        "channels": 2,
+        "consume": true,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 0,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44.1 kHz",
+        "seek": 194350,
+        "service": "qobuz",
+        "status": "play",
+        "stream": false,
+        "title": "Va tutto bene",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833718",
+        "volatile": false,
+        "volume": 20
+    },
+    "item": "state"
+}
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "bitrate": "865 Kbps",
+        "channels": 2,
+        "consume": true,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 0,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44.1 kHz",
+        "seek": 194350,
+        "service": "qobuz",
+        "status": "play",
+        "stream": false,
+        "title": "Va tutto bene",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833718",
+        "volatile": false,
+        "volume": 20
+    },
+    "item": "state"
+}
 {
     "data": {
         "album": "Polvere",
@@ -118,78 +184,22 @@ volumito notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 19
+        "volume": 20
     },
     "item": "state"
 }
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "channels": 2,
-        "consume": false,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 1,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 45,
-        "service": "qobuz",
-        "status": "play",
-        "stream": "qobuz",
-        "title": "Fuoco sui giocattoli",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833719",
-        "volatile": false,
-        "volume": 19
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "channels": 2,
-        "consume": false,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 1,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 45,
-        "service": "qobuz",
-        "status": "play",
-        "stream": "qobuz",
-        "title": "Fuoco sui giocattoli",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833719",
-        "volatile": false,
-        "volume": 19
-    },
-    "item": "state"
-}
-[2026-09-08T12:14:08.209Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-08T12:14:08.210Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-08T12:14:08.210Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T12:14:18.213Z] [INFO] Timed out after 10 seconds
-[2026-09-08T12:14:18.240Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:19:09.140Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:19:09.140Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:19:09.140Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T14:19:19.147Z] [INFO] Timed out after 10 seconds
+[2026-09-08T14:19:19.167Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 ### Notifications (WebSocket API Only)
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
 
 When using a WebSocket API client,
 the `notification event` command group provides
@@ -230,26 +240,28 @@ volumito -C aw notification event listen --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "consume": false,
+        "bitrate": "1 Kbps",
+        "channels": 2,
+        "consume": true,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 236,
+        "duration": 196,
         "mute": false,
         "position": 1,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 516,
+        "samplerate": "44.1 kHz",
+        "seek": 0,
         "service": "qobuz",
         "status": "play",
-        "stream": "qobuz",
+        "stream": false,
         "title": "Fuoco sui giocattoli",
         "trackType": "qobuz",
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 19
+        "volume": 20
     },
     "event": "pushState"
 }
@@ -259,61 +271,32 @@ volumito -C aw notification event listen --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
+        "bitrate": "1 Kbps",
         "channels": 2,
-        "consume": false,
+        "consume": true,
         "dbVolume": null,
         "disableVolumeControl": false,
-        "duration": 236,
+        "duration": 196,
         "mute": false,
         "position": 1,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 45,
+        "samplerate": "44.1 kHz",
+        "seek": 0,
         "service": "qobuz",
         "status": "play",
-        "stream": "qobuz",
+        "stream": false,
         "title": "Fuoco sui giocattoli",
         "trackType": "qobuz",
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 19
+        "volume": 20
     },
     "event": "pushState"
 }
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "channels": 2,
-        "consume": false,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 1,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44 KHz",
-        "seek": 45,
-        "service": "qobuz",
-        "status": "play",
-        "stream": "qobuz",
-        "title": "Fuoco sui giocattoli",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833719",
-        "volatile": false,
-        "volume": 19
-    },
-    "event": "pushState"
-}
-[2026-09-08T12:14:24.951Z] [INFO] Listening for the events: pushState
-[2026-09-08T12:14:24.951Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T12:14:34.952Z] [INFO] Timed out after 10 seconds
+[2026-09-08T14:19:25.716Z] [INFO] Listening for the events: pushState
+[2026-09-08T14:19:25.716Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T14:19:35.717Z] [INFO] Timed out after 10 seconds
 ```

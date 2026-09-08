@@ -5,6 +5,9 @@ volumito playlist play "volumito test qobuz multiple albums"
 
 ### Notifications (REST API Only)
 
+```markdown lucio command=include path="./ONLY_REST_API_CLIENT.md" style=literal
+```
+
 Instead of constantly polling the Volumio REST API,
 you can register a URL which Volumio can call to notify
 about state changes in the playback or queue state or multiroom zones.
@@ -18,7 +21,7 @@ To list the callback URLs currently registered,
 issue the `notification list` command:
 
 ```bash lucio command=execute
-volumito notification list
+volumito -C sr notification list
 ```
 
 #### Notification Register
@@ -29,23 +32,23 @@ providing the full URL: name or IP (`192.168.1.2` in the example),
 port (`4567`), and endpoint (`/notif/volumio`):
 
 ```bash lucio command=execute
-volumito notification register http://192.168.1.2:4567/notif/volumio
-volumito notification register http://192.168.1.2:5678/anothercallbackurl
-volumito notification register http://192.168.1.2:5678/yetanother
+volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
+volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
+volumito -C sr notification register http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
 by issuing the `-A / --autocompose-url` option:
 
 ```bash lucio command=execute
-volumito notification register --autocompose-url
+volumito -C sr notification register --autocompose-url
 ```
 
 Issuing again the `notification list` command
 now shows the registered callback URLs:
 
 ```bash lucio command=execute
-volumito notification list
+volumito -C sr notification list
 ```
 
 #### Notification Unregister
@@ -54,13 +57,13 @@ To unregister a callback URL,
 simply pass it to the `notification unregister` command:
 
 ```bash lucio command=execute
-volumito notification unregister http://192.168.1.2:4567/notif/volumio
+volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash lucio command=execute
-volumito notification unregister --all
+volumito -C sr notification unregister --all
 ```
 
 #### Notification Listen
@@ -87,10 +90,13 @@ volumito playback seek 03:10
 ```
 
 ```bash lucio command=execute
-volumito notification listen --register-url --timeout 10.0
+volumito -C sr notification listen --register-url --timeout 10.0
 ```
 
 ### Notifications (WebSocket API Only)
+
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
 
 When using a WebSocket API client,
 the `notification event` command group provides

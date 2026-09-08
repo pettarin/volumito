@@ -33,6 +33,11 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
+- [Edit The Current Queue](#edit-the-current-queue)
+  - [Add An Item](#add-an-item)
+  - [Remove An Item](#remove-an-item)
+  - [Change Position Of An Item](#change-position-of-an-item)
+  - [Queue Save](#queue-save)
   - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
 - [Playlists](#playlists)
@@ -119,6 +124,10 @@ This document describes the `volumito` command-line (CLI) tool.
 
 
 ```markdown lucio command=include path="./INSPECT_CURRENT_QUEUE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./EDIT_CURRENT_QUEUE.md" style=literal
 ```
 
 

@@ -156,13 +156,12 @@ volumito playback unmute
 
 ### Playback Sleep
 
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
 It is possible to set a "playback sleep",
 that is, an amount of time after which the playback is stopped
 and the Volumio host is put to sleep (if supported) or shut down (otherwise).
-
-> [!NOTE]
-> This functionality is available only when using a WebSocket client.
-> The next examples set `-C aw` to remind of that.
 
 To check if the playback sleep is set, run without arguments:
 
@@ -193,13 +192,12 @@ volumito -C aw playback sleep off
 
 ### Infinity Playback
 
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
 It is possible to inspect and toggle the "infinity playback" function
 (i.e., playing other music suggested by Volumio based
 on the current queue and music library of the user).
-
-> [!NOTE]
-> This functionality is available only when using a WebSocket client.
-> The next examples set `-C aw` to remind of that.
 
 To inspect its state, run without arguments:
 
