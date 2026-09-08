@@ -592,7 +592,7 @@ volumito
 
 If you have command aliases defined in your configuration file,
 they are also printed by the above command within parentheses
-(e.g., `ti` is a shorthand for `track info`).
+(e.g., `i` is a shorthand for `info` and `qs` for `queue status`).
 The full list of aliases currently defined can be printed
 by the `command alias` command:
 
