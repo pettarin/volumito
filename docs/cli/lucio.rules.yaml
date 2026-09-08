@@ -1,0 +1,33 @@
+rules:
+
+  # replace strings like
+  # "hwUuid": "6f05 ... 8d37",
+  # with
+  # "hwUuid": "<REDACTED>",
+  - id: replace_hwUuid
+    type: re
+    streams:
+      - include
+      - stderr
+      - stdout
+    target: '"hwUuid": "[0-9a-f]*",$'
+    replacement: '"hwUuid": "<REDACTED>",'
+    count: all
+    mode: multiline
+    case: respect
+
+  # replace UUID4 strings like
+  # "id": "d08f41df-c0d9-4b14-8e34-4d656ac203ec",
+  # with
+  # "id": "<REDACTED>",
+  - id: replace_id
+    type: re
+    streams:
+      - include
+      - stderr
+      - stdout
+    target: '"id": "[0-9a-f\-]*",$'
+    replacement: '"id": "<REDACTED>",'
+    count: all
+    mode: multiline
+    case: respect
