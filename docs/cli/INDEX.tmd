@@ -162,7 +162,10 @@ This document describes the `volumito` command-line (CLI) tool.
 ```markdown lucio command=include path="./MULTIROOM.md" style=literal
 ```
 
-```markdown lucio command=include path="./NOTIFICATIONS.md" style=literal
+```markdown lucio command=include path="./NOTIFICATIONS_REST_API.md" style=literal
+```
+
+```markdown lucio command=include path="./NOTIFICATIONS_WEBSOCKET_API.md" style=literal
 ```
 
 ```markdown lucio command=include path="./SCP.md" style=literal

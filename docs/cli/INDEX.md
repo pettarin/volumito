@@ -5505,9 +5505,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
 volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
 volumito -C sr notification register http://192.168.1.2:5678/yetanother
-[2026-09-08T14:18:59.751Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-08T14:19:00.311Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T14:19:00.872Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T14:31:10.730Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T14:31:11.311Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T14:31:11.901Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -5515,7 +5515,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito -C sr notification register --autocompose-url
-[2026-09-08T14:19:01.445Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:31:12.500Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -5538,16 +5538,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-08T14:19:02.595Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-08T14:31:13.681Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito -C sr notification unregister --all
-[2026-09-08T14:19:03.209Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T14:19:03.209Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-08T14:19:03.210Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:31:14.272Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-08T14:31:14.273Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-08T14:31:14.273Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -5586,7 +5586,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 194350,
+        "seek": 194372,
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -5617,7 +5617,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": 194350,
+        "seek": 194372,
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -5646,7 +5646,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": false,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 500,
+        "seek": 501,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -5659,11 +5659,11 @@ volumito -C sr notification listen --register-url --timeout 10.0
     },
     "item": "state"
 }
-[2026-09-08T14:19:09.140Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-08T14:19:09.140Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-08T14:19:09.140Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T14:19:19.147Z] [INFO] Timed out after 10 seconds
-[2026-09-08T14:19:19.167Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:31:20.169Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:31:20.170Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-08T14:31:20.170Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T14:31:30.189Z] [INFO] Timed out after 10 seconds
+[2026-09-08T14:31:30.212Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 ### Notifications (WebSocket API Only)
@@ -5718,7 +5718,7 @@ volumito -C aw notification event listen --timeout 10.0
         "disableVolumeControl": false,
         "duration": 196,
         "mute": false,
-        "position": 1,
+        "position": 0,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
@@ -5727,10 +5727,10 @@ volumito -C aw notification event listen --timeout 10.0
         "service": "qobuz",
         "status": "play",
         "stream": false,
-        "title": "Fuoco sui giocattoli",
+        "title": "Va tutto bene",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833719",
+        "uri": "qobuz://song/2833718",
         "volatile": false,
         "volume": 20
     },
@@ -5749,7 +5749,7 @@ volumito -C aw notification event listen --timeout 10.0
         "disableVolumeControl": false,
         "duration": 196,
         "mute": false,
-        "position": 1,
+        "position": 0,
         "random": false,
         "repeat": false,
         "repeatSingle": false,
@@ -5758,18 +5758,18 @@ volumito -C aw notification event listen --timeout 10.0
         "service": "qobuz",
         "status": "play",
         "stream": false,
-        "title": "Fuoco sui giocattoli",
+        "title": "Va tutto bene",
         "trackType": "qobuz",
         "updatedb": false,
-        "uri": "qobuz://song/2833719",
+        "uri": "qobuz://song/2833718",
         "volatile": false,
         "volume": 20
     },
     "event": "pushState"
 }
-[2026-09-08T14:19:25.716Z] [INFO] Listening for the events: pushState
-[2026-09-08T14:19:25.716Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T14:19:35.717Z] [INFO] Timed out after 10 seconds
+[2026-09-08T14:31:39.610Z] [INFO] Listening for the events: pushState
+[2026-09-08T14:31:39.610Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-08T14:31:49.611Z] [INFO] Timed out after 10 seconds
 ```
 
 ### Copying Files With SCP
