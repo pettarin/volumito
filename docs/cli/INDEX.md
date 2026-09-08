@@ -4903,7 +4903,7 @@ volumito multiroom info
             "artist": "Enrico Ruggeri",
             "mute": false,
             "status": "play",
-            "track": "Va tutto bene",
+            "track": "Rien Ne Va Plus",
             "volume": 19
         }
     },
@@ -4947,6 +4947,21 @@ Commands:
   single  Take the Volumio host out of multiroom.
   status  Print the multiroom configuration of the Volumio host: whether...
   write   Write the multiroom configuration, without waiting for the host...
+```
+
+All commands, with the exception of `multiroom info`,
+require a WebSocket client, as their help message tells:
+
+```bash
+volumito multiroom client --help
+Usage: volumito multiroom client [OPTIONS] SERVER
+
+  Make the Volumio host a multiroom client of the host SERVER.
+
+  Needs a WebSocket API client, and the multiroom plugin on the host.
+
+Options:
+  --help  Show this message and exit.
 ```
 
 ### Notifications (REST API Only)

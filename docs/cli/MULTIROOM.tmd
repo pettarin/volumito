@@ -20,3 +20,10 @@ These are all the subcommands of the `multiroom` group:
 volumito multiroom --help
 ```
 
+All commands, with the exception of `multiroom info`,
+require a WebSocket client, as their help message tells:
+
+```bash lucio command=execute
+volumito multiroom client --help
+```
+
