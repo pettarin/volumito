@@ -1,4 +1,4 @@
-## Collection Source
+### Collection Source
 
 ```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
@@ -6,7 +6,7 @@
 The `collection source` command group allows inspecting
 and controlling the sources of the music collection.
 
-### Collection Source List
+#### Collection Source List
 
 List all the available sources of the music collection:
 
@@ -14,7 +14,7 @@ List all the available sources of the music collection:
 volumito -C aw collection source list
 ```
 
-### Collection Source Disable
+#### Collection Source Disable
 
 To disable a source:
 
@@ -31,7 +31,7 @@ sleep 10
 volumito -C aw collection source list
 ```
 
-### Collection Source Enable
+#### Collection Source Enable
 
 To enable a source:
 

@@ -72,6 +72,14 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Collection Radio](#collection-radio)
+    - [Collection Radio List](#collection-radio-list)
+    - [Collection Radio Add](#collection-radio-add)
+    - [Collection Radio Remove](#collection-radio-remove)
+  - [Collection Source](#collection-source)
+    - [Collection Source List](#collection-source-list)
+    - [Collection Source Disable](#collection-source-disable)
+    - [Collection Source Enable](#collection-source-enable)
   - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
     - [List All The Aliases](#list-all-the-aliases)
@@ -3959,12 +3967,12 @@ volumito story place "Abbey Road Studios"
 
 ## Miscellaneous Commands
 
-## Collection Radio
+### Collection Radio
 
-The `collection source` command group allows listing, adding and removing
+The `collection radio` command group allows listing, adding and removing
 user-defined Web radio stations.
 
-### Collection Radio List
+#### Collection Radio List
 
 List all the user-defined Web radio stations:
 
@@ -3977,11 +3985,9 @@ Volumio Browse Results
    https://streamingv2.shoutcast.com/rtl-1025
 2. Radio B&M
    https://ice02.fluidstream.net/bella.mp3
-3. Radio Volumito Docs
-   https://some.url
 ```
 
-### Collection Radio Add
+#### Collection Radio Add
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -4000,10 +4006,10 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-08T14:54:34.061Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-08T14:58:45.767Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
-### Collection Radio Remove
+#### Collection Radio Remove
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -4020,10 +4026,10 @@ Volumio Browse Results
    https://streamingv2.shoutcast.com/rtl-1025
 2. Radio B&M
    https://ice02.fluidstream.net/bella.mp3
-[2026-09-08T14:54:35.084Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
+[2026-09-08T14:58:46.791Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
 ```
 
-## Collection Source
+### Collection Source
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -4032,7 +4038,7 @@ Volumio Browse Results
 The `collection source` command group allows inspecting
 and controlling the sources of the music collection.
 
-### Collection Source List
+#### Collection Source List
 
 List all the available sources of the music collection:
 
@@ -4117,13 +4123,13 @@ volumito -C aw collection source list
 ]
 ```
 
-### Collection Source Disable
+#### Collection Source Disable
 
 To disable a source:
 
 ```bash
 volumito -C aw collection source disable "bluetooth"
-[2026-09-08T14:46:52.821Z] [INFO] Command 'disable source "bluetooth"' executed successfully
+[2026-09-08T14:58:48.466Z] [INFO] Command 'disable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -4207,13 +4213,13 @@ volumito -C aw collection source list
 ]
 ```
 
-### Collection Source Enable
+#### Collection Source Enable
 
 To enable a source:
 
 ```bash
 volumito -C aw collection source enable "bluetooth"
-[2026-09-08T14:47:04.523Z] [INFO] Command 'enable source "bluetooth"' executed successfully
+[2026-09-08T14:59:01.109Z] [INFO] Command 'enable source "bluetooth"' executed successfully
 ```
 
 ```bash

@@ -1,9 +1,9 @@
-## Collection Radio
+### Collection Radio
 
-The `collection source` command group allows listing, adding and removing
+The `collection radio` command group allows listing, adding and removing
 user-defined Web radio stations.
 
-### Collection Radio List
+#### Collection Radio List
 
 List all the user-defined Web radio stations:
 
@@ -11,7 +11,7 @@ List all the user-defined Web radio stations:
 volumito collection radio list
 ```
 
-### Collection Radio Add
+#### Collection Radio Add
 
 ```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
@@ -22,7 +22,7 @@ To add a user-defined Web radio station:
 volumito -C aw collection radio add "Radio Volumito Docs" "https://some.url"
 ```
 
-### Collection Radio Remove
+#### Collection Radio Remove
 
 ```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
