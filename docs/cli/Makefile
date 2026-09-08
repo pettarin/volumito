@@ -4,13 +4,17 @@
 	build-all \
 	build-only-configuration-file \
 	build-only-index \
-	build-only-setup-verify-installation
+	build-only-setup-verify-installation \
+	clean \
+	rebuild
 
 help:
 	@echo "Available targets:"
 	@echo "  build              - Synonym of build-all"
 	@echo "  build-all          - Build all *.md files"
 	@echo "  build-only-*       - Build only the specified *.tmd file into the corresponding *.md file"
+	@echo "  clean              - Remove all [0-9A-Z]*.md files"
+	@echo "  rebuild            - Run targets: clean, build-all"
 
 build: \
 	build-all
@@ -32,6 +36,9 @@ build-only-index:
 build-only-setup-verify-installation:
 	lucio -r lucio.rules.yaml -O -v -R SETUP_VERIFY_INSTALLATION.tmd
 
-build-docs: \
-	build-all
+clean:
+	rm [0-9A-Z]*.md
 
+rebuild: \
+	clean \
+	build-all
