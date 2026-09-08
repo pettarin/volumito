@@ -151,11 +151,13 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 
-```markdown lucio command=include path="./COLLECTION_SOURCES.md" style=literal
+## Miscellaneous Commands
+
+```markdown lucio command=include path="./COLLECTION_RADIO.md" style=literal
 ```
 
-
-## Miscellaneous Commands
+```markdown lucio command=include path="./COLLECTION_SOURCE.md" style=literal
+```
 
 ```markdown lucio command=include path="./COMMANDS.md" style=literal
 ```

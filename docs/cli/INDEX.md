@@ -3957,6 +3957,72 @@ volumito story place "Abbey Road Studios"
 ```
 
 
+## Miscellaneous Commands
+
+## Collection Radio
+
+The `collection source` command group allows listing, adding and removing
+user-defined Web radio stations.
+
+### Collection Radio List
+
+List all the user-defined Web radio stations:
+
+```bash
+volumito collection radio list
+Volumio Browse Results
+==================================================
+
+1. myRTL
+   https://streamingv2.shoutcast.com/rtl-1025
+2. Radio B&M
+   https://ice02.fluidstream.net/bella.mp3
+3. Radio Volumito Docs
+   https://some.url
+```
+
+### Collection Radio Add
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+To add a user-defined Web radio station:
+
+```bash
+volumito -C aw collection radio add "Radio Volumito Docs" "https://some.url"
+Volumio Browse Results
+==================================================
+
+1. myRTL
+   https://streamingv2.shoutcast.com/rtl-1025
+2. Radio B&M
+   https://ice02.fluidstream.net/bella.mp3
+3. Radio Volumito Docs
+   https://some.url
+[2026-09-08T14:54:34.061Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+```
+
+### Collection Radio Remove
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+To remove a user-defined Web radio station:
+
+```bash
+volumito -C aw collection radio remove "Radio Volumito Docs"
+Volumio Browse Results
+==================================================
+
+1. myRTL
+   https://streamingv2.shoutcast.com/rtl-1025
+2. Radio B&M
+   https://ice02.fluidstream.net/bella.mp3
+[2026-09-08T14:54:35.084Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
+```
+
 ## Collection Source
 
 > [!NOTE]
@@ -4230,9 +4296,6 @@ volumito -C aw collection source list
     }
 ]
 ```
-
-
-## Miscellaneous Commands
 
 ### Command Discovery
 

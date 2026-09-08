@@ -1,0 +1,34 @@
+## Collection Radio
+
+The `collection source` command group allows listing, adding and removing
+user-defined Web radio stations.
+
+### Collection Radio List
+
+List all the user-defined Web radio stations:
+
+```bash lucio command=execute
+volumito collection radio list
+```
+
+### Collection Radio Add
+
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+To add a user-defined Web radio station:
+
+```bash lucio command=execute
+volumito -C aw collection radio add "Radio Volumito Docs" "https://some.url"
+```
+
+### Collection Radio Remove
+
+```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+To remove a user-defined Web radio station:
+
+```bash lucio command=execute
+volumito -C aw collection radio remove "Radio Volumito Docs"
+```
