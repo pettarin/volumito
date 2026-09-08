@@ -27,7 +27,7 @@ is read implicitly and `make` targets are available.
 2. Regenerate the `.md` file for each of the modified `*.tmd` template files
    using the provided `Makefile`:
    ```bash
-   make build-only-setup-verify-installation
+   make build-only SETUP_VERIFY_INSTALLTION.tmd
    lucio -r lucio.rules.yaml -O -v -R SETUP_VERIFY_INSTALLATION.tmd
    [2026-09-08T07:48:18.462Z] [DEBU] Input file: "/home/alberto/projects/volumito/volumito/docs/cli/SETUP_VERIFY_INSTALLATION.tmd"
    [2026-09-08T07:48:18.462Z] [DEBU] Output file: "/home/alberto/projects/volumito/volumito/docs/cli/SETUP_VERIFY_INSTALLATION.md"
@@ -51,7 +51,7 @@ is read implicitly and `make` targets are available.
    ```
 3. Regenerate the `INDEX.md` file:
    ```bash
-   make build-only-index
+   make build-only INDEX.tmd
    lucio -r lucio.rules.yaml -O -v -R INDEX.tmd
    [2026-09-08T07:49:41.270Z] [DEBU] Input file: "/home/alberto/projects/volumito/volumito/docs/cli/INDEX.tmd"
    [2026-09-08T07:49:41.270Z] [DEBU] Output file: "/home/alberto/projects/volumito/volumito/docs/cli/INDEX.md"
