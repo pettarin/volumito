@@ -14,11 +14,11 @@ volumito multiroom info
         "isSelf": true,
         "name": "Volumitotester",
         "state": {
-            "artist": "Muse",
+            "artist": "Enrico Ruggeri",
             "mute": false,
-            "status": "stop",
-            "track": "Intro",
-            "volume": 55
+            "status": "play",
+            "track": "Va tutto bene",
+            "volume": 19
         }
     },
     {
@@ -39,3 +39,26 @@ volumito multiroom info
 > [!TIP]
 > The Volumio host with `isSelf: true` is the one
 > you are connecting to.
+
+#### Multiroom Help
+
+These are all the subcommands of the `multiroom` group:
+
+```bash
+volumito multiroom --help
+Usage: volumito multiroom [OPTIONS] COMMAND [ARGS]...
+
+  Query the multiroom state.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  client  Make the Volumio host a multiroom client of the host SERVER.
+  info    Print the multiroom zones seen by the Volumio instance.
+  server  Make the Volumio host a multiroom server.
+  set     Change the multiroom configuration, printing the one the host...
+  single  Take the Volumio host out of multiroom.
+  status  Print the multiroom configuration of the Volumio host: whether...
+  write   Write the multiroom configuration, without waiting for the host...
+```
