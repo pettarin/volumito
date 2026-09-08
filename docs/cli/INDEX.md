@@ -18,6 +18,7 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 - [How To Get Help](#how-to-get-help)
+- [Types Of Clients](#types-of-clients)
 - [Control The Playback](#control-the-playback)
   - [Playback Status](#playback-status)
   - [Pause And Stop](#pause-and-stop)
@@ -160,52 +161,6 @@ whose REST API is proxied to port 4567:
 ```bash
 volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 ```
-
-By default, the `volumito` CLI tool talks
-to the Volumio host through its REST API, synchronously.
-The `-C / --api-client` option allows you to select
-another of the clients of the `volumito` library:
-
-| Client                     | Value                    | Short Forms             | Required Extra    |
-| -------------------------- | ------------------------ | ----------------------- | ----------------- |
-| Asynchronous REST          | `asynchronous_rest`      | `async_rest`, `ar`      | `async`           |
-| Asynchronous WebSocket     | `asynchronous_websocket` | `async_websocket`, `aw` | `async_websocket` |
-| Synchronous REST (default) | `synchronous_rest`       | `sync_rest`, `sr`       | None              |
-| Synchronous WebSocket      | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`       |
-
-> [!NOTE]
-> To use any of the non-default clients,
-> you need to install `volumito` with the required extra
-> indicated in the above table, or the `all` extra.
->
-> For example, `pip install volumito[async_websocket]`
-> to run the next example.
-
-To issue the `info` command over the WebSocket API, asynchronously:
-
-```bash
-volumito -C asynchronous_websocket info
-volumito -C aw info
-```
-
-> [!NOTE]
-> Most of the commands that `volumito` provides are available
-> when using any of the clients listed above.
-> However, certain commands are supported only by the REST API clients,
-> and others only by the WebSocket API clients:
-> in the remainder of this document, they are suitably marked as
-> "REST API only" or "WebSocket API only".
->
-> By default, commands that are not available with the selected client
-> return an error similar to the following:
-> ```bash
-> volumito collection radio add "My Radio" "https://some.url"
-> [2026-09-08T11:39:56.286Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
-> ```
->
-> It is possible to fall back to the appropriate client
-> by using issuing the `--allow-fallback-to-rest-api` and/or
-> `--allow-fallback-to-websocket-api` options.
 
 
 ## Check Your Volumito Configuration File
@@ -702,6 +657,202 @@ vol : playback volume
 > If you would like to enable all or some of them,
 > uncomment the relevant lines under the `aliases:` section
 > of your configuration file.
+
+
+## Types Of Clients
+
+By default, the `volumito` CLI tool talks
+to the Volumio host through its REST API, synchronously.
+You can tell it by enabling verbose log:
+
+```bash
+volumito -v -C synchronous_rest info
+{
+    "builddate": "Tue Mar 24 17:20:52 UTC 2026",
+    "hardware": "pi",
+    "host": "http://192.168.1.19",
+    "hwUuid": "<REDACTED>",
+    "id": "<REDACTED>",
+    "isPremiumDevice": false,
+    "isVolumioProduct": false,
+    "name": "volumitotester",
+    "os": "12",
+    "serviceName": "Volumio",
+    "state": {
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "mute": false,
+        "status": "play",
+        "track": "Va tutto bene",
+        "volume": 19
+    },
+    "systemversion": "4.119",
+    "type": "device",
+    "variant": "volumio"
+}
+[2026-09-08T11:57:51.138Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
+[2026-09-08T11:57:51.139Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T11:57:51.139Z] [DEBU] Initializing the REST API client...
+[2026-09-08T11:57:51.139Z] [DEBU] Initializing the REST API client... done
+[2026-09-08T11:57:51.139Z] [DEBU] Using the synchronous REST API client
+[2026-09-08T11:57:51.139Z] [DEBU] Opening the HTTP session...
+[2026-09-08T11:57:51.139Z] [DEBU] Opening the HTTP session... done
+[2026-09-08T11:57:51.139Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
+[2026-09-08T11:57:51.171Z] [DEBU] Response status: 200
+[2026-09-08T11:57:51.171Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
+[2026-09-08T11:57:51.173Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T11:57:51.174Z] [DEBU] Closing the HTTP session...
+[2026-09-08T11:57:51.174Z] [DEBU] Closing the HTTP session... done
+```
+
+The `-C / --api-client` option allows you to select
+another of the clients of the `volumito` library:
+
+| Client                     | Value                    | Short Forms             | Required Extra    |
+| -------------------------- | ------------------------ | ----------------------- | ----------------- |
+| Asynchronous REST          | `asynchronous_rest`      | `async_rest`, `ar`      | `async`           |
+| Asynchronous WebSocket     | `asynchronous_websocket` | `async_websocket`, `aw` | `async_websocket` |
+| Synchronous REST (default) | `synchronous_rest`       | `sync_rest`, `sr`       | None              |
+| Synchronous WebSocket      | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`       |
+
+> [!NOTE]
+> To use any of the non-default clients,
+> you need to install `volumito` with the required extra
+> indicated in the above table, or the `all` extra.
+>
+> For example, `pip install volumito[async_websocket]`
+> to run the next example.
+
+To issue the `info` command over the WebSocket API, asynchronously:
+
+```bash
+volumito -v -C asynchronous_websocket info
+{
+    "builddate": "Tue Mar 24 17:20:52 UTC 2026",
+    "hardware": "pi",
+    "host": "http://192.168.1.19",
+    "hwUuid": "<REDACTED>",
+    "id": "<REDACTED>",
+    "isPremiumDevice": false,
+    "isVolumioProduct": false,
+    "name": "volumitotester",
+    "os": "12",
+    "serviceName": "Volumio",
+    "state": {
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "mute": false,
+        "status": "play",
+        "track": "Va tutto bene",
+        "volume": 19
+    },
+    "systemversion": "4.119",
+    "type": "device",
+    "variant": "volumio"
+}
+[2026-09-08T11:57:51.722Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
+[2026-09-08T11:57:51.722Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T11:57:51.722Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T11:57:51.722Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T11:57:51.723Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T11:57:51.723Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T11:57:51.723Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T11:57:51.834Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T11:57:51.874Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T11:57:51.875Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T11:57:51.875Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T11:57:51.875Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T11:57:51.899Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T11:57:51.899Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T11:57:51.903Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T11:57:51.903Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T11:57:51.912Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T11:57:51.913Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T11:57:51.915Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+```
+
+or
+
+```bash
+volumito -v -C aw info
+{
+    "builddate": "Tue Mar 24 17:20:52 UTC 2026",
+    "hardware": "pi",
+    "host": "http://192.168.1.19",
+    "hwUuid": "<REDACTED>",
+    "id": "<REDACTED>",
+    "isPremiumDevice": false,
+    "isVolumioProduct": false,
+    "name": "volumitotester",
+    "os": "12",
+    "serviceName": "Volumio",
+    "state": {
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "mute": false,
+        "status": "play",
+        "track": "Va tutto bene",
+        "volume": 19
+    },
+    "systemversion": "4.119",
+    "type": "device",
+    "variant": "volumio"
+}
+[2026-09-08T11:57:52.503Z] [DEBU] Using configuration file: "/home/alberto/.volumito.yaml"
+[2026-09-08T11:57:52.503Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-08T11:57:52.503Z] [DEBU] Initializing the async WebSocket API client...
+[2026-09-08T11:57:52.503Z] [DEBU] Initializing the async WebSocket API client... done
+[2026-09-08T11:57:52.503Z] [DEBU] Using the asynchronous WebSocket API client
+[2026-09-08T11:57:52.503Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
+[2026-09-08T11:57:52.504Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
+[2026-09-08T11:57:52.619Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-08T11:57:52.657Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-08T11:57:52.657Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-08T11:57:52.658Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-08T11:57:52.658Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-08T11:57:52.679Z] [DEBU] Received "pushSystemInfo"
+[2026-09-08T11:57:52.680Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-08T11:57:52.683Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-08T11:57:52.683Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-08T11:57:52.693Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-08T11:57:52.694Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
+[2026-09-08T11:57:52.696Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+```
+
+Most of the commands that `volumito` provides are available
+when using any of the clients listed above.
+However, certain commands are supported only by the REST API clients,
+and others only by the WebSocket API clients:
+in the remainder of this document, they are suitably marked as
+"REST API only" or "WebSocket API only".
+
+By default, commands that are not available with the selected client
+return an error similar to the following:
+
+```bash
+volumito -C sr collection radio add "Radio Volumito Docs" "https://some.url"
+[2026-09-08T11:57:53.285Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
+```
+
+It is possible to fall back to the appropriate client
+by using issuing the `--allow-fallback-to-rest-api` and/or
+`--allow-fallback-to-websocket-api` options,
+or setting the corresponding keys in the configuration file to `true`:
+
+```bash
+volumito -C sr --allow-fallback-to-websocket-api collection radio add "Radio Volumito Docs" "https://some.url"
+Volumio Browse Results
+==================================================
+
+1. myRTL
+   https://streamingv2.shoutcast.com/rtl-1025
+2. Radio B&M
+   https://ice02.fluidstream.net/bella.mp3
+3. Radio Volumito Docs
+   https://some.url
+[2026-09-08T11:57:53.963Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
+[2026-09-08T11:57:54.223Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+```
 
 
 ## Control The Playback

@@ -16,6 +16,7 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 - [How To Get Help](#how-to-get-help)
+- [Types Of Clients](#types-of-clients)
 - [Control The Playback](#control-the-playback)
   - [Playback Status](#playback-status)
   - [Pause And Stop](#pause-and-stop)
@@ -98,6 +99,10 @@ This document describes the `volumito` command-line (CLI) tool.
 
 
 ```markdown lucio command=include path="./GET_HELP.md" style=literal
+```
+
+
+```markdown lucio command=include path="./TYPES_OF_CLIENTS.md" style=literal
 ```
 
 
