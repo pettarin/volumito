@@ -170,8 +170,8 @@ volumito queue clear
     "title": "",
     "volume": 19
 }
-[2026-09-08T09:15:31.669Z] [INFO] Command 'clear' executed successfully
-[2026-09-08T09:15:33.687Z] [INFO] Command 'stop' executed successfully
+[2026-09-08T09:18:51.249Z] [INFO] Command 'clear' executed successfully
+[2026-09-08T09:18:53.271Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help

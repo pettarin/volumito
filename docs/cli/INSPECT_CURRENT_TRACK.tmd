@@ -1,27 +1,32 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
 ## Inspect The Current Track
 
 ### Track Info
 
-Command `track info` provides the details
+Command `queue track info` provides the details
 of the current track being played:
 
 ```bash lucio command=execute
-volumito track info
+volumito queue track info
 ```
 
 The `--format`, `--fields`, `--machine-readable` options
 apply to this command as well:
 
 ```bash lucio command=execute
-volumito track info --format table
+volumito queue track info --format table
 ```
 
 ```bash lucio command=execute
-volumito track info --fields ALL
+volumito queue track info --fields ALL
 ```
 
 ```bash lucio command=execute
-volumito -m track info -F raw -L ALL
+volumito -m queue track info -F raw -L ALL
 ```
 
 ### Track Help
@@ -29,7 +34,7 @@ volumito -m track info -F raw -L ALL
 These are all the subcommands of the `track` group:
 
 ```bash lucio command=execute
-volumito track --help
+volumito queue track --help
 ```
 
 The `albumart` and `audio` subcommands are described

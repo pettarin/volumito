@@ -1158,11 +1158,11 @@ Commands:
 
 ### Track Info
 
-Command `track info` provides the details
+Command `queue track info` provides the details
 of the current track being played:
 
 ```bash
-volumito track info
+volumito queue track info
 {
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
@@ -1180,7 +1180,7 @@ The `--format`, `--fields`, `--machine-readable` options
 apply to this command as well:
 
 ```bash
-volumito track info --format table
+volumito queue track info --format table
 Track Info
 ==================================================
 Position            : 1
@@ -1195,7 +1195,7 @@ Channels            : 2
 ```
 
 ```bash
-volumito track info --fields ALL
+volumito queue track info --fields ALL
 {
     "album": "Polvere",
     "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
@@ -1213,7 +1213,7 @@ volumito track info --fields ALL
     "repeat": false,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:16.044",
+    "seek": "00:00:01.509",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -1222,13 +1222,13 @@ volumito track info --fields ALL
     "updatedb": false,
     "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 20
+    "volume": 19
 }
 ```
 
 ```bash
-volumito -m track info -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 76546, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+volumito -m queue track info -F raw -L ALL
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 2011, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Track Help
@@ -1236,18 +1236,20 @@ volumito -m track info -F raw -L ALL
 These are all the subcommands of the `track` group:
 
 ```bash
-volumito track --help
-Usage: volumito track [OPTIONS] COMMAND [ARGS]...
+volumito queue track --help
+Usage: volumito queue track [OPTIONS] COMMAND [ARGS]...
 
-  Query the current track (information, audio, album art).
+  Query the current track of the queue (information, audio, album art).
 
 Options:
   --help  Show this message and exit.
 
 Commands:
-  albumart  Print the URI of and/or download the album art of the current...
-  audio     Print the URI of and/or download the audio of the current track.
-  info      Print the information of the current track.
+  albumart      Print the URI of and/or download the album art of the...
+  audio         Print the URI of and/or download the audio of the current...
+  has_next      Print whether the current track has a next track in the...
+  has_previous  Print whether the current track has a previous track in...
+  info          Print the information of the current track.
 ```
 
 The `albumart` and `audio` subcommands are described
@@ -1424,8 +1426,8 @@ volumito queue clear
     "title": "",
     "volume": 19
 }
-[2026-09-08T09:15:31.669Z] [INFO] Command 'clear' executed successfully
-[2026-09-08T09:15:33.687Z] [INFO] Command 'stop' executed successfully
+[2026-09-08T09:18:51.249Z] [INFO] Command 'clear' executed successfully
+[2026-09-08T09:18:53.271Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
