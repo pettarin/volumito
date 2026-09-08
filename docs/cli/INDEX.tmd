@@ -73,7 +73,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Check A Configuration File](#check-a-configuration-file)
     - [Ignore All Configuration Files](#ignore-all-configuration-files)
     - [Priority](#priority)
-  - [Multiroom Zones](#multiroom-zones)
+  - [Multiroom Audio](#multiroom-audio)
   - [Notifications (REST API only)](#notifications-rest-api-only)
     - [Notification List](#notification-list)
     - [Notification Register](#notification-register)

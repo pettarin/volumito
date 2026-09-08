@@ -75,7 +75,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Check A Configuration File](#check-a-configuration-file)
     - [Ignore All Configuration Files](#ignore-all-configuration-files)
     - [Priority](#priority)
-  - [Multiroom Zones](#multiroom-zones)
+  - [Multiroom Audio](#multiroom-audio)
   - [Notifications (REST API only)](#notifications-rest-api-only)
     - [Notification List](#notification-list)
     - [Notification Register](#notification-register)
@@ -4886,11 +4886,14 @@ volumito info
 volumito --ignore-configuration-file info
 ```
 
-### Multiroom Zones
+### Multiroom Audio
 
-Volumio supports multiroom zones,
+Volumio supports multiroom audio,
 and can discover Volumio hosts on your local network.
 Issue the `multiroom info` command to see them:
+
+<!-- not using the "lucio command=execute" annotation here
+to avoid depending on a second Volumio host being running -->
 
 ```bash
 volumito multiroom info
@@ -4903,7 +4906,7 @@ volumito multiroom info
             "artist": "Enrico Ruggeri",
             "mute": false,
             "status": "play",
-            "track": "Rien Ne Va Plus",
+            "track": "Certe Donne",
             "volume": 19
         }
     },

@@ -1,11 +1,40 @@
-### Multiroom Zones
+### Multiroom Audio
 
-Volumio supports multiroom zones,
+Volumio supports multiroom audio,
 and can discover Volumio hosts on your local network.
 Issue the `multiroom info` command to see them:
 
-```bash lucio command=execute
+<!-- not using the "lucio command=execute" annotation here
+to avoid depending on a second Volumio host being running -->
+
+```bash
 volumito multiroom info
+[
+    {
+        "host": "http://192.168.1.19",
+        "isSelf": true,
+        "name": "Volumitotester",
+        "state": {
+            "artist": "Enrico Ruggeri",
+            "mute": false,
+            "status": "play",
+            "track": "Certe Donne",
+            "volume": 19
+        }
+    },
+    {
+        "host": "http://192.168.1.123",
+        "isSelf": false,
+        "name": "Euterpe",
+        "state": {
+            "artist": "John Williams",
+            "mute": false,
+            "status": "stop",
+            "track": "Main Title",
+            "volume": 87
+        }
+    }
+]
 ```
 
 > [!TIP]
