@@ -124,11 +124,11 @@ volumito --host volumio.local info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "http://192.168.1.19/albumart?cacheid=208&web=Enrico%20Ruggeri/La%20Vie%20En%20Rouge/extralarge&path=%2Fmnt%2FINTERNAL%2Fmusic%2FEnrico_Ruggeri%2FLa_Vie_En_Rouge%2F1&metadata=false",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "mute": false,
         "status": "play",
-        "track": "La Vie En Rouge",
+        "track": "Va tutto bene",
         "volume": 19
     },
     "systemversion": "4.119",
