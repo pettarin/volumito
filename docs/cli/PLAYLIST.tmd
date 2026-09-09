@@ -48,6 +48,19 @@ volumito playlist play "volumito test qobuz multiple albums"
 > You might want to use double quotes if the identifier
 > of the playlist contains spaces or other special characters.
 
+### Enqueue A Playlist
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+It is also possible to append the contents of the playlist
+to the current playback queue (not replacing the existing queue items),
+with the `playlist enqueue` command:
+
+```bash lucio command=execute
+volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
+```
+
 ### Playlist Help
 
 These are all the subcommands of the `playlist` group:

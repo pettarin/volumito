@@ -147,18 +147,48 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.007",
+    "seek": "00:00:00.250",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 21
 }
-[2026-09-09T13:43:12.071Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-09T14:26:09.170Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 > [!TIP]
 > You might want to use double quotes if the identifier
 > of the playlist contains spaces or other special characters.
+
+### Enqueue A Playlist
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+It is also possible to append the contents of the playlist
+to the current playback queue (not replacing the existing queue items),
+with the `playlist enqueue` command:
+
+```bash
+volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:03.003",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 21
+}
+[2026-09-09T14:26:11.949Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
+```
 
 ### Playlist Help
 

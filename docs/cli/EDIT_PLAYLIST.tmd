@@ -1,11 +1,185 @@
-```bash lucio command=execute show_source=false stdout=false stderr=false
-# hidden block to ensure a certain queue is playing
-volumito playlist play "volumito test qobuz multiple albums"
+```bash lucio command=execute show_source=false stdout=false stderr=false exit=any
+# hidden block to ensure certain playlists do not exist
+volumito -C aw playlist delete "volumito docs playlist" --yes
+volumito -C aw playlist delete "volumito docs playlist2" --yes
+volumito -C aw playlist delete "volumito docs playlist3" --yes
+volumito -C aw playlist delete "volumito docs playlist4" --yes
 ```
 
 ## Edit Playlists
 
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
 ```markdown lucio command=include path="./inc/NOTE_ON_PLAYLIST_CONCEPT.md" style=literal
 ```
 
-TBW
+### Create An Empty Playlist
+
+Command `playlist create` allows you to create a new playlist:
+
+```bash lucio command=execute
+volumito -C aw playlist create "volumito docs playlist"
+```
+
+The playlist is initially empty:
+
+```bash lucio command=execute
+volumito -C aw playlist content "volumito docs playlist"
+```
+
+### Add An Item (Playlist)
+
+If you want to add an item to the current queue,
+use the `playlist add` command providing
+the identifier of the playlist (as printed by command `playlist list`)
+and the URI of the item
+(see
+[Search The Collection](#search-the-collection)
+or
+[Browse The Collection](#browse-the-collection)
+below for details).
+
+```bash lucio command=execute
+volumito -C aw playlist add "volumito docs playlist" qobuz://song/63333861
+```
+
+As you can see, the above command appends the track
+"Don't Know Why" from album "Come Away With Me" by Norah Jones
+(URI `qobuz://song/63333861`) as the last element of the playlist.
+
+You can also append an album, instead of a single track:
+
+```bash lucio command=execute
+volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
+```
+
+When adding an album, option `--expand-tracks` is selected by default,
+resulting in the individual tracks being added to the playlist,
+as in the above example.
+
+It is also possible to add the album itself as a single playlist item,
+by specifying the `--no-expand-tracks` option:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false exit=any
+# hidden block to remove the added tracks
+volumito -C aw playlist remove "volumito docs playlist" -p 2-13
+```
+
+```bash lucio command=execute
+volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467 --no-expand-tracks
+```
+
+> [!NOTE]
+> When the playlist will be played,
+> Volumio will expand the album into tracks;
+> however, until then, the will be no way of inspecting
+> the tracks of the album e.g. in the Web UI of Volumio:
+> this why the `--expand-tracks` is the default behavior.
+
+> [!NOTE]
+> It seems that the underlying WebSocket API does not offer
+> a way of adding an item at a certain position of a playlist,
+> allowing only to append at the end of the latter.
+>
+> To work around this limitation, there are two ways:
+> either delete the playlist and recreate it from scratch,
+> with the new item listed in the right position
+> (for example, using a sequence of `playlist copy` and `playlist add`);
+> or clear the current playback queue, play the target playlist,
+> insert the new item at the desired index in the playback queue,
+> and then save the queue back to a playlist.
+> Note that the second option disrupts the playback.
+
+### Remove An Item (Playlist)
+
+To remove an item from a playlist, use the `playlist remove` command,
+providing the playlist identifier and either the URI of the item to be removed
+or its position in the playlist.
+
+```bash lucio command=execute show_source=false stdout=false stderr=false exit=any
+# hidden block to recreate the playlist with multiple tracks
+volumito -C aw playlist remove "volumito docs playlist"
+volumito -C aw playlist create "volumito docs playlist"
+volumito -C aw playlist add "volumito docs playlist" qobuz://song/63333861
+sleep 2
+volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
+sleep 2
+volumito -C aw playlist remove "volumito docs playlist" -p 6-13
+sleep 2
+```
+
+On this playlist:
+
+```bash lucio command=execute
+volumito -C aw playlist content "volumito docs playlist"
+```
+
+Remove the first track, specified by URI:
+
+```bash lucio command=execute
+volumito -C aw playlist remove "volumito docs playlist" qobuz://song/63333861
+```
+
+Remove the second track, specified by index
+with the `-p / --position` option:
+
+```bash lucio command=execute
+volumito -C aw playlist remove "volumito docs playlist" -p 2
+```
+
+> [!TIP]
+It is also possible to specify ranges, for example `-p 1,4-5,9-12`
+selects the 1st, 4th, 5th, 9th, 10th, 11th, and 12th tracks.
+
+### Copy A Playlist
+
+It is possibly to copy a playlist, with all or part of its contents,
+as a new playlist, using `playlist copy` command.
+
+Without arguments, the playlist is copied with all its contents:
+
+```bash lucio command=execute
+volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2"
+```
+
+With the `-p / --position` option, only the specified tracks
+will be copied:
+
+```bash lucio command=execute
+volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" -p 1,3-4
+```
+
+### Rename A Playlist
+
+The `playlist rename` command gives a playlist a new name:
+
+```bash lucio command=execute
+volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4"
+```
+
+> [!NOTE]
+> It seems that the underlying WebSocket API does not offer
+> a way of renaming a playlist.
+> Therefore, the implementation simply copies the original playlist
+> as the new one, and deletes the original.
+
+### Delete A Playlist
+
+The `playlist delete` command deletes a playlist:
+
+```bash lucio command=execute
+volumito -C aw playlist delete "volumito docs playlist2" --yes
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false exit=any
+# hidden block to ensure certain playlists do not exist
+volumito -C aw playlist delete "volumito docs playlist" --yes
+volumito -C aw playlist delete "volumito docs playlist2" --yes
+volumito -C aw playlist delete "volumito docs playlist3" --yes
+volumito -C aw playlist delete "volumito docs playlist4" --yes
+```
+
+> [!TIP]
+> The command requires the `-y / --yes` confirmation option,
+> otherwise it will error out.

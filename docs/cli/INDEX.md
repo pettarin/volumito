@@ -40,6 +40,7 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Playlists](#playlists)
   - [List All Playlists](#list-all-playlists)
   - [Play A Playlist](#play-a-playlist)
+  - [Enqueue A Playlist](#enqueue-a-playlist)
   - [Playlist Help](#playlist-help)
 - [Search The Collection](#search-the-collection)
   - [List Artists Matching A Query](#list-artists-matching-a-query)
@@ -66,6 +67,10 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Change Position Of An Item](#change-position-of-an-item)
   - [Queue Save](#queue-save)
 - [Edit Playlists](#edit-playlists)
+  - [Create An Empty Playlist](#create-an-empty-playlist)
+  - [Add An Item (Playlist)](#add-an-item-playlist)
+  - [Remove An Item (Playlist)](#remove-an-item-playlist)
+  - [Delete A Playlist](#delete-a-playlist)
 - [Download](#download)
   - [Download Track](#download-track)
     - [Download Track Albumart (Cover)](#download-track-albumart-cover)
@@ -1976,18 +1981,48 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.007",
+    "seek": "00:00:00.250",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 21
 }
-[2026-09-09T13:43:12.071Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-09T14:26:09.170Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 > [!TIP]
 > You might want to use double quotes if the identifier
 > of the playlist contains spaces or other special characters.
+
+### Enqueue A Playlist
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+It is also possible to append the contents of the playlist
+to the current playback queue (not replacing the existing queue items),
+with the `playlist enqueue` command:
+
+```bash
+volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:03.003",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 21
+}
+[2026-09-09T14:26:11.949Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
+```
 
 ### Playlist Help
 
@@ -4041,6 +4076,10 @@ volumito -C aw queue save "volumito docs queue save"
 ## Edit Playlists
 
 > [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+> [!NOTE]
 > In this section the word "playlist" refers to Volumio playlists
 > which might aggregate tracks from different services
 > (e.g., tracks stored in local files and Qobuz tracks).
@@ -4053,7 +4092,540 @@ volumito -C aw queue save "volumito docs queue save"
 > and `queue replace` commands,
 > if they are endowed with their own URI.
 
-TBW
+### Create An Empty Playlist
+
+Command `playlist create` allows you to create a new playlist:
+
+```bash
+volumito -C aw playlist create "volumito docs playlist"
+[
+    "volumito docs playlist",
+    "volumito test alarm",
+    "volumito test local album",
+    "volumito test qobuz 5 hd tracks",
+    "volumito test qobuz multiple albums",
+    "volumito test qobuz multiple albums 4 tracks",
+    "volumito test qobuz single album",
+    "volumito test qobuz single album 3 tracks"
+]
+[2026-09-09T14:36:45.354Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
+```
+
+The playlist is initially empty:
+
+```bash
+volumito -C aw playlist content "volumito docs playlist"
+[]
+```
+
+### Add An Item (Playlist)
+
+If you want to add an item to the current queue,
+use the `playlist add` command providing
+the identifier of the playlist (as printed by command `playlist list`)
+and the URI of the item
+(see
+[Search The Collection](#search-the-collection)
+or
+[Browse The Collection](#browse-the-collection)
+below for details).
+
+```bash
+volumito -C aw playlist add "volumito docs playlist" qobuz://song/63333861
+[
+    {
+        "album": "Come Away With Me",
+        "artist": "Norah Jones",
+        "position": 1,
+        "title": "Don't Know Why",
+        "uri": "qobuz://song/63333861"
+    }
+]
+[2026-09-09T14:36:47.921Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+```
+
+As you can see, the above command appends the track
+"Don't Know Why" from album "Come Away With Me" by Norah Jones
+(URI `qobuz://song/63333861`) as the last element of the playlist.
+
+You can also append an album, instead of a single track:
+
+```bash
+volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
+[
+    {
+        "album": "Come Away With Me",
+        "artist": "Norah Jones",
+        "position": 1,
+        "title": "Don't Know Why",
+        "uri": "qobuz://song/63333861"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Polaroide",
+        "uri": "qobuz://song/2833720"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Il rock'n roll",
+        "uri": "qobuz://song/2833721"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 6,
+        "title": "Salviamo Milano",
+        "uri": "qobuz://song/2833722"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 7,
+        "title": "Gerarchie",
+        "uri": "qobuz://song/2833723"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 8,
+        "title": "Polvere",
+        "uri": "qobuz://song/2833724"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 9,
+        "title": "Un altro testo",
+        "uri": "qobuz://song/2833725"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 10,
+        "title": "Generazione combustibile",
+        "uri": "qobuz://song/2833726"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 11,
+        "title": "Qualcosa (Per prenderti il cuore)",
+        "uri": "qobuz://song/2833727"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 12,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 13,
+        "title": "Quindici righe",
+        "uri": "qobuz://song/2833729"
+    }
+]
+[2026-09-09T14:36:49.566Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
+[2026-09-09T14:36:55.396Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+```
+
+When adding an album, option `--expand-tracks` is selected by default,
+resulting in the individual tracks being added to the playlist,
+as in the above example.
+
+It is also possible to add the album itself as a single playlist item,
+by specifying the `--no-expand-tracks` option:
+
+```bash
+volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467 --no-expand-tracks
+[
+    {
+        "album": "Come Away With Me",
+        "artist": "Norah Jones",
+        "position": 1,
+        "title": "Don't Know Why",
+        "uri": "qobuz://song/63333861"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    }
+]
+[2026-09-09T14:37:00.006Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+```
+
+> [!NOTE]
+> When the playlist will be played,
+> Volumio will expand the album into tracks;
+> however, until then, the will be no way of inspecting
+> the tracks of the album e.g. in the Web UI of Volumio:
+> this why the `--expand-tracks` is the default behavior.
+
+> [!NOTE]
+> It seems that the underlying WebSocket API does not offer
+> a way of adding an item at a certain position of a playlist,
+> allowing only to append at the end of the latter.
+>
+> To work around this limitation, there are two ways:
+> either delete the playlist and recreate it from scratch,
+> with the new item listed in the right position
+> (for example, using a sequence of `playlist copy` and `playlist add`);
+> or clear the current playback queue, play the target playlist,
+> insert the new item at the desired index in the playback queue,
+> and then save the queue back to a playlist.
+> Note that the second option disrupts the playback.
+
+### Remove An Item (Playlist)
+
+To remove an item from a playlist, use the `playlist remove` command,
+providing the playlist identifier and either the URI of the item to be removed
+or its position in the playlist.
+
+On this playlist:
+
+```bash
+volumito -C aw playlist content "volumito docs playlist"
+[
+    {
+        "album": "Come Away With Me",
+        "artist": "Norah Jones",
+        "position": 1,
+        "title": "Don't Know Why",
+        "uri": "qobuz://song/63333861"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    },
+    {
+        "album": "Come Away With Me",
+        "artist": "Norah Jones",
+        "position": 3,
+        "title": "Don't Know Why",
+        "uri": "qobuz://song/63333861"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 6,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 7,
+        "title": "Quindici righe",
+        "uri": "qobuz://song/2833729"
+    }
+]
+```
+
+Remove the first track, specified by URI:
+
+```bash
+volumito -C aw playlist remove "volumito docs playlist" qobuz://song/63333861
+[
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 1,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    },
+    {
+        "album": "Come Away With Me",
+        "artist": "Norah Jones",
+        "position": 2,
+        "title": "Don't Know Why",
+        "uri": "qobuz://song/63333861"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 6,
+        "title": "Quindici righe",
+        "uri": "qobuz://song/2833729"
+    }
+]
+[2026-09-09T14:37:20.798Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+```
+
+Remove the second track, specified by index
+with the `-p / --position` option:
+
+```bash
+volumito -C aw playlist remove "volumito docs playlist" -p 2
+[
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 1,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Quindici righe",
+        "uri": "qobuz://song/2833729"
+    }
+]
+[2026-09-09T14:37:21.817Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+```
+
+> [!TIP]
+It is also possible to specify ranges, for example `-p 1,4-5,9-12`
+selects the 1st, 4th, 5th, 9th, 10th, 11th, and 12th tracks.
+
+### Copy A Playlist
+
+It is possibly to copy a playlist, with all or part of its contents,
+as a new playlist, using `playlist copy` command.
+
+Without arguments, the playlist is copied with all its contents:
+
+```bash
+volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2"
+[
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 1,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Quindici righe",
+        "uri": "qobuz://song/2833729"
+    }
+]
+[2026-09-09T14:37:22.602Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
+[2026-09-09T14:37:25.509Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
+```
+
+With the `-p / --position` option, only the specified tracks
+will be copied:
+
+```bash
+volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" -p 1,2-4
+[
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 1,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    }
+]
+[2026-09-09T14:37:26.392Z] [INFO] Copying 4 items of "volumito docs playlist" to "volumito docs playlist3"
+[2026-09-09T14:37:28.576Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
+```
+
+### Rename A Playlist
+
+The `playlist rename` command gives a playlist a new name:
+
+```bash
+volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4"
+[
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 1,
+        "title": "Va tutto bene",
+        "uri": "qobuz://album/0090317058467"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Non c'è Penelope",
+        "uri": "qobuz://song/2833728"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Quindici righe",
+        "uri": "qobuz://song/2833729"
+    }
+]
+[2026-09-09T14:37:29.399Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
+[2026-09-09T14:37:32.159Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
+```
+
+> [!NOTE]
+> It seems that the underlying WebSocket API does not offer
+> a way of renaming a playlist.
+> Therefore, the implementation simply copies the original playlist
+> as the new one, and deletes the original.
+
+### Delete A Playlist
+
+The `playlist delete` command deletes a playlist:
+
+```bash
+volumito -C aw playlist delete "volumito docs playlist2" --yes
+[
+    "volumito docs playlist3",
+    "volumito docs playlist4",
+    "volumito test alarm",
+    "volumito test local album",
+    "volumito test qobuz 5 hd tracks",
+    "volumito test qobuz multiple albums",
+    "volumito test qobuz multiple albums 4 tracks",
+    "volumito test qobuz single album",
+    "volumito test qobuz single album 3 tracks"
+]
+[2026-09-09T14:37:32.989Z] [INFO] Command 'delete playlist "volumito docs playlist2"' executed successfully
+```
+
+> [!TIP]
+> The command requires the `-y / --yes` confirmation option,
+> otherwise it will error out.
 
 
 ## Download
