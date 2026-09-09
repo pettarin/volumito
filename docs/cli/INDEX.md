@@ -62,14 +62,14 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Label Story](#label-story)
   - [Place Story](#place-story)
 - [Edit The Current Queue](#edit-the-current-queue)
-  - [Add An Item](#add-an-item)
-  - [Remove An Item](#remove-an-item)
+  - [Add An Item](#add-an-item-queue)
+  - [Remove An Item](#remove-an-item-queue)
   - [Change Position Of An Item](#change-position-of-an-item)
-  - [Queue Save](#queue-save)
+  - [Save The Queue As A Playlist](#save-the-queue-as-a-playlist)
 - [Edit Playlists](#edit-playlists)
   - [Create An Empty Playlist](#create-an-empty-playlist)
-  - [Add An Item (Playlist)](#add-an-item-playlist)
-  - [Remove An Item (Playlist)](#remove-an-item-playlist)
+  - [Add An Item](#add-an-item-playlist)
+  - [Remove An Item](#remove-an-item-playlist)
   - [Copy A Playlist](#copy-a-playlist)
   - [Rename A Playlist](#rename-a-playlist)
   - [Delete A Playlist](#delete-a-playlist)
@@ -3707,7 +3707,7 @@ volumito story place "Abbey Road Studios"
 > This functionality is available only when using a WebSocket API client.
 > The examples in this section set `-C aw` to remind of that.
 
-### Add An Item
+### Add An Item (Queue)
 
 If you want to add an item to the current queue,
 use the `queue add` command providing the URI of the item
@@ -3728,13 +3728,13 @@ volumito -C aw queue add qobuz://song/63333861
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.666",
+    "seek": "00:00:02.257",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:41:53.958Z] [INFO] Command 'add' executed successfully
+[2026-09-09T15:09:02.186Z] [INFO] Command 'add' executed successfully
 ```
 
 The above command appends the track
@@ -3796,13 +3796,13 @@ volumito -C aw queue add qobuz://song/63333861 --next
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:06.258",
+    "seek": "00:00:05.761",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:41:57.561Z] [INFO] Command 'add' executed successfully
+[2026-09-09T15:09:05.842Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -3860,13 +3860,13 @@ volumito -C aw queue add qobuz://song/63333861 --play
     "mute": false,
     "position": 6,
     "samplerate": "192 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.499",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:42:01.317Z] [INFO] Command 'add' executed successfully
+[2026-09-09T15:09:09.415Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -3917,7 +3917,7 @@ Volumio Queue
    Duration: 00:03:06
 ```
 
-### Remove An Item
+### Remove An Item (Queue)
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -3938,13 +3938,13 @@ volumito -C aw queue remove 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:04.004",
+    "seek": "00:00:04.263",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:42:04.962Z] [INFO] Command 'remove' executed successfully
+[2026-09-09T15:09:12.994Z] [INFO] Command 'remove' executed successfully
 ```
 
 ```bash
@@ -4009,13 +4009,13 @@ volumito -C aw queue move 1 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:07.676",
+    "seek": "00:00:07.766",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:42:08.624Z] [INFO] Command 'move' executed successfully
+[2026-09-09T15:09:16.595Z] [INFO] Command 'move' executed successfully
 ```
 
 ```bash
@@ -4059,7 +4059,7 @@ Volumio Queue
    Duration: 00:03:06
 ```
 
-### Queue Save
+### Save The Queue As A Playlist
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -4067,11 +4067,11 @@ Volumio Queue
 
 To save the current queue as a Volumio playlist,
 issue the `queue save` command,
-providing a name for the playlist:
+providing a name for the playlist to be created:
 
 ```bash
 volumito -C aw queue save "volumito docs queue save"
-[2026-09-09T13:42:12.236Z] [INFO] Command 'save' executed successfully
+[2026-09-09T15:09:20.168Z] [INFO] Command 'save' executed successfully
 ```
 
 
@@ -4110,7 +4110,7 @@ volumito -C aw playlist create "volumito docs playlist"
     "volumito test qobuz single album",
     "volumito test qobuz single album 3 tracks"
 ]
-[2026-09-09T14:54:55.103Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
+[2026-09-09T15:08:03.298Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
 ```
 
 The playlist is initially empty:
@@ -4143,7 +4143,7 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://song/63333861
         "uri": "qobuz://song/63333861"
     }
 ]
-[2026-09-09T14:54:57.290Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-09T15:08:05.482Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 As you can see, the above command appends the track
@@ -4247,8 +4247,8 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:54:58.426Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
-[2026-09-09T14:55:06.195Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-09T15:08:06.616Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
+[2026-09-09T15:08:13.828Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 When adding an album, option `--expand-tracks` is selected by default,
@@ -4276,7 +4276,7 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
         "uri": "qobuz://album/0090317058467"
     }
 ]
-[2026-09-09T14:55:10.700Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-09T15:08:18.366Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!NOTE]
@@ -4411,7 +4411,7 @@ volumito -C aw playlist remove "volumito docs playlist" qobuz://song/63333861
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:55:31.693Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+[2026-09-09T15:08:38.444Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
 ```
 
 Remove the second track, specified by index
@@ -4456,7 +4456,7 @@ volumito -C aw playlist remove "volumito docs playlist" -p 2
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:55:32.717Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+[2026-09-09T15:08:39.467Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!TIP]
@@ -4509,8 +4509,8 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2"
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:55:33.534Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
-[2026-09-09T14:55:36.301Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
+[2026-09-09T15:08:40.248Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
+[2026-09-09T15:08:42.756Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
 ```
 
 With the `-p / --position` option, only the specified tracks
@@ -4541,8 +4541,8 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" 
         "uri": "qobuz://song/2833728"
     }
 ]
-[2026-09-09T14:55:37.107Z] [INFO] Copying 3 items of "volumito docs playlist" to "volumito docs playlist3"
-[2026-09-09T14:55:38.964Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
+[2026-09-09T15:08:43.547Z] [INFO] Copying 3 items of "volumito docs playlist" to "volumito docs playlist3"
+[2026-09-09T15:08:44.937Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
 ```
 
 ### Rename A Playlist
@@ -4588,8 +4588,8 @@ volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:55:39.779Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
-[2026-09-09T14:55:42.140Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
+[2026-09-09T15:08:45.722Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
+[2026-09-09T15:08:48.056Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
 ```
 
 > [!NOTE]
@@ -4604,7 +4604,7 @@ The `playlist delete` command deletes a playlist:
 
 ```bash
 volumito -C aw playlist delete "volumito docs playlist4"
-[2026-09-09T14:55:42.818Z] [ERRO] Refusing to delete the playlist without -y/--yes: "volumito docs playlist4"
+[2026-09-09T15:08:48.760Z] [ERRO] Refusing to delete the playlist without -y/--yes: "volumito docs playlist4"
 ```
 
 > [!CAUTION]
@@ -4625,13 +4625,8 @@ volumito -C aw playlist delete "volumito docs playlist4" --yes
     "volumito test qobuz single album",
     "volumito test qobuz single album 3 tracks"
 ]
-[2026-09-09T14:55:43.539Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
+[2026-09-09T15:08:49.486Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
 ```
-
-
-> [!TIP]
-> The command requires the `-y / --yes` confirmation option,
-> otherwise it will error out.
 
 
 ## Download

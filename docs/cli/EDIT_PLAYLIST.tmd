@@ -187,7 +187,3 @@ volumito -C aw playlist delete "volumito docs playlist2" --yes
 volumito -C aw playlist delete "volumito docs playlist3" --yes
 volumito -C aw playlist delete "volumito docs playlist4" --yes
 ```
-
-> [!TIP]
-> The command requires the `-y / --yes` confirmation option,
-> otherwise it will error out.

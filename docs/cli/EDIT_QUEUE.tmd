@@ -8,7 +8,7 @@ volumito playlist play "volumito test qobuz multiple albums 4 tracks"
 ```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
 
-### Add An Item
+### Add An Item (Queue)
 
 If you want to add an item to the current queue,
 use the `queue add` command providing the URI of the item
@@ -52,7 +52,7 @@ volumito -C aw queue add qobuz://song/63333861 --play
 volumito -C aw queue list -F table
 ```
 
-### Remove An Item
+### Remove An Item (Queue)
 
 ```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
@@ -86,14 +86,14 @@ volumito -C aw queue move 1 2
 volumito -C aw queue list -F table
 ```
 
-### Queue Save
+### Save The Queue As A Playlist
 
 ```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
 
 To save the current queue as a Volumio playlist,
 issue the `queue save` command,
-providing a name for the playlist:
+providing a name for the playlist to be created:
 
 ```bash lucio command=execute
 volumito -C aw queue save "volumito docs queue save"

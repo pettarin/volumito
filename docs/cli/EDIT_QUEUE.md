@@ -6,7 +6,7 @@
 > This functionality is available only when using a WebSocket API client.
 > The examples in this section set `-C aw` to remind of that.
 
-### Add An Item
+### Add An Item (Queue)
 
 If you want to add an item to the current queue,
 use the `queue add` command providing the URI of the item
@@ -27,13 +27,13 @@ volumito -C aw queue add qobuz://song/63333861
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.666",
+    "seek": "00:00:02.257",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:41:53.958Z] [INFO] Command 'add' executed successfully
+[2026-09-09T15:09:02.186Z] [INFO] Command 'add' executed successfully
 ```
 
 The above command appends the track
@@ -95,13 +95,13 @@ volumito -C aw queue add qobuz://song/63333861 --next
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:06.258",
+    "seek": "00:00:05.761",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:41:57.561Z] [INFO] Command 'add' executed successfully
+[2026-09-09T15:09:05.842Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -159,13 +159,13 @@ volumito -C aw queue add qobuz://song/63333861 --play
     "mute": false,
     "position": 6,
     "samplerate": "192 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.499",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:42:01.317Z] [INFO] Command 'add' executed successfully
+[2026-09-09T15:09:09.415Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -216,7 +216,7 @@ Volumio Queue
    Duration: 00:03:06
 ```
 
-### Remove An Item
+### Remove An Item (Queue)
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -237,13 +237,13 @@ volumito -C aw queue remove 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:04.004",
+    "seek": "00:00:04.263",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:42:04.962Z] [INFO] Command 'remove' executed successfully
+[2026-09-09T15:09:12.994Z] [INFO] Command 'remove' executed successfully
 ```
 
 ```bash
@@ -308,13 +308,13 @@ volumito -C aw queue move 1 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:07.676",
+    "seek": "00:00:07.766",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 19
 }
-[2026-09-09T13:42:08.624Z] [INFO] Command 'move' executed successfully
+[2026-09-09T15:09:16.595Z] [INFO] Command 'move' executed successfully
 ```
 
 ```bash
@@ -358,7 +358,7 @@ Volumio Queue
    Duration: 00:03:06
 ```
 
-### Queue Save
+### Save The Queue As A Playlist
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
@@ -366,9 +366,9 @@ Volumio Queue
 
 To save the current queue as a Volumio playlist,
 issue the `queue save` command,
-providing a name for the playlist:
+providing a name for the playlist to be created:
 
 ```bash
 volumito -C aw queue save "volumito docs queue save"
-[2026-09-09T13:42:12.236Z] [INFO] Command 'save' executed successfully
+[2026-09-09T15:09:20.168Z] [INFO] Command 'save' executed successfully
 ```
