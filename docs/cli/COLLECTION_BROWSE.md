@@ -5,7 +5,7 @@
 The `collection browse` command allows browsing the music sources
 that are currently enabled in the Volumio host.
 
-For the sake of clarity, the following examples
+For the sake of clarity, most of the following examples
 issue the `--limit 5` option to show only the top five results.
 Omit it if you want the full list.
 
@@ -19,20 +19,30 @@ as demonstrated by the following examples.
 Browse Qobuz -> My Artists -> "Enrico Ruggeri" (artist) -> "Polvere" (album):
 
 ```bash
-volumito collection browse --limit 5
+volumito collection browse
 Volumio Browse Results
 ==================================================
 
-1. Favorites
-   favourites
-2. Playlists
-   playlists
-3. Music Library
-   music-library
-4. Artists
-   artists://
-5. Albums
-   albums://
+ 1. Favorites
+    favourites
+ 2. Playlists
+    playlists
+ 3. Music Library
+    music-library
+ 4. Artists
+    artists://
+ 5. Albums
+    albums://
+ 6. Genres
+    genres://
+ 7. Media Servers
+    upnp
+ 8. Last 100
+    Last_100
+ 9. Web Radio
+    radio
+10. QOBUZ
+    qobuz://
 ```
 
 ```bash
@@ -124,20 +134,30 @@ Enrico Ruggeri - Polvere
 Browse local resources stored in `/mnt/INTERNAL/` -> "Mango" (artist) -> "Sirtaki" (album):
 
 ```bash
-volumito collection browse --limit 5
+volumito collection browse
 Volumio Browse Results
 ==================================================
 
-1. Favorites
-   favourites
-2. Playlists
-   playlists
-3. Music Library
-   music-library
-4. Artists
-   artists://
-5. Albums
-   albums://
+ 1. Favorites
+    favourites
+ 2. Playlists
+    playlists
+ 3. Music Library
+    music-library
+ 4. Artists
+    artists://
+ 5. Albums
+    albums://
+ 6. Genres
+    genres://
+ 7. Media Servers
+    upnp
+ 8. Last 100
+    Last_100
+ 9. Web Radio
+    radio
+10. QOBUZ
+    qobuz://
 ```
 
 ```bash
@@ -156,23 +176,6 @@ Volumio Browse Results
 
 1. music
    music-library/INTERNAL/music
-```
-
-```bash
-volumito collection browse --limit 5 "music-library/INTERNAL/music"
-Volumio Browse Results
-==================================================
-
-1. Enrico_Ruggeri
-   music-library/INTERNAL/music/Enrico_Ruggeri
-2. Francesco_De_Gregori
-   music-library/INTERNAL/music/Francesco_De_Gregori
-3. Mango
-   music-library/INTERNAL/music/Mango
-4. Norah_Jones
-   music-library/INTERNAL/music/Norah_Jones
-5. Paolo_Conte
-   music-library/INTERNAL/music/Paolo_Conte
 ```
 
 ```bash
@@ -238,13 +241,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.148",
+    "seek": "00:00:02.009",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:53:38.667Z] [INFO] Command 'replace' executed successfully
+[2026-09-09T16:18:03.259Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -260,13 +263,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.009",
+    "seek": "00:00:02.008",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:53:41.369Z] [INFO] Command 'replace' executed successfully
+[2026-09-09T16:18:06.327Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -282,13 +285,13 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.218",
+    "seek": "00:00:02.000",
     "status": "play",
     "title": "Nella mia città",
     "trackType": "flac",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:53:44.274Z] [INFO] Command 'replace' executed successfully
+[2026-09-09T16:18:09.480Z] [INFO] Command 'replace' executed successfully
 ```
 
 ### Collection Statistics

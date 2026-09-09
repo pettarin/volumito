@@ -7,7 +7,7 @@ volumito playlist play "volumito test qobuz multiple albums"
 
 By default, the `volumito` CLI tool talks
 to the Volumio host through its REST API, synchronously.
-You can tell it by enabling verbose log:
+You can tell it by enabling verbose logging:
 
 ```bash lucio command=execute
 volumito -v info
@@ -49,7 +49,8 @@ when using any of the clients listed above.
 However, certain commands are supported only by the REST API clients,
 and others only by the WebSocket API clients:
 in the remainder of this document, they are suitably marked as
-"REST API only" or "WebSocket API only".
+"available only when using a REST API client" or
+"available only when using a WebSocket API client".
 
 By default, commands that are not available with the selected client
 return an error similar to the following:
@@ -59,7 +60,7 @@ volumito collection radio add "Radio Volumito Docs" "https://some.url"
 ```
 
 It is possible to fall back to the appropriate client
-by using issuing the `--allow-fallback-to-rest-api` and/or
+by issuing the `--allow-fallback-to-rest-api` and/or
 `--allow-fallback-to-websocket-api` options,
 or setting the corresponding keys in the configuration file to `true`:
 

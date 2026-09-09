@@ -57,7 +57,7 @@ in Section [Download](#download) below.
 
 > [!NOTE]
 > The `queue track` command group is also available
-> as top-level `track`, via an hard-coded alias, for convenience of use.
+> as top-level `track`, via a hard-coded alias, for convenience of use.
 > Therefore for example `volumito track info` and `volumito queue track info`
 > are equivalent commands.
 >

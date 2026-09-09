@@ -25,7 +25,6 @@ volumito playlist list
 The `playlist content` command lists the contents
 of the playlist specified by its identifier:
 
-
 ```bash lucio command=execute
 volumito -C aw playlist content "volumito test qobuz multiple albums"
 ```
@@ -43,10 +42,6 @@ issue the `playlist play` command followed by the playlist identifier:
 ```bash lucio command=execute
 volumito playlist play "volumito test qobuz multiple albums"
 ```
-
-> [!TIP]
-> You might want to use double quotes if the identifier
-> of the playlist contains spaces or other special characters.
 
 ### Enqueue A Playlist
 

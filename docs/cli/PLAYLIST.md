@@ -37,11 +37,10 @@ volumito playlist list
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
+> The examples in this section set `-C aw` as a reminder.
 
 The `playlist content` command lists the contents
 of the playlist specified by its identifier:
-
 
 ```bash
 volumito -C aw playlist content "volumito test qobuz multiple albums"
@@ -147,24 +146,20 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:02.005",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:26:09.170Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-09T16:14:58.447Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
-
-> [!TIP]
-> You might want to use double quotes if the identifier
-> of the playlist contains spaces or other special characters.
 
 ### Enqueue A Playlist
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
+> The examples in this section set `-C aw` as a reminder.
 
 It is also possible to append the contents of the playlist
 to the current playback queue (not replacing the existing queue items),
@@ -181,13 +176,13 @@ volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.003",
+    "seek": "00:00:03.371",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:26:11.949Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-09T16:15:01.216Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Playlist Help

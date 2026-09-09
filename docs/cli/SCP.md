@@ -50,7 +50,7 @@ in addition to the obvious `--host` (default: `volumio.local`).
 > therefore omitting the `--ssh-password` option.
 >
 > If you are not familiar with SSH keys,
-> you can follow Step 1-3 of
+> you can follow Steps 1-3 of
 > [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server),
 > keeping in mind that in your case the `remote_host`
 > is your Volumio host.
@@ -72,17 +72,17 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-09-09T14:57:16.864Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-09-09T16:15:57.973Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
 > [!CAUTION]
-> Mind the error: to make sure you know what you are doing,
+> Note the error above: to make sure you know what you are doing,
 > `volumito` refuses to execute the command
 > unless you provide the `--yes` option:
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-09-09T14:57:18.781Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-09-09T16:15:59.923Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -93,7 +93,7 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-09-09T14:57:20.242Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-09-09T16:16:01.621Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
 > [!TIP]

@@ -2,4 +2,4 @@
 
 > [!NOTE]
 > This functionality is available only when using a REST API client.
-> The examples in this section set `-C sr` to remind of that.
+> The examples in this section set `-C sr` as a reminder.

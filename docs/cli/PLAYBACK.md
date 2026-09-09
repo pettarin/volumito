@@ -18,11 +18,11 @@ volumito playback status
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.506",
+    "seek": "00:00:00.000",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
 ```
 
@@ -38,8 +38,8 @@ Title               : Va tutto bene
 Artist              : Enrico Ruggeri
 Album               : Polvere
 Duration            : 00:03:16
-Seek                : 00:00:01.007
-Volume              : 21
+Seek                : 00:00:00.750
+Volume              : 19
 Mute                : False
 Tracktype           : qobuz
 Samplerate          : 44.1 kHz
@@ -47,8 +47,7 @@ Bitdepth            : 16 bit
 Channels            : 2
 ```
 
-as well as selecting all the fields present in the response
-from the REST API:
+as well as selecting all the fields present in the response:
 
 ```bash
 volumito playback status --fields ALL
@@ -57,7 +56,7 @@ volumito playback status --fields ALL
     "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "bitrate": null,
+    "bitrate": "1 Kbps",
     "channels": 2,
     "consume": true,
     "dbVolume": null,
@@ -69,7 +68,7 @@ volumito playback status --fields ALL
     "repeat": null,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.757",
+    "seek": "00:00:01.423",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -78,7 +77,7 @@ volumito playback status --fields ALL
     "updatedb": false,
     "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 21
+    "volume": 19
 }
 ```
 
@@ -97,7 +96,7 @@ volumito playback status --fields ALL
 
 ```bash
 volumito -m playback status -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 2508, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": null, "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 21, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 2000, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Pause And Stop
@@ -115,13 +114,13 @@ volumito playback pause
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.998",
+    "seek": "00:00:03.409",
     "status": "pause",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:02.733Z] [INFO] Command 'pause' executed successfully
+[2026-09-09T16:13:53.737Z] [INFO] Command 'pause' executed successfully
 ```
 
 By default, the resulting status of the playback is printed.
@@ -141,13 +140,13 @@ volumito playback toggle
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:06.001",
+    "seek": "00:00:05.412",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:05.372Z] [INFO] Command 'toggle' executed successfully
+[2026-09-09T16:13:56.404Z] [INFO] Command 'toggle' executed successfully
 ```
 
 To stop the playback, use `playback stop`:
@@ -163,13 +162,13 @@ volumito playback stop
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.275",
+    "seek": "00:00:00.250",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:08.083Z] [INFO] Command 'stop' executed successfully
+[2026-09-09T16:13:59.167Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Play Track At A Given Position
@@ -187,13 +186,13 @@ volumito playback play
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.753",
+    "seek": "00:00:00.273",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:10.732Z] [INFO] Command 'play' executed successfully
+[2026-09-09T16:14:01.819Z] [INFO] Command 'play' executed successfully
 ```
 
 It accepts an optional positional argument
@@ -212,23 +211,68 @@ volumito playback play 3
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.001",
+    "seek": "00:00:02.024",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:13.688Z] [INFO] Command 'play' executed successfully
+[2026-09-09T16:14:04.754Z] [INFO] Command 'play' executed successfully
 ```
 
-### Seeking
+### Play Previous Or Next Track
+
+The `playback previous` and `playback next` commands
+play the previous or next track in the current queue.
+
+```bash
+volumito playback next
+{
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:04:08",
+    "mute": false,
+    "position": 4,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:01.752",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "qobuz",
+    "volume": 19
+}
+[2026-09-09T16:14:07.523Z] [INFO] Command 'next' executed successfully
+```
+
+```bash
+volumito playback previous
+{
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:04:56",
+    "mute": false,
+    "position": 4,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:02.002",
+    "status": "play",
+    "title": "Rien Ne Va Plus",
+    "trackType": "qobuz",
+    "volume": 19
+}
+[2026-09-09T16:14:10.212Z] [INFO] Command 'previous' executed successfully
+```
+
+### Seek Within The Current Track
 
 The playback position within the current track
 can be queried with `playback seek`:
 
 ```bash
 volumito playback seek
-00:00:00.500
+00:00:02.502
 ```
 
 and it can be set by providing a new value,
@@ -241,20 +285,20 @@ volumito playback seek 42
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:44.005",
+    "seek": "00:00:44.002",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:16.996Z] [INFO] Command 'seek 42' executed successfully
+[2026-09-09T16:14:13.580Z] [INFO] Command 'seek 42' executed successfully
 ```
 
-or in `HH:MM:SS` format:
+or in `MM:SS` or `HH:MM:SS` format:
 
 ```bash
 volumito playback seek 00:01:42
@@ -263,17 +307,17 @@ volumito playback seek 00:01:42
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
     "seek": "00:01:44.001",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:19.700Z] [INFO] Command 'seek 102' executed successfully
+[2026-09-09T16:14:16.350Z] [INFO] Command 'seek 102' executed successfully
 ```
 
 or `plus/increase/up/forward` and `minus/decrease/down/backward`:
@@ -285,17 +329,17 @@ volumito playback seek forward
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.671",
+    "seek": "00:01:56.607",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:22.373Z] [INFO] Command 'seek plus' executed successfully
+[2026-09-09T16:14:19.016Z] [INFO] Command 'seek plus' executed successfully
 ```
 
 ```bash
@@ -305,17 +349,17 @@ volumito playback seek minus
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:49.301",
+    "seek": "00:01:49.314",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 19
 }
-[2026-09-09T14:56:25.037Z] [INFO] Command 'seek minus' executed successfully
+[2026-09-09T16:14:21.705Z] [INFO] Command 'seek minus' executed successfully
 ```
 
 ### Volume Control
@@ -326,7 +370,7 @@ can be queried with `playback volume`:
 
 ```bash
 volumito playback volume
-21
+19
 ```
 
 and it can be set by providing a new value, either numerical:
@@ -338,17 +382,17 @@ volumito playback volume 20
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:52.592",
+    "seek": "00:01:52.613",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-09T14:56:28.295Z] [INFO] Command 'volume 20' executed successfully
+[2026-09-09T16:14:25.052Z] [INFO] Command 'volume 20' executed successfully
 ```
 
 or `plus/increase/up` and `minus/decrease/down`:
@@ -360,17 +404,17 @@ volumito playback volume plus
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:55.232",
+    "seek": "00:01:55.316",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-09T14:56:30.970Z] [INFO] Command 'volume plus' executed successfully
+[2026-09-09T16:14:27.733Z] [INFO] Command 'volume plus' executed successfully
 ```
 
 ```bash
@@ -380,17 +424,17 @@ volumito playback volume down
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:57.845",
+    "seek": "00:01:58.151",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
     "volume": 19
 }
-[2026-09-09T14:56:33.594Z] [INFO] Command 'volume minus' executed successfully
+[2026-09-09T16:14:30.518Z] [INFO] Command 'volume minus' executed successfully
 ```
 
 The playback volume can be muted and unmuted with
@@ -403,17 +447,17 @@ volumito playback mute
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": true,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:00.534",
+    "seek": "00:02:00.826",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
     "volume": 19
 }
-[2026-09-09T14:56:36.238Z] [INFO] Command 'volume mute' executed successfully
+[2026-09-09T16:14:33.201Z] [INFO] Command 'volume mute' executed successfully
 ```
 
 ```bash
@@ -423,28 +467,27 @@ volumito playback unmute
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:08",
+    "duration": "00:04:56",
     "mute": false,
-    "position": 3,
+    "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:03.267",
+    "seek": "00:02:03.525",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
     "volume": 19
 }
-[2026-09-09T14:56:38.968Z] [INFO] Command 'volume unmute' executed successfully
+[2026-09-09T16:14:35.890Z] [INFO] Command 'volume unmute' executed successfully
 ```
 
 ### Playback Sleep
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
+> The examples in this section set `-C aw` as a reminder.
 
 It is possible to set a "playback sleep",
-that is, an amount of time after which the playback is stopped
-and the Volumio host is put to sleep (if supported) or shut down (otherwise).
+that is, an amount of time after which the playback is stopped.
 
 To check if the playback sleep is set, run without arguments:
 
@@ -457,7 +500,7 @@ volumito -C aw playback sleep
 }
 ```
 
-To set it, provide the amount of time in either minutes or `HH:MM` format:
+To set it, provide the amount of time in either minutes or `H:MM` format:
 
 ```bash
 volumito -C aw playback sleep 42
@@ -466,18 +509,24 @@ volumito -C aw playback sleep 42
     "minutes": 41,
     "time": "0:41"
 }
-[2026-09-09T14:56:43.275Z] [INFO] Command 'sleep 42' executed successfully
+[2026-09-09T16:14:40.578Z] [INFO] Command 'sleep 42' executed successfully
 ```
 
 ```bash
-volumito -C aw playback sleep 02:00
+volumito -C aw playback sleep 2:00
 {
     "enabled": true,
     "minutes": 119,
     "time": "1:59"
 }
-[2026-09-09T14:56:44.042Z] [INFO] Command 'sleep 120' executed successfully
+[2026-09-09T16:14:41.334Z] [INFO] Command 'sleep 120' executed successfully
 ```
+
+> [!NOTE]
+> The remaining delay is rounded down,
+> which explains why the output above has `41` and `1:59`,
+> even if requesting `42` and `2:00`.
+> (Getting the response from the target host requires non-zero time!)
 
 To disable the sleep, use the special value `off`:
 
@@ -488,14 +537,14 @@ volumito -C aw playback sleep off
     "minutes": 0,
     "time": "0:0"
 }
-[2026-09-09T14:56:44.813Z] [INFO] Command 'sleep off' executed successfully
+[2026-09-09T16:14:42.142Z] [INFO] Command 'sleep off' executed successfully
 ```
 
 ### Infinity Playback
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
+> The examples in this section set `-C aw` as a reminder.
 
 It is possible to inspect and toggle the "infinity playback" function
 (i.e., playing other music suggested by Volumio based
@@ -519,7 +568,7 @@ volumito -C aw playback infinity on
     "available": true,
     "enabled": true
 }
-[2026-09-09T14:56:47.152Z] [INFO] Command 'infinity on' executed successfully
+[2026-09-09T16:14:44.507Z] [INFO] Command 'infinity on' executed successfully
 ```
 
 ```bash
@@ -528,7 +577,7 @@ volumito -C aw playback infinity off
     "available": true,
     "enabled": false
 }
-[2026-09-09T14:56:47.917Z] [INFO] Command 'infinity off' executed successfully
+[2026-09-09T16:14:45.312Z] [INFO] Command 'infinity off' executed successfully
 ```
 
 ### Playback Help

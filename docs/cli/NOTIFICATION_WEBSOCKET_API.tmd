@@ -12,7 +12,7 @@ When using a WebSocket API client,
 the `notification event` command group provides
 facilities to emit an event (`emit`),
 to emit an event and wait for a certain response (`request`),
-or to list to all events (`listen`):
+or to listen to all events (`listen`):
 
 ```bash lucio command=execute
 volumito -C aw notification event --help

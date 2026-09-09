@@ -4,7 +4,7 @@
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
+> The examples in this section set `-C aw` as a reminder.
 
 The `collection source` command group allows inspecting
 and controlling the sources of the music collection.
@@ -100,7 +100,7 @@ To disable a source:
 
 ```bash
 volumito -C aw collection source disable "bluetooth"
-[2026-09-09T13:41:25.629Z] [INFO] Command 'disable source "bluetooth"' executed successfully
+[2026-09-09T16:08:36.603Z] [INFO] Command 'disable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -190,7 +190,7 @@ To enable a source:
 
 ```bash
 volumito -C aw collection source enable "bluetooth"
-[2026-09-09T13:41:37.153Z] [INFO] Command 'enable source "bluetooth"' executed successfully
+[2026-09-09T16:08:48.347Z] [INFO] Command 'enable source "bluetooth"' executed successfully
 ```
 
 ```bash

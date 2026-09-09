@@ -1,7 +1,7 @@
 ## How To Get Help
 
 All global options, command groups, and subcommands of `volumito`
-honor the ``--help`` option:
+honor the `--help` option:
 
 ```bash lucio command=execute
 volumito --help
@@ -15,30 +15,7 @@ volumito playlist --help
 volumito playback play --help
 ```
 
-If you need to know the full list of commands, issue the `command list` command:
-
-```bash lucio command=execute
-volumito command list
-```
-
-If you have command aliases defined in your configuration file,
-they are also printed by the above command within parentheses
-(e.g., `i` is a shorthand for `info` and `qs` for `queue status`).
-The full list of aliases currently defined can be printed
-by the `command alias` command:
-
-```bash lucio command=execute
-volumito command alias
-```
-
-> [!NOTE]
-> The above output has been generated on an installation
-> whose configuration file has aliases enabled.
-
-> [!TIP]
-> By default the `configuration create` command
-> produces a configuration file with suggested aliases,
-> but none of them is active, as they are all commented out.
-> If you would like to enable all or some of them,
-> uncomment the relevant lines under the `aliases:` section
-> of your configuration file.
+If you need to know the full list of commands or aliases,
+see Section [Command Discovery](#command-discovery),
+which reports the actual output of commands
+`command list` and `command alias`.

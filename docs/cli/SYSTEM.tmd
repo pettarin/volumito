@@ -99,7 +99,7 @@ volumito system --help
 ```
 
 All commands, with the exception of those listed above
-(`sytstem execute`, `system info`, `system ping`, `system version`),
+(`system execute`, `system info`, `system ping`, `system version`),
 require a WebSocket API client, as their help message tells:
 
 ```bash lucio command=execute

@@ -4,13 +4,13 @@
 
 > [!NOTE]
 > This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
+> The examples in this section set `-C aw` as a reminder.
 
 When using a WebSocket API client,
 the `notification event` command group provides
 facilities to emit an event (`emit`),
 to emit an event and wait for a certain response (`request`),
-or to list to all events (`listen`):
+or to listen to all events (`listen`):
 
 ```bash
 volumito -C aw notification event --help
@@ -55,7 +55,7 @@ volumito -C aw notification event listen --timeout 10.0
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 501,
+        "seek": 500,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -128,7 +128,7 @@ volumito -C aw notification event listen --timeout 10.0
     },
     "event": "pushState"
 }
-[2026-09-09T14:57:02.090Z] [INFO] Listening for the events: pushState
-[2026-09-09T14:57:02.091Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-09T14:57:12.091Z] [INFO] Timed out after 10 seconds
+[2026-09-09T16:15:43.458Z] [INFO] Listening for the events: pushState
+[2026-09-09T16:15:43.458Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-09T16:15:53.459Z] [INFO] Timed out after 10 seconds
 ```

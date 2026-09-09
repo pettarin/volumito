@@ -15,7 +15,7 @@ volumito multiroom info
     {
         "host": "http://192.168.1.19",
         "isSelf": true,
-        "name": "Volumitotester",
+        "name": "VolumioHost1",
         "state": {
             "artist": "Enrico Ruggeri",
             "mute": false,
@@ -27,7 +27,7 @@ volumito multiroom info
     {
         "host": "http://192.168.1.123",
         "isSelf": false,
-        "name": "Euterpe",
+        "name": "VolumioHost2",
         "state": {
             "artist": "John Williams",
             "mute": false,

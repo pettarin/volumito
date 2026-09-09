@@ -20,8 +20,7 @@ A tabular format can also be output:
 volumito playback status --format table
 ```
 
-as well as selecting all the fields present in the response
-from the REST API:
+as well as selecting all the fields present in the response:
 
 ```bash lucio command=execute
 volumito playback status --fields ALL
@@ -85,7 +84,20 @@ For example, to play the third track:
 volumito playback play 3
 ```
 
-### Seeking
+### Play Previous Or Next Track
+
+The `playback previous` and `playback next` commands
+play the previous or next track in the current queue.
+
+```bash lucio command=execute
+volumito playback next
+```
+
+```bash lucio command=execute
+volumito playback previous
+```
+
+### Seek Within The Current Track
 
 The playback position within the current track
 can be queried with `playback seek`:
@@ -101,7 +113,7 @@ either in seconds:
 volumito playback seek 42
 ```
 
-or in `HH:MM:SS` format:
+or in `MM:SS` or `HH:MM:SS` format:
 
 ```bash lucio command=execute
 volumito playback seek 00:01:42
@@ -160,8 +172,7 @@ volumito playback unmute
 ```
 
 It is possible to set a "playback sleep",
-that is, an amount of time after which the playback is stopped
-and the Volumio host is put to sleep (if supported) or shut down (otherwise).
+that is, an amount of time after which the playback is stopped.
 
 To check if the playback sleep is set, run without arguments:
 
@@ -174,15 +185,21 @@ volumito -C aw playback sleep off
 volumito -C aw playback sleep
 ```
 
-To set it, provide the amount of time in either minutes or `HH:MM` format:
+To set it, provide the amount of time in either minutes or `H:MM` format:
 
 ```bash lucio command=execute
 volumito -C aw playback sleep 42
 ```
 
 ```bash lucio command=execute
-volumito -C aw playback sleep 02:00
+volumito -C aw playback sleep 2:00
 ```
+
+> [!NOTE]
+> The remaining delay is rounded down,
+> which explains why the output above has `41` and `1:59`,
+> even if requesting `42` and `2:00`.
+> (Getting the response from the target host requires non-zero time!)
 
 To disable the sleep, use the special value `off`:
 
