@@ -34,9 +34,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
 volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
 volumito -C sr notification register http://192.168.1.2:5678/yetanother
-[2026-09-09T13:28:55.258Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-09T13:28:55.853Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-09T13:28:56.455Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-09T13:43:18.952Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-09T13:43:19.507Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-09T13:43:20.068Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -44,7 +44,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito -C sr notification register --autocompose-url
-[2026-09-09T13:28:57.117Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:43:20.646Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -67,16 +67,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-09T13:28:58.424Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-09T13:43:21.808Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito -C sr notification unregister --all
-[2026-09-09T13:28:59.154Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-09T13:28:59.154Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-09T13:28:59.154Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:43:22.476Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-09T13:43:22.476Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-09T13:43:22.476Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -122,7 +122,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "item": "state"
 }
@@ -152,7 +152,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "item": "state"
 }
@@ -182,13 +182,13 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "item": "state"
 }
-[2026-09-09T13:29:05.545Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-09T13:29:05.545Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-09T13:29:05.546Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-09T13:29:15.590Z] [INFO] Timed out after 10 seconds
-[2026-09-09T13:29:15.618Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:43:28.489Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:43:28.490Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:43:28.490Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-09T13:43:38.540Z] [INFO] Timed out after 10 seconds
+[2026-09-09T13:43:38.564Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```

@@ -11,19 +11,19 @@ updates the music collection:
 
 ```bash
 volumito -C aw collection update
-[2026-09-09T13:26:01.908Z] [INFO] Command 'update library' executed successfully
+[2026-09-09T13:41:48.846Z] [INFO] Command 'update library' executed successfully
 ```
 
 Pass the `--thumbnails` option to regenerate only the thumbnails:
 
 ```bash
 volumito -C aw collection update --thumbnails
-[2026-09-09T13:26:02.788Z] [INFO] Command 'regenerate thumbnails' executed successfully
+[2026-09-09T13:41:49.575Z] [INFO] Command 'regenerate thumbnails' executed successfully
 ```
 
 Pass the `--rescan` option to force a full refresh of the music collection:
 
 ```bash
 volumito -C aw collection update --rescan
-[2026-09-09T13:26:03.608Z] [INFO] Command 'rescan library' executed successfully
+[2026-09-09T13:41:50.308Z] [INFO] Command 'rescan library' executed successfully
 ```

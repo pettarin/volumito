@@ -33,6 +33,103 @@ volumito playlist list
 ]
 ```
 
+### List The Contents Of A Playlist
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+The `playlist content` command lists the contents
+of the playlist specified by its identifier:
+
+
+```bash
+volumito -C aw playlist content "volumito test qobuz multiple albums"
+[
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 1,
+        "title": "Va tutto bene",
+        "uri": "qobuz://song/2833718"
+    },
+    {
+        "album": "Polvere",
+        "artist": "Enrico Ruggeri",
+        "position": 2,
+        "title": "Fuoco sui giocattoli",
+        "uri": "qobuz://song/2833719"
+    },
+    {
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "position": 3,
+        "title": "La Vie En Rouge",
+        "uri": "qobuz://song/167919"
+    },
+    {
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "position": 4,
+        "title": "Rien Ne Va Plus",
+        "uri": "qobuz://song/167920"
+    },
+    {
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "position": 5,
+        "title": "Certe Donne",
+        "uri": "qobuz://song/167921"
+    },
+    {
+        "album": "Sirtaki",
+        "artist": "Mango",
+        "position": 6,
+        "title": "I giochi del vento sul lago salato",
+        "uri": "qobuz://song/2581513"
+    },
+    {
+        "album": "Sirtaki",
+        "artist": "Mango",
+        "position": 7,
+        "title": "Sirtaki",
+        "uri": "qobuz://song/2581517"
+    },
+    {
+        "album": "Sirtaki",
+        "artist": "Mango",
+        "position": 8,
+        "title": "Come Monna Lisa",
+        "uri": "qobuz://song/2581518"
+    },
+    {
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "position": 9,
+        "title": "Il Mare D'Inverno",
+        "uri": "qobuz://song/167941"
+    },
+    {
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "position": 10,
+        "title": "Contessa",
+        "uri": "qobuz://song/167942"
+    },
+    {
+        "album": "La Vie En Rouge",
+        "artist": "Enrico Ruggeri",
+        "position": 11,
+        "title": "La Bandiera",
+        "uri": "qobuz://song/167933"
+    }
+]
+```
+
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
+
 ### Play A Playlist
 
 To play a playlist (from its first track),
@@ -50,13 +147,13 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.586",
+    "seek": "00:00:02.007",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-09T13:28:48.196Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-09T13:43:12.071Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 > [!TIP]

@@ -17,6 +17,23 @@ of all the available playlists:
 volumito playlist list
 ```
 
+### List The Contents Of A Playlist
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+The `playlist content` command lists the contents
+of the playlist specified by its identifier:
+
+
+```bash lucio command=execute
+volumito -C aw playlist content "volumito test qobuz multiple albums"
+```
+
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
+
 ### Play A Playlist
 
 To play a playlist (from its first track),

@@ -55,7 +55,7 @@ volumito -C aw notification event listen --timeout 10.0
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 536,
+        "seek": 501,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -64,7 +64,7 @@ volumito -C aw notification event listen --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "event": "pushState"
 }
@@ -94,7 +94,7 @@ volumito -C aw notification event listen --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "event": "pushState"
 }
@@ -124,11 +124,11 @@ volumito -C aw notification event listen --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "event": "pushState"
 }
-[2026-09-09T13:29:25.784Z] [INFO] Listening for the events: pushState
-[2026-09-09T13:29:25.784Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-09T13:29:35.785Z] [INFO] Timed out after 10 seconds
+[2026-09-09T13:43:48.035Z] [INFO] Listening for the events: pushState
+[2026-09-09T13:43:48.035Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-09T13:43:58.036Z] [INFO] Timed out after 10 seconds
 ```
