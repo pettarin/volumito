@@ -87,14 +87,14 @@ downloads:
 
   # Directory to download into, created if missing (mutually exclusive with output-file);
   # "{timestamp}" in the path is replaced with the current UTC time (e.g., 20260726121314)
-  # output-directory: .                           # use the current working directory
-  # output-directory: /tmp/volumito               # use a fixed directory
-  # output-directory: /tmp/volumito/{timestamp}   # use a per-run timestamped directory
-  output-directory: null                          # no download by default
+  # output-directory: .                                     # use the current working directory
+  # output-directory: /tmp/volumito                         # use a fixed directory
+  # output-directory: /tmp/volumito/{timestamp}             # use a per-run timestamped directory
+  output-directory: null                                    # no download by default
 
   # Exact file path to download to (mutually exclusive with output-directory)
-  # output-file: /tmp/volumito.out      # use a fixed full path
-  output-file: null                     # no download by default
+  # output-file: /tmp/volumito.out                          # use a fixed full path
+  output-file: null                                         # no download by default
 
   # Overwrite the destination file if it already exists
   overwrite-existing-files: false
@@ -565,10 +565,18 @@ volumio:
   allow-fallback-to-websocket-api: false
 
   # API client used to talk to the Volumio host, one of:
-  # - synchronous_rest (default; short forms: sync_rest, sr)
-  # - asynchronous_rest (required extra: async; short forms: async_rest, ar)
-  # - synchronous_websocket (required extra: websocket; short forms: sync_websocket, sw)
-  # - asynchronous_websocket (required extra: async_websocket; short forms: async_websocket, aw)
+  # - asynchronous_rest
+  #       short forms: async_rest, ar
+  #       required extra: async
+  # - asynchronous_websocket
+  #       short forms: async_websocket, aw
+  #       required extra: async_websocket
+  # - synchronous_rest
+  #       short forms: sync_rest, sr
+  #       no extra required (default)
+  # - synchronous_websocket
+  #       short forms: sync_websocket, sw
+  #       required extra: websocket
   api-client: synchronous_rest
 
   # Hostname or IP address of the Volumio host
