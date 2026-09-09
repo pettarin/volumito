@@ -80,7 +80,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 The next time you want to use `volumito`,
@@ -90,7 +90,7 @@ you will only need to activate the existing virtual environment:
 $ micromamba activate volumito_env
 
 (volumito_env) $ volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 To update `volumito`, use the `-U / --upgrade` option:
@@ -145,7 +145,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_env) $ volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 
@@ -264,7 +264,7 @@ volumito queue get
 
 # print information about the current track,
 # with a short format (a subset of all available fields)
-volumito track info
+volumito queue track info
 {
     "album": "Sirtaki",
     "artist": "Mango",
@@ -279,7 +279,7 @@ volumito track info
 
 # print information about the current track,
 # with all the available fields
-volumito track info --fields ALL
+volumito queue track info --fields ALL
 {
     "album": "Sirtaki",
     "albumart": "https://static.qobuz.com/images/covers/64/04/0639842660464_600.jpg",

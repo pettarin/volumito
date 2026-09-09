@@ -33,7 +33,7 @@ automatically installed in the virtual environment:
 
 ```bash
 (volumito_dev) $ volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 

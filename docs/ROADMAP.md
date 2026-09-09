@@ -33,8 +33,9 @@ Rough plan, broken down by milestone:
 
 ## v0.5.0
 
-- CLI: add commands covering the additional features that
-  the WebSocket API offers w.r.t. the REST API
+- Released
+  - CLI: add commands covering the additional features that
+    the WebSocket API offers w.r.t. the REST API
 
 ## v0.6.0
 
