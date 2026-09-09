@@ -5,18 +5,8 @@ volumito playlist play "volumito test qobuz multiple albums"
 
 ## Playlists
 
-> [!NOTE]
-> In this section the word "playlist" refers to Volumio playlists
-> which might aggregate tracks from different services
-> (e.g., tracks stored in local files and Qobuz tracks).
->
-> Some services (e.g., Qobuz) might define their own concept of "playlist",
-> but those "playlists" are not managed directly
-> by the `volumito playlist` command group.
-> Nevertheless, those "playlists" might still be discoverable and/or playable
-> using the `collection browse`, `collection search`,
-> and `queue replace` commands,
-> if they are endowed with their own URI.
+```markdown lucio command=include path="./inc/NOTE_ON_PLAYLIST_CONCEPT.md" style=literal
+```
 
 ### List All Playlists
 
@@ -50,4 +40,7 @@ volumito playlist --help
 ```
 
 The `download` subcommand is described
-in the Section [Download](#download) below.
+in Section [Download](#download) below.
+
+The other subcommands to edit playlists are described
+in Section [Edit Playlists](#edit-playlists) below.

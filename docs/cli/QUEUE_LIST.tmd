@@ -28,3 +28,23 @@ Add `--fields ALL` for even more details:
 ```bash lucio command=execute
 volumito queue status --fields ALL
 ```
+
+### Queue Help
+
+These are all the subcommands of the `queue` group:
+
+```bash lucio command=execute
+volumito queue --help
+```
+
+The `download` subcommand is described
+in Section [Download](#download) below.
+
+The `replace` subcommand is described
+in Section [Replace The Current Queue (Browse)](#replace-the-current-queue-browse)
+and
+in Section [Replace The Current Queue (Search)](#replace-the-current-queue-search)
+below.
+
+The other subcommands to edit the current queue are described
+in Section [Edit The Current Queue](#edit-the-current-queue) below.

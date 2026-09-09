@@ -33,13 +33,8 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
-- [Edit The Current Queue](#edit-the-current-queue)
-  - [Add An Item](#add-an-item)
-  - [Remove An Item](#remove-an-item)
-  - [Change Position Of An Item](#change-position-of-an-item)
-  - [Queue Save](#queue-save)
-  - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
+- [Clear The Current Queue](#clear-the-current-queue)
 - [Playlists](#playlists)
   - [List All Playlists](#list-all-playlists)
   - [Play A Playlist](#play-a-playlist)
@@ -57,18 +52,24 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
   - [Collection Statistics](#collection-statistics)
-- [Download](#download)
-  - [Download Track](#download-track)
-    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
-    - [Download Track Audio](#download-track-audio)
-  - [Download Queue](#download-queue)
-  - [Download Playlist](#download-playlist)
 - [Stories](#stories)
   - [Album Story](#album-story)
   - [Album Credits](#album-credits)
   - [Artist Story](#artist-story)
   - [Label Story](#label-story)
   - [Place Story](#place-story)
+- [Edit The Current Queue](#edit-the-current-queue)
+  - [Add An Item](#add-an-item)
+  - [Remove An Item](#remove-an-item)
+  - [Change Position Of An Item](#change-position-of-an-item)
+  - [Queue Save](#queue-save)
+- [Edit Playlists](#edit-playlists)
+- [Download](#download)
+  - [Download Track](#download-track)
+    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
+    - [Download Track Audio](#download-track-audio)
+  - [Download Queue](#download-queue)
+  - [Download Playlist](#download-playlist)
 - [Miscellaneous Commands](#miscellaneous-commands)
   - [Collection Radio](#collection-radio)
     - [Collection Radio List](#collection-radio-list)
@@ -137,7 +138,7 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 
-```markdown lucio command=include path="./QUEUE_ADD.md" style=literal
+```markdown lucio command=include path="./QUEUE_CLEAR.md" style=literal
 ```
 
 
@@ -153,11 +154,19 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 
-```markdown lucio command=include path="./DOWNLOAD.md" style=literal
+```markdown lucio command=include path="./STORY.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./STORY.md" style=literal
+```markdown lucio command=include path="./EDIT_QUEUE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./EDIT_PLAYLIST.md" style=literal
+```
+
+
+```markdown lucio command=include path="./DOWNLOAD.md" style=literal
 ```
 
 

@@ -53,7 +53,7 @@ volumito queue track --help
 ```
 
 The `albumart` and `audio` subcommands are described
-in the Section [Download](#download) below.
+in Section [Download](#download) below.
 
 > [!NOTE]
 > The `queue track` command group is also available

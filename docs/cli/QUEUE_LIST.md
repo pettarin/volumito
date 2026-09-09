@@ -171,11 +171,11 @@ volumito queue status --fields ALL
         "duration": "00:03:16",
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": "00:00:01.664",
+        "seek": "00:00:02.754",
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -184,7 +184,48 @@ volumito queue status --fields ALL
         "updatedb": false,
         "uri": "qobuz://song/2833718",
         "volatile": false,
-        "volume": 0
+        "volume": 20
     }
 }
 ```
+
+### Queue Help
+
+These are all the subcommands of the `queue` group:
+
+```bash
+volumito queue --help
+Usage: volumito queue [OPTIONS] COMMAND [ARGS]...
+
+  Manage the playback queue and its current track.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  add        Add the content of URI to the end of the queue, leaving the...
+  clear      Clear the playback queue.
+  consume    Print or set the consume mode, which drops each track from...
+  download   Download every track of the current queue.
+  list       Print the playback queue.
+  move       Move the track at SOURCE to TARGET in the queue.
+  randomize  Print or set the random (shuffle) mode.
+  remove     Remove the track at POSITION from the queue.
+  repeat     Print or set the repeat mode.
+  replace    Replace the queue with the content of URI, playing it unless...
+  save       Save the current queue as the playlist NAME, replacing it if...
+  status     Print the current track with the position, length, and...
+  track      Query the current track of the queue (information, audio,...
+```
+
+The `download` subcommand is described
+in Section [Download](#download) below.
+
+The `replace` subcommand is described
+in Section [Replace The Current Queue (Browse)](#replace-the-current-queue-browse)
+and
+in Section [Replace The Current Queue (Search)](#replace-the-current-queue-search)
+below.
+
+The other subcommands to edit the current queue are described
+in Section [Edit The Current Queue](#edit-the-current-queue) below.

@@ -5,7 +5,7 @@ volumito playlist play "volumito test qobuz multiple albums"
 
 ### Notifications (REST API)
 
-```markdown lucio command=include path="./ONLY_REST_API_CLIENT.md" style=literal
+```markdown lucio command=include path="./inc/ONLY_REST_API_CLIENT.md" style=literal
 ```
 
 Instead of constantly polling the Volumio REST API,

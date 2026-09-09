@@ -5,10 +5,10 @@ volumito playlist play "volumito test qobuz multiple albums 4 tracks"
 
 ## Edit The Current Queue
 
-### Add An Item
-
-```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
+
+### Add An Item
 
 If you want to add an item to the current queue,
 use the `queue add` command providing the URI of the item
@@ -54,7 +54,7 @@ volumito -C aw queue list -F table
 
 ### Remove An Item
 
-```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
 
 If you want to remove an item from the current queue,
@@ -71,7 +71,7 @@ volumito -C aw queue list -F table
 
 ### Change Position Of An Item
 
-```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
 
 If you want to change the position of an item of the current queue,
@@ -88,7 +88,7 @@ volumito -C aw queue list -F table
 
 ### Queue Save
 
-```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
 
 To save the current queue as a Volumio playlist,
@@ -103,23 +103,3 @@ volumito -C aw queue save "volumito docs queue save"
 # hidden block to ensure playlist "" does not exist
 volumito -C aw playlist delete "volumito docs queue save" --yes
 ```
-
-### Queue Clear
-
-To clear the current playback queue,
-issue the `queue clear` command:
-
-```bash lucio command=execute
-volumito queue clear
-```
-
-### Queue Help
-
-These are all the subcommands of the `queue` group:
-
-```bash lucio command=execute
-volumito queue --help
-```
-
-The `download` and `replace` subcommands are described
-in the Section [Download](#download) below.

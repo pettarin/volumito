@@ -35,13 +35,8 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
-- [Edit The Current Queue](#edit-the-current-queue)
-  - [Add An Item](#add-an-item)
-  - [Remove An Item](#remove-an-item)
-  - [Change Position Of An Item](#change-position-of-an-item)
-  - [Queue Save](#queue-save)
-  - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
+- [Clear The Current Queue](#clear-the-current-queue)
 - [Playlists](#playlists)
   - [List All Playlists](#list-all-playlists)
   - [Play A Playlist](#play-a-playlist)
@@ -59,18 +54,24 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
   - [Collection Statistics](#collection-statistics)
-- [Download](#download)
-  - [Download Track](#download-track)
-    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
-    - [Download Track Audio](#download-track-audio)
-  - [Download Queue](#download-queue)
-  - [Download Playlist](#download-playlist)
 - [Stories](#stories)
   - [Album Story](#album-story)
   - [Album Credits](#album-credits)
   - [Artist Story](#artist-story)
   - [Label Story](#label-story)
   - [Place Story](#place-story)
+- [Edit The Current Queue](#edit-the-current-queue)
+  - [Add An Item](#add-an-item)
+  - [Remove An Item](#remove-an-item)
+  - [Change Position Of An Item](#change-position-of-an-item)
+  - [Queue Save](#queue-save)
+- [Edit Playlists](#edit-playlists)
+- [Download](#download)
+  - [Download Track](#download-track)
+    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
+    - [Download Track Audio](#download-track-audio)
+  - [Download Queue](#download-queue)
+  - [Download Playlist](#download-playlist)
 - [Miscellaneous Commands](#miscellaneous-commands)
   - [Collection Radio](#collection-radio)
     - [Collection Radio List](#collection-radio-list)
@@ -885,19 +886,19 @@ issue the `playback status` command:
 ```bash
 volumito playback status
 {
-    "album": "La Vie En Rouge",
+    "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:56",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.501",
+    "seek": "00:00:01.489",
     "status": "play",
-    "title": "La Vie En Rouge",
+    "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
 ```
 
@@ -909,12 +910,12 @@ Volumio Status
 ==================================================
 Status              : play
 Position            : 1
-Title               : La Vie En Rouge
+Title               : Va tutto bene
 Artist              : Enrico Ruggeri
-Album               : La Vie En Rouge
-Duration            : 00:04:56
-Seek                : 00:00:03.124
-Volume              : 20
+Album               : Polvere
+Duration            : 00:03:16
+Seek                : 00:00:01.989
+Volume              : 0
 Mute                : False
 Tracktype           : qobuz
 Samplerate          : 44.1 kHz
@@ -928,32 +929,32 @@ from the REST API:
 ```bash
 volumito playback status --fields ALL
 {
-    "album": "La Vie En Rouge",
-    "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
+    "album": "Polvere",
+    "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "bitrate": "926 Kbps",
+    "bitrate": "155 Kbps",
     "channels": 2,
     "consume": true,
     "dbVolume": null,
     "disableVolumeControl": false,
-    "duration": "00:04:56",
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
-    "random": false,
-    "repeat": false,
+    "random": null,
+    "repeat": null,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.625",
-    "service": "mpd",
+    "seek": "00:00:02.740",
+    "service": "qobuz",
     "status": "play",
     "stream": false,
-    "title": "La Vie En Rouge",
+    "title": "Va tutto bene",
     "trackType": "qobuz",
     "updatedb": false,
-    "uri": "qobuz://song/167919",
+    "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 20
+    "volume": 0
 }
 ```
 
@@ -972,7 +973,7 @@ volumito playback status --fields ALL
 
 ```bash
 volumito -m playback status -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 383, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": null, "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 3246, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "155 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 0, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Pause And Stop
@@ -990,13 +991,13 @@ volumito playback pause
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.386",
+    "seek": "00:00:05.442",
     "status": "pause",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:41.551Z] [INFO] Command 'pause' executed successfully
+[2026-09-09T13:27:36.280Z] [INFO] Command 'pause' executed successfully
 ```
 
 By default, the resulting status of the playback is printed.
@@ -1016,13 +1017,13 @@ volumito playback toggle
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:04.386",
+    "seek": "00:00:07.446",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:44.159Z] [INFO] Command 'toggle' executed successfully
+[2026-09-09T13:27:39.002Z] [INFO] Command 'toggle' executed successfully
 ```
 
 To stop the playback, use `playback stop`:
@@ -1038,13 +1039,13 @@ volumito playback stop
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.312",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:46.833Z] [INFO] Command 'stop' executed successfully
+[2026-09-09T13:27:41.937Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Play Track At A Given Position
@@ -1062,13 +1063,13 @@ volumito playback play
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.003",
+    "seek": "00:00:00.791",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:49.423Z] [INFO] Command 'play' executed successfully
+[2026-09-09T13:27:44.712Z] [INFO] Command 'play' executed successfully
 ```
 
 It accepts an optional positional argument
@@ -1079,20 +1080,21 @@ For example, to play the third track:
 ```bash
 volumito playback play 3
 {
-    "album": "La Vie En Rouge",
+    "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:04:07",
+    "channels": 2,
+    "duration": "00:03:16",
     "mute": false,
     "position": 3,
-    "samplerate": "44.1 KHz",
-    "seek": "00:00:02.001",
-    "status": "stop",
-    "title": "La Vie En Rouge",
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:02.003",
+    "status": "play",
+    "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:52.296Z] [INFO] Command 'play' executed successfully
+[2026-09-09T13:27:47.634Z] [INFO] Command 'play' executed successfully
 ```
 
 ### Seeking
@@ -1102,7 +1104,7 @@ can be queried with `playback seek`:
 
 ```bash
 volumito playback seek
-00:00:02.502
+00:00:00.996
 ```
 
 and it can be set by providing a new value,
@@ -1119,13 +1121,13 @@ volumito playback seek 42
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.752",
+    "seek": "00:00:44.030",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:55.486Z] [INFO] Command 'seek 42' executed successfully
+[2026-09-09T13:27:51.033Z] [INFO] Command 'seek 42' executed successfully
 ```
 
 or in `HH:MM:SS` format:
@@ -1141,13 +1143,13 @@ volumito playback seek 00:01:42
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:44.007",
+    "seek": "00:01:44.074",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:17:58.141Z] [INFO] Command 'seek 102' executed successfully
+[2026-09-09T13:27:53.822Z] [INFO] Command 'seek 102' executed successfully
 ```
 
 or `plus/increase/up/forward` and `minus/decrease/down/backward`:
@@ -1163,13 +1165,13 @@ volumito playback seek forward
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.624",
+    "seek": "00:01:56.783",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:18:00.806Z] [INFO] Command 'seek plus' executed successfully
+[2026-09-09T13:27:56.570Z] [INFO] Command 'seek plus' executed successfully
 ```
 
 ```bash
@@ -1183,13 +1185,13 @@ volumito playback seek minus
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:49.142",
+    "seek": "00:01:49.285",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 0
 }
-[2026-09-08T14:18:03.414Z] [INFO] Command 'seek minus' executed successfully
+[2026-09-09T13:27:59.226Z] [INFO] Command 'seek minus' executed successfully
 ```
 
 ### Volume Control
@@ -1200,7 +1202,7 @@ can be queried with `playback volume`:
 
 ```bash
 volumito playback volume
-20
+0
 ```
 
 and it can be set by providing a new value, either numerical:
@@ -1216,13 +1218,13 @@ volumito playback volume 20
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:52.250",
+    "seek": "00:01:52.536",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-08T14:18:06.623Z] [INFO] Command 'volume 20' executed successfully
+[2026-09-09T13:28:02.539Z] [INFO] Command 'volume 20' executed successfully
 ```
 
 or `plus/increase/up` and `minus/decrease/down`:
@@ -1238,13 +1240,13 @@ volumito playback volume plus
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:55.003",
+    "seek": "00:01:55.288",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
     "volume": 21
 }
-[2026-09-08T14:18:09.270Z] [INFO] Command 'volume plus' executed successfully
+[2026-09-09T13:28:05.293Z] [INFO] Command 'volume plus' executed successfully
 ```
 
 ```bash
@@ -1258,13 +1260,13 @@ volumito playback volume down
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:57.651",
+    "seek": "00:01:58.040",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-08T14:18:11.919Z] [INFO] Command 'volume minus' executed successfully
+[2026-09-09T13:28:08.039Z] [INFO] Command 'volume minus' executed successfully
 ```
 
 The playback volume can be muted and unmuted with
@@ -1281,13 +1283,13 @@ volumito playback mute
     "mute": true,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:00.257",
+    "seek": "00:02:00.728",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-08T14:18:14.561Z] [INFO] Command 'volume mute' executed successfully
+[2026-09-09T13:28:10.672Z] [INFO] Command 'volume mute' executed successfully
 ```
 
 ```bash
@@ -1301,13 +1303,13 @@ volumito playback unmute
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:02.925",
+    "seek": "00:02:03.324",
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-08T14:18:17.190Z] [INFO] Command 'volume unmute' executed successfully
+[2026-09-09T13:28:13.394Z] [INFO] Command 'volume unmute' executed successfully
 ```
 
 ### Playback Sleep
@@ -1340,7 +1342,7 @@ volumito -C aw playback sleep 42
     "minutes": 41,
     "time": "0:41"
 }
-[2026-09-08T14:18:21.426Z] [INFO] Command 'sleep 42' executed successfully
+[2026-09-09T13:28:18.499Z] [INFO] Command 'sleep 42' executed successfully
 ```
 
 ```bash
@@ -1350,7 +1352,7 @@ volumito -C aw playback sleep 02:00
     "minutes": 119,
     "time": "1:59"
 }
-[2026-09-08T14:18:22.164Z] [INFO] Command 'sleep 120' executed successfully
+[2026-09-09T13:28:19.598Z] [INFO] Command 'sleep 120' executed successfully
 ```
 
 To disable the sleep, use the special value `off`:
@@ -1362,7 +1364,7 @@ volumito -C aw playback sleep off
     "minutes": 0,
     "time": "0:0"
 }
-[2026-09-08T14:18:22.903Z] [INFO] Command 'sleep off' executed successfully
+[2026-09-09T13:28:20.595Z] [INFO] Command 'sleep off' executed successfully
 ```
 
 ### Infinity Playback
@@ -1393,7 +1395,7 @@ volumito -C aw playback infinity on
     "available": true,
     "enabled": true
 }
-[2026-09-08T14:18:25.098Z] [INFO] Command 'infinity on' executed successfully
+[2026-09-09T13:28:23.472Z] [INFO] Command 'infinity on' executed successfully
 ```
 
 ```bash
@@ -1402,7 +1404,7 @@ volumito -C aw playback infinity off
     "available": true,
     "enabled": false
 }
-[2026-09-08T14:18:25.858Z] [INFO] Command 'infinity off' executed successfully
+[2026-09-09T13:28:24.351Z] [INFO] Command 'infinity off' executed successfully
 ```
 
 ### Playback Help
@@ -1494,11 +1496,11 @@ volumito queue track info --fields ALL
     "duration": "00:03:16",
     "mute": false,
     "position": 1,
-    "random": false,
-    "repeat": false,
+    "random": null,
+    "repeat": null,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.755",
+    "seek": "00:00:02.487",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -1507,13 +1509,13 @@ volumito queue track info --fields ALL
     "updatedb": false,
     "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 19
+    "volume": 20
 }
 ```
 
 ```bash
 volumito -m queue track info -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 3300, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": false, "repeat": false, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 3069, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Track Has Previous, Has Next
@@ -1555,7 +1557,7 @@ Commands:
 ```
 
 The `albumart` and `audio` subcommands are described
-in the Section [Download](#download) below.
+in Section [Download](#download) below.
 
 > [!NOTE]
 > The `queue track` command group is also available
@@ -1740,11 +1742,11 @@ volumito queue status --fields ALL
         "duration": "00:03:16",
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": "00:00:01.664",
+        "seek": "00:00:02.754",
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -1753,407 +1755,9 @@ volumito queue status --fields ALL
         "updatedb": false,
         "uri": "qobuz://song/2833718",
         "volatile": false,
-        "volume": 0
+        "volume": 20
     }
 }
-```
-
-
-## Edit The Current Queue
-
-### Add An Item
-
-> [!NOTE]
-> This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
-
-If you want to add an item to the current queue,
-use the `queue add` command providing the URI of the item
-(see
-[Search The Collection](#search-the-collection)
-or
-[Browse The Collection](#browse-the-collection)
-below for details).
-
-```bash
-volumito -C aw queue add qobuz://song/63333861
-{
-    "album": "Polvere",
-    "artist": "Enrico Ruggeri",
-    "bitdepth": "16 bit",
-    "channels": 2,
-    "duration": "00:03:16",
-    "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:01.456",
-    "status": "play",
-    "title": "Va tutto bene",
-    "trackType": "qobuz",
-    "volume": 20
-}
-[2026-09-08T14:18:29.933Z] [INFO] Command 'add' executed successfully
-```
-
-The above command appends the track
-"Don't Know Why" from album "Come Away With Me" by Norah Jones
-(URI `qobuz://song/63333861`) as the last element of the queue:
-
-```bash
-volumito -C aw queue list -F table
-Volumio Queue
-==================================================
-
-1. Va tutto bene
-   Artist : Enrico Ruggeri
-   Album  : Polvere
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:15
-
-2. La Vie En Rouge
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 1
-   Track  : 1
-   Duration: 00:04:07
-
-3. I giochi del vento sul lago salato
-   Artist : Mango
-   Album  : Sirtaki
-   Volume : 1
-   Track  : 2
-   Duration: 00:04:34
-
-4. Il Mare D'Inverno
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 2
-   Track  : 11
-   Duration: 00:04:39
-
-5. Don't Know Why
-   Artist : Norah Jones
-   Album  : Come Away With Me
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:06
-```
-
-You can add the item to the queue after the track currently playing
-by specifying the option `--next`:
-
-```bash
-volumito -C aw queue add qobuz://song/63333861 --next
-{
-    "album": "Polvere",
-    "artist": "Enrico Ruggeri",
-    "bitdepth": "16 bit",
-    "channels": 2,
-    "duration": "00:03:16",
-    "mute": false,
-    "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:04.994",
-    "status": "play",
-    "title": "Va tutto bene",
-    "trackType": "qobuz",
-    "volume": 20
-}
-[2026-09-08T14:18:33.462Z] [INFO] Command 'add' executed successfully
-```
-
-```bash
-volumito -C aw queue list -F table
-Volumio Queue
-==================================================
-
-1. Va tutto bene
-   Artist : Enrico Ruggeri
-   Album  : Polvere
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:15
-
-2. Don't Know Why
-   Artist : Norah Jones
-   Album  : Come Away With Me
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:06
-
-3. La Vie En Rouge
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 1
-   Track  : 1
-   Duration: 00:04:07
-
-4. I giochi del vento sul lago salato
-   Artist : Mango
-   Album  : Sirtaki
-   Volume : 1
-   Track  : 2
-   Duration: 00:04:34
-
-5. Il Mare D'Inverno
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 2
-   Track  : 11
-   Duration: 00:04:39
-```
-
-You can also switch immediately to the added item
-by specifying the option `--play`:
-
-```bash
-volumito -C aw queue add qobuz://song/63333861 --play
-{
-    "album": "Come Away With Me",
-    "artist": "Norah Jones",
-    "bitdepth": "24 bit",
-    "duration": "00:03:06",
-    "mute": false,
-    "position": 6,
-    "samplerate": "192 KHz",
-    "seek": "00:00:01.933",
-    "status": "stop",
-    "title": "Don't Know Why",
-    "trackType": "qobuz",
-    "volume": 20
-}
-[2026-09-08T14:18:36.950Z] [INFO] Command 'add' executed successfully
-```
-
-```bash
-volumito -C aw queue list -F table
-Volumio Queue
-==================================================
-
-1. Va tutto bene
-   Artist : Enrico Ruggeri
-   Album  : Polvere
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:15
-
-2. Don't Know Why
-   Artist : Norah Jones
-   Album  : Come Away With Me
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:06
-
-3. La Vie En Rouge
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 1
-   Track  : 1
-   Duration: 00:04:07
-
-4. I giochi del vento sul lago salato
-   Artist : Mango
-   Album  : Sirtaki
-   Volume : 1
-   Track  : 2
-   Duration: 00:04:34
-
-5. Il Mare D'Inverno
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 2
-   Track  : 11
-   Duration: 00:04:39
-
-6. Don't Know Why
-   Artist : Norah Jones
-   Album  : Come Away With Me
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:06
-```
-
-### Remove An Item
-
-> [!NOTE]
-> This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
-
-If you want to remove an item from the current queue,
-use the `queue remove` command providing the index of the item:
-
-```bash
-# remove the second track
-volumito -C aw queue remove 2
-{
-    "album": "Come Away With Me",
-    "artist": "Norah Jones",
-    "bitdepth": "24 bit",
-    "channels": 2,
-    "duration": "00:03:07",
-    "mute": false,
-    "position": 5,
-    "samplerate": "192 kHz",
-    "seek": "00:00:02.694",
-    "status": "play",
-    "title": "Don't Know Why",
-    "trackType": "qobuz",
-    "volume": 20
-}
-[2026-09-08T14:18:40.482Z] [INFO] Command 'remove' executed successfully
-```
-
-```bash
-volumito -C aw queue list -F table
-Volumio Queue
-==================================================
-
-1. Va tutto bene
-   Artist : Enrico Ruggeri
-   Album  : Polvere
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:15
-
-2. La Vie En Rouge
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 1
-   Track  : 1
-   Duration: 00:04:07
-
-3. I giochi del vento sul lago salato
-   Artist : Mango
-   Album  : Sirtaki
-   Volume : 1
-   Track  : 2
-   Duration: 00:04:34
-
-4. Il Mare D'Inverno
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 2
-   Track  : 11
-   Duration: 00:04:39
-
-5. Don't Know Why
-   Artist : Norah Jones
-   Album  : Come Away With Me
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:06
-```
-
-### Change Position Of An Item
-
-> [!NOTE]
-> This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
-
-If you want to change the position of an item of the current queue,
-use the `queue move` command providing the source index and the target index:
-
-```bash
-# swap the first two tracks
-volumito -C aw queue move 1 2
-{
-    "album": "Come Away With Me",
-    "artist": "Norah Jones",
-    "bitdepth": "24 bit",
-    "channels": 2,
-    "duration": "00:03:07",
-    "mute": false,
-    "position": 5,
-    "samplerate": "192 kHz",
-    "seek": "00:00:06.201",
-    "status": "play",
-    "title": "Don't Know Why",
-    "trackType": "qobuz",
-    "volume": 20
-}
-[2026-09-08T14:18:44.004Z] [INFO] Command 'move' executed successfully
-```
-
-```bash
-volumito -C aw queue list -F table
-Volumio Queue
-==================================================
-
-1. La Vie En Rouge
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 1
-   Track  : 1
-   Duration: 00:04:07
-
-2. Va tutto bene
-   Artist : Enrico Ruggeri
-   Album  : Polvere
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:15
-
-3. I giochi del vento sul lago salato
-   Artist : Mango
-   Album  : Sirtaki
-   Volume : 1
-   Track  : 2
-   Duration: 00:04:34
-
-4. Il Mare D'Inverno
-   Artist : Enrico Ruggeri
-   Album  : La Vie En Rouge
-   Volume : 2
-   Track  : 11
-   Duration: 00:04:39
-
-5. Don't Know Why
-   Artist : Norah Jones
-   Album  : Come Away With Me
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:06
-```
-
-### Queue Save
-
-> [!NOTE]
-> This functionality is available only when using a WebSocket API client.
-> The examples in this section set `-C aw` to remind of that.
-
-To save the current queue as a Volumio playlist,
-issue the `queue save` command,
-providing a name for the playlist:
-
-```bash
-volumito -C aw queue save "volumito docs queue save"
-[2026-09-08T14:18:47.527Z] [INFO] Command 'save' executed successfully
-```
-
-### Queue Clear
-
-To clear the current playback queue,
-issue the `queue clear` command:
-
-```bash
-volumito queue clear
-{
-    "album": "",
-    "artist": "",
-    "bitdepth": "",
-    "channels": "",
-    "duration": "00:00:00",
-    "mute": false,
-    "position": 1,
-    "samplerate": "",
-    "seek": "00:00:00.000",
-    "status": "stop",
-    "title": "",
-    "volume": 20
-}
-[2026-09-08T14:18:51.036Z] [INFO] Command 'clear' executed successfully
-[2026-09-08T14:18:53.060Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Queue Help
@@ -2185,8 +1789,44 @@ Commands:
   track      Query the current track of the queue (information, audio,...
 ```
 
-The `download` and `replace` subcommands are described
-in the Section [Download](#download) below.
+The `download` subcommand is described
+in Section [Download](#download) below.
+
+The `replace` subcommand is described
+in Section [Replace The Current Queue (Browse)](#replace-the-current-queue-browse)
+and
+in Section [Replace The Current Queue (Search)](#replace-the-current-queue-search)
+below.
+
+The other subcommands to edit the current queue are described
+in Section [Edit The Current Queue](#edit-the-current-queue) below.
+
+
+## Clear The Current Queue
+
+To clear the current playback queue,
+that is, to remove all the items scheduled for playback,
+issue the `queue clear` command:
+
+```bash
+volumito queue clear
+{
+    "album": "",
+    "artist": "",
+    "bitdepth": "",
+    "channels": "",
+    "duration": "00:00:00",
+    "mute": false,
+    "position": 1,
+    "samplerate": "",
+    "seek": "00:00:00.000",
+    "status": "stop",
+    "title": "",
+    "volume": 20
+}
+[2026-09-09T13:28:39.718Z] [INFO] Command 'clear' executed successfully
+[2026-09-09T13:28:41.735Z] [INFO] Command 'stop' executed successfully
+```
 
 
 ## Playlists
@@ -2239,13 +1879,13 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.121",
+    "seek": "00:00:00.586",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-08T09:27:43.770Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-09T13:28:48.196Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 > [!TIP]
@@ -2280,7 +1920,10 @@ Commands:
 ```
 
 The `download` subcommand is described
-in the Section [Download](#download) below.
+in Section [Download](#download) below.
+
+The other subcommands to edit playlists are described
+in Section [Edit Playlists](#edit-playlists) below.
 
 
 ## Search The Collection
@@ -3264,89 +2907,6 @@ volumito collection statistics
 ```
 
 
-## Download
-
-### Download Track
-
-#### Download Track Albumart (Cover)
-
-```bash
-# use the template defined in the configuration file
-volumito queue track albumart
-<REDACTED URL>
-[2026-09-08T09:09:46.711Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
-[2026-09-08T09:09:46.827Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
-[2026-09-08T09:09:46.827Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
-```
-
-```bash
-# override the configuration file, use an explicit output path
-volumito queue track albumart -o /tmp/cover.jpg
-<REDACTED URL>
-[2026-09-08T09:09:47.418Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
-[2026-09-08T09:09:47.479Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
-[2026-09-08T09:09:47.479Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
-```
-
-#### Download Track Audio
-
-```bash
-# use the template defined in the configuration file
-volumito queue track audio
-<REDACTED URL>
-[2026-09-08T09:09:48.079Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"...
-[2026-09-08T09:09:48.913Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"... done
-[2026-09-08T09:09:48.913Z] [INFO] Track successfully downloaded to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
-```
-
-```bash
-# override the configuration file, use an explicit output path
-volumito queue track audio -o /tmp/audio.flac
-<REDACTED URL>
-[2026-09-08T09:09:49.649Z] [INFO] Downloading track to "/tmp/audio.flac"...
-[2026-09-08T09:09:50.328Z] [INFO] Downloading track to "/tmp/audio.flac"... done
-[2026-09-08T09:09:50.328Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
-```
-
-### Download Queue
-
-```bash
-volumito queue download
-[2026-09-08T09:09:51.198Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
-[2026-09-08T09:09:56.293Z] [INFO] [1/4] downloaded: "/tmp/o/Enrico_Ruggeri/Polvere/001___Va_tutto_bene.flac"
-[2026-09-08T09:10:01.851Z] [INFO] [2/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac"
-[2026-09-08T09:10:07.484Z] [INFO] [3/4] downloaded: "/tmp/o/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac"
-[2026-09-08T09:10:12.984Z] [INFO] [4/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/2/011___Il_Mare_D'Inverno.flac"
-[2026-09-08T09:10:15.186Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
-```
-
-### Download Playlist
-
-```bash
-volumito playlist download "volumito test qobuz multiple albums 4 tracks"
-{
-    "album": "Polvere",
-    "artist": "Enrico Ruggeri",
-    "bitdepth": "16 bit",
-    "duration": "00:03:15",
-    "mute": false,
-    "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:04.006",
-    "status": "stop",
-    "title": "Va tutto bene",
-    "trackType": "qobuz",
-    "volume": 19
-}
-[2026-09-08T09:10:20.790Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
-[2026-09-08T09:10:26.117Z] [INFO] [1/4] downloaded: "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
-[2026-09-08T09:10:31.644Z] [INFO] [2/4] downloaded: "/tmp/o/002___La_Vie_En_Rouge___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
-[2026-09-08T09:10:41.421Z] [INFO] [3/4] downloaded: "/tmp/o/003___I_giochi_del_vento_sul_lago_salato___Sirtaki___Mango.flac"
-[2026-09-08T09:10:51.320Z] [INFO] [4/4] downloaded: "/tmp/o/004___Il_Mare_D'Inverno___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
-[2026-09-08T09:10:53.482Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
-```
-
-
 ## Stories
 
 > [!TIP]
@@ -4007,6 +3567,481 @@ volumito story place "Abbey Road Studios"
 ```
 
 
+## Edit The Current Queue
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+### Add An Item
+
+If you want to add an item to the current queue,
+use the `queue add` command providing the URI of the item
+(see
+[Search The Collection](#search-the-collection)
+or
+[Browse The Collection](#browse-the-collection)
+below for details).
+
+```bash
+volumito -C aw queue add qobuz://song/63333861
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:03.112",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 0
+}
+[2026-09-09T13:27:08.245Z] [INFO] Command 'add' executed successfully
+```
+
+The above command appends the track
+"Don't Know Why" from album "Come Away With Me" by Norah Jones
+(URI `qobuz://song/63333861`) as the last element of the queue:
+
+```bash
+volumito -C aw queue list -F table
+Volumio Queue
+==================================================
+
+1. Va tutto bene
+   Artist : Enrico Ruggeri
+   Album  : Polvere
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:15
+
+2. La Vie En Rouge
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 1
+   Track  : 1
+   Duration: 00:04:07
+
+3. I giochi del vento sul lago salato
+   Artist : Mango
+   Album  : Sirtaki
+   Volume : 1
+   Track  : 2
+   Duration: 00:04:34
+
+4. Il Mare D'Inverno
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 2
+   Track  : 11
+   Duration: 00:04:39
+
+5. Don't Know Why
+   Artist : Norah Jones
+   Album  : Come Away With Me
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:06
+```
+
+You can add the item to the queue after the track currently playing
+by specifying the option `--next`:
+
+```bash
+volumito -C aw queue add qobuz://song/63333861 --next
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "channels": 2,
+    "duration": "00:03:16",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:06.866",
+    "status": "play",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 0
+}
+[2026-09-09T13:27:12.040Z] [INFO] Command 'add' executed successfully
+```
+
+```bash
+volumito -C aw queue list -F table
+Volumio Queue
+==================================================
+
+1. Va tutto bene
+   Artist : Enrico Ruggeri
+   Album  : Polvere
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:15
+
+2. Don't Know Why
+   Artist : Norah Jones
+   Album  : Come Away With Me
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:06
+
+3. La Vie En Rouge
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 1
+   Track  : 1
+   Duration: 00:04:07
+
+4. I giochi del vento sul lago salato
+   Artist : Mango
+   Album  : Sirtaki
+   Volume : 1
+   Track  : 2
+   Duration: 00:04:34
+
+5. Il Mare D'Inverno
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 2
+   Track  : 11
+   Duration: 00:04:39
+```
+
+You can also switch immediately to the added item
+by specifying the option `--play`:
+
+```bash
+volumito -C aw queue add qobuz://song/63333861 --play
+{
+    "album": "Come Away With Me",
+    "artist": "Norah Jones",
+    "bitdepth": "24 bit",
+    "channels": 2,
+    "duration": "00:03:07",
+    "mute": false,
+    "position": 6,
+    "samplerate": "192 kHz",
+    "seek": "00:00:00.271",
+    "status": "play",
+    "title": "Don't Know Why",
+    "trackType": "qobuz",
+    "volume": 0
+}
+[2026-09-09T13:27:15.657Z] [INFO] Command 'add' executed successfully
+```
+
+```bash
+volumito -C aw queue list -F table
+Volumio Queue
+==================================================
+
+1. Va tutto bene
+   Artist : Enrico Ruggeri
+   Album  : Polvere
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:15
+
+2. Don't Know Why
+   Artist : Norah Jones
+   Album  : Come Away With Me
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:06
+
+3. La Vie En Rouge
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 1
+   Track  : 1
+   Duration: 00:04:07
+
+4. I giochi del vento sul lago salato
+   Artist : Mango
+   Album  : Sirtaki
+   Volume : 1
+   Track  : 2
+   Duration: 00:04:34
+
+5. Il Mare D'Inverno
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 2
+   Track  : 11
+   Duration: 00:04:39
+
+6. Don't Know Why
+   Artist : Norah Jones
+   Album  : Come Away With Me
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:06
+```
+
+### Remove An Item
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+If you want to remove an item from the current queue,
+use the `queue remove` command providing the index of the item:
+
+```bash
+# remove the second track
+volumito -C aw queue remove 2
+{
+    "album": "Come Away With Me",
+    "artist": "Norah Jones",
+    "bitdepth": "24 bit",
+    "channels": 2,
+    "duration": "00:03:07",
+    "mute": false,
+    "position": 5,
+    "samplerate": "192 kHz",
+    "seek": "00:00:03.977",
+    "status": "play",
+    "title": "Don't Know Why",
+    "trackType": "qobuz",
+    "volume": 0
+}
+[2026-09-09T13:27:19.280Z] [INFO] Command 'remove' executed successfully
+```
+
+```bash
+volumito -C aw queue list -F table
+Volumio Queue
+==================================================
+
+1. Va tutto bene
+   Artist : Enrico Ruggeri
+   Album  : Polvere
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:15
+
+2. La Vie En Rouge
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 1
+   Track  : 1
+   Duration: 00:04:07
+
+3. I giochi del vento sul lago salato
+   Artist : Mango
+   Album  : Sirtaki
+   Volume : 1
+   Track  : 2
+   Duration: 00:04:34
+
+4. Il Mare D'Inverno
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 2
+   Track  : 11
+   Duration: 00:04:39
+
+5. Don't Know Why
+   Artist : Norah Jones
+   Album  : Come Away With Me
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:06
+```
+
+### Change Position Of An Item
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+If you want to change the position of an item of the current queue,
+use the `queue move` command providing the source index and the target index:
+
+```bash
+# swap the first two tracks
+volumito -C aw queue move 1 2
+{
+    "album": "Come Away With Me",
+    "artist": "Norah Jones",
+    "bitdepth": "24 bit",
+    "channels": 2,
+    "duration": "00:03:07",
+    "mute": false,
+    "position": 5,
+    "samplerate": "192 kHz",
+    "seek": "00:00:07.799",
+    "status": "play",
+    "title": "Don't Know Why",
+    "trackType": "qobuz",
+    "volume": 0
+}
+[2026-09-09T13:27:23.120Z] [INFO] Command 'move' executed successfully
+```
+
+```bash
+volumito -C aw queue list -F table
+Volumio Queue
+==================================================
+
+1. La Vie En Rouge
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 1
+   Track  : 1
+   Duration: 00:04:07
+
+2. Va tutto bene
+   Artist : Enrico Ruggeri
+   Album  : Polvere
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:15
+
+3. I giochi del vento sul lago salato
+   Artist : Mango
+   Album  : Sirtaki
+   Volume : 1
+   Track  : 2
+   Duration: 00:04:34
+
+4. Il Mare D'Inverno
+   Artist : Enrico Ruggeri
+   Album  : La Vie En Rouge
+   Volume : 2
+   Track  : 11
+   Duration: 00:04:39
+
+5. Don't Know Why
+   Artist : Norah Jones
+   Album  : Come Away With Me
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:06
+```
+
+### Queue Save
+
+> [!NOTE]
+> This functionality is available only when using a WebSocket API client.
+> The examples in this section set `-C aw` to remind of that.
+
+To save the current queue as a Volumio playlist,
+issue the `queue save` command,
+providing a name for the playlist:
+
+```bash
+volumito -C aw queue save "volumito docs queue save"
+[2026-09-09T13:27:26.723Z] [INFO] Command 'save' executed successfully
+```
+
+
+## Edit Playlists
+
+> [!NOTE]
+> In this section the word "playlist" refers to Volumio playlists
+> which might aggregate tracks from different services
+> (e.g., tracks stored in local files and Qobuz tracks).
+>
+> Some services (e.g., Qobuz) might define their own concept of "playlist",
+> but those "playlists" are not managed directly
+> by the `volumito playlist` command group.
+> Nevertheless, those "playlists" might still be discoverable and/or playable
+> using the `collection browse`, `collection search`,
+> and `queue replace` commands,
+> if they are endowed with their own URI.
+
+TBW
+
+
+## Download
+
+### Download Track
+
+#### Download Track Albumart (Cover)
+
+```bash
+# use the template defined in the configuration file
+volumito queue track albumart
+<REDACTED URL>
+[2026-09-08T09:09:46.711Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
+[2026-09-08T09:09:46.827Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
+[2026-09-08T09:09:46.827Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
+```
+
+```bash
+# override the configuration file, use an explicit output path
+volumito queue track albumart -o /tmp/cover.jpg
+<REDACTED URL>
+[2026-09-08T09:09:47.418Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
+[2026-09-08T09:09:47.479Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
+[2026-09-08T09:09:47.479Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
+```
+
+#### Download Track Audio
+
+```bash
+# use the template defined in the configuration file
+volumito queue track audio
+<REDACTED URL>
+[2026-09-08T09:09:48.079Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"...
+[2026-09-08T09:09:48.913Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"... done
+[2026-09-08T09:09:48.913Z] [INFO] Track successfully downloaded to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
+```
+
+```bash
+# override the configuration file, use an explicit output path
+volumito queue track audio -o /tmp/audio.flac
+<REDACTED URL>
+[2026-09-08T09:09:49.649Z] [INFO] Downloading track to "/tmp/audio.flac"...
+[2026-09-08T09:09:50.328Z] [INFO] Downloading track to "/tmp/audio.flac"... done
+[2026-09-08T09:09:50.328Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
+```
+
+### Download Queue
+
+```bash
+volumito queue download
+[2026-09-08T09:09:51.198Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
+[2026-09-08T09:09:56.293Z] [INFO] [1/4] downloaded: "/tmp/o/Enrico_Ruggeri/Polvere/001___Va_tutto_bene.flac"
+[2026-09-08T09:10:01.851Z] [INFO] [2/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac"
+[2026-09-08T09:10:07.484Z] [INFO] [3/4] downloaded: "/tmp/o/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac"
+[2026-09-08T09:10:12.984Z] [INFO] [4/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/2/011___Il_Mare_D'Inverno.flac"
+[2026-09-08T09:10:15.186Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+```
+
+### Download Playlist
+
+```bash
+volumito playlist download "volumito test qobuz multiple albums 4 tracks"
+{
+    "album": "Polvere",
+    "artist": "Enrico Ruggeri",
+    "bitdepth": "16 bit",
+    "duration": "00:03:15",
+    "mute": false,
+    "position": 1,
+    "samplerate": "44 KHz",
+    "seek": "00:00:04.006",
+    "status": "stop",
+    "title": "Va tutto bene",
+    "trackType": "qobuz",
+    "volume": 19
+}
+[2026-09-08T09:10:20.790Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
+[2026-09-08T09:10:26.117Z] [INFO] [1/4] downloaded: "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
+[2026-09-08T09:10:31.644Z] [INFO] [2/4] downloaded: "/tmp/o/002___La_Vie_En_Rouge___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
+[2026-09-08T09:10:41.421Z] [INFO] [3/4] downloaded: "/tmp/o/003___I_giochi_del_vento_sul_lago_salato___Sirtaki___Mango.flac"
+[2026-09-08T09:10:51.320Z] [INFO] [4/4] downloaded: "/tmp/o/004___Il_Mare_D'Inverno___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
+[2026-09-08T09:10:53.482Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+```
+
+
 ## Miscellaneous Commands
 
 ### Collection Radio
@@ -4048,7 +4083,7 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-08T14:58:45.767Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-09T13:25:35.468Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 #### Collection Radio Remove
@@ -4068,7 +4103,7 @@ Volumio Browse Results
    https://streamingv2.shoutcast.com/rtl-1025
 2. Radio B&M
    https://ice02.fluidstream.net/bella.mp3
-[2026-09-08T14:58:46.791Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
+[2026-09-09T13:25:36.591Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
 ```
 
 ### Collection Source
@@ -4171,7 +4206,7 @@ To disable a source:
 
 ```bash
 volumito -C aw collection source disable "bluetooth"
-[2026-09-08T14:58:48.466Z] [INFO] Command 'disable source "bluetooth"' executed successfully
+[2026-09-09T13:25:38.530Z] [INFO] Command 'disable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -4261,7 +4296,7 @@ To enable a source:
 
 ```bash
 volumito -C aw collection source enable "bluetooth"
-[2026-09-08T14:59:01.109Z] [INFO] Command 'enable source "bluetooth"' executed successfully
+[2026-09-09T13:25:50.147Z] [INFO] Command 'enable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -4356,21 +4391,21 @@ updates the music collection:
 
 ```bash
 volumito -C aw collection update
-[2026-09-08T15:18:28.199Z] [INFO] Command 'update library' executed successfully
+[2026-09-09T13:26:01.908Z] [INFO] Command 'update library' executed successfully
 ```
 
 Pass the `--thumbnails` option to regenerate only the thumbnails:
 
 ```bash
 volumito -C aw collection update --thumbnails
-[2026-09-08T15:18:28.950Z] [INFO] Command 'regenerate thumbnails' executed successfully
+[2026-09-09T13:26:02.788Z] [INFO] Command 'regenerate thumbnails' executed successfully
 ```
 
 Pass the `--rescan` option to force a full refresh of the music collection:
 
 ```bash
 volumito -C aw collection update --rescan
-[2026-09-08T15:18:29.688Z] [INFO] Command 'rescan library' executed successfully
+[2026-09-09T13:26:03.608Z] [INFO] Command 'rescan library' executed successfully
 ```
 
 ### Command Discovery
@@ -5919,9 +5954,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
 volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
 volumito -C sr notification register http://192.168.1.2:5678/yetanother
-[2026-09-08T14:33:40.605Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-08T14:33:41.151Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T14:33:41.785Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-09T13:28:55.258Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-09T13:28:55.853Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-09T13:28:56.455Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -5929,7 +5964,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito -C sr notification register --autocompose-url
-[2026-09-08T14:33:42.432Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:28:57.117Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -5952,16 +5987,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-08T14:33:43.729Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-09T13:28:58.424Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito -C sr notification unregister --all
-[2026-09-08T14:33:44.305Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-08T14:33:44.305Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-08T14:33:44.305Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:28:59.154Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-09T13:28:59.154Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-09T13:28:59.154Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -5988,79 +6023,17 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": "865 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 194404,
-        "service": "qobuz",
-        "status": "play",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "865 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 194404,
-        "service": "qobuz",
-        "status": "play",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "item": "state"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
         "consume": false,
         "dbVolume": null,
         "disableVolumeControl": false,
         "duration": 236,
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 505,
+        "seek": 501,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -6073,11 +6046,71 @@ volumito -C sr notification listen --register-url --timeout 10.0
     },
     "item": "state"
 }
-[2026-09-08T14:33:50.119Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-08T14:33:50.119Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-08T14:33:50.119Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T14:34:00.135Z] [INFO] Timed out after 10 seconds
-[2026-09-08T14:34:00.159Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": null,
+        "repeat": null,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 20
+    },
+    "item": "state"
+}
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": null,
+        "repeat": null,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 20
+    },
+    "item": "state"
+}
+[2026-09-09T13:29:05.545Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:29:05.545Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-09T13:29:05.546Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-09T13:29:15.590Z] [INFO] Timed out after 10 seconds
+[2026-09-09T13:29:15.618Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 ### Notifications (WebSocket API)
@@ -6125,79 +6158,17 @@ volumito -C aw notification event listen --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
-        "bitrate": "865 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 194319,
-        "service": "qobuz",
-        "status": "play",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "event": "pushState"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
-        "bitrate": "865 Kbps",
-        "channels": 2,
-        "consume": true,
-        "dbVolume": null,
-        "disableVolumeControl": false,
-        "duration": 236,
-        "mute": false,
-        "position": 0,
-        "random": false,
-        "repeat": false,
-        "repeatSingle": false,
-        "samplerate": "44.1 kHz",
-        "seek": 194319,
-        "service": "qobuz",
-        "status": "play",
-        "stream": false,
-        "title": "Va tutto bene",
-        "trackType": "qobuz",
-        "updatedb": false,
-        "uri": "qobuz://song/2833718",
-        "volatile": false,
-        "volume": 20
-    },
-    "event": "pushState"
-}
-{
-    "data": {
-        "album": "Polvere",
-        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
-        "artist": "Enrico Ruggeri",
-        "bitdepth": "16 bit",
         "consume": false,
         "dbVolume": null,
         "disableVolumeControl": false,
         "duration": 236,
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 501,
+        "seek": 536,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -6210,9 +6181,69 @@ volumito -C aw notification event listen --timeout 10.0
     },
     "event": "pushState"
 }
-[2026-09-08T14:34:10.448Z] [INFO] Listening for the events: pushState
-[2026-09-08T14:34:10.448Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-08T14:34:20.449Z] [INFO] Timed out after 10 seconds
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": null,
+        "repeat": null,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 20
+    },
+    "event": "pushState"
+}
+{
+    "data": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "channels": 2,
+        "consume": false,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": 236,
+        "mute": false,
+        "position": 1,
+        "random": null,
+        "repeat": null,
+        "repeatSingle": false,
+        "samplerate": "44 KHz",
+        "seek": 45,
+        "service": "qobuz",
+        "status": "play",
+        "stream": "qobuz",
+        "title": "Fuoco sui giocattoli",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833719",
+        "volatile": false,
+        "volume": 20
+    },
+    "event": "pushState"
+}
+[2026-09-09T13:29:25.784Z] [INFO] Listening for the events: pushState
+[2026-09-09T13:29:25.784Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-09T13:29:35.785Z] [INFO] Timed out after 10 seconds
 ```
 
 ### Copying Files With SCP

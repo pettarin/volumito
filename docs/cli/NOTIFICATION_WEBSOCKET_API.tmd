@@ -5,7 +5,7 @@ volumito playlist play "volumito test qobuz multiple albums"
 
 ### Notifications (WebSocket API)
 
-```markdown lucio command=include path="./ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
 ```
 
 When using a WebSocket API client,

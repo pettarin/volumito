@@ -100,7 +100,7 @@ To disable a source:
 
 ```bash
 volumito -C aw collection source disable "bluetooth"
-[2026-09-08T14:58:48.466Z] [INFO] Command 'disable source "bluetooth"' executed successfully
+[2026-09-09T13:25:38.530Z] [INFO] Command 'disable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -190,7 +190,7 @@ To enable a source:
 
 ```bash
 volumito -C aw collection source enable "bluetooth"
-[2026-09-08T14:59:01.109Z] [INFO] Command 'enable source "bluetooth"' executed successfully
+[2026-09-09T13:25:50.147Z] [INFO] Command 'enable source "bluetooth"' executed successfully
 ```
 
 ```bash
