@@ -168,9 +168,17 @@ volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4
 
 The `playlist delete` command deletes a playlist:
 
-```bash lucio command=execute
-volumito -C aw playlist delete "volumito docs playlist2" --yes
+```bash lucio command=execute exit=1
+volumito -C aw playlist delete "volumito docs playlist4"
 ```
+
+```markdown lucio command=include path="./inc/CAUTION_COMMAND_REQUIRES_CONFIRMATION.md" style=literal
+```
+
+```bash lucio command=execute
+volumito -C aw playlist delete "volumito docs playlist4" --yes
+```
+
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false exit=any
 # hidden block to ensure certain playlists do not exist

@@ -68,6 +68,8 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Create An Empty Playlist](#create-an-empty-playlist)
   - [Add An Item (Playlist)](#add-an-item-playlist)
   - [Remove An Item (Playlist)](#remove-an-item-playlist)
+  - [Copy A Playlist](#copy-a-playlist)
+  - [Rename A Playlist](#rename-a-playlist)
   - [Delete A Playlist](#delete-a-playlist)
 - [Download](#download)
   - [Download Track](#download-track)
@@ -206,4 +208,3 @@ This document describes the `volumito` command-line (CLI) tool.
 
 ```markdown lucio command=include path="./SYSTEM.md" style=literal
 ```
-

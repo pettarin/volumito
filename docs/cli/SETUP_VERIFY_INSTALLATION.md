@@ -38,7 +38,7 @@ volumito --host volumio.local info
         "mute": false,
         "status": "play",
         "track": "Va tutto bene",
-        "volume": 19
+        "volume": 21
     },
     "systemversion": "4.119",
     "type": "device",

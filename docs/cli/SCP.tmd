@@ -5,13 +5,8 @@ with subcommands `scp get` and `scp put`
 to copy files and directories from and to
 the Volumio host.
 
-> [!CAUTION]
-> **Use these commands at your own peril!**
->
-> You might risk overwriting files or directories
-> on the Volumio host and/or your local machine,
-> resulting in loss of data or even compromising
-> the functionality of the Volumio host.
+```markdown lucio command=include path="./inc/CAUTION_RISKY_COMMAND.md" style=literal
+```
 
 > [!NOTE]
 > To use the `volumito scp` commands
@@ -41,7 +36,7 @@ the connection parameters:
 
 in addition to the obvious `--host` (default: `volumio.local`).
 
-> [!WARNING]
+> [!CAUTION]
 > You can provide the SSH password on the command line
 > (`volumito --ssh-password "volumio" scp ...`)
 > or in the `volumito` configuration file.
@@ -78,10 +73,8 @@ tree /tmp/mydir
 volumito scp put -r /tmp/mydir /tmp/
 ```
 
-> [!WARNING]
-> Mind the error: to make sure you know what you are doing,
-> `volumito` refuses to copy the file/directory
-> unless you provide the `--yes` option:
+```markdown lucio command=include path="./inc/CAUTION_COMMAND_REQUIRES_CONFIRMATION.md" style=literal
+```
 
 ```bash lucio command=execute
 volumito scp put -r /tmp/mydir /tmp/ --yes

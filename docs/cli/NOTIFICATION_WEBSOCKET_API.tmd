@@ -30,4 +30,3 @@ volumito playback seek 03:10
 ```bash lucio command=execute
 volumito -C aw notification event listen --timeout 10.0
 ```
-

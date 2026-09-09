@@ -227,4 +227,3 @@ These are all the subcommands of the `playback` group:
 ```bash lucio command=execute
 volumito playback --help
 ```
-

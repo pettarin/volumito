@@ -52,4 +52,3 @@ volumito story label "EMI"
 ```bash lucio command=execute
 volumito story place "Abbey Road Studios"
 ```
-

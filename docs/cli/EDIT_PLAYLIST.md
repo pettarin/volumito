@@ -35,7 +35,7 @@ volumito -C aw playlist create "volumito docs playlist"
     "volumito test qobuz single album",
     "volumito test qobuz single album 3 tracks"
 ]
-[2026-09-09T14:36:45.354Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
+[2026-09-09T14:54:55.103Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
 ```
 
 The playlist is initially empty:
@@ -68,7 +68,7 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://song/63333861
         "uri": "qobuz://song/63333861"
     }
 ]
-[2026-09-09T14:36:47.921Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-09T14:54:57.290Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 As you can see, the above command appends the track
@@ -172,8 +172,8 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:36:49.566Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
-[2026-09-09T14:36:55.396Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-09T14:54:58.426Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
+[2026-09-09T14:55:06.195Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 When adding an album, option `--expand-tracks` is selected by default,
@@ -201,7 +201,7 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
         "uri": "qobuz://album/0090317058467"
     }
 ]
-[2026-09-09T14:37:00.006Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-09T14:55:10.700Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!NOTE]
@@ -336,7 +336,7 @@ volumito -C aw playlist remove "volumito docs playlist" qobuz://song/63333861
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:37:20.798Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+[2026-09-09T14:55:31.693Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
 ```
 
 Remove the second track, specified by index
@@ -381,7 +381,7 @@ volumito -C aw playlist remove "volumito docs playlist" -p 2
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:37:21.817Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+[2026-09-09T14:55:32.717Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!TIP]
@@ -434,15 +434,15 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2"
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:37:22.602Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
-[2026-09-09T14:37:25.509Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
+[2026-09-09T14:55:33.534Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
+[2026-09-09T14:55:36.301Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
 ```
 
 With the `-p / --position` option, only the specified tracks
 will be copied:
 
 ```bash
-volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" -p 1,2-4
+volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" -p 1,3-4
 [
     {
         "album": "Polvere",
@@ -455,26 +455,19 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" 
         "album": "Polvere",
         "artist": "Enrico Ruggeri",
         "position": 2,
-        "title": "Va tutto bene",
-        "uri": "qobuz://song/2833718"
-    },
-    {
-        "album": "Polvere",
-        "artist": "Enrico Ruggeri",
-        "position": 3,
         "title": "Fuoco sui giocattoli",
         "uri": "qobuz://song/2833719"
     },
     {
         "album": "Polvere",
         "artist": "Enrico Ruggeri",
-        "position": 4,
+        "position": 3,
         "title": "Non c'è Penelope",
         "uri": "qobuz://song/2833728"
     }
 ]
-[2026-09-09T14:37:26.392Z] [INFO] Copying 4 items of "volumito docs playlist" to "volumito docs playlist3"
-[2026-09-09T14:37:28.576Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
+[2026-09-09T14:55:37.107Z] [INFO] Copying 3 items of "volumito docs playlist" to "volumito docs playlist3"
+[2026-09-09T14:55:38.964Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
 ```
 
 ### Rename A Playlist
@@ -520,8 +513,8 @@ volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-09T14:37:29.399Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
-[2026-09-09T14:37:32.159Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
+[2026-09-09T14:55:39.779Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
+[2026-09-09T14:55:42.140Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
 ```
 
 > [!NOTE]
@@ -535,10 +528,20 @@ volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4
 The `playlist delete` command deletes a playlist:
 
 ```bash
-volumito -C aw playlist delete "volumito docs playlist2" --yes
+volumito -C aw playlist delete "volumito docs playlist4"
+[2026-09-09T14:55:42.818Z] [ERRO] Refusing to delete the playlist without -y/--yes: "volumito docs playlist4"
+```
+
+> [!CAUTION]
+> Mind the error: to make sure you know what you are doing,
+> `volumito` refuses to execute the command
+> unless you provide the `--yes` option:
+
+```bash
+volumito -C aw playlist delete "volumito docs playlist4" --yes
 [
+    "volumito docs playlist2",
     "volumito docs playlist3",
-    "volumito docs playlist4",
     "volumito test alarm",
     "volumito test local album",
     "volumito test qobuz 5 hd tracks",
@@ -547,8 +550,9 @@ volumito -C aw playlist delete "volumito docs playlist2" --yes
     "volumito test qobuz single album",
     "volumito test qobuz single album 3 tracks"
 ]
-[2026-09-09T14:37:32.989Z] [INFO] Command 'delete playlist "volumito docs playlist2"' executed successfully
+[2026-09-09T14:55:43.539Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
 ```
+
 
 > [!TIP]
 > The command requires the `-y / --yes` confirmation option,

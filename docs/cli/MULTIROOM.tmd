@@ -55,4 +55,3 @@ require a WebSocket API client, as their help message tells:
 ```bash lucio command=execute
 volumito multiroom client --help
 ```
-

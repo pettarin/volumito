@@ -71,4 +71,3 @@ volumito --allow-fallback-to-websocket-api collection radio add "Radio Volumito 
 # hidden block to delete the added radio
 volumito -C aw collection radio remove "Radio Volumito Docs"
 ```
-

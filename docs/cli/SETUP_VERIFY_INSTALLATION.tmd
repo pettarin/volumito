@@ -48,4 +48,3 @@ whose REST API is proxied to port 4567:
 ```bash
 volumito -H 192.168.1.3 -M 6599 -P 4567 ...
 ```
-

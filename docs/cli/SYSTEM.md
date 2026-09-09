@@ -21,12 +21,12 @@ volumito system info
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/07/07/5099750410707_600.jpg",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "mute": false,
-        "status": "stop",
-        "track": "Rien Ne Va Plus",
-        "volume": 20
+        "status": "play",
+        "track": "Fuoco sui giocattoli",
+        "volume": 19
     },
     "systemversion": "4.119",
     "type": "device",
@@ -45,8 +45,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-08T15:11:08.383Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-08T15:11:08.383Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-09T14:57:23.476Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-09T14:57:23.476Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -95,8 +95,8 @@ on the Volumio host via SSH.
 > [!CAUTION]
 > **Use this command at your own peril!**
 >
-> You might damage your Volumio host
-> (e.g., by removing files on it!),
+> You might damage your Volumio host and/or your local machine
+> (e.g., by removing or replacing files on it),
 > to the point a full reinstall will be needed.
 
 > [!NOTE]
@@ -114,10 +114,10 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-08T15:11:11.192Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-09T14:57:26.387Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
-> [!WARNING]
+> [!CAUTION]
 > Mind the error: to make sure you know what you are doing,
 > `volumito` refuses to execute the command
 > unless you provide the `--yes` option:
@@ -128,7 +128,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-bluealsa.service-5XSmiv\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-haveged.service-PX51QE\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-ntpsec.service-BzIMOF\nsystemd-private-44bc8e8d7e6a4cd6980065b927539f0a-systemd-logind.service-Jg3zeI\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-bluealsa.service-wTPHYh\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-haveged.service-r8T6mA\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-ntpsec.service-yRrZsK\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-systemd-logind.service-7NqP5M\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -152,10 +152,10 @@ shairport-sync-metadata
 shairport-sync.conf
 snapfifo
 sshtunnel.sh
-systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-bluealsa.service-5XSmiv
-systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-haveged.service-PX51QE
-systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-ntpsec.service-BzIMOF
-systemd-private-44bc8e8d7e6a4cd6980065b927539f0a-systemd-logind.service-Jg3zeI
+systemd-private-3f4c632fd31e4e12910edef49b8de115-bluealsa.service-wTPHYh
+systemd-private-3f4c632fd31e4e12910edef49b8de115-haveged.service-r8T6mA
+systemd-private-3f4c632fd31e4e12910edef49b8de115-ntpsec.service-yRrZsK
+systemd-private-3f4c632fd31e4e12910edef49b8de115-systemd-logind.service-7NqP5M
 tisoc-controller
 updater
 upmpdcli.conf

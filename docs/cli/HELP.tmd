@@ -42,4 +42,3 @@ volumito command alias
 > If you would like to enable all or some of them,
 > uncomment the relevant lines under the `aliases:` section
 > of your configuration file.
-
