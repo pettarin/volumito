@@ -117,39 +117,39 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 
-```markdown lucio command=include path="./GET_HELP.md" style=literal
+```markdown lucio command=include path="./HELP.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./TYPES_OF_CLIENTS.md" style=literal
+```markdown lucio command=include path="./API_CLIENT.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./CONTROL_PLAYBACK.md" style=literal
+```markdown lucio command=include path="./PLAYBACK.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./INSPECT_CURRENT_TRACK.md" style=literal
+```markdown lucio command=include path="./QUEUE_TRACK.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./INSPECT_CURRENT_QUEUE.md" style=literal
+```markdown lucio command=include path="./QUEUE_LIST.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./EDIT_CURRENT_QUEUE.md" style=literal
+```markdown lucio command=include path="./QUEUE_ADD.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./PLAYLISTS.md" style=literal
+```markdown lucio command=include path="./PLAYLIST.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./SEARCH_COLLECTION.md" style=literal
+```markdown lucio command=include path="./COLLECTION_SEARCH.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./BROWSE_COLLECTION.md" style=literal
+```markdown lucio command=include path="./COLLECTION_BROWSE.md" style=literal
 ```
 
 
@@ -181,10 +181,10 @@ This document describes the `volumito` command-line (CLI) tool.
 ```markdown lucio command=include path="./MULTIROOM.md" style=literal
 ```
 
-```markdown lucio command=include path="./NOTIFICATIONS_REST_API.md" style=literal
+```markdown lucio command=include path="./NOTIFICATION_REST_API.md" style=literal
 ```
 
-```markdown lucio command=include path="./NOTIFICATIONS_WEBSOCKET_API.md" style=literal
+```markdown lucio command=include path="./NOTIFICATION_WEBSOCKET_API.md" style=literal
 ```
 
 ```markdown lucio command=include path="./SCP.md" style=literal

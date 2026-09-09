@@ -1718,6 +1718,46 @@ volumito queue status
 }
 ```
 
+Add `--fields ALL` for even more details:
+
+```bash
+volumito queue status --fields ALL
+{
+    "has_next": true,
+    "has_previous": false,
+    "length": 11,
+    "position": 1,
+    "track": {
+        "album": "Polvere",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
+        "bitdepth": "16 bit",
+        "bitrate": "155 Kbps",
+        "channels": 2,
+        "consume": true,
+        "dbVolume": null,
+        "disableVolumeControl": false,
+        "duration": "00:03:16",
+        "mute": false,
+        "position": 1,
+        "random": false,
+        "repeat": false,
+        "repeatSingle": false,
+        "samplerate": "44.1 kHz",
+        "seek": "00:00:01.664",
+        "service": "qobuz",
+        "status": "play",
+        "stream": false,
+        "title": "Va tutto bene",
+        "trackType": "qobuz",
+        "updatedb": false,
+        "uri": "qobuz://song/2833718",
+        "volatile": false,
+        "volume": 0
+    }
+}
+```
+
 
 ## Edit The Current Queue
 

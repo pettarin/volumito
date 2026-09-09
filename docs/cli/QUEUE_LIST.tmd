@@ -22,3 +22,9 @@ use `queue status`:
 ```bash lucio command=execute
 volumito queue status
 ```
+
+Add `--fields ALL` for even more details:
+
+```bash lucio command=execute
+volumito queue status --fields ALL
+```
