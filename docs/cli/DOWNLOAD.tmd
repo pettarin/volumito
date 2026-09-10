@@ -14,22 +14,27 @@ volumito playlist play "volumito test qobuz multiple albums 4 tracks"
 
 ### Download Track
 
+> [!NOTE]
+> In the examples below, wherever an explicit `-o` override is not present,
+> the destination directory `/tmp/o/` is used
+> as it is defined in the configuration file used to generate them.
+>
+> See Sections [Configuration File](#configuration-file) and
+> [Setup Configuration File](#setup-configuration-file) for details.
+
 #### Download Track Albumart (Cover)
 
 ```bash lucio command=execute
-# use the template defined in the configuration file
 volumito queue track albumart
 ```
 
 ```bash lucio command=execute
-# override the configuration file, use an explicit output path
 volumito queue track albumart -o /tmp/cover.jpg
 ```
 
 #### Download Track Audio
 
 ```bash lucio command=execute
-# use the template defined in the configuration file
 volumito queue track audio
 ```
 

@@ -14,7 +14,11 @@ as demonstrated by the following examples.
 
 ### Browse Tracks Of A Qobuz Album By Artist
 
-Browse Qobuz -> My Artists -> "Enrico Ruggeri" (artist) -> "Polvere" (album):
+Browse
+Qobuz ->
+My Artists ->
+"Enrico Ruggeri" (artist) ->
+"Polvere" (album):
 
 ```bash lucio command=execute
 volumito collection browse
@@ -29,16 +33,23 @@ volumito collection browse --limit 5 "qobuz://myartists"
 ```
 
 ```bash lucio command=execute
+# Enrico Ruggeri (artist)
 volumito collection browse --limit 5 "qobuz://artist/178398"
 ```
 
 ```bash lucio command=execute
+# Polvere (album)
 volumito collection browse --limit 5 "qobuz://album/0090317058467"
 ```
 
 ### Browse Local Resources
 
-Browse local resources stored in `/mnt/INTERNAL/` -> "Mango" (artist) -> "Sirtaki" (album):
+Browse local resources stored in
+`music-library` ->
+`INTERNAL` (i.e., `/mnt/INTERNAL/` on the Volumio host) ->
+`music` (root directory) ->
+"Mango" (artist) ->
+"Sirtaki" (album):
 
 ```bash lucio command=execute
 volumito collection browse
@@ -57,10 +68,12 @@ volumito collection browse --limit 5 "music-library/INTERNAL/music"
 ```
 
 ```bash lucio command=execute
+# Mango (artist)
 volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango"
 ```
 
 ```bash lucio command=execute
+# Sirtaki (album)
 volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango/Sirtaki"
 ```
 
@@ -87,11 +100,18 @@ Local resources work as well:
 volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
 ```
 
-### Collection Statistics
+### Collection Help
 
-The `collection statistics` command prints some statistics
-of the music collection:
+These are all the subcommands of the `collection` group:
 
 ```bash lucio command=execute
-volumito collection statistics
+volumito collection --help
+```
+
+All commands, with the exception of `collection browse`,
+`collection search` and `collection statistics`,
+require a WebSocket API client, as their help message tells:
+
+```bash lucio command=execute
+volumito collection update --help
 ```

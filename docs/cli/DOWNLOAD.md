@@ -4,56 +4,61 @@
 
 ### Download Track
 
+> [!NOTE]
+> In the examples below, wherever an explicit `-o` override is not present,
+> the destination directory `/tmp/o/` is used
+> as it is defined in the configuration file used to generate them.
+>
+> See Sections [Configuration File](#configuration-file) and
+> [Setup Configuration File](#setup-configuration-file) for details.
+
 #### Download Track Albumart (Cover)
 
 ```bash
-# use the template defined in the configuration file
 volumito queue track albumart
 <REDACTED URL>
-[2026-09-09T14:53:50.445Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
-[2026-09-09T14:53:50.560Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
-[2026-09-09T14:53:50.561Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
+[2026-09-10T11:58:08.894Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
+[2026-09-10T11:58:08.960Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
+[2026-09-10T11:58:08.960Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
 ```
 
 ```bash
-# override the configuration file, use an explicit output path
 volumito queue track albumart -o /tmp/cover.jpg
 <REDACTED URL>
-[2026-09-09T14:53:51.328Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
-[2026-09-09T14:53:51.385Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
-[2026-09-09T14:53:51.386Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
+[2026-09-10T11:58:09.544Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
+[2026-09-10T11:58:09.602Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
+[2026-09-10T11:58:09.602Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
 ```
 
 #### Download Track Audio
 
 ```bash
-# use the template defined in the configuration file
 volumito queue track audio
 <REDACTED URL>
-[2026-09-09T14:53:52.287Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"...
-[2026-09-09T14:53:53.136Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"... done
-[2026-09-09T14:53:53.136Z] [INFO] Track successfully downloaded to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
+[2026-09-10T11:58:10.211Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"...
+[2026-09-10T11:58:10.998Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"... done
+[2026-09-10T11:58:10.999Z] [INFO] Track successfully downloaded to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
 ```
 
 ```bash
 # override the configuration file, use an explicit output path
 volumito queue track audio -o /tmp/audio.flac
 <REDACTED URL>
-[2026-09-09T14:53:53.838Z] [INFO] Downloading track to "/tmp/audio.flac"...
-[2026-09-09T14:53:54.436Z] [INFO] Downloading track to "/tmp/audio.flac"... done
-[2026-09-09T14:53:54.436Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
+[2026-09-10T11:58:11.716Z] [INFO] Downloading track to "/tmp/audio.flac"...
+[2026-09-10T11:58:12.512Z] [INFO] Downloading track to "/tmp/audio.flac"... done
+[2026-09-10T11:58:12.513Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
 ```
 
 ### Download Queue
 
 ```bash
 volumito queue download
-[2026-09-09T14:53:55.279Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
-[2026-09-09T14:54:00.593Z] [INFO] [1/4] downloaded: "/tmp/o/Enrico_Ruggeri/Polvere/001___Va_tutto_bene.flac"
-[2026-09-09T14:54:06.213Z] [INFO] [2/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac"
-[2026-09-09T14:54:11.702Z] [INFO] [3/4] downloaded: "/tmp/o/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac"
-[2026-09-09T14:54:17.357Z] [INFO] [4/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/2/011___Il_Mare_D'Inverno.flac"
-[2026-09-09T14:54:19.572Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+[2026-09-10T11:58:13.222Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
+[2026-09-10T11:58:18.416Z] [INFO] [1/4] downloaded: "/tmp/o/Enrico_Ruggeri/Polvere/001___Va_tutto_bene.flac"
+[2026-09-10T11:58:23.981Z] [INFO] [2/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac"
+[2026-09-10T11:58:29.491Z] [INFO] [3/4] downloaded: "/tmp/o/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac"
+[2026-09-10T11:58:34.885Z] [INFO] [4/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/2/011___Il_Mare_D'Inverno.flac"
+[2026-09-10T11:58:37.378Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
 ```
 
 ### Download Playlist
@@ -64,20 +69,21 @@ volumito playlist download "volumito test qobuz multiple albums 4 tracks"
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:15",
+    "channels": 2,
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:04.086",
-    "status": "stop",
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:00.258",
+    "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 21
+    "volume": 20
 }
-[2026-09-09T14:54:24.371Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
-[2026-09-09T14:54:29.437Z] [INFO] [1/4] downloaded: "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
-[2026-09-09T14:54:34.835Z] [INFO] [2/4] downloaded: "/tmp/o/002___La_Vie_En_Rouge___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
-[2026-09-09T14:54:40.412Z] [INFO] [3/4] downloaded: "/tmp/o/003___I_giochi_del_vento_sul_lago_salato___Sirtaki___Mango.flac"
-[2026-09-09T14:54:46.099Z] [INFO] [4/4] downloaded: "/tmp/o/004___Il_Mare_D'Inverno___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
-[2026-09-09T14:54:48.350Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+[2026-09-10T11:58:42.141Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
+[2026-09-10T11:58:47.270Z] [INFO] [1/4] downloaded: "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
+[2026-09-10T11:58:52.756Z] [INFO] [2/4] downloaded: "/tmp/o/002___La_Vie_En_Rouge___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
+[2026-09-10T11:58:58.274Z] [INFO] [3/4] downloaded: "/tmp/o/003___I_giochi_del_vento_sul_lago_salato___Sirtaki___Mango.flac"
+[2026-09-10T11:59:03.884Z] [INFO] [4/4] downloaded: "/tmp/o/004___Il_Mare_D'Inverno___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
+[2026-09-10T11:59:06.358Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
 ```

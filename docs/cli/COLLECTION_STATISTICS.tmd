@@ -1,0 +1,8 @@
+### Collection Statistics
+
+The `collection statistics` command prints some statistics
+of the music collection:
+
+```bash lucio command=execute
+volumito collection statistics
+```

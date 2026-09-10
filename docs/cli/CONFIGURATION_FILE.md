@@ -214,6 +214,10 @@ miscellaneous:
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
 
+  # When saving the queue as a playlist, or copying or renaming a playlist,
+  # overwrite an existing playlist of the destination name
+  overwrite-existing-playlist: false
+
   # After running the "system execute" command,
   # return the same exit code generated on the Volumio host
   propagate-remote-exit-code: true
@@ -702,6 +706,9 @@ in the following order of decreasing priority:
 - the `/etc/` directory (only on POSIX systems);
 - the `/etc/volumito/` directory (only on POSIX systems).
 
+Regular `volumito.yaml` takes precedence over "hidden" `.volumito.yaml`
+if both are found in the same directory.
+
 The first configuration file found will be read and applied;
 additional configuration files found will be ignored.
 
@@ -743,7 +750,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-09T16:09:04.452Z] [INFO] Created configuration file "/home/user/volumito.yaml"
+[2026-09-10T12:08:15.164Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -753,8 +760,13 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-09T16:09:05.015Z] [ERRO] File already exists: "/home/user/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-10T12:08:15.719Z] [ERRO] File already exists: "/home/user/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
+
+> [!TIP]
+> Add the `--overwrite-existing-files` option,
+> or set the corresponding key in the configuration file,
+> to overwrite a file already existing at the specified path.
 
 After creating your configuration file,
 you might want to open it with your favorite text editor,
@@ -768,7 +780,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-09-09T16:09:05.575Z] [INFO] Created configuration file "/home/user/volumito3.yaml"
+[2026-09-10T12:08:16.279Z] [INFO] Created configuration file "/home/user/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -778,151 +790,7 @@ that it can be loaded correctly.
 To that end, use the `configuration check` command:
 
 ```bash
-volumito configuration check ~/.volumito.yaml
-aliases.c = collection
-aliases.cb = collection browse
-aliases.cmd = command
-aliases.cmda = command alias
-aliases.cmdl = command list
-aliases.conf = configuration
-aliases.cs = collection search
-aliases.exec = system execute
-aliases.i = info
-aliases.mlt = multiroom
-aliases.mute = playback mute
-aliases.next = playback next
-aliases.not = notification
-aliases.notl = notification list
-aliases.notlis = notification listen
-aliases.notr = notification register
-aliases.notu = notification unregister
-aliases.p = playback
-aliases.pause = playback pause
-aliases.ping = system ping
-aliases.pl = playlist
-aliases.play = playback play
-aliases.pld = playlist download
-aliases.pll = playlist list
-aliases.plp = playlist play
-aliases.pm = playback mute
-aliases.pnext = playback next
-aliases.ppause = playback pause
-aliases.pplay = playback play
-aliases.pprev = playback previous
-aliases.prev = playback previous
-aliases.ps = playback status
-aliases.pseek = playback seek
-aliases.pstop = playback stop
-aliases.pt = playback toggle
-aliases.pu = playback unmute
-aliases.pv = playback volume
-aliases.q = queue
-aliases.qc = queue clear
-aliases.qd = queue download
-aliases.ql = queue list
-aliases.qr = queue replace
-aliases.qs = queue status
-aliases.qt = queue track
-aliases.qta = queue track audio
-aliases.qtc = queue track albumart
-aliases.qti = queue track info
-aliases.s = story
-aliases.salb = story album
-aliases.sart = story artist
-aliases.scre = story credits
-aliases.seek = playback seek
-aliases.slab = story label
-aliases.spla = story place
-aliases.stop = playback stop
-aliases.sys = system
-aliases.syse = system execute
-aliases.sysi = system info
-aliases.sysp = system ping
-aliases.sysv = system version
-aliases.toggle = playback toggle
-aliases.unmute = playback unmute
-aliases.vol = playback volume
-downloads.create-download-manifest = True
-downloads.output-directory = /tmp/o
-downloads.output-file = None
-downloads.overwrite-existing-files = False
-downloads.playlist-download.albumart-file-name-template = 000___{album}___{artist}.{extension}
-downloads.playlist-download.audio-file-name-template = {position:03d}___{title}___{album}___{artist}.{extension}
-downloads.playlist-download.manifest-file = {output_directory}/manifest.json
-downloads.playlist-download.number-retries-next-track = 10
-downloads.playlist-download.only-tracks = None
-downloads.playlist-download.with-albumart = True
-downloads.queue-download.albumart-file-name-template = {artist}/{album_volume}/000___{album}.{extension}
-downloads.queue-download.audio-file-name-template = {artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}
-downloads.queue-download.manifest-file = {output_directory}/manifest.json
-downloads.queue-download.number-retries-next-track = 10
-downloads.queue-download.only-tracks = None
-downloads.queue-download.with-albumart = True
-downloads.replace-characters-in-file-names =  :
-downloads.replace-characters-in-file-names-with = _
-downloads.track-albumart.file-name-template = 000___{album}___{artist}.{extension}
-downloads.track-audio.file-name-template = {position:03d}___{title}___{album}___{artist}.{extension}
-miscellaneous.add-cover-and-metadata = True
-miscellaneous.allow-local-file-rename = False
-miscellaneous.check-next-track = True
-miscellaneous.check-playlist-name = True
-miscellaneous.check-seek-position = True
-miscellaneous.propagate-remote-exit-code = True
-notification.endpoint = /volumionotifications
-notification.event-listen.count = None
-notification.event-listen.idle-timeout = None
-notification.event-listen.timeout = None
-notification.listen.count = None
-notification.listen.idle-timeout = None
-notification.listen.register-url = False
-notification.listen.register-url-full = None
-notification.listen.timeout = None
-notification.listen.unregister-url-on-exit = True
-notification.port = 3003
-output.collection-browse.format = table
-output.collection-favourite-list.format = table
-output.collection-radio-list.format = table
-output.collection-search.format = table
-output.color = True
-output.fields = SHORT
-output.format = pretty
-output.machine-readable = False
-output.pager = False
-output.position-starting-at-one = True
-output.print-resulting-status = True
-output.strict-parsing-configuration-file = False
-output.verbose = False
-timeouts.mpd-timeout = 5.0
-timeouts.rest-api-timeout = 5.0
-timeouts.rest-api-timeout-slow-endpoints = 60.0
-timeouts.retries-on-unexpected-state = 3
-timeouts.sleep-before-next-api-call = 2.0
-timeouts.websocket-timeout = 5.0
-volumio.allow-fallback-to-rest-api = False
-volumio.allow-fallback-to-websocket-api = False
-volumio.api-client = synchronous_rest
-volumio.host = volumio.local
-volumio.mpd-port = 6600
-volumio.rest-api-port = 3000
-volumio.scheme = http
-volumio.ssh-password = None
-volumio.ssh-port = 22
-volumio.ssh-username = volumio
-volumio.websocket-port = 3000
-[2026-09-09T16:09:06.157Z] [INFO] Configuration file "/home/user/.volumito.yaml" is valid.
-```
-
-Any fatal issues will be reported as errors,
-while any non-fatal issues (ignored at runtime) will be reported as warnings.
-The command prints the list of all the keys defined in the configuration file,
-along with their values.
-
-The path can be omitted: in that case the configuration file
-being checked is the one found by the probe mechanism described
-in the previous section.
-
-```bash
-volumito configuration check
+volumito configuration check ~/volumito.yaml
 downloads.create-download-manifest = True
 downloads.output-directory = None
 downloads.output-file = None
@@ -948,6 +816,7 @@ miscellaneous.allow-local-file-rename = False
 miscellaneous.check-next-track = True
 miscellaneous.check-playlist-name = True
 miscellaneous.check-seek-position = True
+miscellaneous.overwrite-existing-playlist = False
 miscellaneous.propagate-remote-exit-code = True
 notification.endpoint = /volumionotifications
 notification.event-listen.count = None
@@ -992,7 +861,91 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-09T16:09:06.739Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
+[2026-09-10T12:08:16.856Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
+```
+
+Any fatal issues will be reported as errors,
+while any non-fatal issues (ignored at runtime) will be reported as warnings.
+The command prints the list of all the keys defined in the configuration file,
+along with their values.
+
+The path can be omitted: in that case the configuration file
+being checked is the one found by the probe mechanism described
+in the previous section.
+
+```bash
+volumito configuration check
+downloads.create-download-manifest = True
+downloads.output-directory = None
+downloads.output-file = None
+downloads.overwrite-existing-files = False
+downloads.playlist-download.albumart-file-name-template = 000___{album}___{artist}.{extension}
+downloads.playlist-download.audio-file-name-template = {position:03d}___{title}___{album}___{artist}.{extension}
+downloads.playlist-download.manifest-file = {output_directory}/manifest.json
+downloads.playlist-download.number-retries-next-track = 10
+downloads.playlist-download.only-tracks = None
+downloads.playlist-download.with-albumart = True
+downloads.queue-download.albumart-file-name-template = {artist}/{album_volume}/000___{album}.{extension}
+downloads.queue-download.audio-file-name-template = {artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}
+downloads.queue-download.manifest-file = {output_directory}/manifest.json
+downloads.queue-download.number-retries-next-track = 10
+downloads.queue-download.only-tracks = None
+downloads.queue-download.with-albumart = True
+downloads.replace-characters-in-file-names =  :
+downloads.replace-characters-in-file-names-with = _
+downloads.track-albumart.file-name-template = 000___{album}___{artist}.{extension}
+downloads.track-audio.file-name-template = {position:03d}___{title}___{album}___{artist}.{extension}
+miscellaneous.add-cover-and-metadata = True
+miscellaneous.allow-local-file-rename = False
+miscellaneous.check-next-track = True
+miscellaneous.check-playlist-name = True
+miscellaneous.check-seek-position = True
+miscellaneous.overwrite-existing-playlist = False
+miscellaneous.propagate-remote-exit-code = True
+notification.endpoint = /volumionotifications
+notification.event-listen.count = None
+notification.event-listen.idle-timeout = None
+notification.event-listen.timeout = None
+notification.listen.count = None
+notification.listen.idle-timeout = None
+notification.listen.register-url = False
+notification.listen.register-url-full = None
+notification.listen.timeout = None
+notification.listen.unregister-url-on-exit = True
+notification.port = 3003
+output.collection-browse.format = table
+output.collection-favourite-list.format = table
+output.collection-radio-list.format = table
+output.collection-search.format = table
+output.color = True
+output.fields = SHORT
+output.format = pretty
+output.machine-readable = False
+output.pager = False
+output.position-starting-at-one = True
+output.print-resulting-content = True
+output.print-resulting-list = True
+output.print-resulting-status = True
+output.strict-parsing-configuration-file = False
+output.verbose = False
+timeouts.mpd-timeout = 5.0
+timeouts.rest-api-timeout = 5.0
+timeouts.rest-api-timeout-slow-endpoints = 60.0
+timeouts.retries-on-unexpected-state = 3
+timeouts.sleep-before-next-api-call = 2.0
+timeouts.websocket-timeout = 5.0
+volumio.allow-fallback-to-rest-api = False
+volumio.allow-fallback-to-websocket-api = False
+volumio.api-client = synchronous_rest
+volumio.host = volumio.local
+volumio.mpd-port = 6600
+volumio.rest-api-port = 3000
+volumio.scheme = http
+volumio.ssh-password = None
+volumio.ssh-port = 22
+volumio.ssh-username = volumio
+volumio.websocket-port = 3000
+[2026-09-10T12:08:17.456Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -1009,15 +962,16 @@ volumito -i playback status
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:15",
+    "channels": 2,
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:29.970",
-    "status": "stop",
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:00.258",
+    "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
 ```
 
@@ -1029,30 +983,31 @@ volumito -v playback status
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:15",
+    "channels": 2,
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:30.470",
-    "status": "stop",
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:00.258",
+    "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:09:07.869Z] [DEBU] Using configuration file: "/home/user/volumito.yaml"
-[2026-09-09T16:09:07.870Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-09T16:09:07.870Z] [DEBU] Initializing the REST API client...
-[2026-09-09T16:09:07.870Z] [DEBU] Initializing the REST API client... done
-[2026-09-09T16:09:07.870Z] [DEBU] Using the synchronous REST API client
-[2026-09-09T16:09:07.870Z] [DEBU] Opening the HTTP session...
-[2026-09-09T16:09:07.870Z] [DEBU] Opening the HTTP session... done
-[2026-09-09T16:09:07.870Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-09T16:09:07.892Z] [DEBU] Response status: 200
-[2026-09-09T16:09:07.893Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-09T16:09:07.895Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-09T16:09:07.895Z] [DEBU] Successfully retrieved state
-[2026-09-09T16:09:07.895Z] [DEBU] Closing the HTTP session...
-[2026-09-09T16:09:07.895Z] [DEBU] Closing the HTTP session... done
+[2026-09-10T12:08:18.619Z] [DEBU] Using configuration file: "/home/user/volumito.yaml"
+[2026-09-10T12:08:18.620Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:08:18.620Z] [DEBU] Initializing the REST API client...
+[2026-09-10T12:08:18.620Z] [DEBU] Initializing the REST API client... done
+[2026-09-10T12:08:18.620Z] [DEBU] Using the synchronous REST API client
+[2026-09-10T12:08:18.621Z] [DEBU] Opening the HTTP session...
+[2026-09-10T12:08:18.621Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T12:08:18.621Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-10T12:08:18.642Z] [DEBU] Response status: 200
+[2026-09-10T12:08:18.642Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-10T12:08:18.644Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:08:18.644Z] [DEBU] Successfully retrieved state
+[2026-09-10T12:08:18.645Z] [DEBU] Closing the HTTP session...
+[2026-09-10T12:08:18.645Z] [DEBU] Closing the HTTP session... done
 ```
 
 ```bash
@@ -1061,30 +1016,31 @@ volumito -v -i playback status
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:15",
+    "channels": 2,
+    "duration": "00:03:16",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:31.223",
-    "status": "stop",
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:00.258",
+    "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:09:08.441Z] [DEBU] Ignoring configuration files
-[2026-09-09T16:09:08.442Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-09T16:09:08.442Z] [DEBU] Initializing the REST API client...
-[2026-09-09T16:09:08.442Z] [DEBU] Initializing the REST API client... done
-[2026-09-09T16:09:08.442Z] [DEBU] Using the synchronous REST API client
-[2026-09-09T16:09:08.442Z] [DEBU] Opening the HTTP session...
-[2026-09-09T16:09:08.443Z] [DEBU] Opening the HTTP session... done
-[2026-09-09T16:09:08.443Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-09T16:09:08.465Z] [DEBU] Response status: 200
-[2026-09-09T16:09:08.465Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-09T16:09:08.467Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-09T16:09:08.467Z] [DEBU] Successfully retrieved state
-[2026-09-09T16:09:08.467Z] [DEBU] Closing the HTTP session...
-[2026-09-09T16:09:08.468Z] [DEBU] Closing the HTTP session... done
+[2026-09-10T12:08:19.182Z] [DEBU] Ignoring configuration files
+[2026-09-10T12:08:19.183Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:08:19.183Z] [DEBU] Initializing the REST API client...
+[2026-09-10T12:08:19.183Z] [DEBU] Initializing the REST API client... done
+[2026-09-10T12:08:19.183Z] [DEBU] Using the synchronous REST API client
+[2026-09-10T12:08:19.183Z] [DEBU] Opening the HTTP session...
+[2026-09-10T12:08:19.183Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T12:08:19.183Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-10T12:08:19.205Z] [DEBU] Response status: 200
+[2026-09-10T12:08:19.205Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-10T12:08:19.207Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:08:19.207Z] [DEBU] Successfully retrieved state
+[2026-09-10T12:08:19.207Z] [DEBU] Closing the HTTP session...
+[2026-09-10T12:08:19.208Z] [DEBU] Closing the HTTP session... done
 ```
 
 #### Priority

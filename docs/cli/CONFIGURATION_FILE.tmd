@@ -85,6 +85,9 @@ in the following order of decreasing priority:
 - the `/etc/` directory (only on POSIX systems);
 - the `/etc/volumito/` directory (only on POSIX systems).
 
+Regular `volumito.yaml` takes precedence over "hidden" `.volumito.yaml`
+if both are found in the same directory.
+
 The first configuration file found will be read and applied;
 additional configuration files found will be ignored.
 
@@ -129,6 +132,11 @@ Note that the command refuses to overwrite an existing file:
 volumito configuration create -o ~/volumito.yaml
 ```
 
+> [!TIP]
+> Add the `--overwrite-existing-files` option,
+> or set the corresponding key in the configuration file,
+> to overwrite a file already existing at the specified path.
+
 After creating your configuration file,
 you might want to open it with your favorite text editor,
 and modify it to suit your preferences.
@@ -150,7 +158,7 @@ that it can be loaded correctly.
 To that end, use the `configuration check` command:
 
 ```bash lucio command=execute
-volumito configuration check ~/.volumito.yaml
+volumito configuration check ~/volumito.yaml
 ```
 
 Any fatal issues will be reported as errors,

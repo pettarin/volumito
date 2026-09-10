@@ -54,7 +54,8 @@ You can also append an album, instead of a single track:
 volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
 ```
 
-When adding an album, option `--expand-tracks` is selected by default,
+When adding an item that is not a track or a local URI (e.g., a Qobuz album),
+option `--expand-tracks` is selected by default,
 resulting in the individual tracks being added to the playlist,
 as in the above example.
 
@@ -115,11 +116,18 @@ On this playlist:
 volumito -C aw playlist content "volumito docs playlist"
 ```
 
-Remove the first track, specified by URI:
+Remove the first track of the playlist, specified by URI:
 
 ```bash lucio command=execute
 volumito -C aw playlist remove "volumito docs playlist" qobuz://song/63333861
 ```
+
+> [!TIP]
+> An item might appear several times in a playlist.
+>
+> When removing items by URI, by default only the first track with that URI
+> is actually removed from the playlist; to remove all the occurrences,
+> add the `--all-occurrences` option to the above command.
 
 Remove the second track, specified by index
 with the `-p / --position` option:
@@ -139,12 +147,23 @@ as a new playlist, using `playlist copy` command.
 
 Without arguments, the playlist is copied with all its contents:
 
-```bash lucio command=execute
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure the playlist already exists
+volumito -C aw playlist create "volumito docs playlist2"
+```
+
+```bash lucio command=execute exit=1
 volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2"
 ```
 
-With the `-p / --position` option, only the specified tracks
-will be copied:
+```markdown lucio command=include path="./inc/CAUTION_COMMAND_REQUIRES_CONFIRMATION_TO_OVERWRITE.md" style=literal
+```
+
+```bash lucio command=execute
+volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2" --overwrite-existing-playlist
+```
+
+With the `-p / --position` option, only the specified tracks will be copied:
 
 ```bash lucio command=execute
 volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" -p 1,3-4
@@ -154,8 +173,20 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" 
 
 The `playlist rename` command gives a playlist a new name:
 
-```bash lucio command=execute
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure the playlist already exists
+volumito -C aw playlist create "volumito docs playlist4"
+```
+
+```bash lucio command=execute exit=1
 volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4"
+```
+
+```markdown lucio command=include path="./inc/CAUTION_COMMAND_REQUIRES_CONFIRMATION_TO_OVERWRITE.md" style=literal
+```
+
+```bash lucio command=execute
+volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4" --overwrite-existing-playlist
 ```
 
 > [!NOTE]

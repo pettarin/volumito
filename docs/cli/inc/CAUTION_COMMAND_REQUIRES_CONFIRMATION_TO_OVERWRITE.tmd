@@ -1,0 +1,4 @@
+> [!CAUTION]
+> Note the error above: if the specified playlist name already exists,
+> `volumito` refuses to execute the command
+> unless you provide the `--overwrite-existing-playlist` option:

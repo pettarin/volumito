@@ -72,8 +72,12 @@ Command `notification listen` starts a simple local server,
 listening for Volumio notifications, on the machine running `volumito`.
 
 You can connect it to an already registered port and endpoint
-or provide the `--register-url` (compose the URL with `--endpoint` and `--port`)
-or `--register-url-full` (provide the full URL) options.
+or provide the `--register-url` (compose the URL with `--endpoint` and `--port`).
+To override the composed URL,
+provide a full URL with the `--register-url-full` option.
+Notification URLs registered by the `notification listen` command
+are unregistered automatically by default,
+unless the `--no-unregister-url-on-exit` option is passed.
 
 Without other options, the server will wait for a CTRL+C event to quit;
 however you can have it quit after a certain number of events are received

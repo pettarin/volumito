@@ -27,13 +27,13 @@ volumito -C aw queue add qobuz://song/63333861
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.502",
+    "seek": "00:00:02.509",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:24.492Z] [INFO] Command 'add' executed successfully
+[2026-09-10T11:25:21.287Z] [INFO] Command 'add' executed successfully
 ```
 
 The above command appends the track
@@ -95,13 +95,13 @@ volumito -C aw queue add qobuz://song/63333861 --next
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:06.003",
+    "seek": "00:00:06.264",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:28.180Z] [INFO] Command 'add' executed successfully
+[2026-09-10T11:25:25.206Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -159,13 +159,13 @@ volumito -C aw queue add qobuz://song/63333861 --play
     "mute": false,
     "position": 6,
     "samplerate": "192 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.251",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:31.778Z] [INFO] Command 'add' executed successfully
+[2026-09-10T11:25:28.763Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -233,13 +233,13 @@ volumito -C aw queue remove 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:04.009",
+    "seek": "00:00:04.013",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:35.521Z] [INFO] Command 'remove' executed successfully
+[2026-09-10T11:25:32.381Z] [INFO] Command 'remove' executed successfully
 ```
 
 ```bash
@@ -289,8 +289,8 @@ If you want to change the position of an item of the current queue,
 use the `queue move` command providing the source index and the target index:
 
 ```bash
-# swap the first two tracks
-volumito -C aw queue move 1 2
+# move the first track to the third position
+volumito -C aw queue move 1 3
 {
     "album": "Come Away With Me",
     "artist": "Norah Jones",
@@ -300,13 +300,13 @@ volumito -C aw queue move 1 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:07.674",
+    "seek": "00:00:07.767",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:39.152Z] [INFO] Command 'move' executed successfully
+[2026-09-10T11:25:36.206Z] [INFO] Command 'move' executed successfully
 ```
 
 ```bash
@@ -321,19 +321,19 @@ Volumio Queue
    Track  : 1
    Duration: 00:04:07
 
-2. Va tutto bene
-   Artist : Enrico Ruggeri
-   Album  : Polvere
-   Volume : 1
-   Track  : 1
-   Duration: 00:03:15
-
-3. I giochi del vento sul lago salato
+2. I giochi del vento sul lago salato
    Artist : Mango
    Album  : Sirtaki
    Volume : 1
    Track  : 2
    Duration: 00:04:34
+
+3. Va tutto bene
+   Artist : Enrico Ruggeri
+   Album  : Polvere
+   Volume : 1
+   Track  : 1
+   Duration: 00:03:15
 
 4. Il Mare D'Inverno
    Artist : Enrico Ruggeri
@@ -358,5 +358,15 @@ providing a name for the playlist to be created:
 
 ```bash
 volumito -C aw queue save "volumito docs queue save"
-[2026-09-09T16:13:42.847Z] [INFO] Command 'save' executed successfully
+[2026-09-10T11:25:40.955Z] [ERRO] Playlist already exists: "volumito docs queue save" (use --overwrite-existing-playlist to overwrite)
+```
+
+> [!CAUTION]
+> Note the error above: if the specified playlist name already exists,
+> `volumito` refuses to execute the command
+> unless you provide the `--overwrite-existing-playlist` option:
+
+```bash
+volumito -C aw queue save "volumito docs queue save" --overwrite-existing-playlist
+[2026-09-10T11:25:41.768Z] [INFO] Command 'save' executed successfully
 ```

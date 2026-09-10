@@ -54,7 +54,7 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
-  - [Collection Statistics](#collection-statistics)
+  - [Collection Help](#collection-help)
 - [Stories](#stories)
   - [Album Story](#album-story)
   - [Album Credits](#album-credits)
@@ -88,6 +88,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Collection Source List](#collection-source-list)
     - [Collection Source Disable](#collection-source-disable)
     - [Collection Source Enable](#collection-source-enable)
+  - [Collection Statistics](#collection-statistics)
   - [Collection Update](#collection-update)
   - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
@@ -186,6 +187,9 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 ```markdown lucio command=include path="./COLLECTION_SOURCE.md" style=literal
+```
+
+```markdown lucio command=include path="./COLLECTION_STATISTICS.md" style=literal
 ```
 
 ```markdown lucio command=include path="./COLLECTION_UPDATE.md" style=literal
