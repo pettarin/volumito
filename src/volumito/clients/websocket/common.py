@@ -17,12 +17,27 @@ This module knows nothing about how a client talks to the host: it imports neith
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import re
+import string
 from datetime import timedelta
 from typing import Any, NoReturn
 
 from volumito.clients.common import VolumioCommon
-from volumito.clients.errors import VolumioConnectionError
+from volumito.clients.errors import VolumioAPIError, VolumioConnectionError
 from volumito.clients.models import Alarm, Playlist, QueueTrack
+
+ALARM_TIME_DATE = "2000-01-01"
+"""The date the alarm times are rendered on: the host schedules by the time of day alone."""
+
+BACKUP_ACTION_RESTORE = 1
+"""The backup flag making the host restore its local backup of the playlists and favourites."""
+
+BACKUP_ACTION_SAVE = 0
+"""The backup flag making the host write its local backup of the playlists and favourites."""
+
+BACKUP_KINDS = ("favourites", "my-web-radio", "playlist", "radio-favourites")
+"""The kinds of backup a Volumio host reads: the favourite tracks, the Web radios added by
+hand, the saved playlists with their content, and the favourite Web radios."""
 
 EVENT_ADD_PLAY = "addPlay"
 """The event appending items to the queue and playing them."""
@@ -46,10 +61,10 @@ EVENT_ADD_TO_QUEUE = "addToQueue"
 """The event appending items to the playback queue."""
 
 EVENT_ADD_TO_RADIO_FAVOURITES = "addToRadioFavourites"
-"""The event adding a web radio to the radio favourites."""
+"""The event adding a Web radio to the radio favourites."""
 
 EVENT_ADD_WEB_RADIO = "addWebRadio"
-"""The event saving a web radio of the user."""
+"""The event saving a Web radio of the user."""
 
 EVENT_AUDIO_OUTPUT_PAUSE = "audioOutputPause"
 """The event pausing one audio output."""
@@ -119,6 +134,9 @@ EVENT_GET_AUTOMATIC_UPDATE_ENABLED = "getAutomaticUpdateEnabled"
 
 EVENT_GET_AVAILABLE_LANGUAGES = "getAvailableLanguages"
 """The event asking for the languages of the user interface."""
+
+EVENT_GET_AVAILABLE_PLUGINS = "getAvailablePlugins"
+"""The event asking for the plugins the store offers, answered only to a MyVolumio login."""
 
 EVENT_GET_AVAILABLE_TIMEZONES = "getAvailableTimezones"
 """The event asking for the time zones the host can be set to."""
@@ -237,9 +255,6 @@ EVENT_GET_WIRELESS_NETWORKS_CACHE = "getWirelessNetworksCache"
 EVENT_GO_TO = "goTo"
 """The event browsing to the artist or the album of what is playing."""
 
-EVENT_IMPORT_SERVICE_PLAYLISTS = "importServicePlaylists"
-"""The event importing the playlists of the music services."""
-
 EVENT_INSTALL_PLUGIN = "installPlugin"
 """The event installing a plugin from a URL."""
 
@@ -248,9 +263,6 @@ EVENT_INSTALL_TO_DISK = "installToDisk"
 
 EVENT_LIST_PLAYLIST = "listPlaylist"
 """The event asking for the names of the saved playlists."""
-
-EVENT_LIST_USB_DRIVES = "listUsbDrives"
-"""The event asking for the USB drives attached to the host."""
 
 EVENT_MANAGE_BACKUP = "manageBackup"
 """The event restoring a backup of the configuration."""
@@ -266,6 +278,9 @@ EVENT_MUTE = "mute"
 
 EVENT_NEXT = "next"
 """The event skipping to the next track."""
+
+EVENT_OPEN_MODAL = "openModal"
+"""The event pushing a dialog to the user interface, which some reads get as their answer."""
 
 EVENT_PAUSE = "pause"
 """The event pausing the playback."""
@@ -300,11 +315,14 @@ EVENT_PONGER = "ponger"
 EVENT_PREVIOUS = "prev"
 """The event going back to the previous track."""
 
+EVENT_PUSH_ADD_TO_PLAYLIST = "pushAddToPlaylist"
+"""The event confirming an item was added to a playlist."""
+
 EVENT_PUSH_ADD_TO_RADIO_FAVOURITES = "pushAddToRadioFavourites"
-"""The event confirming a web radio was made a favourite."""
+"""The event confirming a Web radio was made a favourite."""
 
 EVENT_PUSH_ADD_WEB_RADIO = "pushAddWebRadio"
-"""The event confirming a web radio was saved."""
+"""The event confirming a Web radio was saved."""
 
 EVENT_PUSH_ALARM = "pushAlarm"
 """The event carrying the alarms set on the host."""
@@ -317,6 +335,9 @@ EVENT_PUSH_AUTOMATIC_UPDATE_ENABLED = "pushAutomaticUpdateEnabled"
 
 EVENT_PUSH_AVAILABLE_LANGUAGES = "pushAvailableLanguages"
 """The event carrying the languages of the user interface."""
+
+EVENT_PUSH_AVAILABLE_PLUGINS = "pushAvailablePlugins"
+"""The event carrying the plugins the store offers."""
 
 EVENT_PUSH_AVAILABLE_TIMEZONES = "pushAvailableTimezones"
 """The event carrying the time zones the host can be set to."""
@@ -381,9 +402,6 @@ EVENT_PUSH_LIST_PLAYLIST = "pushListPlaylist"
 EVENT_PUSH_LIST_SHARES = "pushListShares"
 """The event carrying the network shares mounted by the host."""
 
-EVENT_PUSH_LIST_USB_DRIVES = "pushListUsbDrives"
-"""The event carrying the USB drives attached to the host."""
-
 EVENT_PUSH_MENU_ITEMS = "pushMenuItems"
 """The event carrying the menu of the user interface."""
 
@@ -421,7 +439,7 @@ EVENT_PUSH_QUEUE = "pushQueue"
 """The event carrying the playback queue."""
 
 EVENT_PUSH_REMOVE_FROM_RADIO_FAVOURITES = "pushRemoveFromRadioFavourites"
-"""The event confirming a web radio is no longer a favourite."""
+"""The event confirming a Web radio is no longer a favourite."""
 
 EVENT_PUSH_SAVE_QUEUE_TO_PLAYLIST = "pushSaveQueueToPlaylist"
 """The event confirming the queue was saved as a playlist."""
@@ -475,13 +493,13 @@ EVENT_REMOVE_FROM_PLAYLIST = "removeFromPlaylist"
 """The event removing an item from a saved playlist."""
 
 EVENT_REMOVE_FROM_RADIO_FAVOURITES = "removeFromRadioFavourites"
-"""The event removing a web radio from the radio favourites."""
+"""The event removing a Web radio from the radio favourites."""
 
 EVENT_REMOVE_QUEUE_ITEM = "removeQueueItem"
 """The event removing a track from the queue."""
 
 EVENT_REMOVE_WEB_RADIO = "removeWebRadio"
-"""The event deleting a web radio of the user."""
+"""The event deleting a Web radio of the user."""
 
 EVENT_REPLACE_AND_PLAY = "replaceAndPlay"
 """The event replacing the playback queue and starting it."""
@@ -512,9 +530,6 @@ EVENT_SEARCH = "search"
 
 EVENT_SEEK = "seek"
 """The event seeking to an absolute position."""
-
-EVENT_SERVICE_UPDATE_TRACKLIST = "serviceUpdateTracklist"
-"""The event refreshing the tracks of one music service."""
 
 EVENT_SET_AS_MULTIROOM_CLIENT = "setAsMultiroomClient"
 """The event making the host a multiroom client."""
@@ -591,9 +606,6 @@ EVENT_UNMUTE = "unmute"
 EVENT_UPDATE = "update"
 """The event installing the update the host found."""
 
-EVENT_UPDATE_ALL_METADATA = "updateAllMetadata"
-"""The event refreshing the metadata of the whole collection."""
-
 EVENT_UPDATE_CHECK = "updateCheck"
 """The event checking whether an update is available."""
 
@@ -605,6 +617,12 @@ EVENT_UPDATE_DB = "updateDb"
 
 EVENT_UPDATE_PLUGIN = "updatePlugin"
 """The event updating an installed plugin."""
+
+EVENT_UPDATE_READY_CACHE = "updateReadyCache"
+"""The event carrying the cached answer of the updater, in reply to a cached check."""
+
+EVENT_UPDATE_READY_FOR_DAEMON = "updateReadyForDaemon"
+"""The event carrying the answer of the updater to a check, pushed whatever the check asked."""
 
 EVENT_URI_FAVOURITES = "urifavourites"
 """The event carrying the favourite status of a URI."""
@@ -618,12 +636,25 @@ EVENT_VOLUME = "volume"
 EVENT_WRITE_MULTIROOM = "writeMultiroom"
 """The event writing the multiroom configuration of the host."""
 
+I2S_OUTPUT_DEVICE_VALUE = 1
+"""The sound card number sent beside an I2S DAC, as the setup wizard of the host sends it."""
+
+PENDING_PACKETS_POLL_INTERVAL = 0.01
+"""Seconds between two looks at the packets still to be written while disconnecting."""
+
+PLUGIN_STATUS_STARTED = "START"
+"""The status starting a plugin, as the plugin status event reads it."""
+
+PLUGIN_STATUS_STOPPED = "STOP"
+"""The status stopping a plugin, as the plugin status event reads it."""
+
 RESPONSE_EVENTS = {
     EVENT_BROWSE_LIBRARY: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_GET_ALARMS: EVENT_PUSH_ALARM,
     EVENT_GET_AUDIO_OUTPUTS: EVENT_PUSH_AUDIO_OUTPUTS,
     EVENT_GET_AUTOMATIC_UPDATE_ENABLED: EVENT_PUSH_AUTOMATIC_UPDATE_ENABLED,
     EVENT_GET_AVAILABLE_LANGUAGES: EVENT_PUSH_AVAILABLE_LANGUAGES,
+    EVENT_GET_AVAILABLE_PLUGINS: EVENT_PUSH_AVAILABLE_PLUGINS,
     EVENT_GET_AVAILABLE_TIMEZONES: EVENT_PUSH_AVAILABLE_TIMEZONES,
     EVENT_GET_BACKGROUNDS: EVENT_PUSH_BACKGROUNDS,
     EVENT_GET_BACKUP: EVENT_PUSH_BACKUP,
@@ -664,17 +695,33 @@ RESPONSE_EVENTS = {
     EVENT_GET_WIRELESS_NETWORKS_CACHE: EVENT_PUSH_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_LIST_PLAYLIST: EVENT_PUSH_LIST_PLAYLIST,
-    EVENT_LIST_USB_DRIVES: EVENT_PUSH_LIST_USB_DRIVES,
     EVENT_PINGER: EVENT_PONGER,
     EVENT_PLUGIN_MANAGER: EVENT_PUSH_INSTALLED_PLUGINS,
     EVENT_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
     EVENT_SET_MULTIROOM: EVENT_PUSH_MULTIROOM,
     EVENT_SUPER_SEARCH: EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_UPDATE_CHECK: EVENT_UPDATE_READY_FOR_DAEMON,
+    EVENT_UPDATE_CHECK_CACHE: EVENT_UPDATE_READY_CACHE,
 }
 """The event each read waits for, keyed by the event it emits.
 
 ``search`` and ``browseLibrary`` share their answer, which is why a client serializes its
 reads: two of them in flight at once could take each other's result."""
+
+UPDATE_CHECK_TIMEOUT = 60.0
+"""Seconds an update check is waited for at least: the host asks its updater, which is slow."""
+
+UPDATE_SETTINGS_ENDPOINT = "system_controller/system"
+"""The plugin whose method saves the update settings, as the method call names it."""
+
+UPDATE_SETTINGS_METHOD = "saveUpdateSettings"
+"""The method of the system plugin saving the update settings."""
+
+UPDATE_WINDOW_IDS = ("automatic_updates_start_time", "automatic_updates_stop_time")
+"""The settings of the automatic update window, which saving the update settings wants too."""
+
+USB_BROWSE_URI = "music-library/USB"
+"""The URI of the USB music source, which lists the attached drives as its folders."""
 
 VOLUME_DOWN = "-"
 """The volume argument lowering the level by one step of the host."""
@@ -694,6 +741,102 @@ class VolumioWebSocketCommon(VolumioCommon):
     _CLIENT_DESCRIPTION: str = "WebSocket API client"
     """The name a client logs itself under while initializing."""
 
+    def _alarm_added(
+        self, alarms: list[Alarm], name: str, time: str, playlist: str, enabled: bool
+    ) -> tuple[list[Alarm], Alarm]:
+        """Build the set of alarms with one more, numbered by its position as the host does.
+
+        Args:
+            alarms: The alarms the host holds
+            name: The name of the alarm
+            time: The time it goes off, as :meth:`_alarm_time` rendered it
+            playlist: The name of the playlist it plays
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarms to send back, and the one added (with identifier 0 when the host
+            held none)
+        """
+        alarm = Alarm.from_raw(
+            {
+                "id": len(alarms),
+                "name": name,
+                "enabled": enabled,
+                "time": time,
+                "playlist": playlist,
+            }
+        )
+        return [*alarms, alarm], alarm
+
+    def _alarm_removed(self, alarms: list[Alarm], alarm_id: int) -> list[Alarm]:
+        """Build the set of alarms without one.
+
+        Args:
+            alarms: The alarms the host holds
+            alarm_id: The identifier of the alarm to drop
+
+        Returns:
+            The alarms to send back
+
+        Raises:
+            ValueError: If no alarm has the identifier
+        """
+        kept = [alarm for alarm in alarms if alarm.id != alarm_id]
+        if len(kept) == len(alarms):
+            self._fail_no_alarm(alarm_id)
+        return kept
+
+    def _alarm_time(self, time: str) -> str:
+        """Check a time of day as ``"HH:MM"``, and render it as the host reads it.
+
+        A Volumio host reads the time of an alarm as a date-time, keeping its hour and
+        minute in its own time zone: the time is rendered on a fixed date as an ISO
+        date-time without offset, which the host takes as its local time.
+
+        Args:
+            time: The time to check
+
+        Returns:
+            The time, as the alarm payload carries it
+
+        Raises:
+            ValueError: If the time is not a time of day as ``"HH:MM"``
+        """
+        hours, separator, minutes = time.partition(":")
+        valid = (
+            bool(separator)
+            and hours.isdigit()
+            and minutes.isdigit()
+            and len(minutes) == 2
+            and int(hours) < 24
+            and int(minutes) < 60
+        )
+        if not valid:
+            self._log_warning(f'Refusing the alarm time "{time}"')
+            raise ValueError(f'The alarm time must be a time of day as "HH:MM", got "{time}"')
+        return f"{ALARM_TIME_DATE}T{int(hours):02d}:{minutes}:00"
+
+    def _alarm_toggled(self, alarms: list[Alarm], alarm_id: int, enabled: bool) -> list[Alarm]:
+        """Build the set of alarms with one armed or disarmed.
+
+        Args:
+            alarms: The alarms the host holds
+            alarm_id: The identifier of the alarm to arm or disarm
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarms to send back
+
+        Raises:
+            ValueError: If no alarm has the identifier
+        """
+        if all(alarm.id != alarm_id for alarm in alarms):
+            self._fail_no_alarm(alarm_id)
+        return [
+            alarm.model_copy(update={"enabled": enabled}) if alarm.id == alarm_id else alarm
+            for alarm in alarms
+        ]
+
     def _alarms_payload(self, alarms: list[Alarm]) -> list[dict[str, Any]]:
         """Build the payload replacing the whole set of alarms.
 
@@ -705,24 +848,117 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         return [alarm.model_dump(by_alias=True, exclude_none=True) for alarm in alarms]
 
-    def _audio_output_payload(self, output_id: str, volume: int | None = None) -> dict[str, Any]:
+    def _audio_output_listed(self, outputs: dict[str, Any], output_id: str) -> dict[str, Any]:
+        """Pick one audio output out of those the host lists.
+
+        The host acts on an output only when sent the entry it listed, kind and host
+        name included: the play, pause, and volume events carry that entry.
+
+        Args:
+            outputs: The audio outputs the host lists, as :attr:`audio_outputs` reads them
+            output_id: The identifier of the output
+
+        Returns:
+            The entry of the output, as the host listed it
+
+        Raises:
+            ValueError: If no output has the identifier
+        """
+        for output in outputs.get("availableOutputs") or []:
+            if isinstance(output, dict) and output.get("id") == output_id:
+                return dict(output)
+        self._fail_no_audio_output(output_id)
+
+    def _audio_output_payload(self, output_id: str) -> dict[str, str]:
         """Build the payload naming one audio output of the host.
 
         Args:
             output_id: The identifier of the output
-            volume: The volume level to set on it, when the event carries one
 
         Returns:
-            The payload the audio output events carry
+            The payload the enable and disable events carry
+        """
+        return {"id": output_id}
+
+    def _audio_output_volume_payload(self, output: dict[str, Any], volume: int) -> dict[str, Any]:
+        """Build the payload setting the volume of one audio output.
+
+        The host refuses the payload without a mute flag, and reads the kind and the
+        host name of the output: the payload carries what its user interface sends.
+
+        Args:
+            output: The entry of the output, as the host listed it
+            volume: The volume level to set on it, already checked
+
+        Returns:
+            The payload the volume event carries
+        """
+        payload: dict[str, Any] = {
+            key: output[key] for key in ("host", "id", "isSelf", "type") if key in output
+        }
+        return {**payload, "mute": False, "volume": volume}
+
+    def _background_color_payload(self, color: str) -> dict[str, str]:
+        """Build the payload making a solid colour the background.
+
+        Args:
+            color: The colour, hexadecimal with three or six digits (e.g., ``"#000"``)
+
+        Returns:
+            The payload the background event carries
 
         Raises:
-            ValueError: If the volume level is out of range
+            ValueError: If the colour is not hexadecimal
         """
-        payload: dict[str, Any] = {"id": output_id}
-        if volume is not None:
-            self._check_volume_level(volume)
-            payload["volume"] = volume
-        return payload
+        if not re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", color):
+            self._log_warning(f'Refusing the background colour "{color}"')
+            raise ValueError(
+                f'The background colour must be hexadecimal, like "#000" or "#1a2b3c", '
+                f'got "{color}"'
+            )
+        return {"color": color}
+
+    def _background_listed(self, backgrounds: dict[str, Any], name: str) -> dict[str, Any]:
+        """Pick one background out of those the host lists.
+
+        The host applies a background only when sent the entry it listed, path
+        included: the background event carries that entry.
+
+        Args:
+            backgrounds: The backgrounds the host lists, as :attr:`backgrounds` reads them
+            name: The name of the background
+
+        Returns:
+            The entry of the background, as the host listed it
+
+        Raises:
+            ValueError: If no background has the name
+        """
+        for background in backgrounds.get("available") or []:
+            if isinstance(background, dict) and background.get("name") == name:
+                return dict(background)
+        self._fail_no_background(name)
+
+    def _backup_payload(self, kind: str) -> dict[str, str]:
+        """Build the payload asking for a backup of one kind.
+
+        A Volumio host answers nothing to a kind it does not know, so the kind is checked
+        before sending.
+
+        Args:
+            kind: The kind of backup, one of :data:`BACKUP_KINDS`
+
+        Returns:
+            The payload the backup event carries
+
+        Raises:
+            ValueError: If the kind is not one a Volumio host reads
+        """
+        if kind not in BACKUP_KINDS:
+            self._log_warning(f'Refusing the unknown backup kind "{kind}"')
+            kinds = ", ".join(BACKUP_KINDS)
+            raise ValueError(f'The backup kind must be one of {kinds}, got "{kind}"')
+        return {"type": kind}
 
     def _browse_payload(self, uri: str | None) -> dict[str, str]:
         """Build the payload browsing a URI.
@@ -736,6 +972,26 @@ class VolumioWebSocketCommon(VolumioCommon):
         browsed = uri if uri is not None else "/"
         self._log_debug(f'Browsing "{browsed}"')
         return {"uri": browsed}
+
+    def _check_created_playlist(self, name: str, answer: object) -> None:
+        """Check the answer of the host to the creation of a playlist.
+
+        The host answers with ``success`` and, when it refused, a ``reason``: a name
+        already in use, for instance.
+
+        Args:
+            name: The name of the playlist
+            answer: What the host answered the creation with
+
+        Raises:
+            VolumioAPIError: If the host did not create the playlist
+        """
+        if isinstance(answer, dict) and answer.get("success") is True:
+            return
+        reason = answer.get("reason") if isinstance(answer, dict) else None
+        detail = f": {reason}" if reason else ""
+        self._log_warning(f'The host did not create the playlist "{name}"{detail}')
+        raise VolumioAPIError(f'The host did not create the playlist "{name}"{detail}')
 
     def _cue_payload(self, uri: str, number: int, service: str | None = None) -> dict[str, Any]:
         """Build the payload naming a track inside a cue sheet.
@@ -754,10 +1010,83 @@ class VolumioWebSocketCommon(VolumioCommon):
             "uri": uri,
         }
 
+    def _delete_folder_payload(self, uri: str) -> dict[str, Any]:
+        """Build the payload deleting a folder of the local library.
+
+        The host deletes the folder the ``music-library/...`` URI names, then lists the
+        folder above it (``curUri``) as its answer. A URI naming the root of the
+        library, or a source right under it (``music-library/INTERNAL``), is refused:
+        the host maps the prefix to its mount point and removes whatever the rest
+        names.
+
+        Args:
+            uri: The URI of the folder, as a browse lists it
+
+        Returns:
+            The payload the delete event carries
+
+        Raises:
+            ValueError: If the URI is not that of a folder inside a source of the library
+        """
+        prefix = "music-library/"
+        segments = uri.removeprefix(prefix).split("/") if uri.startswith(prefix) else []
+        if len(segments) < 2 or any(segment in ("", ".", "..") for segment in segments):
+            self._log_warning(f'Refusing to delete the folder "{uri}"')
+            raise ValueError(
+                f'The folder must be a "music-library/<source>/..." URI below a source, got "{uri}"'
+            )
+        return {"item": {"uri": uri}, "curUri": uri.rsplit("/", 1)[0]}
+
     @property
     def _endpoint_description(self) -> str:
         """The base URL a failing connection names as unreachable."""
         return self.host_configuration.websocket_base_url
+
+    def _fail_bad_update_hour(self, hour: int) -> NoReturn:
+        """Refuse an hour outside the day for the automatic update window.
+
+        Args:
+            hour: The hour refused
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f"Refusing the automatic update hour {hour}")
+        raise ValueError(f"The automatic update hours must be between 0 and 23, got {hour}")
+
+    def _fail_bad_wireless_password(self) -> NoReturn:
+        """Refuse a wireless password the host would not save.
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning("Refusing a wireless password the host would not save")
+        raise ValueError(
+            "The wireless password must be a WPA passphrase of 8 to 63 characters, or a "
+            "WEP key of 5, 13, or 16 characters, or of 10, 26, or 32 hexadecimal digits"
+        )
+
+    def _fail_dialog(self, event: str, dialog: object) -> NoReturn:
+        """Refuse a dialog the host pushed in place of the answer to a read.
+
+        A Volumio host answers some reads with a dialog for its user interface when it
+        cannot serve them: the plugin store, for instance, wants a MyVolumio login.
+
+        Args:
+            event: The event the host was answering
+            dialog: What the dialog event carried, a ``title`` and a ``message`` when
+                an object
+
+        Raises:
+            VolumioAPIError: Always
+        """
+        title, message = "", ""
+        if isinstance(dialog, dict):
+            title = re.sub(r"<[^>]+>", "", str(dialog.get("title", "")))
+            message = re.sub(r"<[^>]+>", "", str(dialog.get("message", "")))
+        reason = f'The host answered "{event}" with a dialog: "{title}" "{message}"'
+        self._log_warning(reason)
+        raise VolumioAPIError(reason)
 
     def _fail_emit(self, event: str, error: Exception) -> NoReturn:
         """Report that an event could not be sent to the Volumio instance.
@@ -771,9 +1100,68 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._log_warning(f'Cannot emit "{event}" to the Volumio API: {error}')
         raise VolumioConnectionError(
-            f'Failed to emit "{event}" to Volumio instance at '
-            f"{self._endpoint_description}: {error}"
+            f'Failed to emit "{event}" to Volumio instance at {self._endpoint_description}: {error}'
         ) from error
+
+    def _fail_no_alarm(self, alarm_id: int) -> NoReturn:
+        """Refuse to act on an alarm the host does not hold.
+
+        Args:
+            alarm_id: The identifier no alarm has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f"No alarm has the identifier {alarm_id}")
+        raise ValueError(f"No alarm has the identifier {alarm_id}")
+
+    def _fail_no_audio_output(self, output_id: str) -> NoReturn:
+        """Refuse to act on an audio output the host does not list.
+
+        Args:
+            output_id: The identifier no output has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No audio output has the identifier "{output_id}"')
+        raise ValueError(f'No audio output has the identifier "{output_id}"')
+
+    def _fail_no_background(self, name: str) -> NoReturn:
+        """Refuse to act on a background the host does not list.
+
+        Args:
+            name: The name no background has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No background is named "{name}"')
+        raise ValueError(f'No background is named "{name}"')
+
+    def _fail_no_music_source(self, name: str) -> NoReturn:
+        """Refuse to act on a music source the host does not list.
+
+        Args:
+            name: The name no source has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No music source is named "{name}"')
+        raise ValueError(f'No music source is named "{name}"')
+
+    def _fail_no_output_device(self, device_id: str) -> NoReturn:
+        """Refuse to act on an output device the host does not list.
+
+        Args:
+            device_id: The identifier no device has
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning(f'No output device has the identifier "{device_id}"')
+        raise ValueError(f'No output device has the identifier "{device_id}"')
 
     def _fail_no_response(self, event: str, response_event: str, waited: float) -> NoReturn:
         """Report that a Volumio instance did not answer an event in time.
@@ -794,6 +1182,15 @@ class VolumioWebSocketCommon(VolumioCommon):
             f'Volumio instance at {self._endpoint_description} did not answer "{event}" '
             f'with "{response_event}" within {waited} seconds'
         )
+
+    def _fail_no_update_window(self) -> NoReturn:
+        """Refuse to save the update settings when the host does not report its window.
+
+        Raises:
+            ValueError: Always
+        """
+        self._log_warning("The host does not report the automatic update window")
+        raise ValueError("The host does not report the automatic update window")
 
     def _fail_not_connected(self, action: str) -> NoReturn:
         """Report that an operation needs a connection the client does not have.
@@ -892,20 +1289,60 @@ class VolumioWebSocketCommon(VolumioCommon):
         self._check_play_index(target)
         return {"from": source, "to": target}
 
-    def _output_device_payload(self, device_id: str, mixer: str | None = None) -> dict[str, str]:
-        """Build the payload choosing the output device of the host.
+    def _music_source_toggled(self, sources: list[Any], name: str, enabled: bool) -> dict[str, Any]:
+        """Build the payload enabling or disabling one music source.
+
+        The host reads the category and the kind of the source beside its name: the
+        payload is the entry the host listed, with the flag replaced.
 
         Args:
-            device_id: The identifier of the device
-            mixer: The mixer to drive its volume with, when one is chosen
+            sources: The music sources the host lists, as :attr:`music_sources` reads them
+            name: The name of the source
+            enabled: Whether the source is enabled
+
+        Returns:
+            The payload the event carries
+
+        Raises:
+            ValueError: If no source has the name
+        """
+        for source in sources:
+            if isinstance(source, dict) and source.get("name") == name:
+                return {**source, "enabled": enabled}
+        self._fail_no_music_source(name)
+
+    def _output_device_payload(self, devices: dict[str, Any], device_id: str) -> dict[str, Any]:
+        """Build the payload choosing the output device of the host.
+
+        The host reads the device as its setup wizard sends it: the identifier and the
+        name of a sound card, or those of an I2S DAC under their own key.
+
+        Args:
+            devices: The output devices the host lists, as :attr:`output_devices` reads them
+            device_id: The identifier of the device, a sound card or an I2S DAC
 
         Returns:
             The payload the output device event carries
+
+        Raises:
+            ValueError: If no device has the identifier
         """
-        payload = {"device": device_id}
-        if mixer is not None:
-            payload["mixer"] = mixer
-        return payload
+        cards = (devices.get("devices") or {}).get("available") or []
+        for card in cards:
+            if isinstance(card, dict) and card.get("id") == device_id:
+                return {
+                    "i2s": False,
+                    "output_device": {"value": device_id, "label": card.get("name")},
+                }
+        dacs = (devices.get("i2s") or {}).get("available") or []
+        for dac in dacs:
+            if isinstance(dac, dict) and dac.get("id") == device_id:
+                return {
+                    "i2s": True,
+                    "i2sid": {"value": device_id, "label": dac.get("name")},
+                    "output_device": {"value": I2S_OUTPUT_DEVICE_VALUE, "label": dac.get("name")},
+                }
+        self._fail_no_output_device(device_id)
 
     def _play_next_payload(
         self, uri: str, title: str | None = None, album: str | None = None
@@ -993,6 +1430,27 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         return {"category": category, "name": name}
 
+    def _plugin_status_payload(
+        self, category: str, name: str, started: bool | None = None
+    ) -> dict[str, str]:
+        """Build the payload switching a plugin, as the switch events read it.
+
+        The enable, disable, and status events read the name of the plugin under
+        ``plugin``, unlike the other plugin events.
+
+        Args:
+            category: The category the plugin belongs to
+            name: The name of the plugin
+            started: Whether the plugin is started, when the event carries a status
+
+        Returns:
+            The payload the switch events carry
+        """
+        payload = {"category": category, "plugin": name}
+        if started is not None:
+            payload["status"] = PLUGIN_STATUS_STARTED if started else PLUGIN_STATUS_STOPPED
+        return payload
+
     def _response_event(self, event: str) -> str:
         """Return the event a read waits for after emitting one.
 
@@ -1060,6 +1518,55 @@ class VolumioWebSocketCommon(VolumioCommon):
         minutes = int(delay.total_seconds() // 60)
         return {"enabled": True, "time": f"{minutes // 60}:{minutes % 60:02d}"}
 
+    def _update_window_given(
+        self, start_time: int | None, end_time: int | None
+    ) -> dict[str, dict[str, int]]:
+        """Build the window settings out of the hours given, as the save wants them.
+
+        Args:
+            start_time: The hour the window opens, or None to keep the one of the host
+            end_time: The hour the window closes, or None to keep the one of the host
+
+        Returns:
+            The settings of the hours given, each as the value and label pair the host
+            stores
+
+        Raises:
+            ValueError: If an hour is not between 0 and 23
+        """
+        window: dict[str, dict[str, int]] = {}
+        for key, hour in zip(UPDATE_WINDOW_IDS, (start_time, end_time), strict=True):
+            if hour is None:
+                continue
+            if not 0 <= hour <= 23:
+                self._fail_bad_update_hour(hour)
+            window[key] = {"value": hour, "label": hour}
+        return window
+
+    def _update_window_listed(self, sections: list[dict[str, Any]]) -> dict[str, Any]:
+        """Pick the window settings out of the configuration page of the system plugin.
+
+        The method saving the update settings wants the window too, which the page
+        reports as it stands.
+
+        Args:
+            sections: The sections of the page, as :meth:`get_plugin_config` reads them
+
+        Returns:
+            The settings of the window, as the host listed them
+
+        Raises:
+            ValueError: If the page does not report the window
+        """
+        window: dict[str, Any] = {}
+        for section in sections:
+            for entry in section.get("content") or []:
+                if isinstance(entry, dict) and entry.get("id") in UPDATE_WINDOW_IDS:
+                    window[entry["id"]] = entry.get("value")
+        if any(not isinstance(window.get(key), dict) for key in UPDATE_WINDOW_IDS):
+            self._fail_no_update_window()
+        return window
+
     def _volume_payload(self, value: int) -> int:
         """Build the payload setting the volume to an absolute level.
 
@@ -1078,16 +1585,57 @@ class VolumioWebSocketCommon(VolumioCommon):
         return value
 
     def _web_radio_payload(self, name: str, uri: str | None = None) -> dict[str, str]:
-        """Build the payload naming a web radio of the user.
+        """Build the payload naming a Web radio of the user.
 
         Args:
-            name: The name of the web radio
+            name: The name of the Web radio
             uri: The URL it streams from, when the event needs it
 
         Returns:
-            The payload the web radio events carry
+            The payload the Web radio events carry
         """
         payload = {"name": name}
         if uri is not None:
             payload["uri"] = uri
         return payload
+
+    def _wireless_password_checked(self, password: str) -> str:
+        """Check a wireless password the way the host does before it saves a network.
+
+        Args:
+            password: The password of the network
+
+        Returns:
+            The password, unchanged
+
+        Raises:
+            ValueError: If the password is neither a WPA passphrase nor a WEP key
+        """
+        length = len(password)
+        is_hex = all(char in string.hexdigits for char in password)
+        wep = length in (10, 26, 32) if is_hex else length in (5, 13, 16)
+        wpa = 8 <= length <= 63
+        hashed = length == 70 and "hash::" in password
+        if not (wep or wpa or hashed):
+            self._fail_bad_wireless_password()
+        return password
+
+    def _wireless_security_listed(self, networks: dict[str, Any], ssid: str) -> str | None:
+        """Pick the security of a wireless network out of those the host sees.
+
+        The host hashes a WPA passphrase only when told the security of the network,
+        as its user interface does; a network it does not see has none to tell.
+
+        Args:
+            networks: The wireless networks the host sees, as :attr:`wireless_networks`
+                reads them
+            ssid: The name of the network
+
+        Returns:
+            The security of the network, or None when the host does not see it
+        """
+        for network in networks.get("available") or []:
+            if isinstance(network, dict) and network.get("ssid") == ssid:
+                security = network.get("security")
+                return security if isinstance(security, str) else None
+        return None

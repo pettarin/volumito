@@ -4,6 +4,9 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+ALARM_FILE_ERROR = "Expected FILE to hold a JSON list of alarm objects."
+"""Error message when "system alarm set" is given a file of another shape."""
+
 API_CLIENTS = [
     "synchronous_rest",
     "asynchronous_rest",
@@ -42,11 +45,28 @@ API_CLIENT_SYNCHRONOUS_REST = "synchronous_rest"
 API_CLIENT_SYNCHRONOUS_WEBSOCKET = "synchronous_websocket"
 """The -C/--api-client value selecting the synchronous WebSocket API client."""
 
+BROWSE_ALONE_OPTIONS_ERROR = (
+    "Expected the -b/--current-track-album, -a/--current-track-artist, --last, and --root "
+    "options alone: without each other, the URI argument, and the -o/--offset option."
+)
+"""Error message when "collection browse" combines a standalone option with the other inputs."""
+
+BROWSE_CURRENT_TRACK_ERROR = "The current track does not provide the {kind} to browse to."
+"""Error message when "collection browse" is asked for metadata the current track lacks."""
+
 BROWSE_KINDS_ERROR = (
     "Expected the --result-kinds, --albums-only, --artists-only, --playlists-only, "
     "and --tracks-only options to agree on the kinds to keep."
 )
 """Error message when "collection browse" is asked for two different kinds of result."""
+
+COLLECTION_UPDATE_MODES_ERROR = "Expected at most one of the --rescan and --thumbnails options."
+"""Error message when "collection update" is asked for two refreshes at once."""
+
+COLLECTION_UPDATE_URI_ERROR = (
+    "Expected the URI argument only without the --rescan and --thumbnails options."
+)
+"""Error message when "collection update" is given a URI together with a refresh option."""
 
 DEFAULT_API_CLIENT = "synchronous_rest"
 """Default value of the -C/--api-client option."""
@@ -69,6 +89,44 @@ DEFAULT_STORY_ARGUMENT_TYPE = "autodetect"
 DEFAULT_VOLUMIO_VERSION = "4"
 """Default target Volumio version for the "configuration create" command."""
 
+EVENT_PAYLOAD_ERROR = "Expected PAYLOAD to be JSON."
+"""Error message when a "notification event" subcommand is given a payload that is not JSON."""
+
+EXPERIENCE_VALUES = [
+    "advanced",
+    "simple",
+]
+"""Accepted values of the VALUE argument of the "system ui experience" command."""
+
+FAVOURITE_PLAY_NAME_ERROR = "Expected the NAME argument without --radio."
+"""Error message when "collection favourite play" is given no name without --radio."""
+
+FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR = (
+    'The Volumio host does not list "{uri}" among its radio favourites after the add.'
+)
+"""Error message when "collection favourite add --radio" finds the radio not listed."""
+
+FAVOURITE_RADIO_OPTIONS_ERROR = "Expected the --service option only without --radio."
+"""Error message when a "collection favourite" subcommand gives a Web radio a service."""
+
+FAVOURITE_RADIO_TITLE_ERROR = (
+    "Expected the --title option with --radio, unless URI is the name or the URL of a "
+    'Web radio of the host ("collection radio list").'
+)
+"""Error message when "collection favourite add --radio" cannot name a Web radio."""
+
+FAVOURITE_RADIO_UNKNOWN_ERROR = (
+    'The Volumio host lists no radio favourite named, or streaming from, "{radio}".'
+)
+"""Error message when "collection favourite remove --radio" finds no such radio."""
+
+FAVOURITE_REMOVE_STILL_LISTED_ERROR = (
+    'The Volumio host still lists "{uri}" among its favourites after the removal: '
+    "the URI may not match the one listed, or a MyVolumio cloud device may not save "
+    "an empty list of favourites."
+)
+"""Error message when "collection favourite remove" finds the favourite still listed."""
+
 FILE_WRITE_CHUNK_SIZE = 8192
 """Default chunk size in bytes when writing files."""
 
@@ -80,6 +138,11 @@ MPD_PORT_VOLUMIO_3 = 6599
 
 MPD_PORT_VOLUMIO_4 = 6600
 """MPD port used by Volumio 4 (major version 4 and above)."""
+
+MULTIROOM_SETTINGS_ERROR = (
+    "Expected the SETTINGS argument to be a JSON object, or the path of a file holding one."
+)
+"""Error message when a "multiroom" subcommand is given settings of another shape."""
 
 MUTUALLY_EXCLUSIVE_CONFIGURATION_ERROR = (
     "Options -c/--configuration-file and --ignore-configuration-file are mutually exclusive."
@@ -143,11 +206,89 @@ OUTPUT_FORMATS = [
 ]
 """Accepted values of the -F/--format option."""
 
+PLAY_VOLATILE_ERROR = "Expected a POSITION argument together with --volatile."
+"""Error message when "playback play" is asked for the volatile source without a position."""
+
+PLAYLIST_DELETE_ATTEMPTS = 3
+"""How many times "playlist delete" reads the playlists, waiting for the deletion."""
+
+PLAYLIST_DELETE_STILL_LISTED_ERROR = (
+    'The Volumio host still lists the playlist "{name}" after the deletion.'
+)
+"""Error message when "playlist delete" finds the playlist still listed."""
+
+PLAYLIST_EXISTS_ERROR = (
+    'Playlist already exists: "{name}" (use --overwrite-existing-playlist to overwrite)'
+)
+"""Error message when "playlist rename" or "queue save" would overwrite a playlist."""
+
+PLAYLIST_FILE_ERROR = 'Expected FILE to hold a JSON list of playlist items, each with a "uri".'
+"""Error message when "playlist create" is given a file of another shape to import."""
+
+PLAYLIST_REMOVE_ALL_OCCURRENCES_ERROR = (
+    "Expected the --all-occurrences option only together with a URI argument."
+)
+"""Error message when "playlist remove" is asked for every occurrence of a position."""
+
+PLAYLIST_REMOVE_ARGUMENTS_ERROR = (
+    "Expected either a URI argument or the -p/--position option, and not both."
+)
+"""Error message when "playlist remove" is given neither a URI nor a position, or both."""
+
+PLAYLIST_REMOVE_EMPTY_WARNING = (
+    'The removal would leave the playlist "{name}" empty, which the Volumio host may '
+    'refuse: to empty a playlist, delete it with "playlist delete" and create it again '
+    'with "playlist create".'
+)
+"""Warning when "playlist remove" is asked to remove every item of a playlist."""
+
+PLAYLIST_REMOVE_SERVICE_ERROR = "Expected the --service option only together with a URI argument."
+"""Error message when "playlist remove" is given a service with a position instead of a URI."""
+
+PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR = 'No item at URI "{uri}" in the playlist "{name}".'
+"""Error message when "playlist remove" finds no occurrence of the URI to remove."""
+
+PLAYLIST_SAME_NAME_ERROR = "Expected SOURCE and TARGET to be different playlist names."
+"""Error message when "playlist copy" or "playlist rename" is given the same name twice."""
+
+PLUGIN_INSTALL_WAIT_INTERVAL = 5.0
+"""Seconds between two looks at the installed plugins while waiting for an install."""
+
+PLUGIN_INSTALL_WAIT_RETRIES = 120
+"""Number of looks at the installed plugins while waiting for an install: ten minutes."""
+
 PROGRAM_NAME = "volumito"
 """Name of the CLI tool, heading the command tree."""
 
+QUEUE_ADD_ARGUMENTS_ERROR = (
+    "Expected a single URI argument (several are accepted only with --by-uid)."
+)
+"""Error message when "queue add" is given several arguments without --by-uid."""
+
+QUEUE_ADD_MODES_ERROR = (
+    "Expected at most one of the --by-uid, --cue-track, --next, and --play options."
+)
+"""Error message when "queue add" is asked to add in two ways at once."""
+
+QUEUE_ADD_NEXT_OPTIONS_ERROR = "Expected the --album and --title options only together with --next."
+"""Error message when "queue add" is given the item details without --next."""
+
+QUEUE_CUE_TRACK_SERVICE_ERROR = "Expected the --service option only together with --cue-track."
+"""Error message when a "queue" subcommand is given a service without a cue track."""
+
+RADIO_REMOVE_STILL_LISTED_ERROR = (
+    'The Volumio host still lists the Web radio "{name}" after the removal: '
+    "a MyVolumio cloud device does not save an empty list of Web radios."
+)
+"""Error message when "collection radio remove" finds the Web radio still listed."""
+
 REGISTER_ARGUMENT_ERROR = "Expected a URL argument, or the -A/--autocompose-url option."
 """Error message when "notification register" is given neither a URL nor --autocompose-url."""
+
+REPLACE_CUE_TRACK_ERROR = (
+    "Expected the --cue-track option only together with --play, and without -p/--position."
+)
+"""Error message when "queue replace" combines a cue track with a position or --no-play."""
 
 REPLACE_POSITION_ERROR = "Expected the -p/--position option only together with --play."
 """Error message when "queue replace" is asked for a position without playing."""
@@ -163,18 +304,18 @@ SEARCH_KINDS_ERROR = (
 )
 """Error message when "collection search" is asked for two different kinds of result."""
 
-SEARCH_LIMIT_ERROR ="Expected the -1/--best-result-only or the -l/--limit option, not both."
+SEARCH_LIMIT_ERROR = "Expected the -1/--best-result-only or the -l/--limit option, not both."
 """Error message when "collection search" is given two limits on the results."""
 
 SEARCH_SERVICES = [
     "highresaudio",  # not verified
     "mpd",
     "qobuz",
-    "soundcloud",    # not verified
-    "spop",          # the Spotify plugin, not verified
-    "tidal",         # not verified
+    "soundcloud",  # not verified
+    "spop",  # the Spotify plugin, not verified
+    "tidal",  # not verified
     "webradio",
-    "youtube2",      # the YouTube2 plugin, not verified
+    "youtube2",  # the YouTube2 plugin, not verified
 ]
 """Accepted values of the --service option of the "collection search" command.
 
@@ -183,18 +324,34 @@ verified is the name its plugin registers itself with, or a guess where the plug
 public.
 """
 
-SHORT_FORMAT_FIELDS_MULTIROOM_ZONES = [
+SHARE_EDIT_FIELDS_ERROR = (
+    "Expected at least one of the --fstype, --name, --options, --password, --path, "
+    "and --username options."
+)
+"""Error message when "system share edit" is given nothing to change."""
+
+SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST = [
+    "name",
+    "prettyName",
+    "category",
+    "active",
+    "enabled",
+    "hasConfiguration",
+]
+"""Short fields list for the "collection source list" command."""
+
+SHORT_FORMAT_FIELDS_MULTIROOM_INFO = [
     "host",
     "name",
     "isSelf",
     "state",
 ]
-"""Short fields list for the "multiroom zones" command."""
+"""Short fields list for the "multiroom info" command."""
 
-SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE = [
+SHORT_FORMAT_FIELDS_MULTIROOM_INFO_EXCLUDED_FROM_STATE = [
     "albumart",
 ]
-"""Keys of the "state" subdictionary omitted by the short fields of "multiroom zones"."""
+"""Keys of the "state" subdictionary omitted by the short fields of "multiroom info"."""
 
 SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "status",
@@ -212,6 +369,21 @@ SHORT_FORMAT_FIELDS_PLAYER_STATE = [
     "channels",
 ]
 """Short fields list for the "playback status" command."""
+
+# The track fields must stay in sync with SHORT_FORMAT_FIELDS_QUEUE_LIST
+SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT = [
+    "position",
+    "title",
+    # The local files (the "mpd" service) report their title under "name"
+    "name",
+    "artist",
+    "album",
+    "volumeNumber",
+    "tracknumber",
+    "duration",
+    "uri",
+]
+"""Short fields list for the "playlist content" command: the queue list ones, and the URI."""
 
 SHORT_FORMAT_FIELDS_QUEUE_LIST = [
     "position",
@@ -244,6 +416,78 @@ SHORT_FORMAT_FIELDS_QUEUE_STATUS = [
 ]
 """Short fields list for the "queue status" command."""
 
+SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST = [
+    "id",
+    "name",
+    "enabled",
+    "time",
+    "playlist",
+]
+"""Short fields list for the "system alarm list" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS = [
+    "id",
+    "name",
+    "type",
+    "enabled",
+    "volume",
+]
+"""Short fields list for the "system audio outputs" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO = [
+    "type",
+    "ip",
+    "status",
+    "speed",
+]
+"""Short fields list for the "system network info" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS = [
+    "ssid",
+    "signal",
+    "security",
+    "configured",
+]
+"""Short fields list for the "system network wireless" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE = [
+    "category",
+    "name",
+    "prettyName",
+    "version",
+    "installed",
+    "updateAvailable",
+    "url",
+]
+"""Short fields list for the "system plugin available" command printing the store."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST = [
+    "category",
+    "name",
+    "prettyName",
+    "version",
+    "enabled",
+    "active",
+]
+"""Short fields list for the "system plugin" commands printing the installed plugins."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST = [
+    "id",
+    "name",
+    "path",
+    "fstype",
+    "size",
+    "username",
+    "options",
+]
+"""Short fields list for the "system share list" command."""
+
+SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST = [
+    "title",
+    "uri",
+]
+"""Short fields list for the "system usb list" command."""
+
 SHORT_FORMAT_FIELDS_STORY = [
     "data.value",
 ]
@@ -260,7 +504,7 @@ SHORT_FORMAT_FIELDS_TRACK_INFO = [
     "bitdepth",
     "channels",
 ]
-"""Short fields list for the "track info" command."""
+"""Short fields list for the "queue track info" command."""
 
 STORY_ARGUMENT_TYPES = [
     "autodetect",
@@ -269,9 +513,7 @@ STORY_ARGUMENT_TYPES = [
 ]
 """Accepted values of the -T/--type option of the "story" subcommands."""
 
-STORY_ARTIST_ALBUM_ARGUMENTS_ERROR = (
-    "Expected ARTIST ALBUM arguments, or a single MBID argument."
-)
+STORY_ARTIST_ALBUM_ARGUMENTS_ERROR = "Expected ARTIST ALBUM arguments, or a single MBID argument."
 """Error message when the "story album"/"story credits" arguments cannot be resolved."""
 
 STORY_ARTIST_ARGUMENT_ERROR = "Expected a NAME or MBID argument."
@@ -284,3 +526,12 @@ UNREGISTER_ARGUMENT_ERROR = (
     "Expected a URL argument, or one of the -a/--all and -A/--autocompose-url options."
 )
 """Error message when "notification unregister" is given no way of naming a URL."""
+
+URI_FAVOURITES = "favourites"
+"""The URI the Favourites browse source of a Volumio host lists the favourites at."""
+
+URI_RADIO_FAVOURITES = "radio/favourites"
+"""The URI the Web radio plugin of a Volumio host lists the radio favourites at."""
+
+URI_WEB_RADIOS = "radio/myWebRadio"
+"""The URI the Web radio plugin of a Volumio host lists the Web radios of the user at."""

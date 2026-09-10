@@ -1,0 +1,4 @@
+> [!CAUTION]
+> Note the error above: to make sure you know what you are doing,
+> `volumito` refuses to execute the command
+> unless you provide the `--yes` option:

@@ -14,12 +14,13 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_PLACEHOLDER,
     OUTPUT_FIELDS_ALL,
     OUTPUT_FIELDS_SHORT,
-    SHORT_FORMAT_FIELDS_MULTIROOM_ZONES,
-    SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE,
+    SHORT_FORMAT_FIELDS_MULTIROOM_INFO,
+    SHORT_FORMAT_FIELDS_MULTIROOM_INFO_EXCLUDED_FROM_STATE,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
     SHORT_FORMAT_FIELDS_QUEUE_LIST,
 )
 from volumito.clients import VolumioHostConfiguration
+from volumito.clients.common import MPD_LIBRARY_SCHEMES
 from volumito.clients.models import PlayerState, QueueTrack, SearchResultItemKind
 from volumito.clients.remote import is_local_file_uri
 
@@ -244,7 +245,9 @@ def filter_fields(
 
 
 def filter_queue_fields(
-    queue_data: dict[str, Any], fields: str
+    queue_data: dict[str, Any],
+    fields: str,
+    short_fields: list[str] = SHORT_FORMAT_FIELDS_QUEUE_LIST,
 ) -> list[dict[str, Any]]:
     """Filter queue items based on the fields option.
 
@@ -255,12 +258,13 @@ def filter_queue_fields(
     Args:
         queue_data: The queue data dictionary from the Volumio API (contains "queue" key)
         fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
+        short_fields: The list of keys to keep for the ``SHORT`` keyword
 
     Returns:
         A list of filtered queue item dictionaries, in the requested order
     """
     queue = queue_data.get("queue", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_QUEUE_LIST)
+    selected = resolve_output_fields(fields, short_fields)
     filtered_queue = []
 
     for index, item in enumerate(queue):
@@ -275,9 +279,26 @@ def filter_queue_fields(
     return filtered_queue
 
 
-def filter_zones_fields(
-    zones_data: dict[str, Any], fields: str
+def filter_items_fields(
+    items: list[dict[str, Any]], fields: str, short_fields: list[str]
 ) -> list[dict[str, Any]]:
+    """Filter a list of items (e.g., the music sources) based on the fields option.
+
+    Args:
+        items: The items, as the Volumio API reports them
+        fields: The fields option (``ALL``, ``SHORT``, or a comma-separated field list)
+        short_fields: The keys the ``SHORT`` keyword keeps
+
+    Returns:
+        A list of copies of the items, holding the selected fields in the requested order
+    """
+    selected = resolve_output_fields(fields, short_fields)
+    if selected is None:  # ALL
+        return [item.copy() for item in items]
+    return [{key: item[key] for key in selected if key in item} for item in items]
+
+
+def filter_zones_fields(zones_data: dict[str, Any], fields: str) -> list[dict[str, Any]]:
     """Filter the zones based on the fields option.
 
     Args:
@@ -289,7 +310,7 @@ def filter_zones_fields(
         keyword the "state" subdictionary is trimmed too
     """
     zones = zones_data.get("zones", [])
-    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_MULTIROOM_ZONES)
+    selected = resolve_output_fields(fields, SHORT_FORMAT_FIELDS_MULTIROOM_INFO)
     if selected is None:  # ALL
         return [zone.copy() for zone in zones]
 
@@ -302,7 +323,7 @@ def filter_zones_fields(
             filtered_zone["state"] = {
                 key: value
                 for key, value in state.items()
-                if key not in SHORT_FORMAT_FIELDS_MULTIROOM_ZONES_EXCLUDED_FROM_STATE
+                if key not in SHORT_FORMAT_FIELDS_MULTIROOM_INFO_EXCLUDED_FROM_STATE
             }
         filtered_zones.append(filtered_zone)
     return filtered_zones
@@ -383,6 +404,10 @@ def format_as_table(
             ("Seek", "seek"),
             ("Volume", "volume"),
             ("Mute", "mute"),
+            ("Tracktype", "trackType"),
+            ("Samplerate", "samplerate"),
+            ("Bitdepth", "bitdepth"),
+            ("Channels", "channels"),
         ]
     else:
         # Display all fields from the state
@@ -549,17 +574,18 @@ def format_notification_as_line(item: str | None, data: object, timestamp: str) 
     return f"[{timestamp}] {item or '?':<8} {summary}"
 
 
-def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
-    """Format the queue as a readable table.
+def format_queue_as_table(tracks: list[dict[str, Any]], heading: str = "Volumio Queue") -> str:
+    """Format the queue, or another list of tracks, as a readable table.
 
     Args:
         tracks: List of (potentially filtered) queue item dictionaries
+        heading: The heading of the table
 
     Returns:
         A formatted string representation of the queue
     """
     lines = []
-    lines.append("Volumio Queue")
+    lines.append(heading)
     lines.append("=" * 50)
 
     if not tracks:
@@ -579,6 +605,7 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
         volume_number = track.get("volumeNumber")
         duration = track.get("duration")
         service = track.get("service", "")
+        uri = track.get("uri", "")
 
         lines.append(f"\n{position:>{width}}. {title}")
         if artist:
@@ -593,6 +620,8 @@ def format_queue_as_table(tracks: list[dict[str, Any]]) -> str:
             lines.append(f"{indent}Duration: {format_duration(duration)}")
         if service:
             lines.append(f"{indent}Service: {service}")
+        if uri:
+            lines.append(f"{indent}URI    : {uri}")
 
         # Add optional audio quality fields if present
         samplerate = track.get("samplerate")
@@ -682,33 +711,36 @@ def format_termination_conditions(
     return f"Terminate as soon as: {', '.join(conditions)}"
 
 
-def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
-    """Format the zones as a readable table.
+def format_items_as_table(items: list[dict[str, Any]], heading: str, name_key: str = "name") -> str:
+    """Format a list of named items (e.g., the zones, the music sources) as a table.
 
-    Each zone is printed as a numbered block whose key/value lines are indented to
-    start at the same column as the zone name.
+    Each item is printed as a numbered block headed by its name, whose key/value lines
+    are indented to start at the same column as the name; a value that is itself a
+    mapping is printed one key/value per line, indented further.
 
     Args:
-        zones: List of (potentially filtered) zone dictionaries
+        items: List of (potentially filtered) item dictionaries
+        heading: The heading of the table
+        name_key: The key holding the name heading the block of each item
 
     Returns:
-        A formatted string representation of the zones
+        A formatted string representation of the items
     """
     lines = []
-    lines.append("Volumio Multiroom Zones")
+    lines.append(heading)
     lines.append("=" * 50)
 
-    if not zones:
+    if not items:
         lines.append("(empty)")
         return "\n".join(lines)
 
-    width = number_prefix_width([str(index) for index in range(1, len(zones) + 1)])
+    width = number_prefix_width([str(index) for index in range(1, len(items) + 1)])
     indent = " " * (width + 2)
 
-    for index, zone in enumerate(zones, start=1):
-        lines.append(f"\n{index:>{width}}. {zone.get('name', 'Unknown')}")
-        for key, value in zone.items():
-            if key == "name":
+    for index, item in enumerate(items, start=1):
+        lines.append(f"\n{index:>{width}}. {item.get(name_key, 'Unknown')}")
+        for key, value in item.items():
+            if key == name_key:
                 # The name is already the heading of the block
                 continue
             label = split_camel_case(key)
@@ -720,6 +752,45 @@ def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
                 lines.append(f"{indent}{label:17}: {value}")
 
     return "\n".join(lines)
+
+
+def format_zones_as_table(zones: list[dict[str, Any]]) -> str:
+    """Format the zones as a readable table.
+
+    Args:
+        zones: List of (potentially filtered) zone dictionaries
+
+    Returns:
+        A formatted string representation of the zones
+    """
+    return format_items_as_table(zones, "Volumio Multiroom Zones")
+
+
+def is_expandable_uri(uri: str) -> bool:
+    """Return whether a URI may list tracks a client has to expand it into.
+
+    A Volumio host adding a URI to a playlist expands the containers of its local
+    library by itself (a folder, an ``albums://`` album, and so on), and stores the
+    URI of any other source as one item, whatever it lists. So a URI is expandable
+    when it belongs to another source, and does not name a single track already: a
+    Web URL (a stream), a ``spotify:track:`` URI, or a URI whose path starts with
+    ``song/`` or ``track/`` (``qobuz://song/...``, ``tidal://song/...``) is a track.
+
+    Args:
+        uri: The URI to be added to a playlist
+
+    Returns:
+        True if the URI belongs to a source other than the local library and may
+        list tracks
+    """
+    if uri.startswith(("http://", "https://")):
+        return False
+    if uri.startswith("spotify:"):
+        return not uri.startswith("spotify:track:")
+    scheme, separator, path = uri.partition("://")
+    if not separator or scheme in MPD_LIBRARY_SCHEMES:
+        return False
+    return not path.startswith(("song/", "track/"))
 
 
 def is_mbid(text: str) -> bool:
@@ -734,9 +805,7 @@ def is_mbid(text: str) -> bool:
     Returns:
         True if the text is UUID-shaped, False otherwise
     """
-    return (
-        re.fullmatch(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", text) is not None
-    )
+    return re.fullmatch(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", text) is not None
 
 
 def manifest_matches_queue(

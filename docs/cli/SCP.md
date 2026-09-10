@@ -8,12 +8,11 @@ to copy files and directories from and to
 the Volumio host.
 
 > [!CAUTION]
-> **Use these commands at your own peril!**
+> **Use this command at your own peril!**
 >
-> You might risk overwriting files or directories
-> on the Volumio host and/or your local machine,
-> resulting in loss of data or even compromising
-> the functionality of the Volumio host.
+> You might damage your Volumio host and/or your local machine
+> (e.g., by removing or replacing files on it),
+> to the point a full reinstall will be needed.
 
 > [!NOTE]
 > To use the `volumito scp` commands
@@ -34,7 +33,7 @@ the connection parameters:
 
 in addition to the obvious `--host` (default: `volumio.local`).
 
-> [!WARNING]
+> [!CAUTION]
 > You can provide the SSH password on the command line
 > (`volumito --ssh-password "volumio" scp ...`)
 > or in the `volumito` configuration file.
@@ -51,7 +50,7 @@ in addition to the obvious `--host` (default: `volumio.local`).
 > therefore omitting the `--ssh-password` option.
 >
 > If you are not familiar with SSH keys,
-> you can follow Step 1-3 of
+> you can follow Steps 1-3 of
 > [this tutorial](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server),
 > keeping in mind that in your case the `remote_host`
 > is your Volumio host.
@@ -73,17 +72,17 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-08-14T13:41:10.380Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-09-10T13:46:23.691Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
-> [!WARNING]
-> Mind the error: to make sure you know what you are doing,
-> `volumito` refuses to copy the file/directory
+> [!CAUTION]
+> Note the error above: to make sure you know what you are doing,
+> `volumito` refuses to execute the command
 > unless you provide the `--yes` option:
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-08-14T13:41:11.561Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-09-10T13:46:25.176Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -94,7 +93,7 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-08-14T13:41:12.707Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-09-10T13:46:27.065Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
 > [!TIP]

@@ -1,0 +1,108 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums 4 tracks"
+```
+
+## Edit The Current Queue
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+### Add An Item (Queue)
+
+If you want to add an item to the current queue,
+use the `queue add` command providing the URI of the item
+(see
+[Search The Collection](#search-the-collection)
+or
+[Browse The Collection](#browse-the-collection)
+above for details).
+
+```bash lucio command=execute
+volumito -C aw queue add qobuz://song/63333861
+```
+
+The above command appends the track
+"Don't Know Why" from album "Come Away With Me" by Norah Jones
+(URI `qobuz://song/63333861`) as the last element of the queue:
+
+```bash lucio command=execute
+volumito -C aw queue list -F table
+```
+
+You can add the item to the queue after the track currently playing
+by specifying the option `--next`:
+
+```bash lucio command=execute
+volumito -C aw queue add qobuz://song/63333861 --next
+```
+
+```bash lucio command=execute
+volumito -C aw queue list -F table
+```
+
+You can also switch immediately to the added item
+by specifying the option `--play`:
+
+```bash lucio command=execute
+volumito -C aw queue add qobuz://song/63333861 --play
+```
+
+```bash lucio command=execute
+volumito -C aw queue list -F table
+```
+
+### Remove An Item (Queue)
+
+If you want to remove an item from the current queue,
+use the `queue remove` command providing the index of the item:
+
+```bash lucio command=execute
+# remove the second track
+volumito -C aw queue remove 2
+```
+
+```bash lucio command=execute
+volumito -C aw queue list -F table
+```
+
+### Change Position Of An Item
+
+If you want to change the position of an item of the current queue,
+use the `queue move` command providing the source index and the target index:
+
+```bash lucio command=execute
+# move the first track to the third position
+volumito -C aw queue move 1 3
+```
+
+```bash lucio command=execute
+volumito -C aw queue list -F table
+```
+
+### Save The Queue As A Playlist
+
+To save the current queue as a Volumio playlist,
+issue the `queue save` command,
+providing a name for the playlist to be created:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure the playlist already exists
+volumito -C aw playlist create "volumito docs queue save"
+```
+
+```bash lucio command=execute exit=1
+volumito -C aw queue save "volumito docs queue save"
+```
+
+```markdown lucio command=include path="./inc/CAUTION_COMMAND_REQUIRES_CONFIRMATION_TO_OVERWRITE.md" style=literal
+```
+
+```bash lucio command=execute
+volumito -C aw queue save "volumito docs queue save" --overwrite-existing-playlist
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure the playlist created in this file is removed
+volumito -C aw playlist delete "volumito docs queue save" --yes
+```

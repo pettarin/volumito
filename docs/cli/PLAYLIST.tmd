@@ -1,0 +1,71 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
+## Playlists
+
+```markdown lucio command=include path="./inc/NOTE_ON_PLAYLIST_CONCEPT.md" style=literal
+```
+
+### List All Playlists
+
+The `playlist list` command prints the identifiers
+of all the available playlists:
+
+```bash lucio command=execute
+volumito playlist list
+```
+
+### List The Contents Of A Playlist
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+The `playlist content` command lists the contents
+of the playlist specified by its identifier:
+
+```bash lucio command=execute
+volumito -C aw playlist content "volumito test qobuz multiple albums"
+```
+
+> [!TIP]
+> You might want to use double quotes if the identifier
+> of the playlist contains spaces or other special characters.
+
+### Play A Playlist
+
+To play a playlist (from its first track),
+replacing the current playback queue,
+issue the `playlist play` command followed by the playlist identifier:
+
+```bash lucio command=execute
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
+### Enqueue A Playlist
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+It is also possible to append the contents of the playlist
+to the current playback queue (not replacing the existing queue items),
+with the `playlist enqueue` command:
+
+```bash lucio command=execute
+volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
+```
+
+### Playlist Help
+
+These are all the subcommands of the `playlist` group:
+
+```bash lucio command=execute
+volumito playlist --help
+```
+
+The `download` subcommand is described
+in Section [Download](#download) below.
+
+The other subcommands to edit playlists are described
+in Section [Edit Playlists](#edit-playlists) below.

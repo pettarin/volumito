@@ -15,6 +15,9 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_4
 
 ACTION_COMMAND_PATHS: list[list[str]] = (
     [
+        ["collection", "favourite", "play"],
+    ]
+    + [
         ["playback", name]
         for name in (
             "mute",
@@ -28,17 +31,20 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
             "unmute",
             "volume",
         )
-    ] +
-    [
+    ]
+    + [
         ["playlist", "download"],
+        ["playlist", "enqueue"],
         ["playlist", "play"],
-    ] +
-    [
+    ]
+    + [
         ["queue", name]
         for name in (
+            "add",
             "clear",
-            "randomize",
-            "repeat",
+            "move",
+            "remove",
+            "replace",
         )
     ]
 )
@@ -58,6 +64,15 @@ CONFIGURATION_FILENAMES: list[str] = [
 ]
 """Configuration file names tried within each directory, in this order."""
 
+CONTENT_COMMAND_PATHS: list[list[str]] = [
+    ["playlist", "add"],
+    ["playlist", "copy"],
+    ["playlist", "create"],
+    ["playlist", "remove"],
+    ["playlist", "rename"],
+]
+"""--print-resulting-content lives on the playlist editing commands."""
+
 DEFAULT_CONFIGURATION_TEMPLATE: str = "volumito.yaml.template"
 """File name of the packaged default-configuration template (in the cli "res" directory)."""
 
@@ -74,19 +89,57 @@ FORMAT_KEYS: list[str] = [
 
 DISPLAY_SUBSECTION_KEYS: dict[str, list[str]] = {
     "command-list": COMMAND_LIST_KEYS,
+    "playback-infinity": FORMAT_KEYS,
+    "playback-sleep": FORMAT_KEYS,
     "playback-status": DISPLAY_KEYS,
+    "system-update-check": FORMAT_KEYS,
     "track-info": DISPLAY_KEYS,
+    "queue-consume": FORMAT_KEYS,
     "queue-list": DISPLAY_KEYS,
+    "queue-randomize": FORMAT_KEYS,
+    "queue-repeat": FORMAT_KEYS,
     "queue-status": DISPLAY_KEYS,
+    "playlist-content": DISPLAY_KEYS,
     "playlist-list": FORMAT_KEYS,
+    "notification-event-listen": FORMAT_KEYS,
+    "notification-event-request": FORMAT_KEYS,
     "notification-list": FORMAT_KEYS,
     "notification-listen": FORMAT_KEYS,
-    "multiroom-zones": DISPLAY_KEYS,
+    "multiroom-info": DISPLAY_KEYS,
+    "multiroom-set": FORMAT_KEYS,
+    "multiroom-status": FORMAT_KEYS,
+    "system-alarm-list": DISPLAY_KEYS,
+    "system-audio-device-list": FORMAT_KEYS,
+    "system-audio-dsp": FORMAT_KEYS,
+    "system-audio-inputs": FORMAT_KEYS,
+    "system-audio-outputs": DISPLAY_KEYS,
+    "system-backup-create": FORMAT_KEYS,
     "system-execute": FORMAT_KEYS,
     "system-version": FORMAT_KEYS,
     "system-info": FORMAT_KEYS,
+    "system-network-info": DISPLAY_KEYS,
+    "system-network-wireless": DISPLAY_KEYS,
+    "system-plugin-configuration": FORMAT_KEYS,
+    "system-plugin-disable": DISPLAY_KEYS,
+    "system-plugin-enable": DISPLAY_KEYS,
+    "system-plugin-list": DISPLAY_KEYS,
+    "system-power-modes": FORMAT_KEYS,
+    "system-share-discover": FORMAT_KEYS,
+    "system-share-info": FORMAT_KEYS,
+    "system-share-list": DISPLAY_KEYS,
+    "system-timezone-list": FORMAT_KEYS,
+    "system-ui-background-list": FORMAT_KEYS,
+    "system-ui-experience": FORMAT_KEYS,
+    "system-ui-language-list": FORMAT_KEYS,
+    "system-ui-privacy": FORMAT_KEYS,
+    "system-ui-settings": FORMAT_KEYS,
+    "system-update-channel-list": FORMAT_KEYS,
+    "system-usb-list": DISPLAY_KEYS,
     "collection-browse": FORMAT_KEYS,
+    "collection-favourite-list": FORMAT_KEYS,
+    "collection-radio-list": FORMAT_KEYS,
     "collection-search": FORMAT_KEYS,
+    "collection-source-list": DISPLAY_KEYS,
     "collection-statistics": FORMAT_KEYS,
     "story-album": DISPLAY_KEYS,
     "story-artist": DISPLAY_KEYS,
@@ -103,8 +156,19 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "collection-browse": [
         ["collection", "browse"],
     ],
+    "collection-favourite-list": [
+        ["collection", "favourite", "list"],
+    ],
+    "collection-radio-list": [
+        ["collection", "radio", "add"],
+        ["collection", "radio", "list"],
+        ["collection", "radio", "remove"],
+    ],
     "collection-search": [
         ["collection", "search"],
+    ],
+    "collection-source-list": [
+        ["collection", "source", "list"],
     ],
     "collection-statistics": [
         ["collection", "statistics"],
@@ -112,8 +176,20 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "command-list": [
         ["command", "list"],
     ],
-    "multiroom-zones": [
-        ["multiroom", "zones"],
+    "multiroom-info": [
+        ["multiroom", "info"],
+    ],
+    "multiroom-set": [
+        ["multiroom", "set"],
+    ],
+    "multiroom-status": [
+        ["multiroom", "status"],
+    ],
+    "notification-event-listen": [
+        ["notification", "event", "listen"],
+    ],
+    "notification-event-request": [
+        ["notification", "event", "request"],
     ],
     "notification-list": [
         ["notification", "list"],
@@ -121,14 +197,37 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "notification-listen": [
         ["notification", "listen"],
     ],
+    "playback-infinity": [
+        ["playback", "infinity"],
+    ],
+    "playback-sleep": [
+        ["playback", "sleep"],
+    ],
     "playback-status": [
         ["playback", "status"],
+    ],
+    "playlist-content": [
+        ["playlist", "add"],
+        ["playlist", "content"],
+        ["playlist", "copy"],
+        ["playlist", "create"],
+        ["playlist", "remove"],
+        ["playlist", "rename"],
     ],
     "playlist-list": [
         ["playlist", "list"],
     ],
+    "queue-consume": [
+        ["queue", "consume"],
+    ],
     "queue-list": [
         ["queue", "list"],
+    ],
+    "queue-randomize": [
+        ["queue", "randomize"],
+    ],
+    "queue-repeat": [
+        ["queue", "repeat"],
     ],
     "queue-status": [
         ["queue", "status"],
@@ -148,6 +247,24 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
     "story-place": [
         ["story", "place"],
     ],
+    "system-alarm-list": [
+        ["system", "alarm", "list"],
+    ],
+    "system-audio-device-list": [
+        ["system", "audio", "device", "list"],
+    ],
+    "system-audio-dsp": [
+        ["system", "audio", "dsp"],
+    ],
+    "system-audio-inputs": [
+        ["system", "audio", "inputs"],
+    ],
+    "system-audio-outputs": [
+        ["system", "audio", "outputs"],
+    ],
+    "system-backup-create": [
+        ["system", "backup", "create"],
+    ],
     "system-execute": [
         ["system", "execute"],
     ],
@@ -155,10 +272,68 @@ DISPLAY_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["system", "info"],
         ["info"],
     ],
+    "system-network-info": [
+        ["system", "network", "info"],
+    ],
+    "system-network-wireless": [
+        ["system", "network", "wireless"],
+    ],
+    "system-plugin-configuration": [
+        ["system", "plugin", "configuration"],
+    ],
+    "system-plugin-disable": [
+        ["system", "plugin", "disable"],
+    ],
+    "system-plugin-enable": [
+        ["system", "plugin", "enable"],
+    ],
+    "system-plugin-list": [
+        ["system", "plugin", "list"],
+    ],
+    "system-power-modes": [
+        ["system", "power", "modes"],
+    ],
+    "system-share-discover": [
+        ["system", "share", "discover"],
+    ],
+    "system-share-info": [
+        ["system", "share", "info"],
+    ],
+    "system-share-list": [
+        ["system", "share", "list"],
+    ],
+    "system-timezone-list": [
+        ["system", "timezone", "list"],
+    ],
+    "system-ui-background-list": [
+        ["system", "ui", "background", "list"],
+    ],
+    "system-ui-experience": [
+        ["system", "ui", "experience"],
+    ],
+    "system-ui-language-list": [
+        ["system", "ui", "language", "list"],
+    ],
+    "system-ui-privacy": [
+        ["system", "ui", "privacy"],
+    ],
+    "system-ui-settings": [
+        ["system", "ui", "settings"],
+    ],
+    "system-update-channel-list": [
+        ["system", "update", "channel", "list"],
+    ],
+    "system-update-check": [
+        ["system", "update", "check"],
+    ],
+    "system-usb-list": [
+        ["system", "usb", "list"],
+    ],
     "system-version": [
         ["system", "version"],
     ],
     "track-info": [
+        ["queue", "track", "info"],
         ["track", "info"],
     ],
 }
@@ -225,9 +400,11 @@ DOWNLOAD_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
         ["queue", "download"],
     ],
     "track-albumart": [
+        ["queue", "track", "albumart"],
         ["track", "albumart"],
     ],
     "track-audio": [
+        ["queue", "track", "audio"],
         ["track", "audio"],
     ],
 }
@@ -253,13 +430,26 @@ OUTPUT_SCALAR_KEYS: list[str] = [
     "fields",
     "format",
     "print-resulting-status",
+    "print-resulting-content",
+    "print-resulting-list",
 ]
 """The "output" section is hierarchical: its scalar keys are shared, and optional
 per-command subsections override the display keys (fields/format). color, verbose,
 machine-readable, position-starting-at-one, pager, and
 strict-parsing-configuration-file are global; print-resulting-status applies to the
-playback and queue action commands.
+playback and queue action commands, print-resulting-content to the playlist editing
+ones, and print-resulting-list to the Web radio editing ones and to the playlist
+create and delete ones.
 """
+
+LIST_COMMAND_PATHS: list[list[str]] = [
+    ["collection", "radio", "add"],
+    ["collection", "radio", "remove"],
+    ["playlist", "create"],
+    ["playlist", "delete"],
+]
+"""--print-resulting-list lives on the commands listing the Web radios or the playlists
+once done."""
 
 NOTIFICATION_KEY_PATHS: dict[str, list[list[str]]] = {
     "endpoint": [
@@ -279,6 +469,13 @@ key -> the default_map path(s) of the command(s) it targets. The endpoint and th
 port describe one local listener, so they are not overridden per subcommand.
 """
 
+NOTIFICATION_EVENT_LISTEN_KEYS: list[str] = [
+    "count",
+    "idle-timeout",
+    "timeout",
+]
+"""The keys accepted by the "event-listen" subsection: the limits of "event listen"."""
+
 NOTIFICATION_LISTEN_KEYS: list[str] = [
     "count",
     "idle-timeout",
@@ -290,11 +487,15 @@ NOTIFICATION_LISTEN_KEYS: list[str] = [
 """The keys accepted by the "listen" subsection: the options only that command has."""
 
 NOTIFICATION_SUBSECTION_KEYS: dict[str, list[str]] = {
+    "event-listen": NOTIFICATION_EVENT_LISTEN_KEYS,
     "listen": NOTIFICATION_LISTEN_KEYS,
 }
 """Each notification subsection mapped to the keys it accepts."""
 
 NOTIFICATION_SUBSECTION_PATHS: dict[str, list[list[str]]] = {
+    "event-listen": [
+        ["notification", "event", "listen"],
+    ],
     "listen": [
         ["notification", "listen"],
     ],
@@ -319,11 +520,13 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "add-cover-and-metadata": [
         ["playlist", "download"],
         ["queue", "download"],
+        ["queue", "track", "audio"],
         ["track", "audio"],
     ],
     "allow-local-file-rename": [
         ["playlist", "download"],
         ["queue", "download"],
+        ["queue", "track", "audio"],
         ["track", "audio"],
     ],
     "check-next-track": [
@@ -331,11 +534,21 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
         ["queue", "download"],
     ],
     "check-playlist-name": [
+        ["playlist", "add"],
+        ["playlist", "content"],
+        ["playlist", "delete"],
         ["playlist", "download"],
+        ["playlist", "enqueue"],
         ["playlist", "play"],
+        ["playlist", "remove"],
     ],
     "check-seek-position": [
         ["playback", "seek"],
+    ],
+    "overwrite-existing-playlist": [
+        ["playlist", "copy"],
+        ["playlist", "rename"],
+        ["queue", "save"],
     ],
     "propagate-remote-exit-code": [
         ["system", "execute"],
@@ -351,6 +564,7 @@ SECTION_KEYS: dict[str, list[str]] = {
         "scheme",
         "api-client",
         "allow-fallback-to-rest-api",
+        "allow-fallback-to-websocket-api",
         "rest-api-port",
         "websocket-port",
         "mpd-port",
@@ -434,7 +648,7 @@ def _validate_aliases(values: dict[str, Any], path: str, errors: list[str]) -> d
     result: dict[str, str] = {}
     for key, value in values.items():
         if not isinstance(key, str):
-            errors.append(f"alias name {key!r} in configuration file \"{path}\" must be a string")
+            errors.append(f'alias name {key!r} in configuration file "{path}" must be a string')
             continue
         if not isinstance(value, str) or not value.strip():
             errors.append(
@@ -452,7 +666,7 @@ def _validate_flat_keys(
     for key in values:
         if key not in allowed:
             errors.append(
-                f"unknown key {key!r} in section {section!r} of configuration file \"{path}\""
+                f'unknown key {key!r} in section {section!r} of configuration file "{path}"'
             )
 
 
@@ -483,9 +697,7 @@ def _validate_hierarchical(
         elif key in scalar_keys:
             result[key] = value
         else:
-            errors.append(
-                f"unknown key {key!r} in section {name!r} of configuration file \"{path}\""
-            )
+            errors.append(f'unknown key {key!r} in section {name!r} of configuration file "{path}"')
     return result
 
 
@@ -525,6 +737,12 @@ def build_click_default_map(config: dict[str, Any]) -> dict[str, Any]:
             result[_param_name(key)] = value
         elif key == "print-resulting-status":
             for command_path in ACTION_COMMAND_PATHS:
+                _assign_nested(result, command_path, _param_name(key), value)
+        elif key == "print-resulting-content":
+            for command_path in CONTENT_COMMAND_PATHS:
+                _assign_nested(result, command_path, _param_name(key), value)
+        elif key == "print-resulting-list":
+            for command_path in LIST_COMMAND_PATHS:
                 _assign_nested(result, command_path, _param_name(key), value)
     shared_display = {k: v for k, v in output.items() if k in DISPLAY_KEYS}
     _apply_hierarchical(
@@ -672,9 +890,7 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     for subsection, keys in NOTIFICATION_SUBSECTION_KEYS.items():
         subvalues = notification.get(subsection, {})
         pairs.extend(
-            (f"notification.{subsection}.{key}", subvalues[key])
-            for key in keys
-            if key in subvalues
+            (f"notification.{subsection}.{key}", subvalues[key]) for key in keys if key in subvalues
         )
     aliases = config.get("aliases", {})
     pairs.extend((f"aliases.{key}", value) for key, value in aliases.items())
@@ -695,7 +911,7 @@ def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]
         with open(path, encoding="utf-8") as config_file:
             data = yaml.safe_load(config_file)
     except UnicodeDecodeError:
-        return {}, [f"configuration file \"{path}\" is not a valid YAML file"]
+        return {}, [f'configuration file "{path}" is not a valid YAML file']
     except (OSError, yaml.YAMLError) as error:
         # The YAML errors span several lines: flatten them, so the problem message
         # stays a single (timestamped) line
@@ -705,18 +921,18 @@ def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]
     if data is None:
         return {}, []
     if not isinstance(data, dict):
-        return {}, [f"configuration file \"{path}\" must contain a mapping at the top level"]
+        return {}, [f'configuration file "{path}" must contain a mapping at the top level']
 
     config: dict[str, Any] = {}
     errors: list[str] = []
     for section, values in data.items():
         if section not in RECOGNIZED_SECTIONS:
-            errors.append(f"unknown section {section!r} in configuration file \"{path}\"")
+            errors.append(f'unknown section {section!r} in configuration file "{path}"')
             continue
         if values is None:
             continue
         if not isinstance(values, dict):
-            errors.append(f"section {section!r} in configuration file \"{path}\" must be a mapping")
+            errors.append(f'section {section!r} in configuration file "{path}" must be a mapping')
             continue
         if section == "aliases":
             config[section] = _validate_aliases(values, path, errors)

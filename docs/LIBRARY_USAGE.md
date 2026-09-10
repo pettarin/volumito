@@ -473,7 +473,11 @@ grouped by functionality.
 
 #### Alarms And Sleep Timer
 
+- `add_alarm(name, time, playlist, enabled=True)`
 - `alarms`
+- `disable_alarm(alarm_id)`
+- `enable_alarm(alarm_id)`
+- `remove_alarm(alarm_id)`
 - `set_alarms(alarms)`
 - `set_sleep_timer(delay)`
 - `sleep_timer`
@@ -493,6 +497,11 @@ grouped by functionality.
 > **`set_alarms` replaces the whole set.**
 > The Volumio API takes the alarms together, not one at a time,
 > so read `alarms` first and send back the list you want to keep.
+> `add_alarm`, `remove_alarm`, `enable_alarm`, and `disable_alarm`
+> do exactly that for one alarm, keeping the others as they are;
+> `add_alarm` numbers the new alarm by its position, as the host does,
+> and sends its time of day as the date-time the host reads in its own time zone;
+> the host stores that date-time, which is what `Alarm.time` holds.
 
 ```python
 from datetime import timedelta
@@ -503,6 +512,10 @@ with VolumioWebSocketClient(host) as client:
 
     # keep only the alarms that are armed
     client.set_alarms([alarm for alarm in client.alarms if alarm.enabled])
+
+    # add an alarm, and disarm it right away
+    alarm = client.add_alarm("Weekday", "07:30", "jazz")
+    client.disable_alarm(alarm.id)
 ```
 
 #### Audio
@@ -518,6 +531,15 @@ with VolumioWebSocketClient(host) as client:
 - `set_audio_output_volume(output_id, volume)`
 - `set_output_device(device_id)`
 
+> [!NOTE]
+> `set_output_device` reads `output_devices` first, and sends the device
+> as the setup wizard of the host does: a sound card, or an I2S DAC,
+> which may need a reboot of the host.
+
+> [!NOTE]
+> `audio_output_play`, `audio_output_pause`, and `set_audio_output_volume`
+> read `audio_outputs` first: the host acts on the entries it listed.
+
 #### Browse
 
 - `browse_sources`
@@ -528,7 +550,7 @@ with VolumioWebSocketClient(host) as client:
 
 #### Favourites
 
-- `add_radio_favourite(uri)`
+- `add_radio_favourite(uri, title)`
 - `add_to_favourites(uri)`
 - `play_favourites()`
 - `play_radio_favourites()`
@@ -540,9 +562,11 @@ with VolumioWebSocketClient(host) as client:
 - `music_sources`
 - `rescan_library()`
 - `set_music_source_enabled(name, enabled)`
-- `update_all_metadata()`
 - `update_library(uri)`
-- `update_service_tracklist(service)`
+
+> [!NOTE]
+> `set_music_source_enabled` reads `music_sources` first:
+> the host acts on the entry it listed.
 
 #### Miscellanea
 
@@ -552,14 +576,15 @@ system administration, and user interface preferences.
 
 - `add_share(name, path, fstype, ...)`
 - `automatic_update_enabled`
+- `available_plugins`
 - `available_timezones`
 - `backgrounds`
-- `backup()`
+- `backup(kind)`
 - `call_plugin_method(endpoint, method, data)`
 - `check_for_update()`
 - `check_update_cache()`
 - `delete_background(name)`
-- `delete_folder(path)`
+- `delete_folder(uri)`
 - `delete_share(share_id)`
 - `disable_plugin(category, name)`
 - `discover_network_shares()`
@@ -574,17 +599,18 @@ system administration, and user interface preferences.
 - `installed_plugins`
 - `languages`
 - `manage_plugin(action, category, name)`
-- `modify_plugin_status(category, name, enabled)`
+- `modify_plugin_status(category, name, started)`
 - `multiroom`
 - `network_info`
 - `privacy_settings`
-- `restore_backup(backup)`
-- `restore_config()`
+- `restore_backup()`
 - `safe_remove_drive(name)`
+- `save_backup()`
 - `save_wireless_settings(ssid, password)`
 - `set_as_multiroom_client(server)`
 - `set_as_multiroom_server()`
 - `set_as_multiroom_single()`
+- `set_automatic_updates(enabled, start_time, end_time)`
 - `set_background(name)`
 - `set_experience_settings(advanced)`
 - `set_infinity_playback(enabled)`
@@ -595,12 +621,18 @@ system administration, and user interface preferences.
 - `ui_settings`
 - `uninstall_plugin(category, name)`
 - `update()`
-- `update_plugin(category, name)`
+- `update_plugin(category, name, url)`
 - `updater_channel` (assignable)
 - `usb_drives`
 - `wireless_networks`
 - `wireless_networks_cache`
 - `write_multiroom(settings)`
+
+> [!NOTE]
+> `enable_plugin` and `disable_plugin` only set the flag the host reads at boot;
+> `manage_plugin` with `"enable"` or `"disable"` also starts or stops the plugin.
+> `modify_plugin_status` starts or stops a plugin the host has loaded:
+> one enabled at boot, or through `manage_plugin` since.
 
 #### Playlists
 
@@ -609,7 +641,6 @@ system administration, and user interface preferences.
 - `delete_playlist(name)`
 - `enqueue_playlist(name)`
 - `get_playlist_content(name)`
-- `import_service_playlists()`
 - `remove_from_playlist(name, uri)`
 
 #### Queue
@@ -677,7 +708,7 @@ with VolumioWebSocketClient(host) as client:
     # {'enabled': False, 'time': '0:0', ...}
 
     # an event that answers nothing at all
-    client.emit("importServicePlaylists")
+    client.emit("updateDb")
 ```
 
 The second argument of `request` names the event carrying the answer.
@@ -791,10 +822,12 @@ than the REST API clients, and thus in turn additional models:
 | `alarms`                                       | `Alarms` (of `Alarm`)                     |
 | `audio_outputs`                                | `AudioOutputs` (of `AudioOutput`)         |
 | `automatic_update_enabled`                     | `bool`                                    |
+| `available_plugins`                            | `AvailablePlugins` (of `AvailablePlugin`) |
 | `available_timezones`                          | `Timezones`                               |
 | `backgrounds`                                  | `Backgrounds` (of `Background`)           |
 | `backup`, `discover_network_shares`            | `dict`                                    |
 | `browse_sources`                               | `BrowseSources` (of `BrowseSource`)       |
+| `check_for_update()`, `check_update_cache()`   | `UpdateCheck`                             |
 | `device_info`                                  | `DeviceInfo`                              |
 | `device_name`, `device_uuid`, `timezone`       | `str`                                     |
 | `dsp_config`, `get_plugin_config`              | `UiConfig`                                |

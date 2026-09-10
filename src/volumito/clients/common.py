@@ -30,6 +30,26 @@ QUEUE_ITEM_KEYS = ("name", "service", "title", "type", "uri")
 """The keys of a browsed item a Volumio instance reads when queueing it: the others
 (the album art URL above all) only grow the payload toward the body size limit."""
 
+SERVICE_WEB_RADIO = "webradio"
+"""The name of the service of a Volumio instance the Web radios belong to."""
+
+
+def stored_local_uri(uri: str) -> str:
+    """Return the form a file of the local library is stored under by a Volumio host.
+
+    The host keeps such files in its playlists and favourites under their mount path
+    (``mnt/...``), converting the ``music-library/...`` URI a browse lists when it
+    adds them, but it compares what a removal names to what it stored, as it is.
+
+    Args:
+        uri: A URI, of the local library or of any source
+
+    Returns:
+        The URI as the host stores it, unchanged unless it is of the browse form
+    """
+    prefix = "music-library/"
+    return f"mnt/{uri.removeprefix(prefix)}" if uri.startswith(prefix) else uri
+
 
 class VolumioCommon(VolumioBaseClient):
     """The transport-independent half every Volumio client shares.
@@ -202,8 +222,7 @@ class VolumioCommon(VolumioBaseClient):
         """
         self._log_warning(f"The URI lists {count} items, not enough for index {index}")
         raise VolumioAPIError(
-            f"The URI lists {count} items, not enough to play the one "
-            f"at index {index}"
+            f"The URI lists {count} items, not enough to play the one at index {index}"
         )
 
     def _fail_timeout(self, error: Exception, waited: float) -> NoReturn:
@@ -396,7 +415,7 @@ class VolumioCommon(VolumioBaseClient):
         when none is given, to ``mpd`` -- which silently adds nothing for the URI of
         another source. The service is therefore always sent, read from the URI: the
         scheme names it (``qobuz://...``), except for the schemes the local library is
-        browsed by and the scheme-less local paths (``mpd``), the web URLs
+        browsed by and the scheme-less local paths (``mpd``), the Web URLs
         (``webradio``), and the ``spotify:`` URIs (``spop``).
 
         Args:
@@ -406,7 +425,7 @@ class VolumioCommon(VolumioBaseClient):
             The name of the service (e.g., ``"mpd"``, ``"qobuz"``, ``"webradio"``)
         """
         if uri.startswith(("http://", "https://")):
-            service = "webradio"
+            service = SERVICE_WEB_RADIO
         elif uri.startswith("spotify:"):
             service = "spop"
         else:

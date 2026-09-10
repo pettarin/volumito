@@ -3,9 +3,7 @@
 #### System Info
 
 The `system info` command (and its alias `info`)
-returns the response from the same-name endpoint
-of the Volumio REST API, containing a summary
-of the state of the Volumio host:
+returns a summary of the state of the Volumio host:
 
 ```bash lucio command=execute
 volumito system info
@@ -57,12 +55,8 @@ volumito version
 The `system execute` command lets you execute shell commands
 on the Volumio host via SSH.
 
-> [!CAUTION]
-> **Use this command at your own peril!**
->
-> You might damage your Volumio host
-> (e.g., by removing files on it!),
-> to the point a full reinstall will be needed.
+```markdown lucio command=include path="./inc/CAUTION_RISKY_COMMAND.md" style=literal
+```
 
 > [!NOTE]
 > To use the `volumito system execute` command
@@ -81,10 +75,8 @@ To run the `ls /tmp/` command on the Volumio host issue:
 volumito system execute "ls /tmp/"
 ```
 
-> [!WARNING]
-> Mind the error: to make sure you know what you are doing,
-> `volumito` refuses to execute the command
-> unless you provide the `--yes` option:
+```markdown lucio command=include path="./inc/CAUTION_COMMAND_REQUIRES_CONFIRMATION.md" style=literal
+```
 
 ```bash lucio command=execute
 volumito system execute "ls /tmp/" --yes
@@ -98,3 +90,18 @@ volumito system execute "ls /tmp/" --yes
 volumito -m system execute "ls /tmp/" --yes | jq -r .stdout
 ```
 
+#### System Help
+
+These are all the subcommands of the `system` group:
+
+```bash lucio command=execute
+volumito system --help
+```
+
+All commands, with the exception of those listed above
+(`system execute`, `system info`, `system ping`, `system version`),
+require a WebSocket API client, as their help message tells:
+
+```bash lucio command=execute
+volumito system timezone --help
+```

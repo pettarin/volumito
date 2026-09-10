@@ -1,0 +1,74 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
+## Types Of Clients
+
+By default, the `volumito` CLI tool talks
+to the Volumio host through its REST API, synchronously.
+You can tell it by enabling verbose logging:
+
+```bash lucio command=execute
+volumito -v info
+```
+
+The `-C / --api-client` option allows you to select
+another of the clients of the `volumito` library:
+
+| Client                     | Value                    | Short Forms             | Required Extra    |
+| -------------------------- | ------------------------ | ----------------------- | ----------------- |
+| Asynchronous REST          | `asynchronous_rest`      | `async_rest`, `ar`      | `async`           |
+| Asynchronous WebSocket     | `asynchronous_websocket` | `async_websocket`, `aw` | `async_websocket` |
+| Synchronous REST (default) | `synchronous_rest`       | `sync_rest`, `sr`       | None              |
+| Synchronous WebSocket      | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`       |
+
+> [!NOTE]
+> To use any of the non-default clients,
+> you need to install `volumito` with the required extra
+> indicated in the above table, or the `all` extra.
+>
+> For example, `pip install volumito[async_websocket]`
+> to run the next example.
+
+To issue the `info` command over the WebSocket API, asynchronously,
+specify `-C asynchronous_websocket`:
+
+```bash lucio command=execute
+volumito -v -C asynchronous_websocket info
+```
+
+or its short form `-C aw`:
+
+```bash lucio command=execute
+volumito -v -C aw info
+```
+
+Most of the commands that `volumito` provides are available
+when using any of the clients listed above.
+However, certain commands are supported only by the REST API clients,
+and others only by the WebSocket API clients:
+in the remainder of this document, they are suitably marked as
+"available only when using a REST API client" or
+"available only when using a WebSocket API client".
+
+By default, commands that are not available with the selected client
+return an error similar to the following:
+
+```bash lucio command=execute exit=1
+volumito collection radio add "Radio Volumito Docs" "https://some.url"
+```
+
+It is possible to fall back to the appropriate client
+by issuing the `--allow-fallback-to-rest-api` and/or
+`--allow-fallback-to-websocket-api` options,
+or setting the corresponding keys in the configuration file to `true`:
+
+```bash lucio command=execute
+volumito --allow-fallback-to-websocket-api collection radio add "Radio Volumito Docs" "https://some.url"
+```
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to delete the added radio
+volumito -C aw collection radio remove "Radio Volumito Docs"
+```

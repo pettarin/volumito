@@ -4,6 +4,7 @@
 	build-all \
 	build-sdist \
 	build-wheel \
+	check-lint \
 	check-type-hints \
 	clean \
 	coverage \
@@ -59,7 +60,7 @@ help:
 	@echo "  install-e-this-dev         - Install package in editable mode with dev dependencies"
 	@echo "  install-e-this-scp         - Install package in editable mode with scp dependencies"
 	@echo "  install-e-this-websocket   - Install package in editable mode with websocket dependencies"
-	@echo "  lint                       - Run ruff linter"
+	@echo "  check-lint                 - Run linter (check only)"
 	@echo "  reinstall-e-this           - Install package in editable mode"
 	@echo "  reinstall-e-this-all       - Install package in editable mode with all optional dependencies"
 	@echo "  reinstall-e-this-async     - Install package in editable mode with async dependencies"
@@ -134,7 +135,7 @@ test: \
 
 test-all: \
 	test-unit \
-	lint \
+	check-lint \
 	check-type-hints
 
 test-unit:
@@ -146,7 +147,7 @@ coverage: \
 coverage-html:
 	pytest --cov-report=html
 
-lint:
+check-lint:
 	ruff check src/ tests/
 
 check-type-hints:
@@ -183,6 +184,9 @@ build-wheel: \
 
 dist: \
 	build
+
+lint:
+	ruff format src/ tests/
 
 # micromamba env specific
 micromamba-create:

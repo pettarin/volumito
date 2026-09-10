@@ -1,8 +1,16 @@
-### Notifications
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
+### Notifications (REST API)
+
+```markdown lucio command=include path="./inc/ONLY_REST_API_CLIENT.md" style=literal
+```
 
 Instead of constantly polling the Volumio REST API,
 you can register a URL which Volumio can call to notify
-about state changes in the playback or queue state or multiroom zones.
+about changes in the playback, queue, or multiroom state.
 Details can be found in the
 [Notifications](https://developers.volumio.com/api/rest-api#notifications)
 section of the Volumio REST API documentation.
@@ -13,7 +21,7 @@ To list the callback URLs currently registered,
 issue the `notification list` command:
 
 ```bash lucio command=execute
-volumito notification list
+volumito -C sr notification list
 ```
 
 #### Notification Register
@@ -24,23 +32,23 @@ providing the full URL: name or IP (`192.168.1.2` in the example),
 port (`4567`), and endpoint (`/notif/volumio`):
 
 ```bash lucio command=execute
-volumito notification register http://192.168.1.2:4567/notif/volumio
-volumito notification register http://192.168.1.2:5678/anothercallbackurl
-volumito notification register http://192.168.1.2:5678/yetanother
+volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
+volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
+volumito -C sr notification register http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
 by issuing the `-A / --autocompose-url` option:
 
 ```bash lucio command=execute
-volumito notification register --autocompose-url
+volumito -C sr notification register --autocompose-url
 ```
 
 Issuing again the `notification list` command
 now shows the registered callback URLs:
 
 ```bash lucio command=execute
-volumito notification list
+volumito -C sr notification list
 ```
 
 #### Notification Unregister
@@ -49,13 +57,13 @@ To unregister a callback URL,
 simply pass it to the `notification unregister` command:
 
 ```bash lucio command=execute
-volumito notification unregister http://192.168.1.2:4567/notif/volumio
+volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash lucio command=execute
-volumito notification unregister --all
+volumito -C sr notification unregister --all
 ```
 
 #### Notification Listen
@@ -64,8 +72,12 @@ Command `notification listen` starts a simple local server,
 listening for Volumio notifications, on the machine running `volumito`.
 
 You can connect it to an already registered port and endpoint
-or provide the `--register-url` (compose the URL with `--endpoint` and `--port`)
-or `--register-url-full` (provide the full URL) options.
+or provide the `--register-url` (compose the URL with `--endpoint` and `--port`).
+To override the composed URL,
+provide a full URL with the `--register-url-full` option.
+Notification URLs registered by the `notification listen` command
+are unregistered automatically by default,
+unless the `--no-unregister-url-on-exit` option is passed.
 
 Without other options, the server will wait for a CTRL+C event to quit;
 however you can have it quit after a certain number of events are received
@@ -74,7 +86,13 @@ or no events are received for a specified amount of time
 (e.g., `--idle-timeout 20.0`: exit if 20 seconds passed with no event received),
 or after a specified timeout (e.g., `--timeout 60.0`: exit after one minute).
 
-```bash lucio command=execute
-volumito notification listen --register-url --timeout 10.0
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing,
+# near the end of the first track, so that we capture some events
+volumito playlist play "volumito test qobuz multiple albums"
+volumito playback seek 03:10
 ```
 
+```bash lucio command=execute
+volumito -C sr notification listen --register-url --timeout 10.0
+```

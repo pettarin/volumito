@@ -9,6 +9,75 @@ All notable changes to this project will be documented in this file.
 > [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.5.0] - 2026-09-10
+
+### Added
+
+- [Issue #15](https://github.com/pettarin/volumito/issues/15):
+  CLI commands for the functionality the WebSocket API
+  offers on top of the REST API
+- Global option `--allow-fallback-to-websocket-api`,
+  with the corresponding configuration key
+- Option `--overwrite-existing-playlist` of `playlist copy`, `playlist rename`,
+  and `queue save`, with the corresponding configuration key
+- Property `available_plugins` on the WebSocket API clients, with the models
+  `AvailablePlugin`, `AvailablePluginCategory`, and `AvailablePlugins`
+- Model `UiBackground`, the background image `UiSettings` reports
+- Methods `check_for_update` and `check_update_cache` on the WebSocket API
+  clients wait for the answer of the updater, an `UpdateCheck`, which
+  `system update check` prints
+- Methods `add_alarm`, `disable_alarm`, `enable_alarm`, and `remove_alarm`
+  on the WebSocket API clients
+
+### Changed
+
+- Renamed command group `track` to `queue track`
+  (`track` is kept as a synonym),
+  and commands `queue has_next` and `queue has_previous` to
+  `queue track has_next` and `queue track has_previous` (without synonyms)
+- Renamed command `multiroom zones` to `multiroom info`
+  and the corresponding configuration key (without synonym)
+- `set_output_device` of the WebSocket clients no longer takes a mixer
+- `modify_plugin_status` of the WebSocket clients starts or stops the plugin,
+  and `update_plugin` takes the URL of the package
+- The table of `playback status` lists the audio-quality fields of its short set
+
+### Fixed
+
+- `VolumioWebSocketClient` and `VolumioAsyncWebSocketClient` wait for
+  the events emitted right before disconnecting to be sent
+- `set_music_source_enabled`, `set_output_device`, `audio_output_play`,
+  `audio_output_pause`, `set_audio_output_volume`, `enable_plugin`,
+  `disable_plugin`, `modify_plugin_status`, and `update_plugin`
+  of the WebSocket clients send what the host reads
+- `add_to_queue`, `add_and_play`, and `replace_queue_and_play` without an index
+  (`queue add` and `queue replace`) no longer browse a URI of a source other than
+  the local library before queueing it, which failed for a single track
+- `set_sleep_timer` and `set_infinity_playback` of the WebSocket clients wait for
+  the answer of the host, which a read right after them took as its own
+- `add_to_playlist` and `remove_from_playlist` of the WebSocket clients wait for
+  the answer of the host, so a read of the content right after them is current
+- `delete_folder` of the WebSocket clients sends the URI and the parent listing
+  the host reads (it ignored the previous payload), waits for its answer,
+  and refuses a URI above a directory of a source
+- `add_web_radio` and `remove_web_radio` of the WebSocket clients wait for
+  the answer of the host, and `collection radio remove` reports a Web radio
+  the host still lists after the removal
+- `create_playlist` of the WebSocket clients waits for the answer of the host,
+  and reports a playlist it did not create (a name already in use)
+- `remove_from_favourites` and `remove_from_playlist` of the WebSocket clients
+  name a file of the local library as the host stores it, so the URI a browse
+  lists matches; `remove_from_favourites` waits for the answer of the host, and
+  `collection favourite remove` reports a favourite the host still lists
+- `add_radio_favourite` and `remove_radio_favourite` of the WebSocket clients
+  edit the radio favourites the way the Web UI does (the radio favourite events
+  of the host save and remove nothing), waiting for the answer of the host;
+  `add_radio_favourite` takes the title and the logo of the radio, and
+  `remove_radio_favourite` no longer takes a name; `collection favourite
+  add/remove --radio` take a Web radio by name or by URL, and report a radio
+  the host does not list afterwards
+
+
 ## [0.4.0] - 2026-09-04
 
 ### Added

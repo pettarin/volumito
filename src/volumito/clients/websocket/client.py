@@ -11,19 +11,23 @@ all -- reaches the handlers registered with :meth:`VolumioWebSocketClient.on`.
 """
 
 import logging
+import queue
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from datetime import timedelta
 from types import ModuleType, TracebackType
 from typing import Any, Self, cast
 
+from volumito.clients.common import SERVICE_WEB_RADIO, stored_local_uri
 from volumito.clients.errors import VolumioWebSocketError
 from volumito.clients.host_configuration import VolumioHostConfiguration
 from volumito.clients.models import (
     Alarm,
     Alarms,
     AudioOutputs,
+    AvailablePlugins,
     Backgrounds,
     BrowseResults,
     BrowseSources,
@@ -56,12 +60,15 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrives,
     WirelessNetworks,
     Zones,
 )
 from volumito.clients.websocket.common import (
+    BACKUP_ACTION_RESTORE,
+    BACKUP_ACTION_SAVE,
     EVENT_ADD_PLAY,
     EVENT_ADD_PLAY_CUE,
     EVENT_ADD_QUEUE_UIDS,
@@ -69,7 +76,6 @@ from volumito.clients.websocket.common import (
     EVENT_ADD_TO_FAVOURITES,
     EVENT_ADD_TO_PLAYLIST,
     EVENT_ADD_TO_QUEUE,
-    EVENT_ADD_TO_RADIO_FAVOURITES,
     EVENT_ADD_WEB_RADIO,
     EVENT_AUDIO_OUTPUT_PAUSE,
     EVENT_AUDIO_OUTPUT_PLAY,
@@ -92,6 +98,7 @@ from volumito.clients.websocket.common import (
     EVENT_GET_AUDIO_OUTPUTS,
     EVENT_GET_AUTOMATIC_UPDATE_ENABLED,
     EVENT_GET_AVAILABLE_LANGUAGES,
+    EVENT_GET_AVAILABLE_PLUGINS,
     EVENT_GET_AVAILABLE_TIMEZONES,
     EVENT_GET_BACKGROUNDS,
     EVENT_GET_BACKUP,
@@ -131,15 +138,14 @@ from volumito.clients.websocket.common import (
     EVENT_GET_WIRELESS_NETWORKS,
     EVENT_GET_WIRELESS_NETWORKS_CACHE,
     EVENT_GO_TO,
-    EVENT_IMPORT_SERVICE_PLAYLISTS,
     EVENT_INSTALL_PLUGIN,
     EVENT_LIST_PLAYLIST,
-    EVENT_LIST_USB_DRIVES,
     EVENT_MANAGE_BACKUP,
     EVENT_MODIFY_PLUGIN_STATUS,
     EVENT_MOVE_QUEUE,
     EVENT_MUTE,
     EVENT_NEXT,
+    EVENT_OPEN_MODAL,
     EVENT_PAUSE,
     EVENT_PINGER,
     EVENT_PLAY,
@@ -150,24 +156,27 @@ from volumito.clients.websocket.common import (
     EVENT_PLAY_RADIO_FAVOURITES,
     EVENT_PLUGIN_MANAGER,
     EVENT_PREVIOUS,
+    EVENT_PUSH_ADD_TO_PLAYLIST,
+    EVENT_PUSH_ADD_WEB_RADIO,
+    EVENT_PUSH_BROWSE_LIBRARY,
+    EVENT_PUSH_CREATE_PLAYLIST,
+    EVENT_PUSH_INFINITY_PLAYBACK,
+    EVENT_PUSH_SLEEP,
     EVENT_REBOOT,
     EVENT_REGENERATE_THUMBNAILS,
     EVENT_REMOVE_FROM_FAVOURITES,
     EVENT_REMOVE_FROM_PLAYLIST,
-    EVENT_REMOVE_FROM_RADIO_FAVOURITES,
     EVENT_REMOVE_QUEUE_ITEM,
     EVENT_REMOVE_WEB_RADIO,
     EVENT_REPLACE_AND_PLAY,
     EVENT_REPLACE_AND_PLAY_CUE,
     EVENT_RESCAN_DB,
-    EVENT_RESTORE_CONFIG,
     EVENT_SAFE_REMOVE_DRIVE,
     EVENT_SAVE_ALARM,
     EVENT_SAVE_QUEUE_TO_PLAYLIST,
     EVENT_SAVE_WIRELESS_NETWORK_SETTINGS,
     EVENT_SEARCH,
     EVENT_SEEK,
-    EVENT_SERVICE_UPDATE_TRACKLIST,
     EVENT_SET_AS_MULTIROOM_CLIENT,
     EVENT_SET_AS_MULTIROOM_SERVER,
     EVENT_SET_AS_MULTIROOM_SINGLE,
@@ -193,15 +202,21 @@ from volumito.clients.websocket.common import (
     EVENT_UNINSTALL_PLUGIN,
     EVENT_UNMUTE,
     EVENT_UPDATE,
-    EVENT_UPDATE_ALL_METADATA,
     EVENT_UPDATE_CHECK,
     EVENT_UPDATE_CHECK_CACHE,
     EVENT_UPDATE_DB,
     EVENT_UPDATE_PLUGIN,
+    EVENT_URI_FAVOURITES,
     EVENT_VOLATILE_PLAY,
     EVENT_VOLUME,
     EVENT_WRITE_MULTIROOM,
+    PENDING_PACKETS_POLL_INTERVAL,
     RESPONSE_EVENTS,
+    UPDATE_CHECK_TIMEOUT,
+    UPDATE_SETTINGS_ENDPOINT,
+    UPDATE_SETTINGS_METHOD,
+    UPDATE_WINDOW_IDS,
+    USB_BROWSE_URI,
     VOLUME_DOWN,
     VOLUME_UP,
     VolumioWebSocketCommon,
@@ -242,6 +257,8 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     The client owns the Socket.IO connection it emits through: use it as a context
     manager, so the connection is closed when the block is left.
     """
+
+    _CLIENT_DESCRIPTION: str = "Synchronous WebSocket API client"
 
     def __init__(
         self,
@@ -330,31 +347,6 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._client.on(event, self._receiver(event))
         self._registered.add(event)
 
-    def _queue_payload_items(self, uri: str) -> list[dict[str, Any]] | None:
-        """Return the browsed items a URI must be queued as, or None for the URI itself.
-
-        A Volumio instance explodes the URIs of its local library (``mpd``) into
-        tracks by itself, while the plugins of the other sources leave a container
-        URI silently unexploded, reporting a success and queueing nothing: for those,
-        the URI is browsed here and the items it lists are queued instead. A URI
-        listing nothing (a single track, for instance) is queued as itself.
-
-        Args:
-            uri: The URI to be queued
-
-        Returns:
-            The items to queue in place of the URI, or None to queue the URI itself
-        """
-        if self._uri_service(uri) == "mpd":
-            self._log_debug("The URI belongs to the local library: queueing it as itself")
-            return None
-        self._log_debug("Browsing the URI to queue the items it lists...")
-        items = self._browse_items(uri)
-        self._log_debug(
-            f"Browsing the URI to queue the items it lists... done ({len(items)} items)"
-        )
-        return items or None
-
     def _read_array(self, event: str, payload: object = None) -> list[Any]:
         """Read an event answered by a JSON array.
 
@@ -387,21 +379,28 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return self._as_json_boolean(self._request(event, payload=payload))
 
-    def _read_object(self, event: str, payload: object = None) -> dict[str, Any]:
+    def _read_object(
+        self, event: str, payload: object = None, dialog_event: str | None = None
+    ) -> dict[str, Any]:
         """Read an event answered by a JSON object.
 
         Args:
             event: The event to emit
             payload: What the emitted event carries, when it carries anything
+            dialog_event: The event carrying a dialog the host pushes in place of the
+                answer when it cannot serve the read, when there is one
 
         Returns:
             The object the answer carried
 
         Raises:
             VolumioConnectionError: If not connected, or if the host does not answer
-            VolumioAPIError: If the answer is not an object
+            VolumioAPIError: If the answer is not an object, or if the host answered
+                with the dialog instead
         """
-        return self._as_json_object(self._request(event, payload=payload))
+        return self._as_json_object(
+            self._request(event, payload=payload, dialog_event=dialog_event)
+        )
 
     def _read_text(self, event: str, payload: object = None) -> str:
         """Read an event answered by a bare JSON string.
@@ -440,6 +439,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         response_event: str | None = None,
         payload: object = None,
         timeout: float | None = None,
+        dialog_event: str | None = None,
     ) -> object:
         """Emit an event and return the payload of the answer the host pushes back.
 
@@ -452,6 +452,8 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             payload: What the emitted event carries, when it carries anything
             timeout: The number of seconds to wait, the timeout of the client when
                 not given
+            dialog_event: The event carrying a dialog the host pushes in place of the
+                answer when it cannot serve the read, when there is one
 
         Returns:
             What the answer carried
@@ -460,6 +462,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             ValueError: If no answer event is given for an event the host does not answer
             VolumioConnectionError: If not connected, if the event cannot be sent, or if
                 the host does not answer in time
+            VolumioAPIError: If the host answered with the dialog instead
         """
         awaited = response_event if response_event is not None else self._response_event(event)
         waited = timeout if timeout is not None else self.timeout
@@ -469,33 +472,89 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             self._ensure_registered(awaited)
             arrived = threading.Event()
             self._arrived[awaited] = arrived
+            if dialog_event is not None:
+                # a dialog pushed in place of the answer ends the wait too
+                self._ensure_registered(dialog_event)
+                self._arrived[dialog_event] = arrived
             try:
                 self._emit(event, payload)
                 if not arrived.wait(waited):
                     self._fail_no_response(event, awaited, waited)
+                if (
+                    dialog_event is not None
+                    and awaited not in self._slots
+                    and dialog_event in self._slots
+                ):
+                    self._fail_dialog(event, self._slots[dialog_event])
                 answer = self._slots.pop(awaited, None)
             finally:
                 self._arrived.pop(awaited, None)
+                if dialog_event is not None:
+                    self._arrived.pop(dialog_event, None)
+                    self._slots.pop(dialog_event, None)
             self._log_debug(f'Requesting "{event}", waiting for "{awaited}"... done')
             return answer
+
+    def _wait_for_pending_packets(self) -> None:
+        """Wait until the packets emitted so far were written to the connection.
+
+        The socket.io client writes its packets from a background thread, and closes
+        the connection without draining them: an event emitted right before
+        disconnecting would be lost. The wait gives up after the timeout of the client.
+        """
+        pending = cast(
+            "queue.Queue[object] | None",
+            getattr(getattr(self._client, "eio", None), "queue", None),
+        )
+        if pending is None:
+            return
+        deadline = time.monotonic() + self.timeout
+        while pending.unfinished_tasks and time.monotonic() < deadline:
+            time.sleep(PENDING_PACKETS_POLL_INTERVAL)
+        if pending.unfinished_tasks:
+            self._log_warning("Disconnecting with packets still to be written")
+
+    def add_alarm(self, name: str, time: str, playlist: str, enabled: bool = True) -> Alarm:
+        """Add an alarm to the Volumio instance, keeping the others.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back with one more, numbered by its position as the host numbers them.
+        The time is sent as the date-time the host reads in its own time zone.
+
+        Args:
+            name: The name of the alarm
+            time: The time of day it goes off, as ``"HH:MM"``
+            playlist: The name of the playlist it plays
+            enabled: Whether the alarm is armed
+
+        Returns:
+            The alarm added, with its identifier
+
+        Raises:
+            ValueError: If the time is not a time of day as ``"HH:MM"``
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        checked = self._alarm_time(time)
+        alarms, alarm = self._alarm_added(list(self.alarms), name, checked, playlist, enabled)
+        self.set_alarms(alarms)
+        return alarm
 
     def add_and_play(self, uri: str) -> None:
         """Add the content of a URI to the queue and start playing it.
 
-        Like :meth:`add_to_queue`, the URI of a container of a source other than the
-        local library is browsed first and queued as the items it lists.
+        Like :meth:`add_to_queue`, the URI is queued as itself, along with the service
+        its scheme names, and the host explodes a container into its tracks.
 
         Args:
             uri: The URI whose content to add and play, from a browse or a search
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
-            VolumioAPIError: If the browse of a container answers something unexpected
         """
         self._log_debug(f'Adding "{uri}" to the queue and playing it...')
-        items = self._queue_payload_items(uri)
-        payload: object = items if items is not None else self._queue_uri_item(uri)
-        self._emit(EVENT_ADD_PLAY, payload)
+        self._emit(EVENT_ADD_PLAY, self._queue_uri_item(uri))
         self._log_debug(f'Adding "{uri}" to the queue and playing it... done')
 
     def add_cue_track(self, uri: str, number: int, service: str | None = None) -> None:
@@ -511,16 +570,28 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_ADD_PLAY_CUE, self._cue_payload(uri, number, service))
 
-    def add_radio_favourite(self, uri: str) -> None:
-        """Add a web radio to the radio favourites.
+    def add_radio_favourite(
+        self, uri: str, title: str | None = None, albumart: str | None = None
+    ) -> None:
+        """Add a Web radio to the radio favourites.
+
+        The radio is given to the host as an item of the ``webradio`` service, the way
+        its Web UI does: the ``addToRadioFavourites`` event of the host names a service
+        it no longer has, and saves nothing. The host lists a radio saved without a
+        title under no name. It answers with the favourite status it broadcasts,
+        waited for and dropped.
 
         Args:
-            uri: The URL the web radio streams from
+            uri: The URL the Web radio streams from
+            title: The name to list the radio under
+            albumart: The URL of the logo to show for it, when known
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_ADD_TO_RADIO_FAVOURITES, {"uri": uri})
+        payload = self._favourite_payload(uri, title, SERVICE_WEB_RADIO, albumart)
+        self._request(EVENT_ADD_TO_FAVOURITES, EVENT_URI_FAVOURITES, payload)
 
     def add_share(self, name: str, path: str, fstype: str, **options: str) -> None:
         """Mount a network share on the Volumio instance.
@@ -559,10 +630,11 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         payload = self._favourite_payload(uri, title, service, albumart)
         self._emit(EVENT_ADD_TO_FAVOURITES, payload)
 
-    def add_to_playlist(
-        self, name: str | Playlist, uri: str, service: str | None = None
-    ) -> None:
+    def add_to_playlist(self, name: str | Playlist, uri: str, service: str | None = None) -> None:
         """Add an item to a saved playlist, creating the playlist if it does not exist.
+
+        The host answers once the item is written, with a push of its own that is
+        waited for and dropped: :meth:`get_playlist_content` right after sees the item.
 
         Args:
             name: The name of the playlist, or the playlist itself
@@ -571,28 +643,30 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
         Raises:
             ValueError: If the given playlist has no name
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_ADD_TO_PLAYLIST, self._playlist_item_payload(name, uri, service))
+        self._request(
+            EVENT_ADD_TO_PLAYLIST,
+            EVENT_PUSH_ADD_TO_PLAYLIST,
+            self._playlist_item_payload(name, uri, service),
+        )
 
     def add_to_queue(self, uri: str) -> None:
         """Add the content of a URI to the end of the queue, without touching playback.
 
-        The URI of a container of a source other than the local library is browsed
-        first and queued as the items it lists, since only the local library explodes
-        its containers by itself.
+        The URI is queued as itself, along with the service its scheme names: the host
+        hands it to the plugin of that service, which explodes a container (an album,
+        a playlist) into its tracks.
 
         Args:
             uri: The URI whose content to add, from a browse or a search
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
-            VolumioAPIError: If the browse of a container answers something unexpected
         """
         self._log_debug(f'Adding "{uri}" to the queue...')
-        items = self._queue_payload_items(uri)
-        payload: object = items if items is not None else self._queue_uri_item(uri)
-        self._emit(EVENT_ADD_TO_QUEUE, payload)
+        self._emit(EVENT_ADD_TO_QUEUE, self._queue_uri_item(uri))
         self._log_debug(f'Adding "{uri}" to the queue... done')
 
     def add_uids_to_queue(self, uids: list[str]) -> None:
@@ -607,16 +681,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._emit(EVENT_ADD_QUEUE_UIDS, uids)
 
     def add_web_radio(self, name: str, uri: str) -> None:
-        """Save a web radio of the user.
+        """Save a Web radio of the user.
+
+        The host answers once the radio is saved, with a push of its own that is
+        waited for and dropped: a read of the Web radios right after sees the radio.
 
         Args:
-            name: The name to save the web radio under
+            name: The name to save the Web radio under
             uri: The URL it streams from
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_ADD_WEB_RADIO, self._web_radio_payload(name, uri))
+        self._request(
+            EVENT_ADD_WEB_RADIO, EVENT_PUSH_ADD_WEB_RADIO, self._web_radio_payload(name, uri)
+        )
 
     @property
     def alarms(self) -> Alarms:
@@ -637,24 +717,38 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def audio_output_pause(self, output_id: str) -> None:
         """Pause one audio output of the Volumio instance.
 
+        The output is read from :attr:`audio_outputs` first: the host acts on the entry
+        it listed.
+
         Args:
             output_id: The identifier of the output to pause
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no output has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        self._emit(EVENT_AUDIO_OUTPUT_PAUSE, self._audio_output_payload(output_id))
+        outputs = self._read_object(EVENT_GET_AUDIO_OUTPUTS)
+        self._emit(EVENT_AUDIO_OUTPUT_PAUSE, self._audio_output_listed(outputs, output_id))
 
     def audio_output_play(self, output_id: str) -> None:
         """Start one audio output of the Volumio instance.
+
+        The output is read from :attr:`audio_outputs` first: the host acts on the entry
+        it listed.
 
         Args:
             output_id: The identifier of the output to start
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no output has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        self._emit(EVENT_AUDIO_OUTPUT_PLAY, self._audio_output_payload(output_id))
+        outputs = self._read_object(EVENT_GET_AUDIO_OUTPUTS)
+        self._emit(EVENT_AUDIO_OUTPUT_PLAY, self._audio_output_listed(outputs, output_id))
 
     @property
     def audio_outputs(self) -> AudioOutputs:
@@ -687,6 +781,26 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         return self._read_boolean(EVENT_GET_AUTOMATIC_UPDATE_ENABLED)
 
     @property
+    def available_plugins(self) -> AvailablePlugins:
+        """The plugins the store offers to the Volumio instance.
+
+        The host lists the store only when it is logged in to MyVolumio: otherwise it
+        answers with a login dialog, reported as an API error. Each access emits a
+        fresh event.
+
+        Returns:
+            The available plugins, by category, each with the URL of its package
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object, or if the host asks for a
+                login instead
+        """
+        return AvailablePlugins.from_raw(
+            self._read_object(EVENT_GET_AVAILABLE_PLUGINS, dialog_event=EVENT_OPEN_MODAL)
+        )
+
+    @property
     def available_timezones(self) -> Timezones:
         """The time zones the Volumio instance can be set to.
 
@@ -717,17 +831,26 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return Backgrounds.from_raw(self._read_object(EVENT_GET_BACKGROUNDS))
 
-    def backup(self) -> dict[str, Any]:
-        """Read a backup of the configuration of the Volumio instance.
+    def backup(self, kind: str) -> dict[str, Any]:
+        """Read a backup of one kind from the Volumio instance.
+
+        The kinds are the saved playlists with their content (``"playlist"``), the
+        favourite tracks (``"favourites"``), the favourite Web radios
+        (``"radio-favourites"``), and the Web radios added by hand (``"my-web-radio"``).
+
+        Args:
+            kind: The kind of backup, one of :data:`BACKUP_KINDS`
 
         Returns:
-            The backup, as the host reported it
+            The backup, as the host reported it: its identification under ``id``, and
+            the backup itself under ``backup``
 
         Raises:
+            ValueError: If the kind is not one a Volumio host reads
             VolumioConnectionError: If not connected, or if the host does not answer
             VolumioAPIError: If the answer is not an object
         """
-        return self._read_object(EVENT_GET_BACKUP)
+        return self._read_object(EVENT_GET_BACKUP, self._backup_payload(kind))
 
     def browse(self, uri: str | None = None) -> BrowseResults:
         """Browse the content the Volumio instance lists at a URI.
@@ -790,24 +913,41 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         payload["data"] = data if data is not None else {}
         self._emit(EVENT_CALL_METHOD, payload)
 
-    def check_for_update(self) -> None:
-        """Ask the Volumio instance to check whether an update is available.
+    def check_for_update(self) -> UpdateCheck:
+        """Check whether an update is available for the Volumio instance.
 
-        The host reports what it found through the events its user interface listens
-        for, which :meth:`on` can be registered for.
+        The host asks its updater, which can take a while: the answer is waited for
+        :data:`UPDATE_CHECK_TIMEOUT` seconds at least, the timeout of the client when
+        longer. The user interface is not shown the check.
 
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_UPDATE_CHECK, {"hideModal": True})
-
-    def check_update_cache(self) -> None:
-        """Ask the Volumio instance to check the update information it cached.
+        Returns:
+            What the updater found
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
         """
-        self._emit(EVENT_UPDATE_CHECK_CACHE)
+        answer = self._request(
+            EVENT_UPDATE_CHECK,
+            payload={"hideModal": True},
+            timeout=max(self.timeout, UPDATE_CHECK_TIMEOUT),
+        )
+        return UpdateCheck.from_raw(self._as_json_object(answer))
+
+    def check_update_cache(self) -> UpdateCheck:
+        """Read the update information the Volumio instance cached.
+
+        The host answers only when its automatic update check is enabled, and does
+        not answer at all otherwise.
+
+        Returns:
+            What the updater found the last time
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the host does not answer
+            VolumioAPIError: If the answer is not an object
+        """
+        return UpdateCheck.from_raw(self._read_object(EVENT_UPDATE_CHECK_CACHE))
 
     def clear(self) -> None:
         """Empty the playback queue.
@@ -874,14 +1014,21 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def create_playlist(self, name: str | Playlist) -> None:
         """Create an empty saved playlist.
 
+        The host answers once the playlist is written, telling whether it did: a
+        name already in use is refused, which is reported as an API error.
+
         Args:
             name: The name to give the playlist, or the playlist itself
 
         Raises:
             ValueError: If the given playlist has no name
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
+            VolumioAPIError: If the host did not create the playlist
         """
-        self._emit(EVENT_CREATE_PLAYLIST, self._playlist_payload(name))
+        payload = self._playlist_payload(name)
+        answer = self._request(EVENT_CREATE_PLAYLIST, EVENT_PUSH_CREATE_PLAYLIST, payload)
+        self._check_created_playlist(payload["name"], answer)
 
     def decrease_volume(self) -> None:
         """Decrease the playback volume by one step.
@@ -904,16 +1051,24 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_DELETE_BACKGROUND, {"name": name})
 
-    def delete_folder(self, path: str) -> None:
-        """Delete a folder of the collection of the Volumio instance.
+    def delete_folder(self, uri: str) -> None:
+        """Delete a folder of the local library of the Volumio instance, files included.
+
+        The host answers with the listing of the folder above, as the push a browse is
+        answered by, which is waited for and dropped: a browse right after is answered
+        by its own push.
 
         Args:
-            path: The path of the folder to delete
+            uri: The URI of the folder, as a browse lists it (``music-library/...``)
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the URI is not that of a folder inside a source of the library
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_DELETE_FOLDER, {"item": {"path": path}})
+        self._request(
+            EVENT_DELETE_FOLDER, EVENT_PUSH_BROWSE_LIBRARY, self._delete_folder_payload(uri)
+        )
 
     def delete_playlist(self, name: str | Playlist) -> None:
         """Delete a saved playlist.
@@ -1004,6 +1159,23 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return self._read_text(EVENT_GET_DEVICE_HW_UUID)
 
+    def disable_alarm(self, alarm_id: int) -> None:
+        """Disarm an alarm of the Volumio instance, keeping the others as they are.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back with the alarm disarmed.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :attr:`alarms`
+
+        Raises:
+            ValueError: If no alarm has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        self.set_alarms(self._alarm_toggled(list(self.alarms), alarm_id, False))
+
     def disable_audio_output(self, output_id: str) -> None:
         """Disable one audio output of the Volumio instance.
 
@@ -1016,7 +1188,10 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._emit(EVENT_DISABLE_AUDIO_OUTPUT, self._audio_output_payload(output_id))
 
     def disable_plugin(self, category: str, name: str) -> None:
-        """Disable an installed plugin of the Volumio instance.
+        """Disable an installed plugin of the Volumio instance, without stopping it.
+
+        The plugin no longer starts with the host; :meth:`manage_plugin` with
+        ``"disable"`` also stops it right away.
 
         Args:
             category: The category the plugin belongs to
@@ -1025,7 +1200,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_DISABLE_PLUGIN, self._plugin_payload(category, name))
+        self._emit(EVENT_DISABLE_PLUGIN, self._plugin_status_payload(category, name))
 
     def disconnect(self) -> None:
         """Close the connection to the Volumio WebSocket API.
@@ -1034,12 +1209,12 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         if self._connected:
             self._log_debug("Disconnecting from the Volumio WebSocket API...")
+            self._wait_for_pending_packets()
             try:
                 self._client.disconnect()
             except Exception as e:
                 self._log_warning(
-                    f"Ignoring an error while disconnecting from the Volumio "
-                    f"WebSocket API: {e}"
+                    f"Ignoring an error while disconnecting from the Volumio WebSocket API: {e}"
                 )
             finally:
                 self._client = None
@@ -1103,6 +1278,23 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(event, payload)
 
+    def enable_alarm(self, alarm_id: int) -> None:
+        """Arm an alarm of the Volumio instance, keeping the others as they are.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back with the alarm armed.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :attr:`alarms`
+
+        Raises:
+            ValueError: If no alarm has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        self.set_alarms(self._alarm_toggled(list(self.alarms), alarm_id, True))
+
     def enable_audio_output(self, output_id: str) -> None:
         """Enable one audio output of the Volumio instance.
 
@@ -1115,7 +1307,10 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         self._emit(EVENT_ENABLE_AUDIO_OUTPUT, self._audio_output_payload(output_id))
 
     def enable_plugin(self, category: str, name: str) -> None:
-        """Enable an installed plugin of the Volumio instance.
+        """Enable an installed plugin of the Volumio instance, without starting it.
+
+        The plugin starts with the host from now on; :meth:`manage_plugin` with
+        ``"enable"`` also starts it right away.
 
         Args:
             category: The category the plugin belongs to
@@ -1124,7 +1319,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_ENABLE_PLUGIN, self._plugin_payload(category, name))
+        self._emit(EVENT_ENABLE_PLUGIN, self._plugin_status_payload(category, name))
 
     def enqueue_playlist(self, name: str | Playlist) -> None:
         """Append a saved playlist to the queue, without touching the playback.
@@ -1287,14 +1482,6 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioAPIError: If an answer is of an unexpected shape
         """
         return bool(self.queue_status["has_previous"])
-
-    def import_service_playlists(self) -> None:
-        """Import the playlists the music services of the host expose.
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_IMPORT_SERVICE_PLAYLISTS)
 
     def increase_volume(self) -> None:
         """Increase the playback volume by one step.
@@ -1471,9 +1658,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
             VolumioConnectionError: If not connected, or if the host does not answer
             VolumioAPIError: If the answer is not an object
         """
-        return BrowseResults.from_envelope(
-            self._read_object(EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY)
-        )
+        return BrowseResults.from_envelope(self._read_object(EVENT_GET_LAST_PUSHED_BROWSE_LIBRARY))
 
     def manage_plugin(self, action: str, category: str, name: str) -> Plugins:
         """Ask the plugin manager of the Volumio instance to act on a plugin.
@@ -1509,18 +1694,22 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         return MenuItems.from_raw({"items": self._read_array(EVENT_GET_MENU_ITEMS)})
 
-    def modify_plugin_status(self, category: str, name: str, enabled: bool) -> None:
-        """Enable or disable an installed plugin in one call.
+    def modify_plugin_status(self, category: str, name: str, started: bool) -> None:
+        """Start or stop an enabled plugin of the Volumio instance.
+
+        The host acts only on a plugin it has loaded: one enabled when the host booted,
+        or one enabled through :meth:`manage_plugin` since. A plugin enabled through
+        :meth:`enable_plugin` alone is loaded at the next boot.
 
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
-            enabled: True to enable the plugin, False to disable it
+            started: True to start the plugin, False to stop it
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        payload = {**self._plugin_payload(category, name), "enabled": enabled}
+        payload = self._plugin_status_payload(category, name, started)
         self._emit(EVENT_MODIFY_PLUGIN_STATUS, payload)
 
     def move_in_queue(self, source: int, target: int) -> None:
@@ -1785,8 +1974,8 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def power_modes(self) -> PowerModes:
         """The ways the Volumio instance can be powered down.
 
-        Each access emits a fresh event. A host that reports no standby mode answers
-        :meth:`standby` by powering off instead.
+        Each access emits a fresh event. A host that reports no standby mode ignores
+        :meth:`standby`.
 
         Returns:
             The power modes of the host
@@ -1892,23 +2081,53 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_REGENERATE_THUMBNAILS)
 
+    def remove_alarm(self, alarm_id: int) -> None:
+        """Remove an alarm from the Volumio instance, keeping the others.
+
+        The Volumio API takes the alarms as a set: this reads :attr:`alarms` and sends
+        the set back without the alarm.
+
+        Args:
+            alarm_id: The identifier of the alarm, from :attr:`alarms`
+
+        Raises:
+            ValueError: If no alarm has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
+        """
+        self.set_alarms(self._alarm_removed(list(self.alarms), alarm_id))
+
     def remove_from_favourites(self, uri: str, service: str | None = None) -> None:
         """Remove an item from the favourites.
+
+        A file of the local library is named as the host stores it (see
+        :func:`stored_local_uri`), so that the URI a browse lists matches. The host
+        answers with the favourite status it broadcasts, waited for and dropped: a
+        read of the favourites right after sees the removal.
 
         Args:
             uri: The URI of the item to remove
             service: The service the URI belongs to, derived from it when not given
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        payload = self._favourite_payload(uri, service=service)
-        self._emit(EVENT_REMOVE_FROM_FAVOURITES, payload)
+        payload = self._favourite_payload(stored_local_uri(uri), service=service)
+        self._request(EVENT_REMOVE_FROM_FAVOURITES, EVENT_URI_FAVOURITES, payload)
 
     def remove_from_playlist(
         self, name: str | Playlist, uri: str, service: str | None = None
     ) -> None:
         """Remove an item from a saved playlist.
+
+        A file of the local library is named as the host stores it (see
+        :func:`stored_local_uri`), so that the URI a browse lists matches.
+        The host answers once the item is removed, with the listing of the playlist as
+        the push a browse is answered by, which is waited for and dropped:
+        :meth:`get_playlist_content` right after sees the removal, and a browse right
+        after is answered by its own push.
 
         Args:
             name: The name of the playlist, or the playlist itself
@@ -1917,9 +2136,14 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
         Raises:
             ValueError: If the given playlist has no name
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_REMOVE_FROM_PLAYLIST, self._playlist_item_payload(name, uri, service))
+        self._request(
+            EVENT_REMOVE_FROM_PLAYLIST,
+            EVENT_PUSH_BROWSE_LIBRARY,
+            self._playlist_item_payload(name, stored_local_uri(uri), service),
+        )
 
     def remove_from_queue(self, position: int) -> None:
         """Remove a track from the queue.
@@ -1933,29 +2157,42 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_REMOVE_QUEUE_ITEM, self._index_payload(position))
 
-    def remove_radio_favourite(self, uri: str, name: str | None = None) -> None:
-        """Remove a web radio from the radio favourites.
+    def remove_radio_favourite(self, uri: str) -> None:
+        """Remove a Web radio from the radio favourites.
+
+        The host is asked the way its Web UI asks, as for an item of the ``webradio``
+        service: the ``removeFromRadioFavourites`` event of the host compares a
+        service it no longer has, and removes nothing. The host answers with the
+        listing of the favourites, waited for and dropped.
 
         Args:
-            uri: The URL the web radio streams from
-            name: The name it is a favourite under, when known
+            uri: The URL the Web radio streams from
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        payload = {"uri": uri} if name is None else {"name": name, "uri": uri}
-        self._emit(EVENT_REMOVE_FROM_RADIO_FAVOURITES, payload)
+        payload = self._favourite_payload(uri, service=SERVICE_WEB_RADIO)
+        self._request(EVENT_REMOVE_FROM_FAVOURITES, EVENT_PUSH_BROWSE_LIBRARY, payload)
 
     def remove_web_radio(self, name: str) -> None:
-        """Delete a web radio of the user.
+        """Delete a Web radio of the user.
+
+        The host answers once the radio is removed, with the listing of the Web radios
+        as the push a browse is answered by, which is waited for and dropped: a read
+        of the Web radios right after sees the removal, and a browse right after is
+        answered by its own push.
 
         Args:
-            name: The name the web radio was saved under
+            name: The name the Web radio was saved under
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_REMOVE_WEB_RADIO, self._web_radio_payload(name))
+        self._request(
+            EVENT_REMOVE_WEB_RADIO, EVENT_PUSH_BROWSE_LIBRARY, self._web_radio_payload(name)
+        )
 
     def repeat(self, value: bool | None = None) -> None:
         """Set or toggle the repeat mode.
@@ -1977,11 +2214,13 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def replace_queue_and_play(self, uri: str, index: int | None = None) -> None:
         """Replace the queue with the content of a URI and start playing it.
 
-        Without an index the first item plays. With one, the URI is browsed first and
-        its items are sent along with the index, since that is the only payload the
-        Volumio API starts at a chosen item with. Like :meth:`add_to_queue`, the URI
-        of a container of a source other than the local library is browsed and sent as
-        the items it lists even without an index.
+        Without an index, the URI is sent as itself, along with the service its scheme
+        names, and the host explodes a container into its tracks and plays the first.
+        With an index, the URI is browsed first and its items are sent along with the
+        index, since that is the only payload the Volumio API starts at a chosen item
+        with; a URI listing nothing (a single track, for instance) falls back to the
+        payload without an index when the index is 0, whose first item is the wanted
+        one.
 
         Args:
             uri: The URI whose content to play, from a browse or a search
@@ -2004,13 +2243,6 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
                 return
             if items or index > 0:
                 self._fail_short_listing(len(items), index)
-        else:
-            listed = self._queue_payload_items(uri)
-            if listed is not None:
-                self._log_debug(f"Sending the {len(listed)} listed items, playing the first")
-                self._emit(EVENT_REPLACE_AND_PLAY, {"list": listed, "index": 0})
-                self._log_debug(f'Replacing the queue with "{uri}"... done')
-                return
         self._log_debug("Sending the URI as a single item, playing its first element")
         self._emit(EVENT_REPLACE_AND_PLAY, {"item": self._queue_uri_item(uri)})
         self._log_debug(f'Replacing the queue with "{uri}"... done')
@@ -2069,24 +2301,17 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_RESCAN_DB)
 
-    def restore_backup(self, backup: dict[str, Any]) -> None:
-        """Restore a backup of the configuration of the Volumio instance.
+    def restore_backup(self) -> None:
+        """Restore the local backup of the playlists and favourites of the Volumio instance.
 
-        Args:
-            backup: The backup to restore, as :meth:`backup` reported it
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_MANAGE_BACKUP, backup)
-
-    def restore_config(self) -> None:
-        """Restore the configuration of the plugins of the Volumio instance.
+        The host restores what :meth:`save_backup` wrote, after a delay of about ten
+        seconds: the playlists are replaced, the favourites are merged with the current
+        ones. Nothing happens when there is no local backup.
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_RESTORE_CONFIG)
+        self._emit(EVENT_MANAGE_BACKUP, BACKUP_ACTION_RESTORE)
 
     def safe_remove_drive(self, name: str) -> None:
         """Unmount a USB drive of the Volumio instance before it is unplugged.
@@ -2097,7 +2322,18 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_SAFE_REMOVE_DRIVE, {"name": name})
+        self._emit(EVENT_SAFE_REMOVE_DRIVE, name)
+
+    def save_backup(self) -> None:
+        """Write a local backup of the playlists and favourites on the Volumio instance.
+
+        The host writes the backup under its configuration folder after a delay of about
+        ten seconds, replacing the previous one; :meth:`restore_backup` reads it back.
+
+        Raises:
+            VolumioConnectionError: If not connected, or if the event cannot be sent
+        """
+        self._emit(EVENT_MANAGE_BACKUP, BACKUP_ACTION_SAVE)
 
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         """Save the current queue as a saved playlist.
@@ -2114,14 +2350,29 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def save_wireless_settings(self, ssid: str, password: str = "") -> None:
         """Join a wireless network with the Volumio instance.
 
+        The host hashes a WPA passphrase only when told the security of the network,
+        as its user interface does: the networks the host sees are read first, and
+        the security of the one named is sent along. A network the host does not see
+        is joined without it, as a hidden one. The password is checked the way the
+        host does: a WPA passphrase of 8 to 63 characters, or a WEP key.
+
         Args:
             ssid: The name of the network
             password: The password of the network, empty for an open one
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the password is neither a WPA passphrase nor a WEP key
+            VolumioConnectionError: If not connected, if the host does not answer, or
+                if the event cannot be sent
+            VolumioAPIError: If the answer to the read is not an object
         """
-        payload = {"ssid": ssid, "password": password}
+        payload: dict[str, Any] = {"ssid": ssid}
+        if password:
+            payload["password"] = self._wireless_password_checked(password)
+            networks = self._read_object(EVENT_GET_WIRELESS_NETWORKS)
+            security = self._wireless_security_listed(networks, ssid)
+            if security is not None:
+                payload["security"] = security
         self._emit(EVENT_SAVE_WIRELESS_NETWORK_SETTINGS, payload)
 
     def search(self, query: str) -> SearchResults:
@@ -2237,31 +2488,79 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def set_audio_output_volume(self, output_id: str, volume: int) -> None:
         """Set the volume of one audio output of the Volumio instance.
 
-        This is the volume of one output; :attr:`volume` is the volume of the host.
+        This is the volume of one output; :attr:`volume` is the volume of the host. The
+        output is read from :attr:`audio_outputs` once the level is checked: the host
+        acts on the entry it listed.
 
         Args:
             output_id: The identifier of the output
             volume: The volume level, an integer between 0 and 100 (inclusive)
 
         Raises:
-            ValueError: If the volume level is out of range
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If the volume level is out of range, or if no output has the
+                identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        payload = self._audio_output_payload(output_id, volume)
+        self._check_volume_level(volume)
+        outputs = self._read_object(EVENT_GET_AUDIO_OUTPUTS)
+        output = self._audio_output_listed(outputs, output_id)
+        payload = self._audio_output_volume_payload(output, volume)
         self._emit(EVENT_SET_AUDIO_OUTPUT_VOLUME, payload)
 
-    def set_background(self, name: str, path: str | None = None) -> None:
-        """Choose the background image of the user interface.
+    def set_automatic_updates(
+        self, enabled: bool, start_time: int | None = None, end_time: int | None = None
+    ) -> None:
+        """Switch the automatic updates of the Volumio instance, and set their window.
+
+        The switch goes through the settings of the system plugin, which want the
+        window of the automatic updates too: an hour not given is read from the
+        configuration page of the plugin, as it stands.
 
         Args:
-            name: The name of the background, from :attr:`backgrounds`
-            path: The path of its image, when the host needs it named too
+            enabled: True for the host to update itself, False otherwise
+            start_time: The hour of the day the window opens (0 to 23), or None to
+                keep the one the host holds
+            end_time: The hour of the day the window closes (0 to 23), or None to
+                keep the one the host holds
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If an hour is not between 0 and 23, or if the host does not
+                report the window when one is needed
+            VolumioConnectionError: If not connected, if the host does not answer, or
+                if the event cannot be sent
+            VolumioAPIError: If the page is not an object
         """
-        payload = {"name": name} if path is None else {"name": name, "path": path}
-        self._emit(EVENT_SET_BACKGROUNDS, payload)
+        window = self._update_window_given(start_time, end_time)
+        if len(window) < len(UPDATE_WINDOW_IDS):
+            page = self.get_plugin_config(UPDATE_SETTINGS_ENDPOINT)
+            window = {**self._update_window_listed(page.sections), **window}
+        arguments = {"automatic_updates": enabled, **window}
+        self.call_plugin_method(UPDATE_SETTINGS_ENDPOINT, UPDATE_SETTINGS_METHOD, arguments)
+
+    def set_background(self, name: str) -> None:
+        """Choose the background of the user interface: an image, or a solid colour.
+
+        A name starting with ``#`` is a hexadecimal colour (e.g., ``"#000"``) and is
+        sent as such. Any other name is that of an image, which the host applies only
+        when sent the entry it listed, path included, so the backgrounds are read first.
+
+        Args:
+            name: The name of the image, from :attr:`backgrounds`, or a colour
+
+        Raises:
+            ValueError: If the colour is not hexadecimal, or if the host lists no image
+                by that name
+            VolumioConnectionError: If not connected, if the host does not answer, or
+                if the event cannot be sent
+            VolumioAPIError: If the answer to the read is not an object
+        """
+        if name.startswith("#"):
+            self._emit(EVENT_SET_BACKGROUNDS, self._background_color_payload(name))
+            return
+        backgrounds = self._read_object(EVENT_GET_BACKGROUNDS)
+        self._emit(EVENT_SET_BACKGROUNDS, self._background_listed(backgrounds, name))
 
     def set_experience_settings(self, advanced: bool) -> None:
         """Choose how many options the user interface of the Volumio instance offers.
@@ -2278,13 +2577,20 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def set_infinity_playback(self, enabled: bool) -> None:
         """Turn infinity playback on or off.
 
+        The host answers with the setting it applied, pushed to every client: it is
+        waited for and dropped, since a read of :attr:`infinity_playback` right after
+        would take it for its own answer otherwise.
+
         Args:
             enabled: True to enable infinity playback, False to disable it
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_SET_INFINITY_PLAYBACK, {"enabled": enabled})
+        self._request(
+            EVENT_SET_INFINITY_PLAYBACK, EVENT_PUSH_INFINITY_PLAYBACK, {"enabled": enabled}
+        )
 
     def set_language(self, code: str, language: str | None = None) -> None:
         """Choose the language of the user interface of the Volumio instance.
@@ -2317,28 +2623,41 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def set_music_source_enabled(self, name: str, enabled: bool) -> None:
         """Enable or disable one music source of the Volumio instance.
 
+        The source is read from :attr:`music_sources` first: the host acts on the entry
+        it listed, with the flag replaced.
+
         Args:
             name: The name of the source, from :attr:`music_sources`
             enabled: True to enable the source, False to disable it
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no source has the name
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an array
         """
-        payload = {"name": name, "enabled": enabled}
+        sources = self._read_array(EVENT_GET_MY_MUSIC_PLUGINS)
+        payload = self._music_source_toggled(sources, name, enabled)
         self._emit(EVENT_ENABLE_DISABLE_MY_MUSIC_PLUGIN, payload)
 
-    def set_output_device(self, device_id: str, mixer: str | None = None) -> None:
+    def set_output_device(self, device_id: str) -> None:
         """Choose the output device the Volumio instance plays through.
+
+        The device is read from :attr:`output_devices` first: the host reads it as its
+        setup wizard sends it, a sound card or an I2S DAC. Choosing an I2S DAC may need
+        a reboot of the host.
 
         Args:
             device_id: The identifier of the device, from :attr:`output_devices`
-            mixer: The mixer to drive its volume with, left to the host when not given
 
         Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            ValueError: If no device has the identifier
+            VolumioConnectionError: If not connected, if the host does not answer, or if
+                the event cannot be sent
+            VolumioAPIError: If the answer is not an object
         """
-        payload = self._output_device_payload(device_id, mixer)
-        self._emit(EVENT_SET_OUTPUT_DEVICES, payload)
+        devices = self._read_object(EVENT_GET_OUTPUT_DEVICES)
+        self._emit(EVENT_SET_OUTPUT_DEVICES, self._output_device_payload(devices, device_id))
 
     def set_sleep_timer(self, delay: timedelta | None) -> None:
         """Arm or disarm the sleep timer of the Volumio instance.
@@ -2348,14 +2667,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
         The timer comes from the ``alarm-clock`` plugin, and so does :attr:`sleep_timer`.
 
+        The host answers with an empty push of its own: it is waited for and dropped,
+        since a read of :attr:`sleep_timer` right after would take it for its own
+        answer otherwise.
+
         Args:
             delay: How long from now the host should stop, or None to disarm the timer
 
         Raises:
             ValueError: If the delay is negative
-            VolumioConnectionError: If not connected, or if the event cannot be sent
+            VolumioConnectionError: If not connected, if the event cannot be sent, or if
+                the host does not answer
         """
-        self._emit(EVENT_SET_SLEEP, self._sleep_payload(delay))
+        self._request(EVENT_SET_SLEEP, EVENT_PUSH_SLEEP, self._sleep_payload(delay))
 
     @property
     def shares(self) -> Shares:
@@ -2402,7 +2726,8 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     def standby(self) -> None:
         """Put the Volumio host on standby.
 
-        A host whose :attr:`power_modes` report no standby mode powers off instead.
+        A host whose :attr:`power_modes` report no standby mode ignores the request,
+        logging that it has no standby handler.
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
@@ -2506,7 +2831,7 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
     @timezone.setter
     def timezone(self, value: str) -> None:
-        self._emit(EVENT_SET_TIMEZONE, {"timeZone": value})
+        self._emit(EVENT_SET_TIMEZONE, value)
 
     def toggle(self) -> None:
         """Toggle between playing and paused.
@@ -2565,14 +2890,6 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_UPDATE, {"ignoreIntegrityCheck": ignore_integrity_check})
 
-    def update_all_metadata(self) -> None:
-        """Refresh the metadata of the whole collection of the Volumio instance.
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_UPDATE_ALL_METADATA)
-
     def update_library(self, uri: str | None = None) -> None:
         """Update the music collection of the Volumio instance, looking for changes.
 
@@ -2584,28 +2901,19 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
         """
         self._emit(EVENT_UPDATE_DB, uri)
 
-    def update_plugin(self, category: str, name: str) -> None:
-        """Update an installed plugin of the Volumio instance.
+    def update_plugin(self, category: str, name: str, url: str) -> None:
+        """Update an installed plugin of the Volumio instance from a package.
 
         Args:
             category: The category the plugin belongs to
             name: The name of the plugin
+            url: The URL of the package, as the plugin store of the host lists it
 
         Raises:
             VolumioConnectionError: If not connected, or if the event cannot be sent
         """
-        self._emit(EVENT_UPDATE_PLUGIN, self._plugin_payload(category, name))
-
-    def update_service_tracklist(self, service: str) -> None:
-        """Refresh the tracks one music service of the Volumio instance offers.
-
-        Args:
-            service: The name of the service to refresh
-
-        Raises:
-            VolumioConnectionError: If not connected, or if the event cannot be sent
-        """
-        self._emit(EVENT_SERVICE_UPDATE_TRACKLIST, service)
+        payload = {**self._plugin_payload(category, name), "url": url}
+        self._emit(EVENT_UPDATE_PLUGIN, payload)
 
     @property
     def updater_channel(self) -> UpdaterChannel:
@@ -2625,22 +2933,24 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
 
     @updater_channel.setter
     def updater_channel(self, value: str) -> None:
-        self._emit(EVENT_SET_UPDATER_CHANNEL, {"channel": value})
+        self._emit(EVENT_SET_UPDATER_CHANNEL, value)
 
     @property
     def usb_drives(self) -> UsbDrives:
         """The USB drives attached to the Volumio instance.
 
-        Each access emits a fresh event.
+        The host lists them as the folders of its USB music source, which is what
+        browsing that source answers. Each access emits a fresh event.
 
         Returns:
-            The attached drives
+            The attached drives, as the host lists them
 
         Raises:
             VolumioConnectionError: If not connected, or if the host does not answer
-            VolumioAPIError: If the answer is not an array
+            VolumioAPIError: If the answer is not an object
         """
-        return UsbDrives.from_raw({"drives": self._read_array(EVENT_LIST_USB_DRIVES)})
+        items = [item.raw for item in self.browse(USB_BROWSE_URI).items]
+        return UsbDrives.from_raw({"drives": items})
 
     @property
     def volume(self) -> int:

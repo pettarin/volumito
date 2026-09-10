@@ -19,7 +19,6 @@ aliases:
   # exec: system execute
   # i: info
   # mlt: multiroom
-  # mltz: multiroom zones
   # mute: playback mute
   # next: playback next
   # not: notification
@@ -53,6 +52,10 @@ aliases:
   # ql: queue list
   # qr: queue replace
   # qs: queue status
+  # qt: queue track
+  # qta: queue track audio
+  # qtc: queue track albumart
+  # qti: queue track info
   # s: story
   # salb: story album
   # sart: story artist
@@ -66,10 +69,6 @@ aliases:
   # sysi: system info
   # sysp: system ping
   # sysv: system version
-  # t: track
-  # ta: track audio
-  # tc: track albumart
-  # ti: track info
   # toggle: playback toggle
   # unmute: playback unmute
   # vol: playback volume
@@ -88,14 +87,14 @@ downloads:
 
   # Directory to download into, created if missing (mutually exclusive with output-file);
   # "{timestamp}" in the path is replaced with the current UTC time (e.g., 20260726121314)
-  # output-directory: .                           # use the current working directory
-  # output-directory: /tmp/volumito               # use a fixed directory
-  # output-directory: /tmp/volumito/{timestamp}   # use a per-run timestamped directory
-  output-directory: null                          # no download by default
+  # output-directory: .                                     # use the current working directory
+  # output-directory: /tmp/volumito                         # use a fixed directory
+  # output-directory: /tmp/volumito/{timestamp}             # use a per-run timestamped directory
+  output-directory: null                                    # no download by default
 
   # Exact file path to download to (mutually exclusive with output-directory)
-  # output-file: /tmp/volumito.out      # use a fixed full path
-  output-file: null                     # no download by default
+  # output-file: /tmp/volumito.out                          # use a fixed full path
+  output-file: null                                         # no download by default
 
   # Overwrite the destination file if it already exists
   overwrite-existing-files: false
@@ -180,11 +179,15 @@ miscellaneous:
   # Check that each queue-download track's metadata are current before downloading it
   check-next-track: true
 
-  # Check that the playlist name exists before playing it
+  # Check that the playlist name exists before using it
   check-playlist-name: true
 
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
+
+  # When saving the queue as a playlist, or copying or renaming a playlist,
+  # overwrite an existing playlist of the destination name
+  overwrite-existing-playlist: false
 
   # After running the "system execute" command,
   # return the same exit code generated on the Volumio host
@@ -193,13 +196,24 @@ miscellaneous:
 
 notification:
   # A key here applies to the listen, register, and unregister commands;
-  # the keys of the options only "listen" has are under its own section
+  # the keys of the options only "listen" and "event listen" have
+  # are under their own sections
 
   # Path served by the local notification listener
   endpoint: /volumionotifications
 
   # Port the local notification listener binds to
   port: 3003
+
+  event-listen:
+    # Stop after receiving this number of events
+    count: null
+
+    # Stop after this number of seconds without receiving an event
+    idle-timeout: null
+
+    # Stop after listening for this number of seconds
+    timeout: null
 
   listen:
     # Stop after receiving this number of notifications
@@ -225,23 +239,61 @@ output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
   # - collection-browse
+  # - collection-favourite-list
+  # - collection-radio-list
   # - collection-search
+  # - collection-source-list
   # - collection-statistics
   # - command-list
-  # - multiroom-zones
+  # - multiroom-info
+  # - multiroom-set
+  # - multiroom-status
+  # - notification-event-listen
+  # - notification-event-request
   # - notification-list
   # - notification-listen
+  # - playback-infinity
+  # - playback-sleep
   # - playback-status
+  # - playlist-content
   # - playlist-list
+  # - queue-consume
   # - queue-list
+  # - queue-randomize
+  # - queue-repeat
   # - queue-status
   # - story-album
   # - story-artist
   # - story-credits
   # - story-label
   # - story-place
+  # - system-alarm-list
+  # - system-audio-device-list
+  # - system-audio-dsp
+  # - system-audio-inputs
+  # - system-audio-outputs
+  # - system-backup-create
   # - system-execute
   # - system-info
+  # - system-network-info
+  # - system-network-wireless
+  # - system-plugin-configuration
+  # - system-plugin-disable
+  # - system-plugin-enable
+  # - system-plugin-list
+  # - system-power-modes
+  # - system-share-discover
+  # - system-share-info
+  # - system-share-list
+  # - system-timezone-list
+  # - system-ui-background-list
+  # - system-ui-experience
+  # - system-ui-language-list
+  # - system-ui-privacy
+  # - system-ui-settings
+  # - system-update-channel-list
+  # - system-update-check
+  # - system-usb-list
   # - system-version
   # - track-info
 
@@ -272,6 +324,13 @@ output:
   # Index queue positions starting at one (true) or zero (false)
   position-starting-at-one: true
 
+  # After a playlist editing command like add or remove, print the resulting playlist content
+  print-resulting-content: true
+
+  # After a Web radio command like add or remove, print the resulting list of Web radios;
+  # after playlist create or delete, print the resulting list of playlists
+  print-resulting-list: true
+
   # After a playback or queue command like pause or clear, print the resulting playback status
   print-resulting-status: true
 
@@ -287,10 +346,25 @@ output:
 
     # Add your own overrides here
 
+  collection-favourite-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
+  collection-radio-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
   collection-search:
     # Searching is meant for humans, so the table is its default format
     format: table
 
+    # Add your own overrides here
+
+  collection-source-list:
     # Add your own overrides here
 
   collection-statistics:
@@ -305,7 +379,19 @@ output:
 
     # Add your own overrides here
 
-  multiroom-zones:
+  multiroom-info:
+    # Add your own overrides here
+
+  multiroom-set:
+    # Add your own overrides here
+
+  multiroom-status:
+    # Add your own overrides here
+
+  notification-event-listen:
+    # Add your own overrides here
+
+  notification-event-request:
     # Add your own overrides here
 
   notification-list:
@@ -314,13 +400,31 @@ output:
   notification-listen:
     # Add your own overrides here
 
+  playback-infinity:
+    # Add your own overrides here
+
+  playback-sleep:
+    # Add your own overrides here
+
   playback-status:
+    # Add your own overrides here
+
+  playlist-content:
     # Add your own overrides here
 
   playlist-list:
     # Add your own overrides here
 
+  queue-consume:
+    # Add your own overrides here
+
   queue-list:
+    # Add your own overrides here
+
+  queue-randomize:
+    # Add your own overrides here
+
+  queue-repeat:
     # Add your own overrides here
 
   queue-status:
@@ -341,10 +445,85 @@ output:
   story-place:
     # Add your own overrides here
 
+  system-alarm-list:
+    # Add your own overrides here
+
+  system-audio-device-list:
+    # Add your own overrides here
+
+  system-audio-dsp:
+    # Add your own overrides here
+
+  system-audio-inputs:
+    # Add your own overrides here
+
+  system-audio-outputs:
+    # Add your own overrides here
+
+  system-backup-create:
+    # Add your own overrides here
+
   system-execute:
     # Add your own overrides here
 
   system-info:
+    # Add your own overrides here
+
+  system-network-info:
+    # Add your own overrides here
+
+  system-network-wireless:
+    # Add your own overrides here
+
+  system-plugin-configuration:
+    # Add your own overrides here
+
+  system-plugin-disable:
+    # Add your own overrides here
+
+  system-plugin-enable:
+    # Add your own overrides here
+
+  system-plugin-list:
+    # Add your own overrides here
+
+  system-power-modes:
+    # Add your own overrides here
+
+  system-share-discover:
+    # Add your own overrides here
+
+  system-share-info:
+    # Add your own overrides here
+
+  system-share-list:
+    # Add your own overrides here
+
+  system-timezone-list:
+    # Add your own overrides here
+
+  system-ui-background-list:
+    # Add your own overrides here
+
+  system-ui-experience:
+    # Add your own overrides here
+
+  system-ui-language-list:
+    # Add your own overrides here
+
+  system-ui-privacy:
+    # Add your own overrides here
+
+  system-ui-settings:
+    # Add your own overrides here
+
+  system-update-channel-list:
+    # Add your own overrides here
+
+  system-update-check:
+    # Add your own overrides here
+
+  system-usb-list:
     # Add your own overrides here
 
   system-version:
@@ -383,11 +562,25 @@ volumio:
   # - false: error out
   allow-fallback-to-rest-api: false
 
+  # If a REST API client is selected,
+  # and a command that only the WebSocket API can satisfy is issued:
+  # - true: allow using a WebSocket API client (with a warning);
+  # - false: error out
+  allow-fallback-to-websocket-api: false
+
   # API client used to talk to the Volumio host, one of:
-  # - synchronous_rest (default; short forms: sync_rest, sr)
-  # - asynchronous_rest (required extra: async; short forms: async_rest, ar)
-  # - synchronous_websocket (required extra: websocket; short forms: sync_websocket, sw)
-  # - asynchronous_websocket (required extra: async_websocket; short forms: async_websocket, aw)
+  # - asynchronous_rest
+  #       short forms: async_rest, ar
+  #       required extra: async
+  # - asynchronous_websocket
+  #       short forms: async_websocket, aw
+  #       required extra: async_websocket
+  # - synchronous_rest
+  #       short forms: sync_rest, sr
+  #       no extra required (default)
+  # - synchronous_websocket
+  #       short forms: sync_websocket, sw
+  #       required extra: websocket
   api-client: synchronous_rest
 
   # Hostname or IP address of the Volumio host

@@ -1,0 +1,50 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
+## Inspect The Current Queue
+
+### Queue List
+
+Command `queue list` lets you query the contents
+of the current playback queue:
+
+```bash lucio command=execute
+volumito queue list
+```
+
+### Queue Status
+
+If you want to know the details of the item currently playing,
+use `queue status`:
+
+```bash lucio command=execute
+volumito queue status
+```
+
+Add `--fields ALL` for even more details:
+
+```bash lucio command=execute
+volumito queue status --fields ALL
+```
+
+### Queue Help
+
+These are all the subcommands of the `queue` group:
+
+```bash lucio command=execute
+volumito queue --help
+```
+
+The `download` subcommand is described
+in Section [Download](#download) below.
+
+The `replace` subcommand is described
+in Section [Replace The Current Queue (Browse)](#replace-the-current-queue-browse)
+and
+in Section [Replace The Current Queue (Search)](#replace-the-current-queue-search)
+below.
+
+The other subcommands to edit the current queue are described
+in Section [Edit The Current Queue](#edit-the-current-queue) below.

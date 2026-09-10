@@ -1,3 +1,8 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
 ## Control The Playback
 
 ### Playback Status
@@ -15,8 +20,7 @@ A tabular format can also be output:
 volumito playback status --format table
 ```
 
-as well as selecting all the fields present in the response
-from the REST API:
+as well as selecting all the fields present in the response:
 
 ```bash lucio command=execute
 volumito playback status --fields ALL
@@ -80,7 +84,20 @@ For example, to play the third track:
 volumito playback play 3
 ```
 
-### Seeking
+### Play Previous Or Next Track
+
+The `playback previous` and `playback next` commands
+play the previous or next track in the current queue.
+
+```bash lucio command=execute
+volumito playback next
+```
+
+```bash lucio command=execute
+volumito playback previous
+```
+
+### Seek Within The Current Track
 
 The playback position within the current track
 can be queried with `playback seek`:
@@ -96,7 +113,7 @@ either in seconds:
 volumito playback seek 42
 ```
 
-or in `HH:MM:SS` format:
+or in `MM:SS` or `HH:MM:SS` format:
 
 ```bash lucio command=execute
 volumito playback seek 00:01:42
@@ -149,6 +166,77 @@ volumito playback mute
 volumito playback unmute
 ```
 
+### Playback Sleep
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+It is possible to set a "playback sleep",
+that is, an amount of time after which the playback is stopped.
+
+To check if the playback sleep is set, run without arguments:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure sleep is off
+volumito -C aw playback sleep off
+```
+
+```bash lucio command=execute
+volumito -C aw playback sleep
+```
+
+To set it, provide the amount of time in either minutes or `H:MM` format:
+
+```bash lucio command=execute
+volumito -C aw playback sleep 42
+```
+
+```bash lucio command=execute
+volumito -C aw playback sleep 2:00
+```
+
+> [!NOTE]
+> The remaining delay is rounded down,
+> which explains why the output above has `41` and `1:59`,
+> even if requesting `42` and `2:00`.
+> (Getting the response from the target host requires non-zero time!)
+
+To disable the sleep, use the special value `off`:
+
+```bash lucio command=execute
+volumito -C aw playback sleep off
+```
+
+### Infinity Playback
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+It is possible to inspect and toggle the "infinity playback" function
+(i.e., playing other music suggested by Volumio based
+on the current queue and music library of the user).
+
+To inspect its state, run without arguments:
+
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure infinity is off
+volumito -C aw playback infinity off
+```
+
+```bash lucio command=execute
+volumito -C aw playback infinity
+```
+
+Passing the `on` or `off` value enables or disables it:
+
+```bash lucio command=execute
+volumito -C aw playback infinity on
+```
+
+```bash lucio command=execute
+volumito -C aw playback infinity off
+```
+
 ### Playback Help
 
 These are all the subcommands of the `playback` group:
@@ -156,4 +244,3 @@ These are all the subcommands of the `playback` group:
 ```bash lucio command=execute
 volumito playback --help
 ```
-

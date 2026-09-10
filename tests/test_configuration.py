@@ -26,9 +26,7 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_3
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
 _QUEUE_ALBUMART_FILE_NAME_TEMPLATE = "{artist}/{album_volume}/000___{album}.{extension}"
-_QUEUE_AUDIO_FILE_NAME_TEMPLATE = (
-    "{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}"
-)
+_QUEUE_AUDIO_FILE_NAME_TEMPLATE = "{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}"
 
 
 class TestConfigurationPaths:
@@ -96,9 +94,7 @@ class TestConfigurationPaths:
         assert paths.count(os.path.join("/home/user", ".volumito", "volumito.yaml")) == 1
         assert len(paths) == 10
 
-    def test_a_symlinked_working_directory_is_probed_once(
-        self, mocker: MockerFixture, tmp_path
-    ):
+    def test_a_symlinked_working_directory_is_probed_once(self, mocker: MockerFixture, tmp_path):
         """A working directory reaching a probed directory by symlink is probed once."""
         home = tmp_path / "home"
         home.mkdir()
@@ -284,8 +280,7 @@ class TestLoadDefaultMap:
         config.write_text("output:\n  playback-status:\n    verbose: true\n")
 
         assert (
-            "unknown key 'verbose' in section 'output.playback-status'"
-            in self._errors(config)[0]
+            "unknown key 'verbose' in section 'output.playback-status'" in self._errors(config)[0]
         )
 
     def test_output_subsection_non_mapping_reported(self, tmp_path):
@@ -317,6 +312,16 @@ class TestLoadDefaultMap:
             [],
         )
 
+    def test_miscellaneous_section_overwrite_existing_playlist(self, tmp_path):
+        """The miscellaneous section accepts overwrite-existing-playlist."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  overwrite-existing-playlist: true\n")
+
+        assert load_configuration_with_errors(str(config)) == (
+            {"miscellaneous": {"overwrite-existing-playlist": True}},
+            [],
+        )
+
     def test_miscellaneous_unknown_key_reported(self, tmp_path):
         """An unrecognized key under miscellaneous is reported."""
         config = tmp_path / "volumito.yaml"
@@ -336,9 +341,7 @@ class TestLoadDefaultMap:
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  track-audio:\n    bogus: 1\n")
 
-        assert (
-            "unknown key 'bogus' in section 'downloads.track-audio'" in self._errors(config)[0]
-        )
+        assert "unknown key 'bogus' in section 'downloads.track-audio'" in self._errors(config)[0]
 
     def test_downloads_null_subsection_skipped(self, tmp_path):
         """A downloads subsection present but empty (null) contributes nothing."""
@@ -361,18 +364,14 @@ class TestLoadDefaultMap:
         config = tmp_path / "volumito.yaml"
         config.write_text("notification:\n  listen:\n    bogus: 1\n")
 
-        assert (
-            "unknown key 'bogus' in section 'notification.listen'" in self._errors(config)[0]
-        )
+        assert "unknown key 'bogus' in section 'notification.listen'" in self._errors(config)[0]
 
     def test_notification_listen_key_at_the_section_level_reported(self, tmp_path):
         """A key of the listen subsection is not accepted at the section level."""
         config = tmp_path / "volumito.yaml"
         config.write_text("notification:\n  register-url: true\n")
 
-        assert (
-            "unknown key 'register-url' in section 'notification'" in self._errors(config)[0]
-        )
+        assert "unknown key 'register-url' in section 'notification'" in self._errors(config)[0]
 
     def test_empty_file(self, tmp_path):
         """An empty file yields an empty mapping."""
@@ -474,6 +473,7 @@ class TestDefaultConfigurationTemplate:
                 "scheme": "http",
                 "api-client": "synchronous_rest",
                 "allow-fallback-to-rest-api": False,
+                "allow-fallback-to-websocket-api": False,
                 "rest-api-port": 3000,
                 "websocket-port": 3000,
                 "mpd-port": 6600,
@@ -495,11 +495,17 @@ class TestDefaultConfigurationTemplate:
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
+                "overwrite-existing-playlist": False,
                 "propagate-remote-exit-code": True,
             },
             "notification": {
                 "endpoint": "/volumionotifications",
                 "port": 3003,
+                "event-listen": {
+                    "count": None,
+                    "idle-timeout": None,
+                    "timeout": None,
+                },
                 "listen": {
                     "count": None,
                     "idle-timeout": None,
@@ -516,11 +522,15 @@ class TestDefaultConfigurationTemplate:
                 "machine-readable": False,
                 "pager": False,
                 "position-starting-at-one": True,
+                "print-resulting-content": True,
+                "print-resulting-list": True,
                 "print-resulting-status": True,
                 "strict-parsing-configuration-file": False,
                 "verbose": False,
-                # The two collection subsections pin their table format
+                # The listing collection subsections pin their table format
                 "collection-browse": {"format": "table"},
+                "collection-favourite-list": {"format": "table"},
+                "collection-radio-list": {"format": "table"},
                 "collection-search": {"format": "table"},
             },
             "downloads": {
@@ -765,29 +775,77 @@ class TestBuildClickDefaultMap:
 
     def test_display_keys_replicated_under_each_command(self):
         """fields/format are nested under every command accepting them, and only those."""
-        result = build_click_default_map(
-            {"output": {"fields": "all", "format": "table"}}
-        )
+        result = build_click_default_map({"output": {"fields": "all", "format": "table"}})
 
         formatting = {"fields": "all", "output_format": "table"}
         # The commands accepting only --format do not receive the shared fields value.
         format_only = {"output_format": "table"}
         assert result == {
             # "command list" takes neither fields nor format, so nothing reaches it
-            "playback": {"status": formatting},
+            "playback": {"infinity": format_only, "sleep": format_only, "status": formatting},
+            # "track" is the top-level synonym of "queue track"
             "track": {"info": formatting},
-            "queue": {"list": formatting, "status": formatting},
-            "notification": {"list": format_only, "listen": format_only},
-            "playlist": {"list": format_only},
-            "multiroom": {"zones": formatting},
+            "queue": {
+                "consume": format_only,
+                "list": formatting,
+                "randomize": format_only,
+                "repeat": format_only,
+                "status": formatting,
+                "track": {"info": formatting},
+            },
+            "notification": {
+                "event": {"listen": format_only, "request": format_only},
+                "list": format_only,
+                "listen": format_only,
+            },
+            "playlist": {
+                "add": formatting,
+                "content": formatting,
+                "copy": formatting,
+                "create": formatting,
+                "list": format_only,
+                "remove": formatting,
+                "rename": formatting,
+            },
+            "multiroom": {"info": formatting, "set": format_only, "status": format_only},
             "system": {
+                "alarm": {"list": formatting},
+                "audio": {
+                    "device": {"list": format_only},
+                    "dsp": format_only,
+                    "inputs": format_only,
+                    "outputs": formatting,
+                },
+                "backup": {"create": format_only},
                 "execute": format_only,
                 "version": format_only,
                 "info": format_only,
+                "network": {"info": formatting, "wireless": formatting},
+                "plugin": {
+                    "configuration": format_only,
+                    "disable": formatting,
+                    "enable": formatting,
+                    "list": formatting,
+                },
+                "power": {"modes": format_only},
+                "share": {"discover": format_only, "info": format_only, "list": formatting},
+                "timezone": {"list": format_only},
+                "ui": {
+                    "background": {"list": format_only},
+                    "experience": format_only,
+                    "language": {"list": format_only},
+                    "privacy": format_only,
+                    "settings": format_only,
+                },
+                "update": {"channel": {"list": format_only}, "check": format_only},
+                "usb": {"list": formatting},
             },
             "collection": {
                 "browse": format_only,
+                "favourite": {"list": format_only},
+                "radio": {"add": format_only, "list": format_only, "remove": format_only},
                 "search": format_only,
+                "source": {"list": formatting},
                 "statistics": format_only,
             },
             "story": {
@@ -825,6 +883,29 @@ class TestBuildClickDefaultMap:
             "unregister": {"endpoint": "/hook", "port": 9000},
         }
 
+    def test_notification_event_listen_keys_reach_their_command(self):
+        """The event-listen keys reach event listen alone, without the listener scalars."""
+        result = build_click_default_map(
+            {
+                "notification": {
+                    "endpoint": "/hook",
+                    "event-listen": {"count": 2, "timeout": 3.0},
+                }
+            }
+        )
+
+        assert result["notification"]["event"] == {"listen": {"count": 2, "timeout": 3.0}}
+        assert "event" not in result["notification"]["listen"]
+
+    def test_notification_event_listen_unknown_key_reported(self, tmp_path):
+        """A listener-only key under event-listen is unknown there."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("notification:\n  event-listen:\n    register-url: true\n")
+
+        _, errors = load_configuration_with_errors(str(config))
+
+        assert "unknown key 'register-url' in section 'notification.event-listen'" in errors[0]
+
     def test_format_only_subsection_overrides_shared(self):
         """A subsection of a format-only command overrides the shared format value."""
         result = build_click_default_map(
@@ -853,15 +934,14 @@ class TestBuildClickDefaultMap:
 
         # playback-status override reaches the playback.status command.
         assert result["playback"]["status"] == {"output_format": "table"}
+        assert result["queue"]["track"]["info"] == {"output_format": "json"}
         assert result["track"]["info"] == {"output_format": "json"}
         # queue-list has no override, so it keeps the shared value.
         assert result["queue"]["list"] == {"output_format": "pretty"}
 
     def test_shared_manifest_file_reaches_only_queue_and_playlist_download(self):
         """A shared downloads.manifest-file flows to the queue/playlist downloads only."""
-        result = build_click_default_map(
-            {"downloads": {"manifest-file": "/reports/run.json"}}
-        )
+        result = build_click_default_map({"downloads": {"manifest-file": "/reports/run.json"}})
 
         assert result["queue"]["download"]["manifest_file"] == "/reports/run.json"
         assert result["playlist"]["download"]["manifest_file"] == "/reports/run.json"
@@ -892,16 +972,25 @@ class TestBuildClickDefaultMap:
                 "miscellaneous": {
                     "check-playlist-name": False,
                     "check-seek-position": False,
+                    "overwrite-existing-playlist": True,
                 }
             }
         )
 
         assert result == {
             "playlist": {
+                "add": {"check_playlist_name": False},
+                "content": {"check_playlist_name": False},
+                "delete": {"check_playlist_name": False},
                 "download": {"check_playlist_name": False},
+                "enqueue": {"check_playlist_name": False},
                 "play": {"check_playlist_name": False},
+                "copy": {"overwrite_existing_playlist": True},
+                "remove": {"check_playlist_name": False},
+                "rename": {"overwrite_existing_playlist": True},
             },
             "playback": {"seek": {"check_seek_position": False}},
+            "queue": {"save": {"overwrite_existing_playlist": True}},
         }
 
     def test_print_resulting_status_replicated_under_action_commands(self):
@@ -909,6 +998,7 @@ class TestBuildClickDefaultMap:
         result = build_click_default_map({"output": {"print-resulting-status": False}})
 
         assert result == {
+            "collection": {"favourite": {"play": {"print_resulting_status": False}}},
             "playback": {
                 "toggle": {"print_resulting_status": False},
                 "play": {"print_resulting_status": False},
@@ -922,13 +1012,47 @@ class TestBuildClickDefaultMap:
                 "unmute": {"print_resulting_status": False},
             },
             "queue": {
+                "add": {"print_resulting_status": False},
                 "clear": {"print_resulting_status": False},
-                "repeat": {"print_resulting_status": False},
-                "randomize": {"print_resulting_status": False},
+                "move": {"print_resulting_status": False},
+                "remove": {"print_resulting_status": False},
+                "replace": {"print_resulting_status": False},
             },
             "playlist": {
                 "download": {"print_resulting_status": False},
+                "enqueue": {"print_resulting_status": False},
                 "play": {"print_resulting_status": False},
+            },
+        }
+
+    def test_print_resulting_content_replicated_under_playlist_editing_commands(self):
+        """print-resulting-content is nested under playlist add and playlist remove only."""
+        result = build_click_default_map({"output": {"print-resulting-content": False}})
+
+        assert result == {
+            "playlist": {
+                "add": {"print_resulting_content": False},
+                "copy": {"print_resulting_content": False},
+                "create": {"print_resulting_content": False},
+                "remove": {"print_resulting_content": False},
+                "rename": {"print_resulting_content": False},
+            },
+        }
+
+    def test_print_resulting_list_replicated_under_the_listing_commands(self):
+        """print-resulting-list is nested under the radio and playlist commands listing them."""
+        result = build_click_default_map({"output": {"print-resulting-list": False}})
+
+        assert result == {
+            "collection": {
+                "radio": {
+                    "add": {"print_resulting_list": False},
+                    "remove": {"print_resulting_list": False},
+                },
+            },
+            "playlist": {
+                "create": {"print_resulting_list": False},
+                "delete": {"print_resulting_list": False},
             },
         }
 
@@ -936,13 +1060,15 @@ class TestBuildClickDefaultMap:
         """A shared downloads key applies to every download command."""
         result = build_click_default_map({"downloads": {"overwrite-existing-files": True}})
 
+        track = {
+            "audio": {"overwrite_existing_files": True},
+            "albumart": {"overwrite_existing_files": True},
+        }
         assert result == {
             "playlist": {"download": {"overwrite_existing_files": True}},
-            "queue": {"download": {"overwrite_existing_files": True}},
-            "track": {
-                "audio": {"overwrite_existing_files": True},
-                "albumart": {"overwrite_existing_files": True},
-            },
+            "queue": {"download": {"overwrite_existing_files": True}, "track": track},
+            # "track" is the top-level synonym of "queue track"
+            "track": track,
         }
 
     def test_downloads_per_command_overrides_shared(self):
@@ -968,6 +1094,7 @@ class TestBuildClickDefaultMap:
             "output_directory": "/shared",
             "file_name_template": "{title}.{extension}",
         }
+        assert result["queue"]["track"] == result["track"]
 
     def test_empty_config_no_nesting(self):
         """An empty config yields an empty default_map."""

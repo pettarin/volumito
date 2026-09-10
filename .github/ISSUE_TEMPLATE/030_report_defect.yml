@@ -34,7 +34,8 @@ body:
       label: Version
       description: What version of volumito are you using?
       options:
-        - 0.4.0 (latest release)
+        - 0.5.0 (latest release)
+        - 0.4.0
         - 0.3.1
         - 0.3.0
         - 0.2.0

@@ -22,16 +22,16 @@ volumito command list
 > of your configuration file.
 
 Aliases appear within parentheses next to the corresponding command,
-for instance `ti` for `track info`, so that
+for instance `qti` for `queue track info`, so that
 
 ```bash lucio command=execute
-volumito track info
+volumito queue track info
 ```
 
 and
 
 ```bash lucio command=execute
-volumito ti
+volumito qti
 ```
 
 are equivalent.

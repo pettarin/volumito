@@ -13,6 +13,7 @@ from volumito.clients.errors import VolumioAPIError, VolumioStoryError
 from volumito.clients.models import (
     Alarms,
     AudioOutputs,
+    AvailablePlugins,
     Backgrounds,
     BrowseResults,
     BrowseSources,
@@ -54,6 +55,7 @@ from volumito.clients.models import (
     Timezones,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrives,
     WirelessNetworks,
@@ -772,9 +774,7 @@ class TestSearchResults:
 
     def test_filtered_by_kind_and_service(self):
         """The kinds filter combines with the other filters."""
-        filtered = self._results().filtered(
-            service="qobuz", kinds={SearchResultItemKind.ARTIST}
-        )
+        filtered = self._results().filtered(service="qobuz", kinds={SearchResultItemKind.ARTIST})
 
         assert [result_list.title for result_list in filtered] == ["QOBUZ Artists"]
         assert filtered.raw == self._ENVELOPE
@@ -1286,6 +1286,12 @@ class TestAlarms:
         """A host reporting no alarm is an empty collection."""
         assert len(Alarms.from_raw({"alarms": []})) == 0
 
+    def test_an_identifier_given_as_text(self):
+        """A host numbers the alarms by position, as text: the identifier reads as an integer."""
+        alarms = Alarms.from_raw({"alarms": [{"id": "0", "enabled": True}]})
+
+        assert alarms[0].id == 0
+
 
 class TestAudioOutputs:
     """Test cases for the AudioOutputs and AudioOutput models."""
@@ -1540,6 +1546,17 @@ class TestSleepTimer:
 class TestUiSettings:
     """Test cases for the UiSettings model."""
 
+    def test_background_image(self):
+        """An image background is reported as an object with its title and path."""
+        settings = UiSettings.from_raw(
+            {"background": {"title": "Yosemite", "path": "yosemite.jpg"}, "language": "it"}
+        )
+
+        assert settings.background is not None
+        assert settings.background.title == "Yosemite"
+        assert settings.background.path == "yosemite.jpg"
+        assert settings.color is None
+
     def test_parses_the_settings(self):
         """The interface settings are parsed."""
         settings = UiSettings.from_raw({"color": "#000", "language": "en", "theme": "default"})
@@ -1557,8 +1574,12 @@ class TestTierCModels:
         info = NetworkInfo.from_raw(
             {
                 "interfaces": [
-                    {"type": "Wired", "ip": "192.168.1.122", "status": "connected",
-                     "speed": "1Gb/s"}
+                    {
+                        "type": "Wired",
+                        "ip": "192.168.1.122",
+                        "status": "connected",
+                        "speed": "1Gb/s",
+                    }
                 ]
             }
         )
@@ -1572,9 +1593,7 @@ class TestTierCModels:
         backgrounds = Backgrounds.from_raw(
             {
                 "current": {"name": "Darkness", "path": "darkness.jpg"},
-                "available": [
-                    {"name": "Aurora", "path": "aurora.jpg", "thumbnail": "thumb.jpg"}
-                ],
+                "available": [{"name": "Aurora", "path": "aurora.jpg", "thumbnail": "thumb.jpg"}],
             }
         )
 
@@ -1606,6 +1625,21 @@ class TestTierCModels:
         assert len(languages) == 1
         assert languages[0].language == "Catala"
         assert [lang.code for lang in languages] == ["ca"]
+
+    def test_update_check(self):
+        """The answer of the updater is parsed, aliases included."""
+        check = UpdateCheck.from_raw(
+            {
+                "updateavailable": True,
+                "title": "3.800",
+                "description": "Fixes",
+                "changeLogLink": "http://x/changelog",
+            }
+        )
+
+        assert check.update_available is True
+        assert check.change_log_link == "http://x/changelog"
+        assert check.title == "3.800"
 
     def test_updater_channel(self):
         """The channel in use is read beside the available ones."""
@@ -1657,13 +1691,55 @@ class TestTierCModels:
         assert config.page == {"label": "System Settings"}
         assert config.sections[0]["id"] == "language_selector"
 
+    def test_available_plugins(self):
+        """The store is parsed by category, and flattened as a sequence of plugins."""
+        plugins = AvailablePlugins.from_raw(
+            {
+                "categories": [
+                    {
+                        "name": "music_service",
+                        "prettyName": "Music Services",
+                        "plugins": [
+                            {
+                                "name": "spop",
+                                "prettyName": "Spotify",
+                                "version": "1.0",
+                                "installed": True,
+                                "updateAvailable": True,
+                                "url": "http://p/s",
+                            }
+                        ],
+                    },
+                    {
+                        "name": "user_interface",
+                        "prettyName": "User Interface",
+                        "plugins": [{"name": "touch_display", "url": "http://p/t"}],
+                    },
+                ]
+            }
+        )
+
+        assert len(plugins) == 2
+        assert plugins[0].pretty_name == "Spotify"
+        assert plugins[0].update_available is True
+        assert [p.name for p in plugins] == ["spop", "touch_display"]
+        assert plugins.categories[1].pretty_name == "User Interface"
+        assert plugins.find("touch_display").url == "http://p/t"
+        assert plugins.find("missing") is None
+
     def test_plugins(self):
         """The plugins are parsed, aliases included."""
         plugins = Plugins.from_raw(
             {
                 "plugins": [
-                    {"name": "spop", "prettyName": "Spotify", "category": "music_service",
-                     "version": "1.0", "enabled": True, "active": True}
+                    {
+                        "name": "spop",
+                        "prettyName": "Spotify",
+                        "category": "music_service",
+                        "version": "1.0",
+                        "enabled": True,
+                        "active": True,
+                    }
                 ]
             }
         )
@@ -1677,8 +1753,15 @@ class TestTierCModels:
         shares = Shares.from_raw(
             {
                 "shares": [
-                    {"id": "uuid", "name": "NAS", "path": "Music", "fstype": "cifs",
-                     "username": "guest", "options": "ro", "size": ""}
+                    {
+                        "id": "uuid",
+                        "name": "NAS",
+                        "path": "Music",
+                        "fstype": "cifs",
+                        "username": "guest",
+                        "options": "ro",
+                        "size": "",
+                    }
                 ]
             }
         )
@@ -1700,11 +1783,11 @@ class TestTierCModels:
     def test_usb_drives(self):
         """The drives are parsed."""
         drives = UsbDrives.from_raw(
-            {"drives": [{"name": "USB", "device": "sda1", "mountpoint": "/media/USB"}]}
+            {"drives": [{"type": "remdisk", "title": "USB", "uri": "music-library/USB/USB"}]}
         )
 
         assert len(drives) == 1
-        assert drives[0].mountpoint == "/media/USB"
+        assert drives[0].uri == "music-library/USB/USB"
         assert [d.name for d in drives] == ["USB"]
 
     def test_multiroom(self):

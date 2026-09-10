@@ -1,0 +1,21 @@
+## How To Get Help
+
+All global options, command groups, and subcommands of `volumito`
+honor the `--help` option:
+
+```bash lucio command=execute
+volumito --help
+```
+
+```bash lucio command=execute
+volumito playlist --help
+```
+
+```bash lucio command=execute
+volumito playback play --help
+```
+
+If you need to know the full list of commands or aliases,
+see Section [Command Discovery](#command-discovery),
+which reports the actual output of commands
+`command list` and `command alias`.

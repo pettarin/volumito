@@ -179,7 +179,7 @@ class Alarm(VolumioModel):
     """Whether the alarm is armed."""
 
     id: int | None = None
-    """The identifier of the alarm."""
+    """The identifier of the alarm: its position in the set, which the host assigns."""
 
     name: str | None = None
     """The name of the alarm."""
@@ -188,7 +188,9 @@ class Alarm(VolumioModel):
     """The name of the playlist the alarm plays."""
 
     time: str | None = None
-    """The time the alarm goes off, as ``"HH:MM"``."""
+    """The time the alarm goes off, as the host stores it: an ISO 8601 date-time, of
+    which only the hour and the minute count, read in the time zone of the host when
+    it carries no offset."""
 
 
 class Alarms(VolumioModel):
@@ -244,9 +246,7 @@ class AudioOutputs(VolumioModel):
     measured with ``len()``.
     """
 
-    available_outputs: list[AudioOutput] = Field(
-        default_factory=list, alias="availableOutputs"
-    )
+    available_outputs: list[AudioOutput] = Field(default_factory=list, alias="availableOutputs")
     """The available outputs, in the order reported by the Volumio instance."""
 
     def __getitem__(self, index: int) -> AudioOutput:
@@ -260,6 +260,89 @@ class AudioOutputs(VolumioModel):
     def __len__(self) -> int:
         """Return the number of available outputs."""
         return len(self.available_outputs)
+
+
+class AvailablePlugin(VolumioModel):
+    """A plugin the store offers to a Volumio instance."""
+
+    author: str | None = None
+    """The author of the plugin."""
+
+    category: str | None = None
+    """The category the plugin belongs to (e.g., ``"music_service"``)."""
+
+    description: str | None = None
+    """The one-line description of the plugin."""
+
+    installed: bool | None = None
+    """Whether the plugin is installed on the Volumio instance."""
+
+    name: str | None = None
+    """The name of the plugin, as it is identified."""
+
+    pretty_name: str | None = Field(default=None, alias="prettyName")
+    """The name of the plugin, as it is displayed."""
+
+    update_available: bool | None = Field(default=None, alias="updateAvailable")
+    """Whether the store offers a newer version than the installed one."""
+
+    url: str | None = None
+    """The URL of the package of the plugin, which the install reads."""
+
+    version: str | None = None
+    """The version the store offers, or the installed one when the plugin is installed."""
+
+
+class AvailablePluginCategory(VolumioModel):
+    """A category of the plugins the store offers to a Volumio instance."""
+
+    name: str | None = None
+    """The name of the category, as it is identified (e.g., ``"music_service"``)."""
+
+    plugins: list[AvailablePlugin] = Field(default_factory=list)
+    """The plugins of the category, in the order reported by the store."""
+
+    pretty_name: str | None = Field(default=None, alias="prettyName")
+    """The name of the category, as it is displayed."""
+
+
+class AvailablePlugins(VolumioModel):
+    """The plugins the store offers to a Volumio instance, by category.
+
+    The collection is a sequence of its plugins across the categories: it can be
+    iterated, indexed, and measured with ``len()``.
+    """
+
+    categories: list[AvailablePluginCategory] = Field(default_factory=list)
+    """The categories, in the order reported by the store."""
+
+    def __getitem__(self, index: int) -> AvailablePlugin:
+        """Return the plugin at the given position across the categories."""
+        return self.plugins[index]
+
+    def __iter__(self) -> Iterator[AvailablePlugin]:  # type: ignore[override]
+        """Iterate over the plugins across the categories."""
+        return iter(self.plugins)
+
+    def __len__(self) -> int:
+        """Return the number of plugins across the categories."""
+        return len(self.plugins)
+
+    def find(self, name: str) -> AvailablePlugin | None:
+        """Return the plugin with the given name, or None when the store offers none.
+
+        Args:
+            name: The name of the plugin, as it is identified
+
+        Returns:
+            The plugin, or None
+        """
+        return next((plugin for plugin in self if plugin.name == name), None)
+
+    @property
+    def plugins(self) -> list[AvailablePlugin]:
+        """The plugins across the categories, in the order reported by the store."""
+        return [plugin for category in self.categories for plugin in category.plugins]
 
 
 class Background(VolumioModel):
@@ -467,14 +550,16 @@ class Languages(VolumioModel):
     """The languages the user interface of a Volumio instance can be shown in.
 
     The collection is a sequence of the available languages: it can be iterated,
-    indexed, and measured with ``len()``; the one in use is :attr:`default_language`.
+    indexed, and measured with ``len()``. The host reports English as
+    :attr:`default_language` whatever the language in use, which :class:`UiSettings`
+    carries.
     """
 
     available: list[Language] = Field(default_factory=list)
     """The languages that can be chosen."""
 
     default_language: Language | None = Field(default=None, alias="defaultLanguage")
-    """The language in use."""
+    """The default language of the host (English), not the one in use."""
 
     def __getitem__(self, index: int) -> Language:
         """Return the available language at the given position."""
@@ -673,9 +758,7 @@ class Notifications(VolumioModel):
     def urls(self) -> list[str]:
         """The registered URLs, in the order reported."""
         return [
-            notification.url
-            for notification in self.notifications
-            if notification.url is not None
+            notification.url for notification in self.notifications if notification.url is not None
         ]
 
     def __contains__(self, item: object) -> bool:
@@ -741,8 +824,7 @@ class OutputDevices(VolumioModel):
         devices = payload.get("devices")
         if not isinstance(devices, dict):
             raise VolumioAPIError(
-                f"Expected a devices object from the Volumio API, "
-                f"got {type(devices).__name__}"
+                f"Expected a devices object from the Volumio API, got {type(devices).__name__}"
             )
         return cls.model_validate({**devices, "i2s": payload.get("i2s"), "raw": payload})
 
@@ -1144,9 +1226,7 @@ class PlaylistContent(VolumioModel):
                     tracks.extend(track for track in entry if isinstance(track, dict))
                 elif isinstance(entry, dict):
                     tracks.append(entry)
-        return cls.model_validate(
-            {"name": payload.get("name"), "tracks": tracks, "raw": payload}
-        )
+        return cls.model_validate({"name": payload.get("name"), "tracks": tracks, "raw": payload})
 
     def __getitem__(self, index: int) -> QueueTrack:
         """Return the track at the given position of the playlist."""
@@ -1304,7 +1384,7 @@ class SearchResultItemKind(StrEnum):
     """An artist of a source."""
 
     OTHER = "other"
-    """Anything else, a web radio for instance."""
+    """Anything else, a Web radio for instance."""
 
     PLAYLIST = "playlist"
     """A playlist of a source."""
@@ -1792,6 +1872,16 @@ class Timezones(VolumioModel):
         return len(self.timezones)
 
 
+class UiBackground(VolumioModel):
+    """The background image the user interface settings of a Volumio instance report."""
+
+    path: str | None = None
+    """The file name of the image, relative to the backgrounds folder of the host."""
+
+    title: str | None = None
+    """The name of the image, as :attr:`Backgrounds.available` lists it."""
+
+
 class UiConfig(VolumioModel):
     """The configuration page a plugin of a Volumio instance offers."""
 
@@ -1805,14 +1895,33 @@ class UiConfig(VolumioModel):
 class UiSettings(VolumioModel):
     """The user interface settings of a Volumio instance."""
 
+    background: UiBackground | None = None
+    """The background image in use, when the background is an image."""
+
     color: str | None = None
-    """The accent color of the interface."""
+    """The solid background colour in use (e.g., ``"#000"``), when it is a colour."""
 
     language: str | None = None
     """The language code of the interface (e.g., ``"en"``)."""
 
     theme: str | None = None
     """The name of the theme of the interface."""
+
+
+class UpdateCheck(VolumioModel):
+    """What the updater of a Volumio instance found when asked for an update."""
+
+    change_log_link: str | None = Field(default=None, alias="changeLogLink")
+    """The link to the change log of the update, when there is one."""
+
+    description: str | None = None
+    """The description of the update, or the notice that none is available."""
+
+    title: str | None = None
+    """The title of the answer: the version offered, or the notice that none is."""
+
+    update_available: bool | None = Field(default=None, alias="updateavailable")
+    """Whether an update is available."""
 
 
 class UpdaterChannel(VolumioModel):
@@ -1826,19 +1935,19 @@ class UpdaterChannel(VolumioModel):
 
 
 class UsbDrive(VolumioModel):
-    """A USB drive attached to a Volumio instance."""
+    """A USB drive attached to a Volumio instance, as its USB music source lists it."""
 
-    device: str | None = None
-    """The device node of the drive."""
+    albumart: str | None = None
+    """The icon of the drive, relative to the host."""
 
-    mountpoint: str | None = None
-    """Where the drive is mounted."""
+    name: str | None = Field(default=None, alias="title")
+    """The name of the drive, which is the folder it is mounted as."""
 
-    name: str | None = None
-    """The name of the drive."""
+    type: str | None = None
+    """The kind of entry (``"remdisk"`` for a removable disk)."""
 
-    size: str | None = None
-    """The size of the drive, as the host reports it."""
+    uri: str | None = None
+    """The URI browsing the content of the drive."""
 
 
 class UsbDrives(VolumioModel):

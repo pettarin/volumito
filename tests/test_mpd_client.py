@@ -209,9 +209,7 @@ class TestVolumioMPDClient:
         logger.warning.assert_not_called()
         logger.exception.assert_not_called()
 
-    def test_get_current_song_no_track_does_not_log_an_exception(
-        self, mocker: MockerFixture
-    ):
+    def test_get_current_song_no_track_does_not_log_an_exception(self, mocker: MockerFixture):
         """The anticipated no-track and not-connected paths stay at debug."""
         mock_mpd = mocker.Mock()
         mock_mpd.currentsong.return_value = {}

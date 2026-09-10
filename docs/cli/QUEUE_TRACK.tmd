@@ -1,0 +1,67 @@
+```bash lucio command=execute show_source=false stdout=false stderr=false
+# hidden block to ensure a certain queue is playing
+volumito playlist play "volumito test qobuz multiple albums"
+```
+
+## Inspect The Current Track
+
+### Track Info
+
+Command `queue track info` provides the details
+of the current track being played:
+
+```bash lucio command=execute
+volumito queue track info
+```
+
+The `--format`, `--fields`, `--machine-readable` options
+apply to this command as well:
+
+```bash lucio command=execute
+volumito queue track info --format table
+```
+
+```bash lucio command=execute
+volumito queue track info --fields ALL
+```
+
+```bash lucio command=execute
+volumito -m queue track info -F raw -L ALL
+```
+
+### Track Has Previous, Has Next
+
+To know whether a previous or next track to the current track
+exists in the current queue,
+the commands `queue track has_previous` and `queue track has_next`
+are available:
+
+```bash lucio command=execute
+volumito queue track has_previous
+```
+
+```bash lucio command=execute
+volumito queue track has_next
+```
+
+### Track Help
+
+These are all the subcommands of the `queue track` group:
+
+```bash lucio command=execute
+volumito queue track --help
+```
+
+The `albumart` and `audio` subcommands are described
+in Section [Download](#download) below.
+
+> [!NOTE]
+> The `queue track` command group is also available
+> as top-level `track`, via a hard-coded alias, for convenience of use.
+> Therefore for example `volumito track info` and `volumito queue track info`
+> are equivalent commands.
+>
+> Note, however, that the concept of "track" here
+> really means "current track of the current queue",
+> thus making the `queue track` the "canonical" placement
+> within the `volumito` command tree.

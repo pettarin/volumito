@@ -1,0 +1,9 @@
+## Clear The Current Queue
+
+To clear the current playback queue,
+that is, to remove all the items scheduled for playback,
+issue the `queue clear` command:
+
+```bash lucio command=execute
+volumito queue clear
+```

@@ -2,7 +2,11 @@
 
 ## Stories
 
-> [!TIP]
+> [!NOTE]
+> This functionality is available only when using a REST API client.
+> The examples in this section set `-C sr` as a reminder.
+
+> [!NOTE]
 > The target Volumio host must run with a Volumio Premium (or better)
 > subscription for the additional metadata to be available;
 > otherwise an error will be returned.
@@ -11,7 +15,7 @@
 > [Metadatas (Premium)](https://developers.volumio.com/api/rest-api#metadatas-premium)
 > section of the Volumio REST API documentation for the details.
 
-> [!TIP]
+> [!NOTE]
 > The "Music Metadata Discovery" option in the "Sources" settings
 > of the target Volumio host must be enabled
 > for the additional metadata to be available;
@@ -19,10 +23,10 @@
 
 `volumito` provides the `story` command group
 to query additional metadata (stories) about
-an artist, an album, a recording label or place.
+an artist, an album, a recording label, or a place.
 
 ```bash
-volumito story --help
+volumito -C sr story --help
 Usage: volumito story [OPTIONS] COMMAND [ARGS]...
 
   Retrieve stories about albums, artists, labels, or places.
@@ -43,7 +47,7 @@ Commands:
 ### Album Story
 
 ```bash
-volumito story album "The Beatles" "Yellow Submarine"
+volumito -C sr story album "The Beatles" "Yellow Submarine"
 {
     "data": {
         "value": "Yellow Submarine is the tenth studio album by the English rock band the Beatles, released in January 1969. It is the soundtrack to the animated film of the same name, which premiered in London in July 1968. The album contains six songs by the Beatles, including four new songs and the previously released \"Yellow Submarine\" and \"All You Need Is Love\". The remainder of the album is a re-recording of selections from the film's orchestral soundtrack by the band's producer, George Martin. \nThe project was regarded as a contractual obligation by the Beatles, who were asked to supply four new songs for the film. Some were written and recorded specifically for the soundtrack, while others were unreleased tracks from other projects. The album was recorded before – and issued two months after – the band's self-titled double LP (also known as the \"White Album\") and was not viewed by the band as a significant release. An EP containing only the new songs had been considered, and was mastered, but left unreleased. The original mono mixes were later included in the 2009 compilation Mono Masters.\nYellow Submarine reached the top 5 in the UK and the US. It has since been afforded a mixed reception from music critics, some of whom consider that it falls short of the high standard generally associated with the Beatles' work. Another version of the album, Yellow Submarine Songtrack, was issued on the film's 30th anniversary. It dispenses with the George Martin orchestral works, and includes the six Beatles songs from the original album, along with an additional nine songs heard in the film, all newly remixed."
@@ -54,7 +58,7 @@ volumito story album "The Beatles" "Yellow Submarine"
 ### Album Credits
 
 ```bash
-volumito story credits "The Beatles" "Yellow Submarine"
+volumito -C sr story credits "The Beatles" "Yellow Submarine"
 {
     "data": {
         "value": [
@@ -629,7 +633,7 @@ volumito story credits "The Beatles" "Yellow Submarine"
 ### Artist Story
 
 ```bash
-volumito story artist "The Beatles"
+volumito -C sr story artist "The Beatles"
 {
     "data": {
         "value": "The Beatles were an English rock band formed in Liverpool in 1960. The band comprised John Lennon, Paul McCartney, George Harrison and Ringo Starr. They are regarded as the most influential band in popular music and were integral to the development of 1960s counterculture and the recognition of popular music as an art form. Rooted in skiffle, beat and 1950s rock 'n' roll, their sound incorporated elements of classical music and traditional pop in innovative ways. They also explored styles ranging from folk and Indian music to psychedelia and hard rock. As pioneers in recording, songwriting and artistic presentation, the Beatles revolutionised many aspects of the music industry and were often publicised as leaders of the era's youth and sociocultural movements.\nLed by primary songwriters Lennon and McCartney, the Beatles evolved from Lennon's previous group, the Quarrymen, and built their reputation by playing clubs in Liverpool and in Hamburg, West Germany, starting in 1960. Lennon, McCartney and Harrison, together since 1958, went through a succession of drummers before Starr joined in 1962. Manager Brian Epstein moulded them into a professional act, and producer George Martin developed their recordings, greatly expanding their domestic success after they signed with EMI and achieved their first hit, \"Love Me Do\", in late 1962. As their popularity grew into the fan frenzy dubbed \"Beatlemania\", the band acquired the nickname \"the Fab Four\". By early 1964, the Beatles were international stars and had achieved unprecedented levels of critical and commercial success. They became a leading force in Britain's cultural resurgence, ushering in the British Invasion of the United States pop market. They made their film debut with A Hard Day's Night (1964).\nA growing desire to refine their studio efforts, coupled with the challenging nature of their concert tours, led to the Beatles' retirement from live performances in 1966. During this time, they produced albums of greater sophistication, including Rubber Soul (1965), Revolver (1966) and Sgt. Pepper's Lonely Hearts Club Band (1967). They enjoyed further commercial success with The Beatles (also known as \"the White Album\", 1968) and Abbey Road (1969). The success of these records heralded the album era, increased public interest in psychedelic drugs and Eastern spirituality, and furthered advancements in electronic music, album art and music videos. In 1968, the Beatles founded Apple Corps, a multi-armed multimedia corporation that continues to oversee projects related to their legacy. After the Beatles' break-up in 1970, all former members enjoyed success as solo artists. While some partial reunions occurred over the next decade, the members never fully reunited. Lennon was murdered in 1980 and Harrison died of lung cancer in 2001; McCartney and Starr remain musically active.\nThe Beatles are the best-selling music act of all time, with estimated sales of over 600 million units worldwide. They are the most successful act in the history of the US Billboard charts, with the most number-one singles on the Billboard Hot 100 (20) and most number-one albums on the Billboard 200 (19). They hold the record for most singles sold in the UK (21.9 million), and held the record for most number-one albums on the UK Albums Chart (15) until Robbie Williams surpassed them in 2026. The Beatles' accolades include nine Grammy Awards, four Brit Awards, an Academy Award (for Best Original Song Score for the 1970 documentary film Let It Be) and fifteen Ivor Novello Awards. They were inducted into the Rock and Roll Hall of Fame in their first year of eligibility, 1988, and each principal member was individually inducted between 1994 and 2015. In 2004 and 2011, the Beatles topped Rolling Stone's lists of the greatest artists in history. Time named them among the 20th century's 100 most important people."
@@ -640,7 +644,7 @@ volumito story artist "The Beatles"
 ### Label Story
 
 ```bash
-volumito story label "EMI"
+volumito -C sr story label "EMI"
 {
     "data": {
         "value": "EMI Records (formerly EMI Records Ltd.) is a British multinational record label owned by Universal Music Group. It was originally founded as a British flagship label by the music company EMI in 1972, and launched in January 1973 as the successor to its Columbia and Parlophone record labels. The label was later launched worldwide. It has a branch in India called EMI Records India, run by director Mohit Suri. In 2014, Universal Music Japan revived the label in Japan as the successor to EMI Records Japan. In June 2020, Universal revived the label as the successor to Virgin EMI, with Virgin Records now operating as an imprint of EMI Records. In February 2024, UMG Philippines relaunched EMI as a successor to the former EMI Philippines label after 22 years."
@@ -651,7 +655,7 @@ volumito story label "EMI"
 ### Place Story
 
 ```bash
-volumito story place "Abbey Road Studios"
+volumito -C sr story place "Abbey Road Studios"
 {
     "data": {
         "value": "Abbey Road Studios (formerly EMI Recording Studios) is a music recording studio at 3 Abbey Road, St John's Wood, City of Westminster, London. It was established in November 1931 by the Gramophone Company, a predecessor of British music company EMI, which owned it until Universal Music Group (UMG) took control of part of it in 2013. It is ultimately owned by UMG's subsidiary Virgin Records.\nThe studio's most notable client was the Beatles, who used the studio – particularly its Studio Two room – as the venue for many of the innovative recording techniques that they adopted throughout the 1960s. In 1976, the studio was renamed from EMI to Abbey Road.\nIn 2009, Abbey Road came under threat of sale to property developers. In response, the British Government protected the site, granting it English Heritage Grade II listed status in 2010, thereby preserving the building from any major alterations."

@@ -5,30 +5,28 @@
 #### System Info
 
 The `system info` command (and its alias `info`)
-returns the response from the same-name endpoint
-of the Volumio REST API, containing a summary
-of the state of the Volumio host:
+returns a summary of the state of the Volumio host:
 
 ```bash
 volumito system info
 {
     "builddate": "Tue Mar 24 17:20:52 UTC 2026",
     "hardware": "pi",
-    "host": "http://192.168.1.122",
+    "host": "http://192.168.1.19",
     "hwUuid": "<REDACTED>",
     "id": "<REDACTED>",
     "isPremiumDevice": false,
     "isVolumioProduct": false,
-    "name": "Volumio3b",
+    "name": "volumitotester",
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/32/58/0060253735832_600.jpg",
-        "artist": "Paolo Conte",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
         "mute": false,
         "status": "play",
-        "track": "Il Treno Va",
-        "volume": 87
+        "track": "Fuoco sui giocattoli",
+        "volume": 21
     },
     "systemversion": "4.119",
     "type": "device",
@@ -47,8 +45,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-04T12:42:34.774Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-04T12:42:34.774Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-10T13:46:30.015Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-10T13:46:30.015Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -86,7 +84,7 @@ For the `volumito` (client) version, use the `version` command:
 
 ```bash
 volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 #### System Execute
@@ -97,8 +95,8 @@ on the Volumio host via SSH.
 > [!CAUTION]
 > **Use this command at your own peril!**
 >
-> You might damage your Volumio host
-> (e.g., by removing files on it!),
+> You might damage your Volumio host and/or your local machine
+> (e.g., by removing or replacing files on it),
 > to the point a full reinstall will be needed.
 
 > [!NOTE]
@@ -116,11 +114,11 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-04T12:42:37.452Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-10T13:46:32.936Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
-> [!WARNING]
-> Mind the error: to make sure you know what you are doing,
+> [!CAUTION]
+> Note the error above: to make sure you know what you are doing,
 > `volumito` refuses to execute the command
 > unless you provide the `--yes` option:
 
@@ -130,7 +128,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\norg.chromium.Chromium.hKcqm2\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nserverauth.GJLdEDyOLQ\nsetvolume\nshairport-sync-metadata\nsnapfifo\nssh-IaEdzg1AJMiG\nsshtunnel.sh\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-bluealsa.service-zBpS8K\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-haveged.service-WZtla1\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-ntpsec.service-alBLg6\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-systemd-logind.service-00Dnse\nsystemd-private-c5a9df2f1f12453dbc756845ff2c97d9-upower.service-RpPBtu\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-bluealsa.service-Ah71xs\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-haveged.service-jiwUE3\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-ntpsec.service-3a11ah\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-systemd-logind.service-M14bys\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -146,24 +144,74 @@ hls
 multiroom
 myvolumio-remote.json
 networkstatus
-org.chromium.Chromium.hKcqm2
 presentation.html
 qbz-connect.cfg
 qbz-connect.socket
-serverauth.GJLdEDyOLQ
 setvolume
 shairport-sync-metadata
+shairport-sync.conf
 snapfifo
-ssh-IaEdzg1AJMiG
 sshtunnel.sh
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-bluealsa.service-zBpS8K
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-haveged.service-WZtla1
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-ntpsec.service-alBLg6
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-systemd-logind.service-00Dnse
-systemd-private-c5a9df2f1f12453dbc756845ff2c97d9-upower.service-RpPBtu
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-bluealsa.service-Ah71xs
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-haveged.service-jiwUE3
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-ntpsec.service-3a11ah
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-systemd-logind.service-M14bys
+tisoc-controller
 updater
 upmpdcli.conf
 upmpdclicache
 volume
 wireless.log
+```
+
+#### System Help
+
+These are all the subcommands of the `system` group:
+
+```bash
+volumito system --help
+Usage: volumito system [OPTIONS] COMMAND [ARGS]...
+
+  Query Volumio system utilities.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  alarm     Manage the alarms of the Volumio host (alarm-clock plugin).
+  audio     Manage the audio outputs, the output devices, and the input...
+  backup    Back up and restore the playlists and favourites of the...
+  execute   Execute COMMAND on the Volumio host, printing what it returned.
+  info      Print the system information.
+  name      Print or set the name of the Volumio host.
+  network   Query the network of the Volumio host, and join a wireless...
+  ping      Ping the Volumio instance, printing 'pong' on success.
+  plugin    Manage the plugins of the Volumio host.
+  power     Power the Volumio host down, or restart it.
+  share     Manage the network shares mounted by the Volumio host.
+  timezone  Print the time zone of the Volumio host, or manage it with...
+  ui        Manage the user interface of the Volumio host.
+  update    Check for, and install, the updates of the Volumio host.
+  usb       Manage the USB drives attached to the Volumio host.
+  version   Print the system version.
+```
+
+All commands, with the exception of those listed above
+(`system execute`, `system info`, `system ping`, `system version`),
+require a WebSocket API client, as their help message tells:
+
+```bash
+volumito system timezone --help
+Usage: volumito system timezone [OPTIONS] [COMMAND] [ARGS]...
+
+  Print the time zone of the Volumio host, or manage it with the subcommands.
+
+  Needs a WebSocket API client.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list  Print the time zones the Volumio host can be set to.
+  set   Move the Volumio host to the time zone VALUE, one of "system...
 ```

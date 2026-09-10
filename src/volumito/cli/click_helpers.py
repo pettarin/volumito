@@ -10,9 +10,9 @@ import shutil
 import sys
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from string import Formatter
-from typing import Any, get_args, overload
+from typing import Any, NamedTuple, get_args, overload
 
 import click
 import requests
@@ -42,6 +42,7 @@ from volumito.cli.constants import (
     API_CLIENT_SYNCHRONOUS_WEBSOCKET,
     API_CLIENTS,
     API_CLIENTS_WEBSOCKET,
+    BROWSE_KINDS_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_MANIFEST_FILE,
     DEFAULT_NUMBER_RETRIES_NEXT_TRACK,
@@ -55,6 +56,8 @@ from volumito.cli.constants import (
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
     OUTPUT_FIELDS_SHORT,
     OUTPUT_FORMATS,
+    PLUGIN_INSTALL_WAIT_INTERVAL,
+    PLUGIN_INSTALL_WAIT_RETRIES,
     SEARCH_SERVICES,
     SHORT_FORMAT_FIELDS_STORY,
     STORY_ARGUMENT_TYPES,
@@ -72,14 +75,22 @@ from volumito.cli.pure_helpers import (
     expand_timestamp_placeholder,
     extract_filename_from_uri,
     filter_fields,
+    filter_items_fields,
+    filter_queue_fields,
     format_as_json,
     format_as_pretty,
     format_as_table,
+    format_browse_results_as_table,
     format_duration,
+    format_items_as_table,
+    format_names_as_table,
+    format_queue_as_table,
+    is_expandable_uri,
     parse_result_kinds,
     parse_time_to_seconds,
     parse_track_selection,
     preserve_local_file_name,
+    rebase_queue_positions,
     resolve_albumart_uri,
     resolve_output_fields,
     sanitize_filename_component,
@@ -106,7 +117,14 @@ from volumito.clients import (
 )
 from volumito.clients.entities import MusicEntity
 from volumito.clients.listener import DEFAULT_ENDPOINT, DEFAULT_PORT
-from volumito.clients.models import PlayerState, SearchResultItemKind, Story
+from volumito.clients.models import (
+    BrowseResults,
+    PlayerState,
+    QueueTrack,
+    SearchResultItemKind,
+    Story,
+)
+from volumito.clients.websocket.common import BACKUP_KINDS
 
 
 class AliasedGroup(click.Group):
@@ -194,10 +212,23 @@ class OnOffParamType(click.ParamType):
         for canonical, spellings in self.ALIASES.items():
             if text in spellings:
                 return canonical
-        accepted = ", ".join(
-            sorted(s for spellings in self.ALIASES.values() for s in spellings)
-        )
+        accepted = ", ".join(sorted(s for spellings in self.ALIASES.values() for s in spellings))
         self.fail(f"{text!r} must be one of {accepted}", param, ctx)
+
+
+class PluginReference(NamedTuple):
+    """A plugin named on the command line, resolved against the Volumio host."""
+
+    name: str
+    """The name of the plugin, as it is identified."""
+
+    category: str
+    """The category the plugin belongs to, as the installed plugins list it."""
+
+    @property
+    def endpoint(self) -> str:
+        """The plugin as ``category/name``, the way the endpoints of the host name it."""
+        return f"{self.category}/{self.name}"
 
 
 class ResultKindsParamType(click.ParamType):
@@ -301,6 +332,39 @@ class SeekParamType(click.ParamType):
         if seconds < 0:
             self.fail(f"seek position must be 0 or greater, got {seconds}", param, ctx)
         return seconds
+
+
+class SleepTimerParamType(click.ParamType):
+    """Click parameter type for the sleep timer value.
+
+    Accepts a non-negative integer number of minutes, a ``H:MM`` delay (with the
+    minutes below 60), both converted to a ``timedelta``, or ``"off"``, returned as it
+    is; anything else is a usage error.
+    """
+
+    name = "sleep"
+
+    OFF = "off"
+    """The spelling disarming the timer."""
+
+    def convert(
+        self,
+        value: object,
+        param: click.Parameter | None,
+        ctx: click.Context | None,
+    ) -> timedelta | str:
+        if isinstance(value, timedelta):
+            return value
+        text = str(value)
+        if text == self.OFF:
+            return text
+        hours, separator, minutes = text.partition(":")
+        if separator:
+            if hours.isdigit() and minutes.isdigit() and int(minutes) < 60:
+                return timedelta(hours=int(hours), minutes=int(minutes))
+        elif text.isdigit():
+            return timedelta(minutes=int(text))
+        self.fail(f"{text!r} must be a number of minutes, a H:MM delay, or {self.OFF}", param, ctx)
 
 
 class TrackSelectionParamType(click.ParamType):
@@ -507,19 +571,115 @@ def alias_problems(
             problems.append(
                 (
                     name,
-                    f'alias {name!r} in configuration file "{path}" '
-                    f"shadows the command {name!r}",
+                    f'alias {name!r} in configuration file "{path}" shadows the command {name!r}',
                 )
             )
         elif resolve_command_path(root, ctx, target) is None:
             problems.append(
                 (
                     name,
-                    f"alias {name!r} in configuration file \"{path}\" "
+                    f'alias {name!r} in configuration file "{path}" '
                     f"targets the unknown command {target!r}",
                 )
             )
     return problems
+
+
+def api_position(ctx: click.Context, position: int, name: str = "position") -> int:
+    """Convert a queue position as the user gives it to the 0-based one of the API.
+
+    The user indexes the positions according to
+    ``--position-starting-at-one``/``--position-starting-at-zero``.
+
+    Args:
+        ctx: Click context object holding the shared options
+        position: The position as the user gave it
+        name: How the usage error names the position
+
+    Returns:
+        The 0-based position
+
+    Raises:
+        click.UsageError: If the position is below the minimum of the indexing in use
+    """
+    minimum = 1 if ctx.obj["position_starting_at_one"] else 0
+    if position < minimum:
+        raise click.UsageError(f"{name} must be {minimum} or greater, got {position}")
+    return position - minimum
+
+
+def backup_document(client: APIClient) -> dict[str, Any]:
+    """Read the backup of every kind from a Volumio host, as one document.
+
+    Args:
+        client: The API client to read through
+
+    Returns:
+        The identification of the host under ``id``, and the backup of each kind under
+        the name of the kind
+    """
+    document: dict[str, Any] = {}
+    for kind in BACKUP_KINDS:
+        answer = client.backup(kind)
+        document.setdefault("id", answer.get("id"))
+        document[kind] = answer.get("backup")
+    return document
+
+
+def browse_kinds(
+    result_kinds: set[SearchResultItemKind] | None,
+    albums_only: bool,
+    artists_only: bool,
+    playlists_only: bool,
+    tracks_only: bool,
+) -> set[SearchResultItemKind] | None:
+    """Resolve the kinds of result a browse keeps, from the options asking for them.
+
+    Args:
+        result_kinds: The kinds of the -k/--result-kinds option, when given
+        albums_only: Whether --albums-only was given
+        artists_only: Whether --artists-only was given
+        playlists_only: Whether --playlists-only was given
+        tracks_only: Whether --tracks-only was given
+
+    Returns:
+        The kinds to keep, or None to keep every result
+
+    Raises:
+        click.UsageError: If two of the options disagree on the kinds to keep
+    """
+    asked = [
+        kinds
+        for kinds, wanted in (
+            (result_kinds or set(), result_kinds is not None),
+            ({SearchResultItemKind.ALBUM}, albums_only),
+            ({SearchResultItemKind.ARTIST}, artists_only),
+            ({SearchResultItemKind.PLAYLIST}, playlists_only),
+            ({SearchResultItemKind.TRACK}, tracks_only),
+        )
+        if wanted
+    ]
+    if len(asked) > 1:
+        raise click.UsageError(BROWSE_KINDS_ERROR)
+    return asked[0] if asked else None
+
+
+def check_playlist_name_or_exit(ctx: click.Context, name: str) -> None:
+    """Check that a playlist exists, printing the available names and exiting (1) otherwise.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist
+    """
+    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+    if name not in names:
+        error(f'Playlist not found: "{name}"')
+        error("Available playlists:")
+        for available in names:
+            error(f'  "{available}"')
+        if not names:
+            error("  (none)")
+        sys.exit(1)
 
 
 def configuration_file_callback(
@@ -611,9 +771,7 @@ def command_nodes(
     return nodes
 
 
-def command_nodes_flattened(
-    nodes: list[dict[str, Any]], prefix: str = ""
-) -> list[dict[str, Any]]:
+def command_nodes_flattened(nodes: list[dict[str, Any]], prefix: str = "") -> list[dict[str, Any]]:
     """Flatten nested command nodes into one node per command, holding its full path.
 
     The groups are kept (typed as such), before the commands they hold, so the
@@ -696,12 +854,15 @@ def create_client(
     websocket_timeout: float = 5.0,
     api_client: str = DEFAULT_API_CLIENT,
     allow_fallback_to_rest_api: bool = False,
+    allow_fallback_to_websocket_api: bool = False,
 ) -> APIClient:
     """Create the API client the -C/--api-client option selects, not yet open.
 
     Every client logs to the CLI console. A WebSocket API client gets a REST API client
     of the same kind (synchronous or asynchronous) to fall back to, when allowed, for
-    the operations the WebSocket API does not offer.
+    the operations the WebSocket API does not offer; a REST API client gets a WebSocket
+    API client of the same kind, when allowed, for the operations the REST API does not
+    offer. A client built to fall back to falls back to nothing itself.
 
     Args:
         host_configuration: The host configuration (scheme, host, and ports)
@@ -712,6 +873,8 @@ def create_client(
         api_client: The name of the API client, one of the -C/--api-client values
         allow_fallback_to_rest_api: Whether a WebSocket API client falls back to a REST
             API client for the operations the WebSocket API does not offer
+        allow_fallback_to_websocket_api: Whether a REST API client falls back to a
+            WebSocket API client for the operations the REST API does not offer
 
     Returns:
         The API client, to be opened before its first use
@@ -720,40 +883,50 @@ def create_client(
         ValueError: If the name is not one of the -C/--api-client values
     """
 
-    def asynchronous_rest() -> APIClient:
+    def asynchronous_rest(fallback: Callable[[], APIClient] | None = None) -> APIClient:
         return AsyncRESTAPIClient(
             VolumioAsyncRESTAPIClient(
                 host_configuration,
                 timeout=rest_api_timeout,
                 timeout_slow_endpoints=rest_api_timeout_slow_endpoints,
                 logger=LOGGER,
-            )
+            ),
+            fallback=fallback,
         )
 
-    def synchronous_rest() -> APIClient:
+    def asynchronous_websocket(fallback: Callable[[], APIClient] | None = None) -> APIClient:
+        return AsyncWebSocketAPIClient(
+            VolumioAsyncWebSocketClient(host_configuration, websocket_timeout, LOGGER),
+            fallback=fallback,
+        )
+
+    def synchronous_rest(fallback: Callable[[], APIClient] | None = None) -> APIClient:
         return SyncRESTAPIClient(
             VolumioRESTAPIClient(
                 host_configuration,
                 timeout=rest_api_timeout,
                 timeout_slow_endpoints=rest_api_timeout_slow_endpoints,
                 logger=LOGGER,
-            )
+            ),
+            fallback=fallback,
+        )
+
+    def synchronous_websocket(fallback: Callable[[], APIClient] | None = None) -> APIClient:
+        return SyncWebSocketAPIClient(
+            VolumioWebSocketClient(host_configuration, websocket_timeout, LOGGER),
+            fallback=fallback,
         )
 
     if api_client == API_CLIENT_SYNCHRONOUS_REST:
-        return synchronous_rest()
+        return synchronous_rest(synchronous_websocket if allow_fallback_to_websocket_api else None)
     if api_client == API_CLIENT_ASYNCHRONOUS_REST:
-        return asynchronous_rest()
+        return asynchronous_rest(
+            asynchronous_websocket if allow_fallback_to_websocket_api else None
+        )
     if api_client == API_CLIENT_SYNCHRONOUS_WEBSOCKET:
-        return SyncWebSocketAPIClient(
-            VolumioWebSocketClient(host_configuration, websocket_timeout, LOGGER),
-            fallback=synchronous_rest if allow_fallback_to_rest_api else None,
-        )
+        return synchronous_websocket(synchronous_rest if allow_fallback_to_rest_api else None)
     if api_client == API_CLIENT_ASYNCHRONOUS_WEBSOCKET:
-        return AsyncWebSocketAPIClient(
-            VolumioAsyncWebSocketClient(host_configuration, websocket_timeout, LOGGER),
-            fallback=asynchronous_rest if allow_fallback_to_rest_api else None,
-        )
+        return asynchronous_websocket(asynchronous_rest if allow_fallback_to_rest_api else None)
     raise ValueError(f"Unknown API client {api_client!r}")
 
 
@@ -914,8 +1087,14 @@ def download_queue_track(
             destination = correct_audio_extension(destination, overwrite)
         if create_manifest:
             write_download_manifest(
-                destination, uri, state, host_configuration, "track", "audio",
-                add_cover_and_metadata, extra_state,
+                destination,
+                uri,
+                state,
+                host_configuration,
+                "track",
+                "audio",
+                add_cover_and_metadata,
+                extra_state,
             )
     except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
         return "error", str(e), destination
@@ -1001,10 +1180,7 @@ def download_uri_to(
         destination = os.path.join(output_directory, filename)  # type: ignore[arg-type]
 
     if not overwrite and os.path.exists(destination):
-        error(
-            f'File already exists: "{destination}" '
-            "(use --overwrite-existing-files to overwrite)"
-        )
+        error(f'File already exists: "{destination}" (use --overwrite-existing-files to overwrite)')
         sys.exit(1)
 
     info(f'Downloading {label} to "{destination}"...')
@@ -1152,6 +1328,10 @@ def execute_command(
     except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
         error(f"API client error: {e}")
         sys.exit(1)
+    except ValueError as e:
+        # The clients refuse a value they cannot send before sending anything
+        error(f"Invalid value: {e}")
+        sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
@@ -1274,6 +1454,10 @@ def fetch_or_exit[T](
     except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
         error(f"API client error: {e}")
         sys.exit(1)
+    except ValueError as e:
+        # The clients refuse a value they cannot send before sending anything
+        error(f"Invalid value: {e}")
+        sys.exit(1)
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
@@ -1314,9 +1498,7 @@ def fetch_uri_to_file(
         OSError: If the destination file cannot be written
     """
     if is_local_file_uri(uri):
-        copy_from_host(
-            host_configuration, remote_music_path(uri), destination, timeout=timeout
-        )
+        copy_from_host(host_configuration, remote_music_path(uri), destination, timeout=timeout)
         return
 
     response = requests.get(uri, timeout=timeout, stream=True)
@@ -1350,6 +1532,7 @@ def get_client(ctx: click.Context) -> APIClient:
             websocket_timeout=ctx.obj["websocket_timeout"],
             api_client=ctx.obj["api_client"],
             allow_fallback_to_rest_api=ctx.obj["allow_fallback_to_rest_api"],
+            allow_fallback_to_websocket_api=ctx.obj["allow_fallback_to_websocket_api"],
         )
         debug(f"Using the {client.description}")
         client.open()
@@ -1430,6 +1613,16 @@ def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_all_occurrences(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--all-occurrences`` option to the playlist remove subcommand."""
+    return click.option(
+        "--all-occurrences/--first-occurrence-only",
+        default=False,
+        show_default=True,
+        help="Remove every item at URI, instead of the first one only.",
+    )(func)
+
+
 def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--allow-local-file-rename`` option to an audio download subcommand."""
     return click.option(
@@ -1485,6 +1678,17 @@ def option_autocompose_url(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_backup_output_file(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-o``/``--output-file`` option to the system backup create subcommand."""
+    return click.option(
+        "-o",
+        "--output-file",
+        type=str,
+        default=None,
+        help="Write the backup to this file, instead of printing it.",
+    )(func)
+
+
 def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-1``/``--best-result-only`` option to the collection search subcommand."""
     return click.option(
@@ -1493,6 +1697,26 @@ def option_best_result_only(func: Callable[..., None]) -> Callable[..., None]:
         is_flag=True,
         default=False,
         help="Keep the best result of each list only, as -l/--limit 1 does.",
+    )(func)
+
+
+def option_by_uid(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--by-uid`` option to the queue add subcommand."""
+    return click.option(
+        "--by-uid",
+        is_flag=True,
+        default=False,
+        help="Read the arguments as identifiers of local library items, instead of a URI.",
+    )(func)
+
+
+def option_cached(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--cached`` option to the system update check subcommand."""
+    return click.option(
+        "--cached",
+        is_flag=True,
+        default=False,
+        help="Check the update information the host cached, instead of asking it to check anew.",
     )(func)
 
 
@@ -1512,7 +1736,7 @@ def option_check_playlist_name(func: Callable[..., None]) -> Callable[..., None]
         "--check-playlist-name/--no-check-playlist-name",
         default=True,
         show_default=True,
-        help="Check that the playlist name exists before playing it.",
+        help="Check that the playlist name exists before using it.",
     )(func)
 
 
@@ -1537,16 +1761,70 @@ def option_create_download_manifest(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_cue_track(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--cue-track`` option to the queue add and replace subcommands."""
+    return click.option(
+        "--cue-track",
+        type=int,
+        default=None,
+        metavar="NUMBER",
+        help=(
+            "Read URI as a cue sheet, queue the track at this position of it, and play it "
+            "(needs a WebSocket API client)."
+        ),
+    )(func)
+
+
 def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--current-track`` option to a story subcommand."""
     return click.option(
         "--current-track",
         is_flag=True,
         default=False,
-        help=(
-            "Use the metadata of the current track "
-            "instead of the positional argument(s)."
-        ),
+        help=("Use the metadata of the current track instead of the positional argument(s)."),
+    )(func)
+
+
+def option_current_track_album(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-b``/``--current-track-album`` option to the collection browse subcommand."""
+    return click.option(
+        "-b",
+        "--current-track-album",
+        is_flag=True,
+        default=False,
+        help="Browse to the album of the current track, instead of a URI.",
+    )(func)
+
+
+def option_current_track_artist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-a``/``--current-track-artist`` option to the collection browse subcommand."""
+    return click.option(
+        "-a",
+        "--current-track-artist",
+        is_flag=True,
+        default=False,
+        help="Browse to the artist of the current track, instead of a URI.",
+    )(func)
+
+
+def option_disabled(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--disabled`` option to the system alarm add subcommand."""
+    return click.option(
+        "--disabled",
+        is_flag=True,
+        default=False,
+        help="Add the alarm disarmed, instead of armed.",
+    )(func)
+
+
+def option_end_time(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--end-time`` option to the system update automatic enable subcommand."""
+    return click.option(
+        "--end-time",
+        type=click.IntRange(0, 23),
+        default=None,
+        metavar="HOUR",
+        help="The hour of the day the automatic updates window closes (0 to 23).",
     )(func)
 
 
@@ -1559,6 +1837,30 @@ def option_endpoint(func: Callable[..., None]) -> Callable[..., None]:
         default=DEFAULT_ENDPOINT,
         show_default=True,
         help="Path served by the local notification listener.",
+    )(func)
+
+
+def option_expand_tracks(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--expand-tracks`` option to the playlist add subcommand."""
+    return click.option(
+        "--expand-tracks/--no-expand-tracks",
+        default=True,
+        show_default=True,
+        help=(
+            "Expand URI into the tracks it lists first (the tracks of an album or a "
+            "playlist of a source other than the local library), adding each of them; "
+            "without, URI is added as one item."
+        ),
+    )(func)
+
+
+def option_extended(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--extended`` option to the system audio device list subcommand."""
+    return click.option(
+        "--extended",
+        is_flag=True,
+        default=False,
+        help="Print the devices with their details.",
     )(func)
 
 
@@ -1622,6 +1924,84 @@ def option_idle_timeout(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_ignore_integrity_check(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--ignore-integrity-check`` option to the system update install subcommand."""
+    return click.option(
+        "--ignore-integrity-check",
+        is_flag=True,
+        default=False,
+        help="Install the update even when its integrity check fails.",
+    )(func)
+
+
+def option_import_from_file(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-f``/``--import-from-file`` option to the playlist create subcommand."""
+    return click.option(
+        "-f",
+        "--import-from-file",
+        type=str,
+        default=None,
+        metavar="FILE",
+        help=(
+            'Fill the new playlist with the items FILE lists, as "playlist content NAME '
+            '-L ALL" prints them in any of its formats.'
+        ),
+    )(func)
+
+
+def option_item_album(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--album`` option to the subcommands taking a single item."""
+    return click.option(
+        "--album",
+        type=str,
+        default=None,
+        help="The album to show for the item, when known.",
+    )(func)
+
+
+def option_item_albumart(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--albumart`` option to the subcommands taking a single item."""
+    return click.option(
+        "--albumart",
+        type=str,
+        default=None,
+        help="The URL of the cover to show for the item, when known.",
+    )(func)
+
+
+def option_item_title(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--title`` option to the subcommands taking a single item."""
+    return click.option(
+        "--title",
+        type=str,
+        default=None,
+        help="The title to show for the item, when known.",
+    )(func)
+
+
+def option_language_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--name`` option to the system ui language set subcommand."""
+    return click.option(
+        "--name",
+        type=str,
+        default=None,
+        help="The name of the language, when the host needs it named too.",
+    )(func)
+
+
+def option_last(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--last`` option to the collection browse subcommand."""
+    return click.option(
+        "--last",
+        is_flag=True,
+        default=False,
+        help=(
+            "Print the listing the host pushed last, to any of its clients, instead of "
+            "browsing (needs a WebSocket API client)."
+        ),
+    )(func)
+
+
 def option_limit(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-l``/``--limit`` option to the collection search subcommand."""
     return click.option(
@@ -1642,6 +2022,17 @@ def option_manifest_file(func: Callable[..., None]) -> Callable[..., None]:
         show_default=True,
         help="Write the download manifest to this file path; {output_directory} is "
         "replaced with the output directory, {timestamp} with the current UTC time.",
+    )(func)
+
+
+def option_next(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--next`` option to the queue add subcommand."""
+    return click.option(
+        "--next",
+        "play_next",
+        is_flag=True,
+        default=False,
+        help="Queue URI as a single item right after the current track, without browsing it.",
     )(func)
 
 
@@ -1701,10 +2092,7 @@ def option_output_file(func: Callable[..., None]) -> Callable[..., None]:
         "--output-file",
         type=str,
         default=None,
-        help=(
-            "Download to this exact file path. "
-            "Mutually exclusive with -d."
-        ),
+        help=("Download to this exact file path. Mutually exclusive with -d."),
     )(func)
 
 
@@ -1718,6 +2106,16 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_overwrite_existing_playlist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--overwrite-existing-playlist`` option to a copy, rename, or save subcommand."""
+    return click.option(
+        "--overwrite-existing-playlist/--no-overwrite-existing-playlist",
+        default=False,
+        show_default=True,
+        help="Overwrite the destination playlist if it already exists.",
+    )(func)
+
+
 def option_play(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--play/--no-play`` option to the queue replace subcommand."""
     return click.option(
@@ -1725,6 +2123,16 @@ def option_play(func: Callable[..., None]) -> Callable[..., None]:
         default=True,
         show_default=True,
         help="Start playing the replaced queue (from the -p/--position item), or only replace it.",
+    )(func)
+
+
+def option_play_added(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--play`` option to the queue add subcommand."""
+    return click.option(
+        "--play",
+        is_flag=True,
+        default=False,
+        help="Start playing the added content.",
     )(func)
 
 
@@ -1736,6 +2144,36 @@ def option_playlist(func: Callable[..., None]) -> Callable[..., None]:
         type=str,
         default=None,
         help="Search for this text and keep the playlists found for it.",
+    )(func)
+
+
+def option_playlist_copy_position(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--position`` option to the playlist copy subcommand."""
+    return click.option(
+        "-p",
+        "--position",
+        type=TrackSelectionParamType(),
+        default=None,
+        help=(
+            "Copy the items at these positions of SOURCE (e.g., '1-3,6-8,12'), instead "
+            "of all of them (indexed according to "
+            "--position-starting-at-one/--position-starting-at-zero)."
+        ),
+    )(func)
+
+
+def option_playlist_position(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-p``/``--position`` option to the playlist remove subcommand."""
+    return click.option(
+        "-p",
+        "--position",
+        type=TrackSelectionParamType(),
+        default=None,
+        help=(
+            "Remove the items at these positions of the playlist (e.g., '1-3,6-8,12'), "
+            "instead of the one at URI (indexed according to "
+            "--position-starting-at-one/--position-starting-at-zero)."
+        ),
     )(func)
 
 
@@ -1773,6 +2211,38 @@ def option_position(func: Callable[..., None]) -> Callable[..., None]:
             "Play the item at this position among those URI lists (indexed according to "
             "--position-starting-at-one/--position-starting-at-zero); the first when not given."
         ),
+    )(func)
+
+
+def option_print_resulting_content(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--print-resulting-content`` option to a playlist editing subcommand."""
+    return click.option(
+        "--print-resulting-content/--no-print-resulting-content",
+        "-r",
+        default=True,
+        show_default=True,
+        help="After executing the command, print the resulting content of the playlist.",
+    )(func)
+
+
+def option_print_resulting_list(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``-r``/``--print-resulting-list`` option to a Web radio editing subcommand."""
+    return click.option(
+        "--print-resulting-list/--no-print-resulting-list",
+        "-r",
+        default=True,
+        show_default=True,
+        help="After executing the command, print the resulting list of Web radios.",
+    )(func)
+
+
+def option_print_resulting_playlists(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--print-resulting-list`` option to the playlist create and delete subcommands."""
+    return click.option(
+        "--print-resulting-list/--no-print-resulting-list",
+        default=True,
+        show_default=True,
+        help="After executing the command, print the resulting list of playlists.",
     )(func)
 
 
@@ -1815,6 +2285,16 @@ def option_propagate_remote_exit_code(func: Callable[..., None]) -> Callable[...
         default=True,
         show_default=True,
         help="Exit with the code the command returned on the Volumio host.",
+    )(func)
+
+
+def option_radio(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--radio`` option to the collection favourite subcommands."""
+    return click.option(
+        "--radio",
+        is_flag=True,
+        default=False,
+        help="Act on the radio favourites (Web radio plugin), instead of the favourites.",
     )(func)
 
 
@@ -1870,8 +2350,44 @@ def option_replace_characters_in_file_names_with(
         default=DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
         show_default=True,
         help=(
-            "Replacement string for the characters selected by "
-            "--replace-characters-in-file-names."
+            "Replacement string for the characters selected by --replace-characters-in-file-names."
+        ),
+    )(func)
+
+
+def option_request_timeout(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--timeout`` option to the notification event request subcommand."""
+    return click.option(
+        "--timeout",
+        type=float,
+        default=None,
+        help="Seconds to wait for the answer; the WebSocket API timeout when not given.",
+    )(func)
+
+
+def option_rescan(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--rescan`` option to the collection update subcommand."""
+    return click.option(
+        "--rescan",
+        is_flag=True,
+        default=False,
+        help=(
+            "Rescan the whole collection from scratch, instead of looking for changes "
+            "(slow on a large collection)."
+        ),
+    )(func)
+
+
+def option_response_event(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--response-event`` option to the notification event request subcommand."""
+    return click.option(
+        "--response-event",
+        type=str,
+        default=None,
+        metavar="NAME",
+        help=(
+            "The event carrying the answer; needed for the events the WebSocket API "
+            "clients do not already know the answer of."
         ),
     )(func)
 
@@ -1890,6 +2406,19 @@ def option_result_kinds(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_scan(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--scan`` option to the system network wireless subcommand."""
+    return click.option(
+        "--scan",
+        is_flag=True,
+        default=False,
+        help=(
+            "Scan for the networks anew, instead of printing the ones seen last "
+            "(slow, and a host without a wireless interface never answers)."
+        ),
+    )(func)
+
+
 def option_service(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``-s``/``--service`` option to the collection search subcommand."""
     return click.option(
@@ -1898,6 +2427,100 @@ def option_service(func: Callable[..., None]) -> Callable[..., None]:
         type=click.Choice(SEARCH_SERVICES, case_sensitive=True),
         default=None,
         help="Keep the results of this source only.",
+    )(func)
+
+
+def option_service_of_uri(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--service`` option to the subcommands taking the URI of a music service."""
+    return click.option(
+        "--service",
+        type=str,
+        default=None,
+        help="The music service the URI belongs to, derived from the URI when not given.",
+    )(func)
+
+
+def option_root(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--root`` option to the collection browse subcommand."""
+    return click.option(
+        "--root",
+        is_flag=True,
+        default=False,
+        help=(
+            "Print the browse sources, the roots the URIs descend from, instead of "
+            "browsing (needs a WebSocket API client)."
+        ),
+    )(func)
+
+
+def option_share_fstype(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--fstype`` option to the system share edit subcommand."""
+    return click.option(
+        "--fstype",
+        type=str,
+        default=None,
+        help='The kind of the share (e.g., "cifs", "nfs").',
+    )(func)
+
+
+def option_share_name(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--name`` option to the system share edit subcommand."""
+    return click.option(
+        "--name",
+        type=str,
+        default=None,
+        help="The name the share is mounted under.",
+    )(func)
+
+
+def option_share_options(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--options`` option to the system share subcommands."""
+    return click.option(
+        "--options",
+        type=str,
+        default=None,
+        help="The mount options of the share.",
+    )(func)
+
+
+def option_share_password(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--password`` option to the system share subcommands."""
+    return click.option(
+        "--password",
+        type=str,
+        default=None,
+        help="The password the share is mounted with; it stays in the shell history.",
+    )(func)
+
+
+def option_share_path(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--path`` option to the system share edit subcommand."""
+    return click.option(
+        "--path",
+        type=str,
+        default=None,
+        help='The path of the share on its host (e.g., "192.168.1.2/Music").',
+    )(func)
+
+
+def option_share_username(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--username`` option to the system share subcommands."""
+    return click.option(
+        "--username",
+        type=str,
+        default=None,
+        help="The user the share is mounted as.",
+    )(func)
+
+
+def option_start_time(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--start-time`` option to the system update automatic enable subcommand."""
+    return click.option(
+        "--start-time",
+        type=click.IntRange(0, 23),
+        default=None,
+        metavar="HOUR",
+        help="The hour of the day the automatic updates window opens (0 to 23).",
     )(func)
 
 
@@ -1911,9 +2534,32 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
         default=DEFAULT_STORY_ARGUMENT_TYPE,
         show_default=True,
         help=(
-            "How to interpret the positional argument(s): "
-            "autodetect, mbid, or name (free string)."
+            "How to interpret the positional argument(s): autodetect, mbid, or name (free string)."
         ),
+    )(func)
+
+
+def option_super(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--super`` option to the collection search subcommand."""
+    return click.option(
+        "--super",
+        "super_search",
+        is_flag=True,
+        default=False,
+        help=(
+            "Search every source at once, through the metavolumio plugin (Volumio "
+            "Premium; needs a WebSocket API client)."
+        ),
+    )(func)
+
+
+def option_thumbnails(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--thumbnails`` option to the collection update subcommand."""
+    return click.option(
+        "--thumbnails",
+        is_flag=True,
+        default=False,
+        help="Rebuild the thumbnails of the album art, instead of looking for changes.",
     )(func)
 
 
@@ -1959,6 +2605,66 @@ def option_unregister_url_on_exit(func: Callable[..., None]) -> Callable[..., No
     )(func)
 
 
+def option_update_library(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--update-library`` option to the collection directory delete subcommand."""
+    return click.option(
+        "--update-library/--no-update-library",
+        default=True,
+        show_default=True,
+        help=(
+            "Once the directory is deleted, update the library at the directory above it, "
+            "so that the deleted directory leaves its listing."
+        ),
+    )(func)
+
+
+def option_url(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--url`` option to the system plugin install and update subcommands."""
+    return click.option(
+        "--url",
+        type=str,
+        default=None,
+        metavar="URL",
+        help="The URL of the package to use, instead of the one the store offers.",
+    )(func)
+
+
+def option_volatile(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--volatile`` option to the playback play subcommand."""
+    return click.option(
+        "--volatile",
+        is_flag=True,
+        default=False,
+        help=(
+            "Start the volatile source (e.g., Spotify Connect) at POSITION, instead of the "
+            "queue (needs a WebSocket API client)."
+        ),
+    )(func)
+
+
+def option_wait_and_enable(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--wait-and-enable`` flag to the system plugin install subcommand."""
+    return click.option(
+        "--wait-and-enable",
+        is_flag=True,
+        default=False,
+        help="Wait until the host lists the plugin as installed, then enable it.",
+    )(func)
+
+
+def option_wireless_password(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--password`` option to the system network join subcommand."""
+    return click.option(
+        "--password",
+        type=str,
+        default=None,
+        help=(
+            "The password of the wireless network, none for an open one; it stays in the "
+            "shell history."
+        ),
+    )(func)
+
+
 def option_with_albumart(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--with-albumart`` option to a queue/playlist download subcommand."""
     return click.option(
@@ -1978,6 +2684,96 @@ def option_yes(func: Callable[..., None]) -> Callable[..., None]:
         show_default=True,
         help="Really perform the operation on the Volumio host.",
     )(func)
+
+
+def playlist_items_at_or_exit(
+    ctx: click.Context, name: str, tracks: list[QueueTrack], positions: set[int]
+) -> list[tuple[str, str | None]]:
+    """Return the URI and service of the items at some positions of a playlist, or exit (1).
+
+    A position past the end of the playlist, or an item the host lists without a
+    URI, is reported as an invalid value, the positions displayed according to
+    ``--position-starting-at-one``/``--position-starting-at-zero``.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist, for the messages
+        tracks: The content of the playlist, as read from the Volumio instance
+        positions: The 0-based positions of the items
+
+    Returns:
+        The URI of each item and the service it belongs to (None when the host
+        reports none), in position order
+    """
+    starting_at_one = ctx.obj["position_starting_at_one"]
+    items: list[tuple[str, str | None]] = []
+    missing: list[int] = []
+    without_uri: list[int] = []
+    for position in sorted(positions):
+        shown = display_position(position, starting_at_one)
+        if position >= len(tracks):
+            missing.append(shown)
+            continue
+        track = tracks[position]
+        if track.uri is None:
+            without_uri.append(shown)
+        else:
+            items.append((track.uri, track.service))
+    if missing:
+        label = "position" if len(missing) == 1 else "positions"
+        listed = ", ".join(str(shown) for shown in missing)
+        error(
+            f'Invalid value: the playlist "{name}" lists {len(tracks)} items, '
+            f"none at {label} {listed}"
+        )
+        sys.exit(1)
+    if without_uri:
+        one = len(without_uri) == 1
+        listed = ", ".join(str(shown) for shown in without_uri)
+        error(
+            f"Invalid value: the {'item' if one else 'items'} at "
+            f'{"position" if one else "positions"} {listed} of the playlist "{name}" '
+            f"{'has' if one else 'have'} no URI"
+        )
+        sys.exit(1)
+    return items
+
+
+def playlist_tracks_of_uri_or_exit(
+    ctx: click.Context, uri: str, service: str | None
+) -> list[tuple[str, str | None]]:
+    """Return the items a URI is added to a playlist as, or exit (1).
+
+    A URI of a source other than the local library that does not name a track (see
+    ``is_expandable_uri``) is browsed, and the tracks it lists are what is added,
+    each with the service it reports (or the given one); a URI listing no track, and
+    any other URI, is added as itself. A browse the host does not answer ends the
+    command with an error.
+
+    Args:
+        ctx: Click context object holding the shared options
+        uri: The URI to be added
+        service: The service the URI belongs to, when given
+
+    Returns:
+        The URI of each item to add and the service it belongs to (None when
+        derived from the URI at sending time)
+    """
+    if not is_expandable_uri(uri):
+        debug(f'"{uri}" names a track, or the host expands it: added as itself')
+        return [(uri, service)]
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri))
+    tracks = [
+        (item.uri, item.service if item.service is not None else service)
+        for item in results.items
+        if item.kind == SearchResultItemKind.TRACK and item.uri is not None
+    ]
+    if not tracks:
+        debug(f'"{uri}" lists no track: added as itself')
+        return [(uri, service)]
+    label = "track" if len(tracks) == 1 else "tracks"
+    info(f'Adding the {len(tracks)} {label} listed at "{uri}"')
+    return tracks
 
 
 def read_queue_log(path: str) -> dict[str, Any] | None:
@@ -2001,6 +2797,38 @@ def read_queue_log(path: str) -> dict[str, Any] | None:
     if not isinstance(tracks, list) or not all(isinstance(track, dict) for track in tracks):
         return None
     return data
+
+
+def render_browse_results(
+    ctx: click.Context, results: BrowseResults, output_format: str, print_uri: bool
+) -> None:
+    """Print the content a browse listed, in the requested format.
+
+    The raw format, and the machine-readable mode, print the payload of the host as it
+    answered it; the table numbers the named items, with their URIs when asked; the
+    json and pretty formats print the navigation: the info, the lists, and the
+    previous URI.
+
+    Args:
+        ctx: Click context object holding the shared options
+        results: The content listed, filtered and limited as the command wants it
+        output_format: The -F/--format option value
+        print_uri: Whether the table prints the URI of each item
+    """
+    if ctx.obj["machine_readable"] or output_format == "raw":
+        output = json.dumps(results.raw)
+    else:
+        info = results.info.model_dump(by_alias=True) if results.info else None
+        lists = [result_list.model_dump(by_alias=True) for result_list in results.lists]
+        if output_format == "table":
+            output = format_browse_results_as_table(lists, info, print_uri)
+        else:
+            navigation = {"info": info, "lists": lists, "prev": results.prev}
+            if output_format == "json":
+                output = json.dumps(navigation, indent=2)
+            else:  # pretty
+                output = json.dumps(navigation, indent=4, sort_keys=True, ensure_ascii=False)
+    echo_data(ctx, output)
 
 
 def render_fields(
@@ -2048,6 +2876,64 @@ def render_fields(
         else:  # pretty
             output = format_as_pretty(filtered, position_starting_at_one)
 
+    echo_data(ctx, output)
+
+
+def render_items(
+    ctx: click.Context,
+    payload: dict[str, Any],
+    items: list[dict[str, Any]],
+    fields: str,
+    output_format: str,
+    short_fields: list[str],
+    heading: str,
+    name_key: str = "name",
+) -> None:
+    """Print a list of named items (e.g., the music sources) in the requested format.
+
+    The raw format prints the payload the items came from, as it is; the other
+    formats keep the selected fields of each item.
+
+    Args:
+        ctx: Click context object holding the shared options
+        payload: The payload the items came from, printed by the raw format
+        items: The items, as the Volumio instance reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+        short_fields: The keys the SHORT keyword keeps
+        heading: The heading of the table format
+        name_key: The key holding the name heading the block of each item in the table
+    """
+    if output_format == "raw":
+        output = json.dumps(payload)
+    else:
+        filtered = filter_items_fields(items, fields, short_fields)
+        if output_format == "json":
+            output = json.dumps(filtered, indent=2)
+        elif output_format == "table":
+            output = format_items_as_table(filtered, heading, name_key)
+        else:  # pretty
+            output = json.dumps(filtered, indent=4, sort_keys=True, ensure_ascii=False)
+    echo_data(ctx, output)
+
+
+def render_names(ctx: click.Context, names: list[Any], output_format: str, heading: str) -> None:
+    """Print a list of names (e.g., the playlists) in the requested format.
+
+    Args:
+        ctx: Click context object holding the shared options
+        names: The names to print
+        output_format: The -F/--format option value
+        heading: The heading of the table format
+    """
+    if output_format == "raw":
+        output = json.dumps(names)
+    elif output_format == "json":
+        output = json.dumps(names, indent=2)
+    elif output_format == "table":
+        output = format_names_as_table(names, heading)
+    else:  # pretty
+        output = json.dumps(names, indent=4, ensure_ascii=False)
     echo_data(ctx, output)
 
 
@@ -2290,6 +3176,53 @@ def render_story(
     echo_data(ctx, output)
 
 
+def resolve_available_plugin_url_or_exit(ctx: click.Context, name: str) -> str:
+    """Resolve the name of a plugin into the URL of its package in the store, or exit.
+
+    The store is what "system plugin available" prints, which the host lists only
+    when it is logged in to MyVolumio.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+
+    Returns:
+        The URL of the package of the plugin
+
+    Raises:
+        SystemExit: If the store does not list the plugin, or lists it without a URL
+    """
+    offered = fetch_or_exit(ctx, lambda c: c.available_plugins).find(name)
+    if offered is None or offered.url is None:
+        error(f'Plugin not found: "{name}" (see "system plugin available")')
+        sys.exit(1)
+    return offered.url
+
+
+def resolve_installed_plugin_or_exit(ctx: click.Context, name: str) -> PluginReference:
+    """Resolve the name of a plugin into what the plugin commands need, or exit.
+
+    The category comes from the plugins installed on the host, as "system plugin
+    list" prints them.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+
+    Returns:
+        The plugin, with its category
+
+    Raises:
+        SystemExit: If the host does not list the plugin as installed
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+    plugin = next((p for p in plugins if p.name == name), None)
+    if plugin is None or plugin.category is None:
+        error(f'Plugin not installed: "{name}" (see "system plugin list")')
+        sys.exit(1)
+    return PluginReference(name, plugin.category)
+
+
 def resolve_output_conflict(
     ctx: click.Context, output_file: str | None, output_directory: str | None
 ) -> tuple[str | None, str | None]:
@@ -2406,9 +3339,55 @@ def resolve_story_entity[E: MusicEntity](
     return entity_class(values[0], is_mbid=kind == "mbid")
 
 
-def resolve_command_path(
-    root: click.Group, ctx: click.Context, path: str
-) -> click.Command | None:
+def render_tracks(
+    ctx: click.Context,
+    payload: dict[str, Any],
+    tracks: list[dict[str, Any]],
+    fields: str,
+    output_format: str,
+    short_fields: list[str],
+    heading: str,
+) -> None:
+    """Print a list of tracks (queue items) in the requested format.
+
+    The raw format prints the payload the tracks came from, as it is. The other
+    formats keep the selected fields of each track, adding its position (which the
+    pretty and table formats display according to
+    ``--position-starting-at-one``/``--position-starting-at-zero``), and the pretty
+    format shows the durations as HH:MM:SS.
+
+    Args:
+        ctx: Click context object holding the shared options
+        payload: The payload the tracks came from, printed by the raw format
+        tracks: The tracks, as the Volumio instance reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+        short_fields: The list of keys to keep when ``fields`` is "short"
+        heading: The heading of the table format
+    """
+    position_starting_at_one = ctx.obj["position_starting_at_one"]
+    if output_format == "raw":
+        output = json.dumps(payload)
+    else:
+        filtered = filter_queue_fields({"queue": tracks}, fields, short_fields)
+        if output_format == "json":
+            output = json.dumps(filtered, indent=2)
+        elif output_format == "pretty":
+            pretty_tracks = []
+            for track in rebase_queue_positions(filtered, position_starting_at_one):
+                pretty_track = track.copy()
+                if isinstance(pretty_track.get("duration"), int):
+                    pretty_track["duration"] = format_duration(pretty_track["duration"])
+                pretty_tracks.append(pretty_track)
+            output = json.dumps(pretty_tracks, indent=4, sort_keys=True, ensure_ascii=False)
+        else:  # table
+            output = format_queue_as_table(
+                rebase_queue_positions(filtered, position_starting_at_one), heading
+            )
+    echo_data(ctx, output)
+
+
+def resolve_command_path(root: click.Group, ctx: click.Context, path: str) -> click.Command | None:
     """Resolve a space-separated command path against the command tree.
 
     Only built-in names are followed, so an alias cannot target another alias.
@@ -2438,6 +3417,40 @@ def sleep_between_api_calls(ctx: click.Context) -> None:
         ctx: Click context object holding the shared options
     """
     time.sleep(ctx.obj["sleep_before_next_api_call"])
+
+
+def wait_for_installed_plugin_or_exit(ctx: click.Context, name: str) -> PluginReference:
+    """Wait until the Volumio host lists a plugin as installed, or exit.
+
+    A Volumio host lists a plugin from the moment its files are in place, before its
+    install script has run, and reports whether it is enabled only once it registered
+    the plugin at the end of the install: the wait ends at the registration. The host
+    is asked every few seconds, for up to the configured number of times.
+
+    Args:
+        ctx: Click context object containing shared options
+        name: The name of the plugin, as it is identified
+
+    Returns:
+        The plugin, with its category
+
+    Raises:
+        SystemExit: If the host does not list the plugin as installed in time
+    """
+    retries = PLUGIN_INSTALL_WAIT_RETRIES
+    info(f'Waiting for the plugin "{name}" to be installed...')
+    for attempt in range(1, retries + 1):
+        plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+        plugin = next((p for p in plugins if p.name == name), None)
+        if plugin is not None and plugin.category is not None and plugin.enabled is not None:
+            info(f'Waiting for the plugin "{name}" to be installed... done')
+            return PluginReference(name, plugin.category)
+        debug(f'The host does not list the plugin "{name}" as installed yet ({attempt}/{retries})')
+        if attempt < retries:
+            time.sleep(PLUGIN_INSTALL_WAIT_INTERVAL)
+    seconds = retries * PLUGIN_INSTALL_WAIT_INTERVAL
+    error(f'Plugin not installed within {seconds:.0f} seconds: "{name}"')
+    sys.exit(1)
 
 
 def write_download_manifest(

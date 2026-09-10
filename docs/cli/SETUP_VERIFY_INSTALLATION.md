@@ -14,7 +14,7 @@ printing the version of the `volumito` tool itself:
 
 ```bash
 volumito version
-volumito, version 0.4.0
+volumito, version 0.5.0
 ```
 
 Check that you can connect to the Volumio host by issuing the `info` command:
@@ -24,21 +24,21 @@ volumito --host volumio.local info
 {
     "builddate": "Tue Mar 24 17:20:52 UTC 2026",
     "hardware": "pi",
-    "host": "http://192.168.1.122",
+    "host": "http://192.168.1.19",
     "hwUuid": "<REDACTED>",
     "id": "<REDACTED>",
     "isPremiumDevice": false,
     "isVolumioProduct": false,
-    "name": "Volumio3b",
+    "name": "volumitotester",
     "os": "12",
     "serviceName": "Volumio",
     "state": {
-        "albumart": "https://static.qobuz.com/images/covers/21/63/0743215086321_600.jpg",
-        "artist": "Giorgia",
+        "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
+        "artist": "Enrico Ruggeri",
         "mute": false,
-        "status": "stop",
-        "track": "Un Amore Da Favola",
-        "volume": 87
+        "status": "play",
+        "track": "Va tutto bene",
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
@@ -68,31 +68,4 @@ whose REST API is proxied to port 4567:
 
 ```bash
 volumito -H 192.168.1.3 -M 6599 -P 4567 ...
-```
-
-By default, the `volumito` CLI tool talks
-to the Volumio host through its REST API, synchronously.
-The `-C / --api-client` option allows you to select
-another of the clients of the `volumito` library:
-
-| Client                     | Value                    | Short Forms             | Required Extra    |
-| -------------------------- | ------------------------ | ----------------------- | ----------------- |
-| Asynchronous REST          | `asynchronous_rest`      | `async_rest`, `ar`      | `async`           |
-| Asynchronous WebSocket     | `asynchronous_websocket` | `async_websocket`, `aw` | `async_websocket` |
-| Synchronous REST (default) | `synchronous_rest`       | `sync_rest`, `sr`       | None              |
-| Synchronous WebSocket      | `synchronous_websocket`  | `sync_websocket`, `sw`  | `websocket`       |
-
-> [!NOTE]
-> To use any of the non-default clients,
-> you need to install `volumito` with the required extra
-> indicated in the above table, or the `all` extra.
->
-> For example, `pip install volumito[async_websocket]`
-> to run the next example.
-
-To issue the `info` command over the WebSocket API, asynchronously:
-
-```bash
-volumito -C asynchronous_websocket info
-volumito -C aw info
 ```

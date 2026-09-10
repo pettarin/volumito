@@ -29,7 +29,7 @@ file that looks like this:
 ```yaml
 # volumito CLI configuration file
 #
-# Generated with default values for version 0.4.0: edit as needed (and remove this comment)
+# Generated with default values for version 0.5.0: edit as needed (and remove this comment)
 
 aliases:
   # Aliases/shorthands for existing command paths (groups, commands, subcommands).
@@ -48,7 +48,6 @@ aliases:
   # exec: system execute
   # i: info
   # mlt: multiroom
-  # mltz: multiroom zones
   # mute: playback mute
   # next: playback next
   # not: notification
@@ -82,6 +81,10 @@ aliases:
   # ql: queue list
   # qr: queue replace
   # qs: queue status
+  # qt: queue track
+  # qta: queue track audio
+  # qtc: queue track albumart
+  # qti: queue track info
   # s: story
   # salb: story album
   # sart: story artist
@@ -95,10 +98,6 @@ aliases:
   # sysi: system info
   # sysp: system ping
   # sysv: system version
-  # t: track
-  # ta: track audio
-  # tc: track albumart
-  # ti: track info
   # toggle: playback toggle
   # unmute: playback unmute
   # vol: playback volume
@@ -117,14 +116,14 @@ downloads:
 
   # Directory to download into, created if missing (mutually exclusive with output-file);
   # "{timestamp}" in the path is replaced with the current UTC time (e.g., 20260726121314)
-  # output-directory: .                           # use the current working directory
-  # output-directory: /tmp/volumito               # use a fixed directory
-  # output-directory: /tmp/volumito/{timestamp}   # use a per-run timestamped directory
-  output-directory: null                          # no download by default
+  # output-directory: .                                     # use the current working directory
+  # output-directory: /tmp/volumito                         # use a fixed directory
+  # output-directory: /tmp/volumito/{timestamp}             # use a per-run timestamped directory
+  output-directory: null                                    # no download by default
 
   # Exact file path to download to (mutually exclusive with output-directory)
-  # output-file: /tmp/volumito.out      # use a fixed full path
-  output-file: null                     # no download by default
+  # output-file: /tmp/volumito.out                          # use a fixed full path
+  output-file: null                                         # no download by default
 
   # Overwrite the destination file if it already exists
   overwrite-existing-files: false
@@ -209,11 +208,15 @@ miscellaneous:
   # Check that each queue-download track's metadata are current before downloading it
   check-next-track: true
 
-  # Check that the playlist name exists before playing it
+  # Check that the playlist name exists before using it
   check-playlist-name: true
 
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
+
+  # When saving the queue as a playlist, or copying or renaming a playlist,
+  # overwrite an existing playlist of the destination name
+  overwrite-existing-playlist: false
 
   # After running the "system execute" command,
   # return the same exit code generated on the Volumio host
@@ -222,13 +225,24 @@ miscellaneous:
 
 notification:
   # A key here applies to the listen, register, and unregister commands;
-  # the keys of the options only "listen" has are under its own section
+  # the keys of the options only "listen" and "event listen" have
+  # are under their own sections
 
   # Path served by the local notification listener
   endpoint: /volumionotifications
 
   # Port the local notification listener binds to
   port: 3003
+
+  event-listen:
+    # Stop after receiving this number of events
+    count: null
+
+    # Stop after this number of seconds without receiving an event
+    idle-timeout: null
+
+    # Stop after listening for this number of seconds
+    timeout: null
 
   listen:
     # Stop after receiving this number of notifications
@@ -254,23 +268,61 @@ output:
   # A key here applies to all relevant commands;
   # overrides can be specified under the following sections:
   # - collection-browse
+  # - collection-favourite-list
+  # - collection-radio-list
   # - collection-search
+  # - collection-source-list
   # - collection-statistics
   # - command-list
-  # - multiroom-zones
+  # - multiroom-info
+  # - multiroom-set
+  # - multiroom-status
+  # - notification-event-listen
+  # - notification-event-request
   # - notification-list
   # - notification-listen
+  # - playback-infinity
+  # - playback-sleep
   # - playback-status
+  # - playlist-content
   # - playlist-list
+  # - queue-consume
   # - queue-list
+  # - queue-randomize
+  # - queue-repeat
   # - queue-status
   # - story-album
   # - story-artist
   # - story-credits
   # - story-label
   # - story-place
+  # - system-alarm-list
+  # - system-audio-device-list
+  # - system-audio-dsp
+  # - system-audio-inputs
+  # - system-audio-outputs
+  # - system-backup-create
   # - system-execute
   # - system-info
+  # - system-network-info
+  # - system-network-wireless
+  # - system-plugin-configuration
+  # - system-plugin-disable
+  # - system-plugin-enable
+  # - system-plugin-list
+  # - system-power-modes
+  # - system-share-discover
+  # - system-share-info
+  # - system-share-list
+  # - system-timezone-list
+  # - system-ui-background-list
+  # - system-ui-experience
+  # - system-ui-language-list
+  # - system-ui-privacy
+  # - system-ui-settings
+  # - system-update-channel-list
+  # - system-update-check
+  # - system-usb-list
   # - system-version
   # - track-info
 
@@ -301,6 +353,13 @@ output:
   # Index queue positions starting at one (true) or zero (false)
   position-starting-at-one: true
 
+  # After a playlist editing command like add or remove, print the resulting playlist content
+  print-resulting-content: true
+
+  # After a Web radio command like add or remove, print the resulting list of Web radios;
+  # after playlist create or delete, print the resulting list of playlists
+  print-resulting-list: true
+
   # After a playback or queue command like pause or clear, print the resulting playback status
   print-resulting-status: true
 
@@ -316,10 +375,25 @@ output:
 
     # Add your own overrides here
 
+  collection-favourite-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
+  collection-radio-list:
+    # Listing is meant for humans, so the table is its default format
+    format: table
+
+    # Add your own overrides here
+
   collection-search:
     # Searching is meant for humans, so the table is its default format
     format: table
 
+    # Add your own overrides here
+
+  collection-source-list:
     # Add your own overrides here
 
   collection-statistics:
@@ -334,7 +408,19 @@ output:
 
     # Add your own overrides here
 
-  multiroom-zones:
+  multiroom-info:
+    # Add your own overrides here
+
+  multiroom-set:
+    # Add your own overrides here
+
+  multiroom-status:
+    # Add your own overrides here
+
+  notification-event-listen:
+    # Add your own overrides here
+
+  notification-event-request:
     # Add your own overrides here
 
   notification-list:
@@ -343,13 +429,31 @@ output:
   notification-listen:
     # Add your own overrides here
 
+  playback-infinity:
+    # Add your own overrides here
+
+  playback-sleep:
+    # Add your own overrides here
+
   playback-status:
+    # Add your own overrides here
+
+  playlist-content:
     # Add your own overrides here
 
   playlist-list:
     # Add your own overrides here
 
+  queue-consume:
+    # Add your own overrides here
+
   queue-list:
+    # Add your own overrides here
+
+  queue-randomize:
+    # Add your own overrides here
+
+  queue-repeat:
     # Add your own overrides here
 
   queue-status:
@@ -370,10 +474,85 @@ output:
   story-place:
     # Add your own overrides here
 
+  system-alarm-list:
+    # Add your own overrides here
+
+  system-audio-device-list:
+    # Add your own overrides here
+
+  system-audio-dsp:
+    # Add your own overrides here
+
+  system-audio-inputs:
+    # Add your own overrides here
+
+  system-audio-outputs:
+    # Add your own overrides here
+
+  system-backup-create:
+    # Add your own overrides here
+
   system-execute:
     # Add your own overrides here
 
   system-info:
+    # Add your own overrides here
+
+  system-network-info:
+    # Add your own overrides here
+
+  system-network-wireless:
+    # Add your own overrides here
+
+  system-plugin-configuration:
+    # Add your own overrides here
+
+  system-plugin-disable:
+    # Add your own overrides here
+
+  system-plugin-enable:
+    # Add your own overrides here
+
+  system-plugin-list:
+    # Add your own overrides here
+
+  system-power-modes:
+    # Add your own overrides here
+
+  system-share-discover:
+    # Add your own overrides here
+
+  system-share-info:
+    # Add your own overrides here
+
+  system-share-list:
+    # Add your own overrides here
+
+  system-timezone-list:
+    # Add your own overrides here
+
+  system-ui-background-list:
+    # Add your own overrides here
+
+  system-ui-experience:
+    # Add your own overrides here
+
+  system-ui-language-list:
+    # Add your own overrides here
+
+  system-ui-privacy:
+    # Add your own overrides here
+
+  system-ui-settings:
+    # Add your own overrides here
+
+  system-update-channel-list:
+    # Add your own overrides here
+
+  system-update-check:
+    # Add your own overrides here
+
+  system-usb-list:
     # Add your own overrides here
 
   system-version:
@@ -412,11 +591,25 @@ volumio:
   # - false: error out
   allow-fallback-to-rest-api: false
 
+  # If a REST API client is selected,
+  # and a command that only the WebSocket API can satisfy is issued:
+  # - true: allow using a WebSocket API client (with a warning);
+  # - false: error out
+  allow-fallback-to-websocket-api: false
+
   # API client used to talk to the Volumio host, one of:
-  # - synchronous_rest (default; short forms: sync_rest, sr)
-  # - asynchronous_rest (required extra: async; short forms: async_rest, ar)
-  # - synchronous_websocket (required extra: websocket; short forms: sync_websocket, sw)
-  # - asynchronous_websocket (required extra: async_websocket; short forms: async_websocket, aw)
+  # - asynchronous_rest
+  #       short forms: async_rest, ar
+  #       required extra: async
+  # - asynchronous_websocket
+  #       short forms: async_websocket, aw
+  #       required extra: async_websocket
+  # - synchronous_rest
+  #       short forms: sync_rest, sr
+  #       no extra required (default)
+  # - synchronous_websocket
+  #       short forms: sync_websocket, sw
+  #       required extra: websocket
   api-client: synchronous_rest
 
   # Hostname or IP address of the Volumio host
@@ -462,7 +655,7 @@ volumio:
 ...
 ```
 
-correspond to the `--host` global option.
+corresponds to the `--host` global option.
 
 Similarly, the `notification.listen.count` key:
 
@@ -513,6 +706,9 @@ in the following order of decreasing priority:
 - the `/etc/` directory (only on POSIX systems);
 - the `/etc/volumito/` directory (only on POSIX systems).
 
+Regular `volumito.yaml` takes precedence over "hidden" `.volumito.yaml`
+if both are found in the same directory.
+
 The first configuration file found will be read and applied;
 additional configuration files found will be ignored.
 
@@ -520,20 +716,20 @@ You can list all probed paths by running the `configuration search` command:
 
 ```bash
 pwd
-/home/alberto/projects/volumito/volumito/docs/cli
+/home/user/projects/volumito/volumito/docs/cli
 ```
 
 ```bash
 volumito configuration search
 Configuration file locations, in probing order, in decreasing order of priority:
-  /home/alberto/projects/volumito/volumito/docs/cli/volumito.yaml
-  /home/alberto/projects/volumito/volumito/docs/cli/.volumito.yaml
-  /home/alberto/volumito.yaml (found, used)
-  /home/alberto/.volumito.yaml (found, NOT used)
-  /home/alberto/.volumito/volumito.yaml
-  /home/alberto/.volumito/.volumito.yaml
-  /home/alberto/.config/volumito/volumito.yaml
-  /home/alberto/.config/volumito/.volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/volumito.yaml
+  /home/user/projects/volumito/volumito/docs/cli/.volumito.yaml
+  /home/user/volumito.yaml (found, used)
+  /home/user/.volumito.yaml (found, NOT used)
+  /home/user/.volumito/volumito.yaml
+  /home/user/.volumito/.volumito.yaml
+  /home/user/.config/volumito/volumito.yaml
+  /home/user/.config/volumito/.volumito.yaml
   /etc/volumito.yaml
   /etc/.volumito.yaml
   /etc/volumito/volumito.yaml
@@ -546,7 +742,7 @@ Given the naming and search convention described above,
 it is advisable to store such a configuration file
 in the user home directory, as `~/volumito.yaml` or `~/.volumito.yaml`,
 so that it takes effect no matter the current directory
-from which `volumito` is run from,
+from which `volumito` is run,
 unless you prefer to have multiple per-directory configuration files
 for some reason.
 
@@ -554,7 +750,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-04T13:56:28.959Z] [INFO] Created configuration file "/home/alberto/volumito.yaml"
+[2026-09-10T13:41:03.171Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -564,8 +760,13 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-04T13:56:29.480Z] [ERRO] File already exists: "/home/alberto/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-10T13:41:03.720Z] [ERRO] File already exists: "/home/user/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
+
+> [!TIP]
+> Add the `--overwrite-existing-files` option,
+> or set the corresponding key in the configuration file,
+> to overwrite a file already existing at the specified path.
 
 After creating your configuration file,
 you might want to open it with your favorite text editor,
@@ -579,7 +780,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-09-04T13:56:30.001Z] [INFO] Created configuration file "/home/alberto/volumito3.yaml"
+[2026-09-10T13:41:04.287Z] [INFO] Created configuration file "/home/user/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -589,73 +790,9 @@ that it can be loaded correctly.
 To that end, use the `configuration check` command:
 
 ```bash
-volumito configuration check ~/.volumito.yaml
-aliases.c = collection
-aliases.cb = collection browse
-aliases.cmd = command
-aliases.cmda = command alias
-aliases.cmdl = command list
-aliases.conf = configuration
-aliases.cs = collection search
-aliases.exec = system execute
-aliases.i = info
-aliases.mlt = multiroom
-aliases.mltz = multiroom zones
-aliases.mute = playback mute
-aliases.next = playback next
-aliases.not = notification
-aliases.notl = notification list
-aliases.notlis = notification listen
-aliases.notr = notification register
-aliases.notu = notification unregister
-aliases.p = playback
-aliases.pause = playback pause
-aliases.ping = system ping
-aliases.pl = playlist
-aliases.play = playback play
-aliases.pld = playlist download
-aliases.pll = playlist list
-aliases.plp = playlist play
-aliases.pm = playback mute
-aliases.pnext = playback next
-aliases.ppause = playback pause
-aliases.pplay = playback play
-aliases.pprev = playback previous
-aliases.prev = playback previous
-aliases.ps = playback status
-aliases.pseek = playback seek
-aliases.pstop = playback stop
-aliases.pt = playback toggle
-aliases.pu = playback unmute
-aliases.pv = playback volume
-aliases.q = queue
-aliases.qc = queue clear
-aliases.qd = queue download
-aliases.ql = queue list
-aliases.qr = queue replace
-aliases.qs = queue status
-aliases.s = story
-aliases.salb = story album
-aliases.sart = story artist
-aliases.scre = story credits
-aliases.seek = playback seek
-aliases.slab = story label
-aliases.spla = story place
-aliases.stop = playback stop
-aliases.sys = system
-aliases.syse = system execute
-aliases.sysi = system info
-aliases.sysp = system ping
-aliases.sysv = system version
-aliases.t = track
-aliases.ta = track audio
-aliases.tc = track albumart
-aliases.ti = track info
-aliases.toggle = playback toggle
-aliases.unmute = playback unmute
-aliases.vol = playback volume
+volumito configuration check ~/volumito.yaml
 downloads.create-download-manifest = True
-downloads.output-directory = /tmp/o
+downloads.output-directory = None
 downloads.output-file = None
 downloads.overwrite-existing-files = False
 downloads.playlist-download.albumart-file-name-template = 000___{album}___{artist}.{extension}
@@ -679,8 +816,12 @@ miscellaneous.allow-local-file-rename = False
 miscellaneous.check-next-track = True
 miscellaneous.check-playlist-name = True
 miscellaneous.check-seek-position = True
+miscellaneous.overwrite-existing-playlist = False
 miscellaneous.propagate-remote-exit-code = True
 notification.endpoint = /volumionotifications
+notification.event-listen.count = None
+notification.event-listen.idle-timeout = None
+notification.event-listen.timeout = None
 notification.listen.count = None
 notification.listen.idle-timeout = None
 notification.listen.register-url = False
@@ -689,6 +830,8 @@ notification.listen.timeout = None
 notification.listen.unregister-url-on-exit = True
 notification.port = 3003
 output.collection-browse.format = table
+output.collection-favourite-list.format = table
+output.collection-radio-list.format = table
 output.collection-search.format = table
 output.color = True
 output.fields = SHORT
@@ -696,6 +839,8 @@ output.format = pretty
 output.machine-readable = False
 output.pager = False
 output.position-starting-at-one = True
+output.print-resulting-content = True
+output.print-resulting-list = True
 output.print-resulting-status = True
 output.strict-parsing-configuration-file = False
 output.verbose = False
@@ -706,6 +851,7 @@ timeouts.retries-on-unexpected-state = 3
 timeouts.sleep-before-next-api-call = 2.0
 timeouts.websocket-timeout = 5.0
 volumio.allow-fallback-to-rest-api = False
+volumio.allow-fallback-to-websocket-api = False
 volumio.api-client = synchronous_rest
 volumio.host = volumio.local
 volumio.mpd-port = 6600
@@ -715,7 +861,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-04T13:56:30.530Z] [INFO] Configuration file "/home/alberto/.volumito.yaml" is valid.
+[2026-09-10T13:41:04.840Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -754,8 +900,12 @@ miscellaneous.allow-local-file-rename = False
 miscellaneous.check-next-track = True
 miscellaneous.check-playlist-name = True
 miscellaneous.check-seek-position = True
+miscellaneous.overwrite-existing-playlist = False
 miscellaneous.propagate-remote-exit-code = True
 notification.endpoint = /volumionotifications
+notification.event-listen.count = None
+notification.event-listen.idle-timeout = None
+notification.event-listen.timeout = None
 notification.listen.count = None
 notification.listen.idle-timeout = None
 notification.listen.register-url = False
@@ -764,6 +914,8 @@ notification.listen.timeout = None
 notification.listen.unregister-url-on-exit = True
 notification.port = 3003
 output.collection-browse.format = table
+output.collection-favourite-list.format = table
+output.collection-radio-list.format = table
 output.collection-search.format = table
 output.color = True
 output.fields = SHORT
@@ -771,6 +923,8 @@ output.format = pretty
 output.machine-readable = False
 output.pager = False
 output.position-starting-at-one = True
+output.print-resulting-content = True
+output.print-resulting-list = True
 output.print-resulting-status = True
 output.strict-parsing-configuration-file = False
 output.verbose = False
@@ -781,6 +935,7 @@ timeouts.retries-on-unexpected-state = 3
 timeouts.sleep-before-next-api-call = 2.0
 timeouts.websocket-timeout = 5.0
 volumio.allow-fallback-to-rest-api = False
+volumio.allow-fallback-to-websocket-api = False
 volumio.api-client = synchronous_rest
 volumio.host = volumio.local
 volumio.mpd-port = 6600
@@ -790,7 +945,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-04T13:56:31.084Z] [INFO] Configuration file "/home/alberto/volumito.yaml" is valid.
+[2026-09-10T13:41:05.455Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -802,20 +957,21 @@ for all the commands and options.
 To achieve that, the `-i / --ignore-configuration-file` global option is available:
 
 ```bash
-volumito -i -H volumio3b.local playback status
+volumito -i playback status
 {
-    "album": "Alice: Solo Grandi Successi",
-    "artist": "Alice",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:48",
+    "channels": 2,
+    "duration": "00:04:08",
     "mute": false,
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "seek": "00:00:00.000",
-    "status": "stop",
-    "title": "Chan-Son Egocentrique",
-    "trackType": "qobuz",
-    "volume": 50
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:38.214",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "flac",
+    "volume": 20
 }
 ```
 
@@ -824,64 +980,74 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Mangio Troppa Cioccolata",
-    "artist": "Giorgia",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:34",
+    "channels": 2,
+    "duration": "00:04:08",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:01.290",
-    "status": "stop",
-    "title": "Un Amore Da Favola",
-    "trackType": "qobuz",
-    "volume": 87
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:38.714",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "flac",
+    "volume": 20
 }
-[2026-09-04T13:56:32.210Z] [DEBU] Using configuration file: "/home/alberto/volumito.yaml"
-[2026-09-04T13:56:32.211Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-04T13:56:32.211Z] [DEBU] Initializing the REST API client...
-[2026-09-04T13:56:32.211Z] [DEBU] Initializing the REST API client... done
-[2026-09-04T13:56:32.211Z] [DEBU] Using the synchronous REST API client
-[2026-09-04T13:56:32.211Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-04T13:56:32.231Z] [DEBU] Response status: 200
-[2026-09-04T13:56:32.231Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-04T13:56:32.233Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-04T13:56:32.234Z] [DEBU] Successfully retrieved state
+[2026-09-10T13:41:06.587Z] [DEBU] Using configuration file: "/home/user/volumito.yaml"
+[2026-09-10T13:41:06.588Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T13:41:06.588Z] [DEBU] Initializing the Synchronous REST API client...
+[2026-09-10T13:41:06.588Z] [DEBU] Initializing the Synchronous REST API client... done
+[2026-09-10T13:41:06.588Z] [DEBU] Using the Synchronous REST API client
+[2026-09-10T13:41:06.588Z] [DEBU] Opening the HTTP session...
+[2026-09-10T13:41:06.588Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T13:41:06.588Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-10T13:41:06.605Z] [DEBU] Response status: 200
+[2026-09-10T13:41:06.605Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-10T13:41:06.608Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T13:41:06.608Z] [DEBU] Successfully retrieved state
+[2026-09-10T13:41:06.608Z] [DEBU] Closing the HTTP session...
+[2026-09-10T13:41:06.608Z] [DEBU] Closing the HTTP session... done
 ```
 
 ```bash
-volumito -v -i -H volumio3b.local playback status
+volumito -v -i playback status
 {
-    "album": "Alice: Solo Grandi Successi",
-    "artist": "Alice",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:03:48",
+    "channels": 2,
+    "duration": "00:04:08",
     "mute": false,
     "position": 1,
-    "samplerate": "44 KHz",
-    "seek": "00:00:01.193",
-    "status": "stop",
-    "title": "Chan-Son Egocentrique",
-    "trackType": "qobuz",
-    "volume": 50
+    "samplerate": "44.1 kHz",
+    "seek": "00:00:39.346",
+    "status": "play",
+    "title": "La Vie En Rouge",
+    "trackType": "flac",
+    "volume": 20
 }
-[2026-09-04T13:56:32.751Z] [DEBU] Ignoring configuration files
-[2026-09-04T13:56:32.751Z] [DEBU] Connecting to http://volumio3b.local:3000...
-[2026-09-04T13:56:32.751Z] [DEBU] Initializing the REST API client...
-[2026-09-04T13:56:32.751Z] [DEBU] Initializing the REST API client... done
-[2026-09-04T13:56:32.751Z] [DEBU] Using the synchronous REST API client
-[2026-09-04T13:56:32.752Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState...
-[2026-09-04T13:56:32.762Z] [DEBU] Response status: 200
-[2026-09-04T13:56:32.762Z] [DEBU] Requesting GET http://volumio3b.local:3000/api/v1/getState... done
-[2026-09-04T13:56:32.765Z] [DEBU] Connecting to http://volumio3b.local:3000... done
-[2026-09-04T13:56:32.765Z] [DEBU] Successfully retrieved state
+[2026-09-10T13:41:07.130Z] [DEBU] Ignoring configuration files
+[2026-09-10T13:41:07.130Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T13:41:07.130Z] [DEBU] Initializing the Synchronous REST API client...
+[2026-09-10T13:41:07.131Z] [DEBU] Initializing the Synchronous REST API client... done
+[2026-09-10T13:41:07.131Z] [DEBU] Using the Synchronous REST API client
+[2026-09-10T13:41:07.131Z] [DEBU] Opening the HTTP session...
+[2026-09-10T13:41:07.131Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T13:41:07.131Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-10T13:41:07.150Z] [DEBU] Response status: 200
+[2026-09-10T13:41:07.150Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-10T13:41:07.153Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T13:41:07.153Z] [DEBU] Successfully retrieved state
+[2026-09-10T13:41:07.153Z] [DEBU] Closing the HTTP session...
+[2026-09-10T13:41:07.153Z] [DEBU] Closing the HTTP session... done
 ```
 
 #### Priority
 
 The value of an option is decided by, in order of descending priority:
 
-- the explicit command line option  (e.g., `--host volumioexplicit.local`);
+- the explicit command line option (e.g., `--host volumioexplicit.local`);
 - the configuration file value (e.g., `volumio.host = anothervolumio.local`),
   if present, and unless the `-i / --ignore-configuration-file` option is issued;
 - the value hardcoded in the implementation (e.g., `volumio.local`).

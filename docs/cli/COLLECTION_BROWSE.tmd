@@ -3,7 +3,7 @@
 The `collection browse` command allows browsing the music sources
 that are currently enabled in the Volumio host.
 
-For the sake of clarity, the following examples
+For the sake of clarity, most of the following examples
 issue the `--limit 5` option to show only the top five results.
 Omit it if you want the full list.
 
@@ -14,10 +14,14 @@ as demonstrated by the following examples.
 
 ### Browse Tracks Of A Qobuz Album By Artist
 
-Browse Qobuz -> My Artists -> "Enrico Ruggeri" (artist) -> "Polvere" (album):
+Browse
+Qobuz ->
+My Artists ->
+"Enrico Ruggeri" (artist) ->
+"Polvere" (album):
 
 ```bash lucio command=execute
-volumito collection browse --limit 5
+volumito collection browse
 ```
 
 ```bash lucio command=execute
@@ -29,19 +33,26 @@ volumito collection browse --limit 5 "qobuz://myartists"
 ```
 
 ```bash lucio command=execute
+# Enrico Ruggeri (artist)
 volumito collection browse --limit 5 "qobuz://artist/178398"
 ```
 
 ```bash lucio command=execute
+# Polvere (album)
 volumito collection browse --limit 5 "qobuz://album/0090317058467"
 ```
 
 ### Browse Local Resources
 
-Browse local resources stored in `/mnt/INTERNAL/` -> "Mango" (artist) -> "Sirtaki" (album):
+Browse local resources stored in
+`music-library` ->
+`INTERNAL` (i.e., `/mnt/INTERNAL/` on the Volumio host) ->
+`music` (root directory) ->
+"Mango" (artist) ->
+"Sirtaki" (album):
 
 ```bash lucio command=execute
-volumito collection browse --limit 5
+volumito collection browse
 ```
 
 ```bash lucio command=execute
@@ -57,14 +68,12 @@ volumito collection browse --limit 5 "music-library/INTERNAL/music"
 ```
 
 ```bash lucio command=execute
-volumito collection browse --limit 5 "music-library/INTERNAL/music"
-```
-
-```bash lucio command=execute
+# Mango (artist)
 volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango"
 ```
 
 ```bash lucio command=execute
+# Sirtaki (album)
 volumito collection browse --limit 5 "music-library/INTERNAL/music/Mango/Sirtaki"
 ```
 
@@ -90,13 +99,3 @@ Local resources work as well:
 ```bash lucio command=execute
 volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
 ```
-
-### Collection Statistics
-
-The `collection statistics` command prints some statistics
-of the music collection:
-
-```bash lucio command=execute
-volumito collection statistics
-```
-

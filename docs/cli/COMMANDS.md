@@ -12,8 +12,24 @@ volumito command list
 volumito
     collection (c)
         browse (cb)
+        directory
+            delete
+        favourite
+            add
+            list
+            play
+            remove
+        radio
+            add
+            list
+            remove
         search (cs)
+        source
+            disable
+            enable
+            list
         statistics
+        update
     command (cmd)
         alias (cmda)
         list (cmdl)
@@ -23,13 +39,24 @@ volumito
         search
     info (i)
     multiroom (mlt)
-        zones (mltz)
+        client
+        info
+        server
+        set
+        single
+        status
+        write
     notification (not)
+        event
+            emit
+            listen
+            request
         list (notl)
         listen (notlis)
         register (notr)
         unregister (notu)
     playback (p)
+        infinity
         is_muted
         is_paused
         is_playing
@@ -40,25 +67,43 @@ volumito
         play (play, pplay)
         previous (pprev, prev)
         seek (pseek, seek)
+        sleep
         status (ps)
         stop (pstop, stop)
         toggle (pt, toggle)
         unmute (pu, unmute)
         volume (pv, vol)
     playlist (pl)
+        add
+        content
+        copy
+        create
+        delete
         download (pld)
+        enqueue
         list (pll)
         play (plp)
+        remove
+        rename
     queue (q)
+        add
         clear (qc)
+        consume
         download (qd)
-        has_next
-        has_previous
         list (ql)
+        move
         randomize
+        remove
         repeat
         replace (qr)
+        save
         status (qs)
+        track (qt)
+            albumart (qtc)
+            audio (qta)
+            has_next
+            has_previous
+            info (qti)
     scp
         get
         put
@@ -69,14 +114,92 @@ volumito
         label (slab)
         place (spla)
     system (sys)
+        alarm
+            add
+            clear
+            disable
+            enable
+            list
+            remove
+            set
+        audio
+            device
+                list
+                set
+            disable
+            dsp
+            enable
+            inputs
+            outputs
+            pause
+            play
+            volume
+        backup
+            create
+            restore
+            save
         execute (exec, syse)
         info (sysi)
+        name
+        network
+            info
+            join
+            wireless
         ping (ping, sysp)
+        plugin
+            available
+            configuration
+            disable
+            enable
+            install
+            list
+            uninstall
+            update
+        power
+            modes
+            reboot
+            shutdown
+            standby
+        share
+            add
+            discover
+            edit
+            info
+            list
+            remove
+        timezone
+            list
+            set
+        ui
+            background
+                delete
+                list
+                set
+            experience
+            language
+                list
+                set
+            privacy
+            settings
+        update
+            automatic
+                disable
+                enable
+            channel
+                list
+                set
+            check
+            install
+        usb
+            eject
+            list
         version (sysv)
-    track (t)
-        albumart (tc)
-        audio (ta)
-        info (ti)
+    track
+        albumart
+        audio
+        has_next
+        has_previous
+        info
     version
 ```
 
@@ -93,37 +216,37 @@ volumito
 > of your configuration file.
 
 Aliases appear within parentheses next to the corresponding command,
-for instance `ti` for `track info`, so that
+for instance `qti` for `queue track info`, so that
 
 ```bash
-volumito track info
+volumito queue track info
 {
-    "album": "Titanic",
-    "artist": "Francesco De Gregori",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:16",
-    "position": 5,
-    "samplerate": "44 KHz",
-    "title": "Titanic",
-    "trackType": "qobuz"
+    "duration": "00:04:08",
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac"
 }
 ```
 
 and
 
 ```bash
-volumito ti
+volumito qti
 {
-    "album": "Titanic",
-    "artist": "Francesco De Gregori",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:04:16",
-    "position": 5,
-    "samplerate": "44 KHz",
-    "title": "Titanic",
-    "trackType": "qobuz"
+    "duration": "00:04:08",
+    "position": 1,
+    "samplerate": "44.1 kHz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac"
 }
 ```
 
@@ -150,7 +273,6 @@ cs : collection search
 exec : system execute
 i : info
 mlt : multiroom
-mltz : multiroom zones
 mute : playback mute
 next : playback next
 not : notification
@@ -184,6 +306,10 @@ qd : queue download
 ql : queue list
 qr : queue replace
 qs : queue status
+qt : queue track
+qta : queue track audio
+qtc : queue track albumart
+qti : queue track info
 s : story
 salb : story album
 sart : story artist
@@ -197,10 +323,6 @@ syse : system execute
 sysi : system info
 sysp : system ping
 sysv : system version
-t : track
-ta : track audio
-tc : track albumart
-ti : track info
 toggle : playback toggle
 unmute : playback unmute
 vol : playback volume

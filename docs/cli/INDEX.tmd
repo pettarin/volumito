@@ -16,24 +16,31 @@ This document describes the `volumito` command-line (CLI) tool.
 - [Verify Your Installation](#verify-your-installation)
 - [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 - [How To Get Help](#how-to-get-help)
+- [Types Of Clients](#types-of-clients)
 - [Control The Playback](#control-the-playback)
   - [Playback Status](#playback-status)
   - [Pause And Stop](#pause-and-stop)
   - [Play Track At A Given Position](#play-track-at-a-given-position)
-  - [Seeking](#seeking)
+  - [Play Previous Or Next Track](#play-previous-or-next-track)
+  - [Seek Within The Current Track](#seek-within-the-current-track)
   - [Volume Control](#volume-control)
+  - [Playback Sleep](#playback-sleep)
+  - [Infinity Playback](#infinity-playback)
   - [Playback Help](#playback-help)
 - [Inspect The Current Track](#inspect-the-current-track)
   - [Track Info](#track-info)
+  - [Track Has Previous, Has Next](#track-has-previous-has-next)
   - [Track Help](#track-help)
 - [Inspect The Current Queue](#inspect-the-current-queue)
   - [Queue List](#queue-list)
   - [Queue Status](#queue-status)
-  - [Queue Clear](#queue-clear)
   - [Queue Help](#queue-help)
+- [Clear The Current Queue](#clear-the-current-queue)
 - [Playlists](#playlists)
   - [List All Playlists](#list-all-playlists)
+  - [List The Contents Of A Playlist](#list-the-contents-of-a-playlist)
   - [Play A Playlist](#play-a-playlist)
+  - [Enqueue A Playlist](#enqueue-a-playlist)
   - [Playlist Help](#playlist-help)
 - [Search The Collection](#search-the-collection)
   - [List Artists Matching A Query](#list-artists-matching-a-query)
@@ -47,20 +54,42 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
-  - [Collection Statistics](#collection-statistics)
-- [Download](#download)
-  - [Download Track](#download-track)
-    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
-    - [Download Track Audio](#download-track-audio)
-  - [Download Queue](#download-queue)
-  - [Download Playlist](#download-playlist)
 - [Stories](#stories)
   - [Album Story](#album-story)
   - [Album Credits](#album-credits)
   - [Artist Story](#artist-story)
   - [Label Story](#label-story)
   - [Place Story](#place-story)
+- [Edit The Current Queue](#edit-the-current-queue)
+  - [Add An Item](#add-an-item-queue)
+  - [Remove An Item](#remove-an-item-queue)
+  - [Change Position Of An Item](#change-position-of-an-item)
+  - [Save The Queue As A Playlist](#save-the-queue-as-a-playlist)
+- [Edit Playlists](#edit-playlists)
+  - [Create An Empty Playlist](#create-an-empty-playlist)
+  - [Add An Item](#add-an-item-playlist)
+  - [Remove An Item](#remove-an-item-playlist)
+  - [Copy A Playlist](#copy-a-playlist)
+  - [Rename A Playlist](#rename-a-playlist)
+  - [Delete A Playlist](#delete-a-playlist)
+- [Download](#download)
+  - [Download Track](#download-track)
+    - [Download Track Albumart (Cover)](#download-track-albumart-cover)
+    - [Download Track Audio](#download-track-audio)
+  - [Download Queue](#download-queue)
+  - [Download Playlist](#download-playlist)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Collection Help](#collection-help)
+  - [Collection Radio](#collection-radio)
+    - [Collection Radio List](#collection-radio-list)
+    - [Collection Radio Add](#collection-radio-add)
+    - [Collection Radio Remove](#collection-radio-remove)
+  - [Collection Source](#collection-source)
+    - [Collection Source List](#collection-source-list)
+    - [Collection Source Disable](#collection-source-disable)
+    - [Collection Source Enable](#collection-source-enable)
+  - [Collection Statistics](#collection-statistics)
+  - [Collection Update](#collection-update)
   - [Command Discovery](#command-discovery)
     - [List All The Commands](#list-all-the-commands)
     - [List All The Aliases](#list-all-the-aliases)
@@ -72,12 +101,14 @@ This document describes the `volumito` command-line (CLI) tool.
     - [Check A Configuration File](#check-a-configuration-file)
     - [Ignore All Configuration Files](#ignore-all-configuration-files)
     - [Priority](#priority)
-  - [Multiroom Zones](#multiroom-zones)
-  - [Notifications](#notifications)
+  - [Multiroom Audio](#multiroom-audio)
+    - [Multiroom Help](#multiroom-help)
+  - [Notifications (REST API)](#notifications-rest-api)
     - [Notification List](#notification-list)
     - [Notification Register](#notification-register)
     - [Notification Unregister](#notification-unregister)
     - [Notification Listen](#notification-listen)
+  - [Notifications (WebSocket API)](#notifications-websocket-api)
   - [Copying Files With SCP](#copying-files-with-scp)
     - [SSH Connection Parameters](#ssh-connection-parameters)
     - [SCP Put](#scp-put)
@@ -87,6 +118,7 @@ This document describes the `volumito` command-line (CLI) tool.
     - [System Ping](#system-ping)
     - [System Version](#system-version)
     - [System Execute](#system-execute)
+    - [System Help](#system-help)
 
 
 ```markdown lucio command=include path="./SETUP_VERIFY_INSTALLATION.md" style=literal
@@ -97,35 +129,39 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 
-```markdown lucio command=include path="./GET_HELP.md" style=literal
+```markdown lucio command=include path="./HELP.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./CONTROL_PLAYBACK.md" style=literal
+```markdown lucio command=include path="./API_CLIENT.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./INSPECT_CURRENT_TRACK.md" style=literal
+```markdown lucio command=include path="./PLAYBACK.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./INSPECT_CURRENT_QUEUE.md" style=literal
+```markdown lucio command=include path="./QUEUE_TRACK.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./PLAYLISTS.md" style=literal
+```markdown lucio command=include path="./QUEUE_LIST.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./SEARCH_COLLECTION.md" style=literal
+```markdown lucio command=include path="./QUEUE_CLEAR.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./BROWSE_COLLECTION.md" style=literal
+```markdown lucio command=include path="./PLAYLIST.md" style=literal
 ```
 
 
-```markdown lucio command=include path="./DOWNLOAD.md" style=literal
+```markdown lucio command=include path="./COLLECTION_SEARCH.md" style=literal
+```
+
+
+```markdown lucio command=include path="./COLLECTION_BROWSE.md" style=literal
 ```
 
 
@@ -133,7 +169,34 @@ This document describes the `volumito` command-line (CLI) tool.
 ```
 
 
+```markdown lucio command=include path="./EDIT_QUEUE.md" style=literal
+```
+
+
+```markdown lucio command=include path="./EDIT_PLAYLIST.md" style=literal
+```
+
+
+```markdown lucio command=include path="./DOWNLOAD.md" style=literal
+```
+
+
 ## Miscellaneous Commands
+
+```markdown lucio command=include path="./COLLECTION_HELP.md" style=literal
+```
+
+```markdown lucio command=include path="./COLLECTION_RADIO.md" style=literal
+```
+
+```markdown lucio command=include path="./COLLECTION_SOURCE.md" style=literal
+```
+
+```markdown lucio command=include path="./COLLECTION_STATISTICS.md" style=literal
+```
+
+```markdown lucio command=include path="./COLLECTION_UPDATE.md" style=literal
+```
 
 ```markdown lucio command=include path="./COMMANDS.md" style=literal
 ```
@@ -144,7 +207,10 @@ This document describes the `volumito` command-line (CLI) tool.
 ```markdown lucio command=include path="./MULTIROOM.md" style=literal
 ```
 
-```markdown lucio command=include path="./NOTIFICATIONS.md" style=literal
+```markdown lucio command=include path="./NOTIFICATION_REST_API.md" style=literal
+```
+
+```markdown lucio command=include path="./NOTIFICATION_WEBSOCKET_API.md" style=literal
 ```
 
 ```markdown lucio command=include path="./SCP.md" style=literal
@@ -152,4 +218,3 @@ This document describes the `volumito` command-line (CLI) tool.
 
 ```markdown lucio command=include path="./SYSTEM.md" style=literal
 ```
-

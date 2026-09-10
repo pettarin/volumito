@@ -15,6 +15,9 @@ from volumito.clients import (
     Artist,
     AudioOutput,
     AudioOutputs,
+    AvailablePlugin,
+    AvailablePluginCategory,
+    AvailablePlugins,
     Background,
     Backgrounds,
     BrowseResults,
@@ -68,8 +71,10 @@ from volumito.clients import (
     SystemInfo,
     SystemVersion,
     Timezones,
+    UiBackground,
     UiConfig,
     UiSettings,
+    UpdateCheck,
     UpdaterChannel,
     UsbDrive,
     UsbDrives,
@@ -105,7 +110,7 @@ from volumito.clients import (
 # CLI installs its own), the records go nowhere, silently
 logging.getLogger("volumito").addHandler(logging.NullHandler())
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __author__ = "Alberto Pettarin"
 __email__ = "alberto@albertopettarin.it"
 
@@ -116,6 +121,9 @@ __all__ = [
     "Artist",
     "AudioOutput",
     "AudioOutputs",
+    "AvailablePlugin",
+    "AvailablePluginCategory",
+    "AvailablePlugins",
     "Background",
     "Backgrounds",
     "BrowseResults",
@@ -169,8 +177,10 @@ __all__ = [
     "SystemInfo",
     "SystemVersion",
     "Timezones",
+    "UiBackground",
     "UiConfig",
     "UiSettings",
+    "UpdateCheck",
     "UpdaterChannel",
     "UsbDrive",
     "UsbDrives",

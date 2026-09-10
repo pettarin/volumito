@@ -1,0 +1,49 @@
+### Collection Radio
+
+The `collection radio` command group allows listing, adding and removing
+user-defined Web radio stations.
+
+#### Collection Radio List
+
+List all the user-defined Web radio stations:
+
+```bash lucio command=execute
+volumito collection radio list
+```
+
+#### Collection Radio Add
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+To add a user-defined Web radio station:
+
+```bash lucio command=execute
+volumito -C aw collection radio add "Radio Volumito Docs" "https://some.url"
+```
+
+#### Collection Radio Remove
+
+```markdown lucio command=include path="./inc/ONLY_WEBSOCKET_API_CLIENT.md" style=literal
+```
+
+To remove a user-defined Web radio station:
+
+```bash lucio command=execute
+volumito -C aw collection radio remove "Radio Volumito Docs"
+```
+
+> [!NOTE]
+> It seems that the underlying WebSocket API refuses to remove
+> the last radio from the list, which would leave the latter empty.
+> In this case, `volumito` issues the following warning:
+>
+> ```bash
+> volumito -C aw collection radio remove "Radio Bella&Monella"
+> [2026-09-10T13:49:29.089Z] [INFO] Command 'remove web radio "Radio Bella&Monella"' executed successfully
+> [2026-09-10T13:49:29.117Z] [ERRO] The Volumio host still lists the Web radio "Radio Bella&Monella" after the removal: a MyVolumio cloud device does not save an empty list of Web radios.
+> ```
+>
+> If you really want to remove a Web radio station,
+> create another dummy one (`collection radio add DUMMY_NAME DUMMY_URL`),
+> and remove the intended one (`collection radio remove NAME`).

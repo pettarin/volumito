@@ -8,7 +8,10 @@ import http.client
 import json
 import os
 import sys
-from datetime import UTC, datetime
+import time
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from queue import Empty, Queue
 from typing import Any, NoReturn
 
 import click
@@ -21,10 +24,15 @@ from volumito.cli.click_helpers import (
     OnOffParamType,
     SchemeParamType,
     SeekParamType,
+    SleepTimerParamType,
     VolumeParamType,
     VolumioVersionParamType,
     alias_problems,
     aliases_by_command_path,
+    api_position,
+    backup_document,
+    browse_kinds,
+    check_playlist_name_or_exit,
     command_nodes,
     command_nodes_flattened,
     configuration_file_callback,
@@ -46,64 +54,120 @@ from volumito.cli.click_helpers import (
     option_albumart_file_name_template,
     option_albums_only,
     option_all_notifications,
+    option_all_occurrences,
     option_allow_local_file_rename,
     option_artist,
     option_artists_only,
     option_audio_file_name_template,
     option_autocompose_url,
+    option_backup_output_file,
     option_best_result_only,
+    option_by_uid,
+    option_cached,
     option_check_next_track,
     option_check_playlist_name,
     option_count,
     option_create_download_manifest,
+    option_cue_track,
     option_current_track,
+    option_current_track_album,
+    option_current_track_artist,
+    option_disabled,
+    option_end_time,
     option_endpoint,
+    option_expand_tracks,
+    option_extended,
     option_fields,
     option_file_name_template,
     option_format,
     option_format_table,
     option_idle_timeout,
+    option_ignore_integrity_check,
+    option_import_from_file,
+    option_item_album,
+    option_item_albumart,
+    option_item_title,
+    option_language_name,
+    option_last,
     option_limit,
     option_manifest_file,
+    option_next,
     option_number_retries_next_track,
     option_offset,
     option_only_tracks,
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
+    option_overwrite_existing_playlist,
     option_play,
+    option_play_added,
     option_playlist,
+    option_playlist_copy_position,
+    option_playlist_position,
     option_playlists_only,
     option_port,
     option_position,
+    option_print_resulting_content,
+    option_print_resulting_list,
+    option_print_resulting_playlists,
     option_print_resulting_status,
     option_print_uri,
     option_print_uri_toggle,
     option_propagate_remote_exit_code,
+    option_radio,
     option_recursive,
     option_register_url,
     option_register_url_full,
     option_replace_characters_in_file_names,
     option_replace_characters_in_file_names_with,
+    option_request_timeout,
+    option_rescan,
+    option_response_event,
     option_result_kinds,
+    option_root,
+    option_scan,
     option_service,
+    option_service_of_uri,
+    option_share_fstype,
+    option_share_name,
+    option_share_options,
+    option_share_password,
+    option_share_path,
+    option_share_username,
+    option_start_time,
     option_story_type,
+    option_super,
+    option_thumbnails,
     option_timeout,
     option_track,
     option_tracks_only,
     option_unregister_url_on_exit,
+    option_update_library,
+    option_url,
+    option_volatile,
+    option_wait_and_enable,
+    option_wireless_password,
     option_with_albumart,
     option_yes,
+    playlist_items_at_or_exit,
+    playlist_tracks_of_uri_or_exit,
     read_queue_log,
+    render_browse_results,
     render_fields,
+    render_items,
+    render_names,
     render_output_filename,
     render_payload,
     render_state,
     render_story,
+    render_tracks,
+    resolve_available_plugin_url_or_exit,
+    resolve_installed_plugin_or_exit,
     resolve_output_conflict,
     resolve_story_album_entities,
     resolve_story_entity,
     sleep_between_api_calls,
+    wait_for_installed_plugin_or_exit,
     write_queue_log,
 )
 from volumito.cli.configuration import (
@@ -117,12 +181,25 @@ from volumito.cli.configuration import (
 )
 from volumito.cli.console import LOGGER, debug, error, info, setup_console, warning
 from volumito.cli.constants import (
-    BROWSE_KINDS_ERROR,
+    ALARM_FILE_ERROR,
+    BROWSE_ALONE_OPTIONS_ERROR,
+    BROWSE_CURRENT_TRACK_ERROR,
+    COLLECTION_UPDATE_MODES_ERROR,
+    COLLECTION_UPDATE_URI_ERROR,
     DEFAULT_API_CLIENT,
     DEFAULT_VOLUMIO_VERSION,
+    EVENT_PAYLOAD_ERROR,
+    EXPERIENCE_VALUES,
+    FAVOURITE_PLAY_NAME_ERROR,
+    FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR,
+    FAVOURITE_RADIO_OPTIONS_ERROR,
+    FAVOURITE_RADIO_TITLE_ERROR,
+    FAVOURITE_RADIO_UNKNOWN_ERROR,
+    FAVOURITE_REMOVE_STILL_LISTED_ERROR,
     MAX_HTTP_HEADERS,
     MPD_PORT_VOLUMIO_3,
     MPD_PORT_VOLUMIO_4,
+    MULTIROOM_SETTINGS_ERROR,
     MUTUALLY_EXCLUSIVE_CREATE_ERROR,
     MUTUALLY_EXCLUSIVE_REGISTER_ERROR,
     MUTUALLY_EXCLUSIVE_UNREGISTER_ERROR,
@@ -130,29 +207,57 @@ from volumito.cli.constants import (
     NOTIFICATION_TIMESTAMP_FORMAT,
     OUTPUT_DIRECTORY_REQUIRED_ERROR,
     OUTPUT_DIRECTORY_TIMESTAMP_FORMAT,
+    PLAY_VOLATILE_ERROR,
+    PLAYLIST_DELETE_ATTEMPTS,
+    PLAYLIST_DELETE_STILL_LISTED_ERROR,
+    PLAYLIST_EXISTS_ERROR,
+    PLAYLIST_FILE_ERROR,
+    PLAYLIST_REMOVE_ALL_OCCURRENCES_ERROR,
+    PLAYLIST_REMOVE_ARGUMENTS_ERROR,
+    PLAYLIST_REMOVE_EMPTY_WARNING,
+    PLAYLIST_REMOVE_SERVICE_ERROR,
+    PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR,
+    PLAYLIST_SAME_NAME_ERROR,
     PROGRAM_NAME,
+    QUEUE_ADD_ARGUMENTS_ERROR,
+    QUEUE_ADD_MODES_ERROR,
+    QUEUE_ADD_NEXT_OPTIONS_ERROR,
+    QUEUE_CUE_TRACK_SERVICE_ERROR,
+    RADIO_REMOVE_STILL_LISTED_ERROR,
     REGISTER_ARGUMENT_ERROR,
+    REPLACE_CUE_TRACK_ERROR,
     REPLACE_POSITION_ERROR,
     SEARCH_ARGUMENT_ERROR,
     SEARCH_KINDS_ERROR,
     SEARCH_LIMIT_ERROR,
+    SHARE_EDIT_FIELDS_ERROR,
+    SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
     SHORT_FORMAT_FIELDS_PLAYER_STATE,
+    SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
+    SHORT_FORMAT_FIELDS_QUEUE_LIST,
     SHORT_FORMAT_FIELDS_QUEUE_STATUS,
+    SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST,
+    SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
+    SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
+    SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
+    SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE,
+    SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST,
+    SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
+    SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
     SHORT_FORMAT_FIELDS_TRACK_INFO,
     UNREGISTER_ARGUMENT_ERROR,
+    URI_FAVOURITES,
+    URI_RADIO_FAVOURITES,
+    URI_WEB_RADIOS,
 )
 from volumito.cli.pure_helpers import (
     display_position,
     expand_manifest_file,
     expand_timestamp_placeholder,
-    filter_queue_fields,
     filter_zones_fields,
-    format_browse_results_as_table,
     format_command_nodes,
     format_duration,
-    format_names_as_table,
     format_notification_as_line,
-    format_queue_as_table,
     format_search_results_as_table,
     format_seek,
     format_termination_conditions,
@@ -161,14 +266,17 @@ from volumito.cli.pure_helpers import (
     preserve_local_file_name,
     queue_album_volumes,
     queue_track_metadata_current,
-    rebase_queue_positions,
     resolve_albumart_uri,
 )
 from volumito.clients import (
+    Alarm,
     Artist,
+    AvailablePlugins,
+    BrowseResults,
     Label,
     NotificationListener,
     Place,
+    Plugins,
     PushNotification,
     Scheme,
     SearchResultItemKind,
@@ -187,6 +295,8 @@ from volumito.clients import (
     is_local_file_uri,
     receiver_url,
 )
+from volumito.clients.common import stored_local_uri
+from volumito.clients.websocket.common import EVENT_PUSH_STATE
 
 
 @click.group(cls=AliasedGroup)
@@ -198,6 +308,16 @@ from volumito.clients import (
         "When a WebSocket API client is selected, serve the commands the WebSocket API "
         "does not offer (the story and notification ones) through a REST API client, "
         "instead of failing them."
+    ),
+)
+@click.option(
+    "--allow-fallback-to-websocket-api/--no-allow-fallback-to-websocket-api",
+    default=False,
+    show_default=True,
+    help=(
+        "When a REST API client is selected, serve the commands the REST API "
+        "does not offer (the ones needing a WebSocket API client) through a WebSocket "
+        "API client, instead of failing them."
     ),
 )
 @click.option(
@@ -254,8 +374,7 @@ from volumito.clients import (
     is_flag=True,
     default=False,
     help=(
-        "Produce machine-readable output only, "
-        "superseding the --verbose option if also specified."
+        "Produce machine-readable output only, superseding the --verbose option if also specified."
     ),
 )
 @click.option(
@@ -334,8 +453,7 @@ from volumito.clients import (
     default=2.0,
     show_default=True,
     help=(
-        "When making multiple API calls, "
-        "sleep these many seconds between two consecutive calls."
+        "When making multiple API calls, sleep these many seconds between two consecutive calls."
     ),
 )
 @click.option(
@@ -393,6 +511,7 @@ from volumito.clients import (
 def main(
     ctx: click.Context,
     allow_fallback_to_rest_api: bool,
+    allow_fallback_to_websocket_api: bool,
     api_client: str,
     color: bool,
     host: str,
@@ -434,6 +553,7 @@ def main(
     )
     ctx.obj["api_client"] = api_client
     ctx.obj["allow_fallback_to_rest_api"] = allow_fallback_to_rest_api
+    ctx.obj["allow_fallback_to_websocket_api"] = allow_fallback_to_websocket_api
     ctx.obj["rest_api_timeout"] = rest_api_timeout
     ctx.obj["rest_api_timeout_slow_endpoints"] = rest_api_timeout_slow_endpoints
     ctx.obj["websocket_timeout"] = websocket_timeout
@@ -527,10 +647,7 @@ def configuration_create(
         destination = os.path.join(os.getcwd(), CONFIGURATION_FILENAMES[0])
 
     if not overwrite_existing_files and os.path.exists(destination):
-        error(
-            f'File already exists: "{destination}" '
-            "(use --overwrite-existing-files to overwrite)"
-        )
+        error(f'File already exists: "{destination}" (use --overwrite-existing-files to overwrite)')
         sys.exit(1)
 
     mpd_port = MPD_PORT_VOLUMIO_3 if volumio_version < 4 else MPD_PORT_VOLUMIO_4
@@ -767,20 +884,25 @@ def toggle(ctx: click.Context, print_resulting_status: bool) -> None:
     type=int,
 )
 @option_print_resulting_status
-def play(ctx: click.Context, position: int | None, print_resulting_status: bool) -> None:
+@option_volatile
+def play(
+    ctx: click.Context, position: int | None, print_resulting_status: bool, volatile: bool
+) -> None:
     """Start playback.
 
     With POSITION, play the track at that position of the queue (indexed according
-    to --position-starting-at-one/--position-starting-at-zero).
+    to --position-starting-at-one/--position-starting-at-zero). With --volatile,
+    POSITION is a position of the volatile source (e.g., Spotify Connect) to start
+    instead, which needs a WebSocket API client.
     """
+    if volatile and position is None:
+        raise click.UsageError(PLAY_VOLATILE_ERROR)
     if position is not None:
-        starting_at_one = ctx.obj["position_starting_at_one"]
-        minimum = 1 if starting_at_one else 0
-        if position < minimum:
-            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
-        if starting_at_one:
-            position -= 1
-        execute_command(ctx, "play", lambda c: c.play(position))
+        index = api_position(ctx, position)
+        if volatile:
+            execute_command(ctx, "play volatile", lambda c: c.play_volatile(index))
+        else:
+            execute_command(ctx, "play", lambda c: c.play(index))
     else:
         execute_command(ctx, "play", lambda c: c.play())
     execute_conditionally(ctx, print_resulting_status, playback_status)
@@ -933,6 +1055,61 @@ def unmute(ctx: click.Context, print_resulting_status: bool) -> None:
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
+@playback.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=OnOffParamType())
+@option_format
+def infinity(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the infinity playback mode.
+
+    Without VALUE, print whether infinity playback is available and enabled.
+    Otherwise VALUE is "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0", and the
+    setting is printed once set.
+
+    Needs a WebSocket API client.
+    """
+    if value is not None:
+        enabled = value
+        execute_command(
+            ctx,
+            f"infinity {'on' if enabled else 'off'}",
+            lambda c: c.set_infinity_playback(enabled),
+        )
+    setting = fetch_or_exit(ctx, lambda c: c.infinity_playback)
+    render_payload(ctx, setting.raw, output_format, heading="Volumio Infinity Playback")
+
+
+@playback.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=SleepTimerParamType())
+@option_format
+def sleep(ctx: click.Context, value: timedelta | str | None, output_format: str) -> None:
+    """Print, arm, or disarm the sleep timer.
+
+    Without VALUE, print the sleep timer: whether it is armed, and the delay left
+    before the Volumio host stops. Otherwise VALUE is the delay from now (not a
+    clock time) after which the host stops, as a number of minutes or as H:MM, or
+    "off" to disarm the timer; the timer is printed once armed or disarmed.
+
+    The timer comes from the alarm-clock plugin. Needs a WebSocket API client.
+    """
+    if value is not None:
+        delay = value if isinstance(value, timedelta) else None
+        label = "sleep off" if delay is None else f"sleep {int(delay.total_seconds() // 60)}"
+        execute_command(ctx, label, lambda c: c.set_sleep_timer(delay))
+    timer = fetch_or_exit(ctx, lambda c: c.sleep_timer)
+    if output_format == "raw":
+        data = timer.raw
+    else:
+        left = timer.delay
+        data = {
+            "enabled": timer.enabled,
+            "time": timer.time,
+            "minutes": int(left.total_seconds() // 60) if left is not None else None,
+        }
+    render_payload(ctx, data, output_format, heading="Volumio Sleep Timer")
+
+
 @playback.command("is_muted")
 @click.pass_context
 def is_muted(ctx: click.Context) -> None:
@@ -967,9 +1144,32 @@ def is_stopped(ctx: click.Context) -> None:
 
 @main.group()
 @click.pass_context
-def track(ctx: click.Context) -> None:
-    """Query the current track (information, audio, album art)."""
+def queue(ctx: click.Context) -> None:
+    """Manage the playback queue and its current track."""
     pass
+
+
+@queue.group("track")
+@click.pass_context
+def track(ctx: click.Context) -> None:
+    """Query the current track of the queue (information, audio, album art)."""
+    pass
+
+
+@track.command("has_next")
+@click.pass_context
+def track_has_next(ctx: click.Context) -> None:
+    """Print whether the current track has a next track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_next)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@track.command("has_previous")
+@click.pass_context
+def track_has_previous(ctx: click.Context) -> None:
+    """Print whether the current track has a previous track in the queue."""
+    value = fetch_or_exit(ctx, lambda c: c.has_previous)
+    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
 
 
 @track.command("info")
@@ -1066,9 +1266,7 @@ def audio(
                     embed_tags,
                     allow_local_file_rename,
                     replace_characters_in_file_names=replace_characters_in_file_names,
-                    replace_characters_in_file_names_with=(
-                        replace_characters_in_file_names_with
-                    ),
+                    replace_characters_in_file_names_with=(replace_characters_in_file_names_with),
                 )
 
                 # Embed track metadata and cover art into the downloaded file
@@ -1171,9 +1369,7 @@ def albumart(
                 "albumart",
                 ctx.obj["position_starting_at_one"],
                 replace_characters_in_file_names=replace_characters_in_file_names,
-                replace_characters_in_file_names_with=(
-                    replace_characters_in_file_names_with
-                ),
+                replace_characters_in_file_names_with=(replace_characters_in_file_names_with),
             )
 
     except click.UsageError:
@@ -1192,29 +1388,6 @@ def albumart(
     except Exception as e:  # pragma: no cover
         error(f"Unexpected error: {e}")
         sys.exit(1)
-
-
-@main.group()
-@click.pass_context
-def queue(ctx: click.Context) -> None:
-    """Manage the playback queue."""
-    pass
-
-
-@queue.command("has_next")
-@click.pass_context
-def queue_has_next(ctx: click.Context) -> None:
-    """Print whether the current track has a next track in the queue."""
-    value = fetch_or_exit(ctx, lambda c: c.has_next)
-    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
-
-
-@queue.command("has_previous")
-@click.pass_context
-def queue_has_previous(ctx: click.Context) -> None:
-    """Print whether the current track has a previous track in the queue."""
-    value = fetch_or_exit(ctx, lambda c: c.has_previous)
-    click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
 
 
 @queue.command("status")
@@ -1239,58 +1412,17 @@ def queue_list(
     output_format: str,
 ) -> None:
     """Print the playback queue."""
-    position_starting_at_one = ctx.obj["position_starting_at_one"]
-
-    debug(f"Connecting to {connection_url(ctx)}...")
-
-    try:
-        client = get_client(ctx)
-        queue_data = client.queue.raw
-
-        debug(f"Connecting to {connection_url(ctx)}... done")
-        debug("Successfully retrieved queue")
-
-        # Determine output format
-        if output_format == "raw":
-            # Raw JSON without formatting (ignores fields filter)
-            output = json.dumps(queue_data)
-        else:
-            # Apply fields filter for all formatted outputs
-            tracks = filter_queue_fields(queue_data, fields)
-
-            # Map output format to formatting function
-            if output_format == "json":
-                output = json.dumps(tracks, indent=2)
-            elif output_format == "pretty":
-                # Format durations as HH:MM:SS for pretty output
-                pretty_tracks = []
-                for track in rebase_queue_positions(tracks, position_starting_at_one):
-                    pretty_track = track.copy()
-                    if "duration" in pretty_track and isinstance(pretty_track["duration"], int):
-                        pretty_track["duration"] = format_duration(pretty_track["duration"])
-                    pretty_tracks.append(pretty_track)
-                output = json.dumps(pretty_tracks, indent=4, sort_keys=True, ensure_ascii=False)
-            elif output_format == "table":
-                output = format_queue_as_table(
-                    rebase_queue_positions(tracks, position_starting_at_one)
-                )
-            else:  # pragma: no cover
-                output = json.dumps(tracks, indent=2)
-
-        echo_data(ctx, output)
-
-    except VolumioConnectionError as e:
-        error(f"Connection error: {e}")
-        sys.exit(1)
-    except VolumioAPIError as e:
-        error(f"API error: {e}")
-        sys.exit(1)
-    except (VolumioAsyncError, VolumioWebSocketError, UnsupportedOperationError) as e:
-        error(f"API client error: {e}")
-        sys.exit(1)
-    except Exception as e:  # pragma: no cover
-        error(f"Unexpected error: {e}")
-        sys.exit(1)
+    queue_data = fetch_or_exit(ctx, lambda c: c.queue.raw)
+    debug("Successfully retrieved queue")
+    render_tracks(
+        ctx,
+        queue_data,
+        queue_data.get("queue", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_QUEUE_LIST,
+        "Volumio Queue",
+    )
 
 
 def _download_summary(entries: list[dict[str, Any]], selected: set[int], errors: int) -> str:
@@ -1404,9 +1536,7 @@ def queue_download(
                 error(f'Cannot read the manifest file "{log_path}"')
                 sys.exit(1)
             if not manifest_matches_queue(existing["tracks"], tracks):
-                error(
-                    f'The manifest file "{log_path}" does not match the current queue'
-                )
+                error(f'The manifest file "{log_path}" does not match the current queue')
                 sys.exit(1)
             info(f'Reading manifest file "{log_path}"')
             entries: list[dict[str, Any]] = existing["tracks"]
@@ -1470,9 +1600,7 @@ def queue_download(
             os.makedirs(log_parent, exist_ok=True)
         write_queue_log(log_path, log)
 
-        if all(
-            entries[index].get("status") in ("downloaded", "skipped") for index in selected
-        ):
+        if all(entries[index].get("status") in ("downloaded", "skipped") for index in selected):
             if machine_readable:
                 click.echo(json.dumps(log_path))
             else:
@@ -1480,12 +1608,9 @@ def queue_download(
                     entry = entries[index]
                     info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                        f"\"{entry.get('output_file_path')}\" (kept)"
+                        f'"{entry.get("output_file_path")}" (kept)'
                     )
-                info(
-                    f"{_download_summary(entries, selected, 0)}; "
-                    f'manifest written to "{log_path}"'
-                )
+                info(f'{_download_summary(entries, selected, 0)}; manifest written to "{log_path}"')
             return
 
         errors = 0
@@ -1501,7 +1626,7 @@ def queue_download(
                 if entry.get("status") in ("downloaded", "skipped"):
                     info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                        f"\"{entry.get('output_file_path')}\" (kept)"
+                        f'"{entry.get("output_file_path")}" (kept)'
                     )
                     continue
                 destination: str | None = None
@@ -1645,8 +1770,7 @@ def queue_download(
             click.echo(json.dumps(log_path))
         else:
             info(
-                f"{_download_summary(entries, selected, errors)}; "
-                f'manifest written to "{log_path}"'
+                f'{_download_summary(entries, selected, errors)}; manifest written to "{log_path}"'
             )
         if errors:
             sys.exit(1)
@@ -1687,65 +1811,229 @@ def clear(ctx: click.Context, print_resulting_status: bool) -> None:
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@option_print_resulting_status
-def repeat(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the repeat mode.
+@option_format
+def repeat(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the repeat mode.
 
-    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
-    or "off"/"false"/"no"/"0".
+    Without VALUE, print whether the repeat mode is on, and whether it repeats the
+    current track only. Otherwise VALUE is "on"/"true"/"yes"/"1" or
+    "off"/"false"/"no"/"0", and the mode is printed once set.
     """
-    label = "repeat" if value is None else f"repeat {'on' if value else 'off'}"
-    execute_command(ctx, label, lambda c: c.repeat(value))
+    if value is not None:
+        mode = value
+        execute_command(ctx, f"repeat {'on' if mode else 'off'}", lambda c: c.repeat(mode))
+    _render_playback_mode(ctx, output_format, "Volumio Repeat Mode", "repeat", "repeatSingle")
+
+
+@queue.command()
+@click.pass_context
+@click.argument("value", required=False, default=None, type=OnOffParamType())
+@option_format
+def randomize(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the random (shuffle) mode.
+
+    Without VALUE, print whether the random mode is on. Otherwise VALUE is
+    "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0", and the mode is printed once set.
+    """
+    if value is not None:
+        mode = value
+        execute_command(ctx, f"randomize {'on' if mode else 'off'}", lambda c: c.randomize(mode))
+    _render_playback_mode(ctx, output_format, "Volumio Random Mode", "random")
+
+
+@queue.command()
+@click.pass_context
+@click.argument("uris", nargs=-1, required=True, metavar="URI...")
+@option_item_album
+@option_by_uid
+@option_cue_track
+@option_next
+@option_play_added
+@option_print_resulting_status
+@option_service_of_uri
+@option_item_title
+def add(
+    ctx: click.Context,
+    uris: tuple[str, ...],
+    album: str | None,
+    by_uid: bool,
+    cue_track: int | None,
+    play_next: bool,
+    play: bool,
+    print_resulting_status: bool,
+    service: str | None,
+    title: str | None,
+) -> None:
+    """Add the content of URI to the end of the queue, leaving the playback alone.
+
+    A URI comes from "collection browse" or "collection search". With --play, the
+    added content starts playing. With --next, URI is queued as a single item right
+    after the current track, shown with the --title and --album given. With
+    --cue-track NUMBER, URI is a cue sheet, whose track at that position is queued
+    and played (--service names its music service when the URI does not tell).
+    With --by-uid, the arguments are identifiers of local library items, not a URI.
+    These four ways are mutually exclusive, and need a WebSocket API client; the
+    plain form works with any API client.
+    """
+    if sum([by_uid, cue_track is not None, play_next, play]) > 1:
+        raise click.UsageError(QUEUE_ADD_MODES_ERROR)
+    if (album is not None or title is not None) and not play_next:
+        raise click.UsageError(QUEUE_ADD_NEXT_OPTIONS_ERROR)
+    if service is not None and cue_track is None:
+        raise click.UsageError(QUEUE_CUE_TRACK_SERVICE_ERROR)
+    if by_uid:
+        uids = list(uris)
+        execute_command(ctx, "add", lambda c: c.add_uids_to_queue(uids))
+    else:
+        if len(uris) != 1:
+            raise click.UsageError(QUEUE_ADD_ARGUMENTS_ERROR)
+        uri = uris[0]
+        if cue_track is not None:
+            number = cue_track
+            execute_command(ctx, "add", lambda c: c.add_cue_track(uri, number, service))
+        elif play_next:
+            execute_command(ctx, "add", lambda c: c.play_next(uri, title, album))
+        elif play:
+            execute_command(ctx, "add", lambda c: c.add_and_play(uri))
+        else:
+            execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @queue.command()
 @click.pass_context
 @click.argument("value", required=False, default=None, type=OnOffParamType())
-@option_print_resulting_status
-def randomize(ctx: click.Context, value: bool | None, print_resulting_status: bool) -> None:
-    """Set or toggle the random (shuffle) mode.
+@option_format
+def consume(ctx: click.Context, value: bool | None, output_format: str) -> None:
+    """Print or set the consume mode, which drops each track from the queue once played.
 
-    Without VALUE, toggle the current mode. Otherwise VALUE is "on"/"true"/"yes"/"1"
-    or "off"/"false"/"no"/"0".
+    Without VALUE, print whether the consume mode is on. Otherwise VALUE is
+    "on"/"true"/"yes"/"1" or "off"/"false"/"no"/"0", and the mode is printed once set.
+
+    Setting the mode needs a WebSocket API client.
     """
-    label = "randomize" if value is None else f"randomize {'on' if value else 'off'}"
-    execute_command(ctx, label, lambda c: c.randomize(value))
+    if value is not None:
+        mode = value
+        execute_command(ctx, f"consume {'on' if mode else 'off'}", lambda c: c.consume(mode))
+    _render_playback_mode(ctx, output_format, "Volumio Consume Mode", "consume")
+
+
+def _render_playback_mode(
+    ctx: click.Context, output_format: str, heading: str, *fields: str
+) -> None:
+    """Read the playback state and print the given fields of it, a playback mode.
+
+    Args:
+        ctx: Click context object holding the shared options
+        output_format: The output format ("json", "pretty", "raw", or "table")
+        heading: The heading of the table format
+        fields: The keys of the state to print, as the host names them
+    """
+    state = fetch_state_or_exit(ctx).raw
+    render_payload(ctx, {field: state.get(field) for field in fields}, output_format, heading)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("source", type=int)
+@click.argument("target", type=int)
+@option_print_resulting_status
+def move(ctx: click.Context, source: int, target: int, print_resulting_status: bool) -> None:
+    """Move the track at SOURCE to TARGET in the queue.
+
+    Both positions are indexed according to
+    --position-starting-at-one/--position-starting-at-zero.
+
+    Needs a WebSocket API client.
+    """
+    source_index = api_position(ctx, source, "source")
+    target_index = api_position(ctx, target, "target")
+    execute_command(ctx, "move", lambda c: c.move_in_queue(source_index, target_index))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("position", type=int)
+@option_print_resulting_status
+def remove(ctx: click.Context, position: int, print_resulting_status: bool) -> None:
+    """Remove the track at POSITION from the queue.
+
+    POSITION is indexed according to
+    --position-starting-at-one/--position-starting-at-zero.
+
+    Needs a WebSocket API client.
+    """
+    index = api_position(ctx, position)
+    execute_command(ctx, "remove", lambda c: c.remove_from_queue(index))
     execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @queue.command()
 @click.pass_context
 @click.argument("uri", type=str)
+@option_cue_track
 @option_play
 @option_position
 @option_print_resulting_status
+@option_service_of_uri
 def replace(
     ctx: click.Context,
     uri: str,
+    cue_track: int | None,
     play: bool,
     position: int | None,
     print_resulting_status: bool,
+    service: str | None,
 ) -> None:
     """Replace the queue with the content of URI, playing it unless --no-play.
 
     A URI comes from "collection browse" or "collection search". With -p/--position,
     the item at that position among those URI lists plays first (indexed according
     to --position-starting-at-one/--position-starting-at-zero); without, the first.
+    With --cue-track NUMBER, URI is a cue sheet, and the queue is replaced with its
+    track at that position, which plays (--service names its music service when the
+    URI does not tell); this needs a WebSocket API client.
     """
+    if cue_track is not None and (position is not None or not play):
+        raise click.UsageError(REPLACE_CUE_TRACK_ERROR)
+    if service is not None and cue_track is None:
+        raise click.UsageError(QUEUE_CUE_TRACK_SERVICE_ERROR)
     if position is not None and not play:
         raise click.UsageError(REPLACE_POSITION_ERROR)
-    if play:
-        minimum = 1 if ctx.obj["position_starting_at_one"] else 0
-        if position is not None and position < minimum:
-            raise click.UsageError(f"position must be {minimum} or greater, got {position}")
-        index = position - minimum if position is not None else 0
+    if cue_track is not None:
+        number = cue_track
+        execute_command(
+            ctx, "replace", lambda c: c.replace_queue_with_cue_track(uri, number, service)
+        )
+    elif play:
+        index = api_position(ctx, position) if position is not None else 0
         execute_command(ctx, "replace", lambda c: c.replace_queue_and_play(uri, index))
     else:
         execute_command(ctx, "clear", lambda c: c.clear())
         sleep_between_api_calls(ctx)
         execute_command(ctx, "add", lambda c: c.add_to_queue(uri))
     execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@queue.command()
+@click.pass_context
+@click.argument("name", type=str)
+@option_overwrite_existing_playlist
+def save(ctx: click.Context, name: str, overwrite_existing_playlist: bool) -> None:
+    """Save the current queue as the new playlist NAME.
+
+    A playlist of that name is refused, unless --overwrite-existing-playlist is
+    given: the Volumio host then replaces its content with the queue.
+
+    Needs a WebSocket API client.
+    """
+    if not overwrite_existing_playlist:
+        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+        if name in names:
+            error(PLAYLIST_EXISTS_ERROR.format(name=name))
+            sys.exit(1)
+    execute_command(ctx, "save", lambda c: c.save_queue_as_playlist(name))
 
 
 @main.group()
@@ -1829,6 +2117,1269 @@ def system_info(ctx: click.Context, output_format: str) -> None:
     render_payload(ctx, data, output_format, heading="Volumio System Info")
 
 
+@system.group("alarm")
+@click.pass_context
+def system_alarm(ctx: click.Context) -> None:
+    """Manage the alarms of the Volumio host (alarm-clock plugin)."""
+    pass
+
+
+@system_alarm.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("time", type=str)
+@click.argument("playlist", type=str)
+@option_disabled
+def system_alarm_add(
+    ctx: click.Context, name: str, time: str, playlist: str, disabled: bool
+) -> None:
+    """Add the alarm NAME playing the playlist PLAYLIST at TIME, armed unless --disabled.
+
+    TIME is a time of day as HH:MM, which the host reads in its own time zone. The host
+    numbers the alarm by its position. Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'add alarm "{name}"', lambda c: c.add_alarm(name, time, playlist, not disabled)
+    )
+
+
+@system_alarm.command("clear")
+@click.pass_context
+@option_yes
+def system_alarm_clear(ctx: click.Context, yes: bool) -> None:
+    """Remove every alarm of the Volumio host.
+
+    IMPORTANT: the alarms cannot be recovered; they are removed only when -y/--yes is
+    given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to clear the alarms without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "clear alarms", lambda c: c.set_alarms([]))
+
+
+@system_alarm.command("disable")
+@click.pass_context
+@click.argument("alarm_id", type=int)
+def system_alarm_disable(ctx: click.Context, alarm_id: int) -> None:
+    """Disarm the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f"disable alarm {alarm_id}", lambda c: c.disable_alarm(alarm_id))
+
+
+@system_alarm.command("enable")
+@click.pass_context
+@click.argument("alarm_id", type=int)
+def system_alarm_enable(ctx: click.Context, alarm_id: int) -> None:
+    """Arm the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f"enable alarm {alarm_id}", lambda c: c.enable_alarm(alarm_id))
+
+
+@system_alarm.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_alarm_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the alarms set on the Volumio host.
+
+    The time of an alarm is the date-time the host stores, of which only the hour and
+    the minute count. Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.alarms.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("alarms", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_ALARM_LIST,
+        "Volumio Alarms",
+    )
+
+
+@system_alarm.command("remove")
+@click.pass_context
+@click.argument("alarm_id", type=int)
+@option_yes
+def system_alarm_remove(ctx: click.Context, alarm_id: int, yes: bool) -> None:
+    """Remove the alarm ALARM_ID, as "system alarm list" numbers it.
+
+    IMPORTANT: the alarm cannot be recovered; it is removed only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f"Refusing to remove the alarm without -y/--yes: {alarm_id}")
+        sys.exit(1)
+    execute_command(ctx, f"remove alarm {alarm_id}", lambda c: c.remove_alarm(alarm_id))
+
+
+@system_alarm.command("set")
+@click.pass_context
+@click.argument("file", type=str)
+def system_alarm_set(ctx: click.Context, file: str) -> None:
+    """Replace the alarms of the Volumio host with the JSON list of alarms in FILE.
+
+    Each alarm of the list is an object with the "id", "name", "enabled", "time", and
+    "playlist" keys, as "system alarm list -F raw" prints them.
+
+    Needs a WebSocket API client.
+    """
+    try:
+        with open(file, encoding="utf-8") as alarms_file:
+            items = json.load(alarms_file)
+    except (OSError, ValueError) as e:
+        error(f'Cannot read alarms file "{file}": {e}')
+        sys.exit(1)
+    if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
+        raise click.UsageError(ALARM_FILE_ERROR)
+    alarms = [Alarm.from_raw(item) for item in items]
+    execute_command(ctx, f'set alarms "{file}"', lambda c: c.set_alarms(alarms))
+
+
+@system.group("audio")
+@click.pass_context
+def system_audio(ctx: click.Context) -> None:
+    """Manage the audio outputs, the output devices, and the input sources."""
+    pass
+
+
+@system_audio.group("device")
+@click.pass_context
+def system_audio_device(ctx: click.Context) -> None:
+    """Manage the output device the Volumio host plays through."""
+    pass
+
+
+@system_audio_device.command("list")
+@click.pass_context
+@option_extended
+@option_format
+def audio_device_list(ctx: click.Context, extended: bool, output_format: str) -> None:
+    """Print the output devices the Volumio host can play through, and the active one.
+
+    Needs a WebSocket API client.
+    """
+    devices = fetch_or_exit(
+        ctx, lambda c: c.extended_output_devices if extended else c.output_devices
+    )
+    render_payload(ctx, devices.raw, output_format, heading="Volumio Output Devices")
+
+
+@system_audio_device.command("set")
+@click.pass_context
+@click.argument("device_id", type=str)
+def audio_device_set(ctx: click.Context, device_id: str) -> None:
+    """Make DEVICE_ID, as "system audio device list" names it, the output device.
+
+    DEVICE_ID names a sound card, or an I2S DAC, which may need a reboot of the host.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'set output device "{device_id}"', lambda c: c.set_output_device(device_id)
+    )
+
+
+@system_audio.command("disable")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_disable(ctx: click.Context, output_id: str) -> None:
+    """Disable the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'disable output "{output_id}"', lambda c: c.disable_audio_output(output_id)
+    )
+
+
+@system_audio.command("dsp")
+@click.pass_context
+@option_format
+def audio_dsp(ctx: click.Context, output_format: str) -> None:
+    """Print the configuration page of the DSP of the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    config = fetch_or_exit(ctx, lambda c: c.dsp_config)
+    render_payload(ctx, config.raw, output_format, heading="Volumio DSP Configuration")
+
+
+@system_audio.command("enable")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_enable(ctx: click.Context, output_id: str) -> None:
+    """Enable the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'enable output "{output_id}"', lambda c: c.enable_audio_output(output_id))
+
+
+@system_audio.command("inputs")
+@click.pass_context
+@option_format
+def audio_inputs(ctx: click.Context, output_format: str) -> None:
+    """Print the input sources the Volumio host exposes, as it reports them.
+
+    The keys depend on the plugins of the host, which answers nothing without an
+    input source. Needs a WebSocket API client.
+    """
+    sources = fetch_or_exit(ctx, lambda c: c.input_sources)
+    render_payload(ctx, sources.raw, output_format, heading="Volumio Input Sources")
+
+
+@system_audio.command("outputs")
+@click.pass_context
+@option_fields
+@option_format
+def audio_outputs(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the audio outputs the Volumio host can play to.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.audio_outputs.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("availableOutputs", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_AUDIO_OUTPUTS,
+        "Volumio Audio Outputs",
+    )
+
+
+@system_audio.command("pause")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_pause(ctx: click.Context, output_id: str) -> None:
+    """Pause the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'pause output "{output_id}"', lambda c: c.audio_output_pause(output_id))
+
+
+@system_audio.command("play")
+@click.pass_context
+@click.argument("output_id", type=str)
+def audio_play(ctx: click.Context, output_id: str) -> None:
+    """Start the audio output OUTPUT_ID, as "system audio outputs" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'play output "{output_id}"', lambda c: c.audio_output_play(output_id))
+
+
+@system_audio.command("volume")
+@click.pass_context
+@click.argument("output_id", type=str)
+@click.argument("value", type=click.IntRange(0, 100))
+def audio_volume(ctx: click.Context, output_id: str, value: int) -> None:
+    """Set the volume of the audio output OUTPUT_ID to VALUE, from 0 to 100.
+
+    This is the volume of one output; "playback volume" is the volume of the host.
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx,
+        f'volume {value} of output "{output_id}"',
+        lambda c: c.set_audio_output_volume(output_id, value),
+    )
+
+
+@system.group("backup")
+@click.pass_context
+def system_backup(ctx: click.Context) -> None:
+    """Back up and restore the playlists and favourites of the Volumio host."""
+    pass
+
+
+@system_backup.command("create")
+@click.pass_context
+@option_format
+@option_backup_output_file
+@option_overwrite_existing_files
+def system_backup_create(
+    ctx: click.Context, output_format: str, output_file: str | None, overwrite_existing_files: bool
+) -> None:
+    """Read a backup of the playlists and favourites of the Volumio host, printing or saving it.
+
+    The backup holds the identification of the host and, by kind, the saved playlists
+    with their content, the favourite tracks, the favourite Web radios, and the Web
+    radios added by hand. With -o/--output-file, it is written to FILE as JSON instead
+    of being printed.
+
+    Needs a WebSocket API client.
+    """
+    backup = fetch_or_exit(ctx, backup_document)
+    if output_file is None:
+        render_payload(ctx, backup, output_format, heading="Volumio Backup")
+        return
+    if not overwrite_existing_files and os.path.exists(output_file):
+        error(f'File already exists: "{output_file}" (use --overwrite-existing-files to overwrite)')
+        sys.exit(1)
+    try:
+        with open(output_file, "w", encoding="utf-8") as backup_file:
+            json.dump(backup, backup_file, indent=2)
+    except OSError as e:
+        error(f'Cannot write backup file "{output_file}": {e}')
+        sys.exit(1)
+    if ctx.obj["machine_readable"]:
+        click.echo(json.dumps(output_file))
+    else:
+        info(f'Created backup file "{output_file}"')
+
+
+@system_backup.command("restore")
+@click.pass_context
+@option_yes
+def system_backup_restore(ctx: click.Context, yes: bool) -> None:
+    """Restore the local backup of the playlists and favourites on the Volumio host.
+
+    The host restores what "system backup save" wrote, after about ten seconds: the
+    playlists are replaced, the favourites are merged with the current ones. IMPORTANT:
+    the current playlists cannot be recovered; the backup is restored only when
+    -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to restore the backup without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "restore backup", lambda c: c.restore_backup())
+
+
+@system_backup.command("save")
+@click.pass_context
+def system_backup_save(ctx: click.Context) -> None:
+    """Write a local backup of the playlists and favourites on the Volumio host.
+
+    The host writes the backup after about ten seconds, replacing the previous one;
+    "system backup restore" reads it back. To keep a copy elsewhere, use
+    "system backup create" instead.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, "save backup", lambda c: c.save_backup())
+
+
+@system.command("name")
+@click.pass_context
+@click.argument("value", required=False, default=None, type=str)
+def system_name(ctx: click.Context, value: str | None) -> None:
+    """Print or set the name of the Volumio host.
+
+    Without VALUE, print the name. Otherwise rename the host to VALUE, which changes
+    what "system info" reports.
+
+    Needs a WebSocket API client.
+    """
+    if value is None:
+        name = fetch_or_exit(ctx, lambda c: c.device_name)
+        click.echo(json.dumps(name) if ctx.obj["machine_readable"] else name or "")
+        return
+    new_name = value
+
+    def set_name(client: APIClient) -> None:
+        client.device_name = new_name
+
+    execute_command(ctx, f'name "{new_name}"', set_name)
+
+
+def _render_available_plugins(
+    ctx: click.Context, plugins: AvailablePlugins, fields: str, output_format: str
+) -> None:
+    """Print the plugins the store offers per the fields and format options.
+
+    Args:
+        ctx: Click context object holding the shared options
+        plugins: The available plugins, as the client reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+    """
+    items = [
+        plugin
+        for category in plugins.raw.get("categories", [])
+        if isinstance(category, dict)
+        for plugin in category.get("plugins", [])
+        if isinstance(plugin, dict)
+    ]
+    render_items(
+        ctx,
+        plugins.raw,
+        items,
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_AVAILABLE,
+        "Volumio Available Plugins",
+    )
+
+
+def _render_plugins(ctx: click.Context, plugins: Plugins, fields: str, output_format: str) -> None:
+    """Print the installed plugins per the fields and format options.
+
+    Args:
+        ctx: Click context object holding the shared options
+        plugins: The installed plugins, as the client reports them
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+    """
+    render_items(
+        ctx,
+        plugins.raw,
+        plugins.raw.get("plugins", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_PLUGIN_LIST,
+        "Volumio Plugins",
+    )
+
+
+@system.group("plugin")
+@click.pass_context
+def system_plugin(ctx: click.Context) -> None:
+    """Manage the plugins of the Volumio host."""
+    pass
+
+
+@system_plugin.command("available")
+@click.pass_context
+@option_fields
+@option_format
+def system_plugin_available(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the plugins the store offers to the Volumio host, with their URLs.
+
+    The host lists the store only when it is logged in to MyVolumio: otherwise the
+    command fails, reporting the login request. The URL of a plugin is what
+    "system plugin install" reads; the name is what it accepts in place of the URL.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.available_plugins)
+    _render_available_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("configuration")
+@click.pass_context
+@click.argument("name", type=str)
+@option_format
+def system_plugin_configuration(ctx: click.Context, name: str, output_format: str) -> None:
+    """Print the configuration page of the plugin NAME, as "system plugin list" names it.
+
+    Needs a WebSocket API client.
+    """
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
+    config = fetch_or_exit(ctx, lambda c: c.get_plugin_config(plugin.endpoint))
+    render_payload(
+        ctx,
+        config.raw,
+        output_format,
+        heading=f'Volumio Plugin Configuration "{plugin.endpoint}"',
+    )
+
+
+@system_plugin.command("disable")
+@click.pass_context
+@click.argument("name", type=str)
+@option_fields
+@option_format
+def system_plugin_disable(ctx: click.Context, name: str, fields: str, output_format: str) -> None:
+    """Disable the plugin NAME, printing the plugins as they then stand.
+
+    NAME is what "system plugin list" prints. Needs a WebSocket API client.
+    """
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("disable", plugin.category, name))
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("enable")
+@click.pass_context
+@click.argument("name", type=str)
+@option_fields
+@option_format
+def system_plugin_enable(ctx: click.Context, name: str, fields: str, output_format: str) -> None:
+    """Enable the plugin NAME, printing the plugins as they then stand.
+
+    NAME is what "system plugin list" prints. Needs a WebSocket API client.
+    """
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
+    plugins = fetch_or_exit(ctx, lambda c: c.manage_plugin("enable", plugin.category, name))
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("install")
+@click.pass_context
+@click.argument("name", type=str)
+@option_url
+@option_wait_and_enable
+@option_yes
+def system_plugin_install(
+    ctx: click.Context, name: str, url: str | None, wait_and_enable: bool, yes: bool
+) -> None:
+    """Install the plugin NAME on the Volumio host.
+
+    The package comes from the store, which the host lists only when it is logged in
+    to MyVolumio (see "system plugin available"), unless --url names it. The host
+    reports its progress through the events its user interface listens for; with
+    --wait-and-enable, the command waits until the host lists the plugin as installed,
+    for up to ten minutes, and then enables it. IMPORTANT: the plugin is installed
+    only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to install the plugin without -y/--yes: "{name}"')
+        sys.exit(1)
+    package = url if url is not None else resolve_available_plugin_url_or_exit(ctx, name)
+    execute_command(ctx, f'install plugin "{name}"', lambda c: c.install_plugin(package))
+    if wait_and_enable:
+        plugin = wait_for_installed_plugin_or_exit(ctx, name)
+        execute_command(
+            ctx,
+            f'enable plugin "{name}"',
+            lambda c: c.manage_plugin("enable", plugin.category, name),
+        )
+
+
+@system_plugin.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_plugin_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the plugins installed on the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    plugins = fetch_or_exit(ctx, lambda c: c.installed_plugins)
+    _render_plugins(ctx, plugins, fields, output_format)
+
+
+@system_plugin.command("uninstall")
+@click.pass_context
+@click.argument("name", type=str)
+@option_yes
+def system_plugin_uninstall(ctx: click.Context, name: str, yes: bool) -> None:
+    """Remove the plugin NAME, as "system plugin list" names it, from the Volumio host.
+
+    IMPORTANT: the plugin is removed only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to uninstall the plugin without -y/--yes: "{name}"')
+        sys.exit(1)
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
+    execute_command(
+        ctx,
+        f'uninstall plugin "{plugin.endpoint}"',
+        lambda c: c.uninstall_plugin(plugin.category, name),
+    )
+
+
+@system_plugin.command("update")
+@click.pass_context
+@click.argument("name", type=str)
+@option_url
+@option_yes
+def system_plugin_update(ctx: click.Context, name: str, url: str | None, yes: bool) -> None:
+    """Update the plugin NAME, as "system plugin list" names it.
+
+    The package comes from the store, which the host lists only when it is logged in
+    to MyVolumio (see "system plugin available"), unless --url names it. IMPORTANT:
+    the plugin is updated only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to update the plugin without -y/--yes: "{name}"')
+        sys.exit(1)
+    plugin = resolve_installed_plugin_or_exit(ctx, name)
+    package = url if url is not None else resolve_available_plugin_url_or_exit(ctx, name)
+    execute_command(
+        ctx,
+        f'update plugin "{plugin.endpoint}"',
+        lambda c: c.update_plugin(plugin.category, name, package),
+    )
+
+
+@system.group("power")
+@click.pass_context
+def system_power(ctx: click.Context) -> None:
+    """Power the Volumio host down, or restart it."""
+    pass
+
+
+@system_power.command("modes")
+@click.pass_context
+@option_format
+def system_power_modes(ctx: click.Context, output_format: str) -> None:
+    """Print whether the Volumio host can be powered off and put on standby.
+
+    Needs a WebSocket API client.
+    """
+    modes = fetch_or_exit(ctx, lambda c: c.power_modes)
+    render_payload(ctx, modes.raw, output_format, heading="Volumio Power Modes")
+
+
+@system_power.command("reboot")
+@click.pass_context
+@option_yes
+def system_power_reboot(ctx: click.Context, yes: bool) -> None:
+    """Restart the Volumio host.
+
+    IMPORTANT: the host drops every connection as it goes down; it is restarted only
+    when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to reboot the Volumio host without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "reboot", lambda c: c.reboot())
+
+
+@system_power.command("shutdown")
+@click.pass_context
+@option_yes
+def system_power_shutdown(ctx: click.Context, yes: bool) -> None:
+    """Power the Volumio host off.
+
+    IMPORTANT: the host does not come back on its own; it is powered off only when
+    -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to shut the Volumio host down without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "shutdown", lambda c: c.shutdown())
+
+
+@system_power.command("standby")
+@click.pass_context
+@option_yes
+def system_power_standby(ctx: click.Context, yes: bool) -> None:
+    """Put the Volumio host on standby, when it has a standby mode.
+
+    A host without a standby mode (see "system power modes") ignores the request, so
+    the command refuses it instead. IMPORTANT: the host is put on standby only when
+    -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to put the Volumio host on standby without -y/--yes")
+        sys.exit(1)
+    modes = fetch_or_exit(ctx, lambda c: c.power_modes)
+    if not modes.has_standby_mode:
+        error('The Volumio host reports no standby mode (see "system power modes")')
+        sys.exit(1)
+    execute_command(ctx, "standby", lambda c: c.standby())
+
+
+@system.group("timezone", invoke_without_command=True)
+@click.pass_context
+def system_timezone(ctx: click.Context) -> None:
+    """Print the time zone of the Volumio host, or manage it with the subcommands.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        zone = fetch_or_exit(ctx, lambda c: c.timezone)
+        click.echo(json.dumps(zone) if ctx.obj["machine_readable"] else zone)
+
+
+@system_timezone.command("list")
+@click.pass_context
+@option_format
+def system_timezone_list(ctx: click.Context, output_format: str) -> None:
+    """Print the time zones the Volumio host can be set to.
+
+    Needs a WebSocket API client.
+    """
+    zones = fetch_or_exit(ctx, lambda c: c.available_timezones)
+    render_names(ctx, list(zones), output_format, "Volumio Time Zones")
+
+
+@system_timezone.command("set")
+@click.pass_context
+@click.argument("value", type=str)
+def system_timezone_set(ctx: click.Context, value: str) -> None:
+    """Move the Volumio host to the time zone VALUE, one of "system timezone list".
+
+    Needs a WebSocket API client.
+    """
+    zones = fetch_or_exit(ctx, lambda c: c.available_timezones)
+    if value not in list(zones):
+        error(f'Time zone not found: "{value}" (see "system timezone list")')
+        sys.exit(1)
+
+    def set_timezone(client: APIClient) -> None:
+        client.timezone = value
+
+    execute_command(ctx, f'timezone "{value}"', set_timezone)
+
+
+@system.group("ui")
+@click.pass_context
+def system_ui(ctx: click.Context) -> None:
+    """Manage the user interface of the Volumio host."""
+    pass
+
+
+@system_ui.group("background", invoke_without_command=True)
+@click.pass_context
+def system_ui_background(ctx: click.Context) -> None:
+    """Print the background in use, or manage the backgrounds.
+
+    The background in use is the title of an image, or a solid colour (e.g., "#000").
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        settings = fetch_or_exit(ctx, lambda c: c.ui_settings)
+        image = settings.background
+        value = image.title if image is not None else settings.color
+        click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value or "")
+
+
+@system_ui_background.command("delete")
+@click.pass_context
+@click.argument("name", type=str)
+@option_yes
+def system_ui_background_delete(ctx: click.Context, name: str, yes: bool) -> None:
+    """Delete the background image NAME, as "system ui background list" names it.
+
+    IMPORTANT: the image is deleted only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to delete the background without -y/--yes: "{name}"')
+        sys.exit(1)
+    execute_command(ctx, f'delete background "{name}"', lambda c: c.delete_background(name))
+
+
+@system_ui_background.command("list")
+@click.pass_context
+@option_format
+def system_ui_background_list(ctx: click.Context, output_format: str) -> None:
+    """Print the background images of the user interface, and the one in use.
+
+    Needs a WebSocket API client.
+    """
+    backgrounds = fetch_or_exit(ctx, lambda c: c.backgrounds)
+    render_payload(ctx, backgrounds.raw, output_format, heading="Volumio Backgrounds")
+
+
+@system_ui_background.command("set")
+@click.pass_context
+@click.argument("name", type=str)
+def system_ui_background_set(ctx: click.Context, name: str) -> None:
+    """Make NAME the background: an image, or a solid colour when NAME starts with "#".
+
+    An image is one "system ui background list" names; a colour is hexadecimal, with
+    three or six digits (e.g., "#000", "#1a2b3c").
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'set background "{name}"', lambda c: c.set_background(name))
+
+
+@system_ui.command("experience")
+@click.pass_context
+@click.argument(
+    "value", required=False, default=None, type=click.Choice(EXPERIENCE_VALUES, case_sensitive=True)
+)
+@option_format
+def system_ui_experience(ctx: click.Context, value: str | None, output_format: str) -> None:
+    """Print or set how many options the user interface offers.
+
+    Without VALUE, print the setting in use and the ones that can be chosen.
+    Otherwise VALUE is "advanced" for the full set of options, or "simple".
+
+    Needs a WebSocket API client.
+    """
+    if value is None:
+        settings = fetch_or_exit(ctx, lambda c: c.experience_settings)
+        render_payload(ctx, settings.raw, output_format, heading="Volumio Experience Settings")
+        return
+    advanced = value == "advanced"
+    execute_command(ctx, f"experience {value}", lambda c: c.set_experience_settings(advanced))
+
+
+@system_ui.group("language", invoke_without_command=True)
+@click.pass_context
+def system_ui_language(ctx: click.Context) -> None:
+    """Print the code of the language of the user interface, or manage the language.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        code = fetch_or_exit(ctx, lambda c: c.ui_settings).language
+        click.echo(json.dumps(code) if ctx.obj["machine_readable"] else code or "")
+
+
+@system_ui_language.command("list")
+@click.pass_context
+@option_format
+def system_ui_language_list(ctx: click.Context, output_format: str) -> None:
+    """Print the languages the user interface can be shown in, and the one in use.
+
+    Needs a WebSocket API client.
+    """
+    languages = fetch_or_exit(ctx, lambda c: c.languages)
+    render_payload(ctx, languages.raw, output_format, heading="Volumio Languages")
+
+
+@system_ui_language.command("set")
+@click.pass_context
+@click.argument("code", type=str)
+@option_language_name
+def system_ui_language_set(ctx: click.Context, code: str, name: str | None) -> None:
+    """Show the user interface in the language CODE, one of "system ui language list".
+
+    Needs a WebSocket API client.
+    """
+    languages = fetch_or_exit(ctx, lambda c: c.languages)
+    codes = [language.code for language in languages if language.code is not None]
+    if code not in codes:
+        error(f'Language not found: "{code}"')
+        error("Available languages:")
+        for available in codes:
+            error(f'  "{available}"')
+        if not codes:
+            error("  (none)")
+        sys.exit(1)
+    execute_command(ctx, f'language "{code}"', lambda c: c.set_language(code, name))
+
+
+@system_ui.command("privacy")
+@click.pass_context
+@option_format
+def system_ui_privacy(ctx: click.Context, output_format: str) -> None:
+    """Print the privacy settings of the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    settings = fetch_or_exit(ctx, lambda c: c.privacy_settings)
+    render_payload(ctx, settings.raw, output_format, heading="Volumio Privacy Settings")
+
+
+@system_ui.command("settings")
+@click.pass_context
+@option_format
+def system_ui_settings(ctx: click.Context, output_format: str) -> None:
+    """Print the colour, language, and theme of the user interface.
+
+    Needs a WebSocket API client.
+    """
+    settings = fetch_or_exit(ctx, lambda c: c.ui_settings)
+    render_payload(ctx, settings.raw, output_format, heading="Volumio User Interface Settings")
+
+
+@system.group("update")
+@click.pass_context
+def system_update(ctx: click.Context) -> None:
+    """Check for, and install, the updates of the Volumio host."""
+    pass
+
+
+@system_update.group("automatic", invoke_without_command=True)
+@click.pass_context
+def system_update_automatic(ctx: click.Context) -> None:
+    """Print whether the Volumio host updates itself, or switch it with the subcommands.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        value = fetch_or_exit(ctx, lambda c: c.automatic_update_enabled)
+        click.echo(json.dumps(value) if ctx.obj["machine_readable"] else value)
+
+
+@system_update_automatic.command("disable")
+@click.pass_context
+def system_update_automatic_disable(ctx: click.Context) -> None:
+    """Stop the Volumio host from updating itself.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, "update automatic disable", lambda c: c.set_automatic_updates(False))
+
+
+@system_update_automatic.command("enable")
+@click.pass_context
+@option_start_time
+@option_end_time
+def system_update_automatic_enable(
+    ctx: click.Context, start_time: int | None, end_time: int | None
+) -> None:
+    """Make the Volumio host update itself, within a window of hours of its day.
+
+    The window opens at --start-time and closes at --end-time; an hour not given keeps
+    the one the host holds.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx,
+        "update automatic enable",
+        lambda c: c.set_automatic_updates(True, start_time, end_time),
+    )
+
+
+@system_update.group("channel", invoke_without_command=True)
+@click.pass_context
+def system_update_channel(ctx: click.Context) -> None:
+    """Print the update channel of the Volumio host, or manage it with the subcommands.
+
+    Needs a WebSocket API client.
+    """
+    if ctx.invoked_subcommand is None:
+        channel = fetch_or_exit(ctx, lambda c: c.updater_channel).current_channel
+        click.echo(json.dumps(channel) if ctx.obj["machine_readable"] else channel or "")
+
+
+@system_update_channel.command("list")
+@click.pass_context
+@option_format
+def system_update_channel_list(ctx: click.Context, output_format: str) -> None:
+    """Print the update channels the Volumio host can follow.
+
+    Needs a WebSocket API client.
+    """
+    channel = fetch_or_exit(ctx, lambda c: c.updater_channel)
+    render_names(ctx, channel.available_channels, output_format, "Volumio Update Channels")
+
+
+@system_update_channel.command("set")
+@click.pass_context
+@click.argument("value", type=str)
+def system_update_channel_set(ctx: click.Context, value: str) -> None:
+    """Move the Volumio host to the update channel VALUE, one of "system update channel list".
+
+    Needs a WebSocket API client.
+    """
+    channel = fetch_or_exit(ctx, lambda c: c.updater_channel)
+    if value not in channel.available_channels:
+        error(f'Update channel not found: "{value}"')
+        error("Available update channels:")
+        for available in channel.available_channels:
+            error(f'  "{available}"')
+        if not channel.available_channels:
+            error("  (none)")
+        sys.exit(1)
+
+    def set_channel(client: APIClient) -> None:
+        client.updater_channel = value
+
+    execute_command(ctx, f'update channel "{value}"', set_channel)
+
+
+@system_update.command("check")
+@click.pass_context
+@option_cached
+@option_format
+def system_update_check(ctx: click.Context, cached: bool, output_format: str) -> None:
+    """Check whether an update is available for the Volumio host, and print the answer.
+
+    The host asks its updater and answers once it has replied, which can take a while.
+    With --cached, the host answers with the update information it cached instead,
+    which it does only when its automatic update check is enabled.
+
+    Needs a WebSocket API client.
+    """
+    if cached:
+        check = fetch_or_exit(ctx, lambda c: c.check_update_cache())
+    else:
+        check = fetch_or_exit(ctx, lambda c: c.check_for_update())
+    render_payload(ctx, check.raw, output_format, heading="Volumio Update Check")
+
+
+@system_update.command("install")
+@click.pass_context
+@option_ignore_integrity_check
+@option_yes
+def system_update_install(ctx: click.Context, ignore_integrity_check: bool, yes: bool) -> None:
+    """Install the update the Volumio host found.
+
+    IMPORTANT: the host restarts when done; the update is installed only when -y/--yes
+    is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error("Refusing to install the update without -y/--yes")
+        sys.exit(1)
+    execute_command(ctx, "update install", lambda c: c.update(ignore_integrity_check))
+
+
+@system.group("network")
+@click.pass_context
+def system_network(ctx: click.Context) -> None:
+    """Query the network of the Volumio host, and join a wireless network."""
+    pass
+
+
+@system_network.command("info")
+@click.pass_context
+@option_fields
+@option_format
+def system_network_info(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the network interfaces of the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.network_info.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("interfaces", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_INFO,
+        "Volumio Network Interfaces",
+        name_key="type",
+    )
+
+
+@system_network.command("join")
+@click.pass_context
+@click.argument("ssid", type=str)
+@option_wireless_password
+@option_yes
+def system_network_join(ctx: click.Context, ssid: str, password: str | None, yes: bool) -> None:
+    """Join the wireless network SSID with the Volumio host.
+
+    IMPORTANT: the host may leave the network this tool reaches it on; the network is
+    joined only when -y/--yes is given. The password stays in the shell history.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to join the wireless network without -y/--yes: "{ssid}"')
+        sys.exit(1)
+    secret = password or ""
+    execute_command(ctx, f'join "{ssid}"', lambda c: c.save_wireless_settings(ssid, secret))
+
+
+@system_network.command("wireless")
+@click.pass_context
+@option_fields
+@option_format
+@option_scan
+def system_network_wireless(
+    ctx: click.Context, fields: str, output_format: str, scan: bool
+) -> None:
+    """Print the wireless networks the Volumio host saw last, or scans for with --scan.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(
+        ctx, lambda c: (c.wireless_networks if scan else c.wireless_networks_cache).raw
+    )
+    render_items(
+        ctx,
+        data,
+        data.get("available", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_NETWORK_WIRELESS,
+        "Volumio Wireless Networks",
+        name_key="ssid",
+    )
+
+
+@system.group("share")
+@click.pass_context
+def system_share(ctx: click.Context) -> None:
+    """Manage the network shares mounted by the Volumio host."""
+    pass
+
+
+@system_share.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("path", type=str)
+@click.argument("fstype", type=str)
+@option_share_options
+@option_share_password
+@option_share_username
+def system_share_add(
+    ctx: click.Context,
+    name: str,
+    path: str,
+    fstype: str,
+    options: str | None,
+    password: str | None,
+    username: str | None,
+) -> None:
+    """Mount the share at PATH of kind FSTYPE (e.g., cifs, nfs) under NAME.
+
+    Needs a WebSocket API client.
+    """
+    given = {
+        key: value
+        for key, value in (("username", username), ("password", password), ("options", options))
+        if value is not None
+    }
+    execute_command(ctx, f'add share "{name}"', lambda c: c.add_share(name, path, fstype, **given))
+
+
+@system_share.command("discover")
+@click.pass_context
+@option_format
+def system_share_discover(ctx: click.Context, output_format: str) -> None:
+    """Print the network shares reachable from the Volumio host, as it reports them.
+
+    Needs a WebSocket API client.
+    """
+    shares = fetch_or_exit(ctx, lambda c: c.discover_network_shares())
+    render_payload(ctx, shares, output_format, heading="Volumio Network Shares Discovered")
+
+
+@system_share.command("edit")
+@click.pass_context
+@click.argument("share_id", type=str)
+@option_share_fstype
+@option_share_name
+@option_share_options
+@option_share_password
+@option_share_path
+@option_share_username
+def system_share_edit(
+    ctx: click.Context,
+    share_id: str,
+    fstype: str | None,
+    name: str | None,
+    options: str | None,
+    password: str | None,
+    path: str | None,
+    username: str | None,
+) -> None:
+    """Change the share SHARE_ID, as "system share list" names it: the fields given.
+
+    Needs a WebSocket API client.
+    """
+    given = {
+        key: value
+        for key, value in (
+            ("name", name),
+            ("path", path),
+            ("fstype", fstype),
+            ("username", username),
+            ("password", password),
+            ("options", options),
+        )
+        if value is not None
+    }
+    if not given:
+        raise click.UsageError(SHARE_EDIT_FIELDS_ERROR)
+    execute_command(ctx, f'edit share "{share_id}"', lambda c: c.edit_share(share_id, **given))
+
+
+@system_share.command("info")
+@click.pass_context
+@click.argument("share_id", type=str)
+@option_format
+def system_share_info(ctx: click.Context, share_id: str, output_format: str) -> None:
+    """Print the details of the share SHARE_ID, as "system share list" names it.
+
+    Needs a WebSocket API client.
+    """
+    share = fetch_or_exit(ctx, lambda c: c.get_share(share_id))
+    render_payload(ctx, share.raw, output_format, heading=f'Volumio Network Share "{share_id}"')
+
+
+@system_share.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_share_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the network shares mounted by the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.shares.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("shares", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_SHARE_LIST,
+        "Volumio Network Shares",
+    )
+
+
+@system_share.command("remove")
+@click.pass_context
+@click.argument("share_id", type=str)
+@option_yes
+def system_share_remove(ctx: click.Context, share_id: str, yes: bool) -> None:
+    """Unmount the share SHARE_ID, as "system share list" names it.
+
+    IMPORTANT: the share is unmounted only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to unmount the share without -y/--yes: "{share_id}"')
+        sys.exit(1)
+    execute_command(ctx, f'remove share "{share_id}"', lambda c: c.delete_share(share_id))
+
+
+@system.group("usb")
+@click.pass_context
+def system_usb(ctx: click.Context) -> None:
+    """Manage the USB drives attached to the Volumio host."""
+    pass
+
+
+@system_usb.command("eject")
+@click.pass_context
+@click.argument("name", type=str)
+def system_usb_eject(ctx: click.Context, name: str) -> None:
+    """Unmount the USB drive NAME, as "system usb list" names it, before unplugging it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'eject "{name}"', lambda c: c.safe_remove_drive(name))
+
+
+@system_usb.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def system_usb_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the USB drives attached to the Volumio host.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.usb_drives.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("drives", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_SYSTEM_USB_LIST,
+        "Volumio USB Drives",
+        name_key="title",
+    )
+
+
 @main.group()
 @click.pass_context
 def collection(ctx: click.Context) -> None:
@@ -1842,12 +3393,16 @@ def collection(ctx: click.Context) -> None:
 @option_albums_only
 @option_artists_only
 @option_best_result_only
+@option_current_track_album
+@option_current_track_artist
 @option_format_table
+@option_last
 @option_limit
 @option_offset
 @option_playlists_only
 @option_print_uri_toggle
 @option_result_kinds
+@option_root
 @option_tracks_only
 def collection_browse(
     ctx: click.Context,
@@ -1855,12 +3410,16 @@ def collection_browse(
     albums_only: bool,
     artists_only: bool,
     best_result_only: bool,
+    current_track_album: bool,
+    current_track_artist: bool,
     output_format: str,
+    last: bool,
     limit: int | None,
     offset: int | None,
     playlists_only: bool,
     print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
+    root: bool,
     tracks_only: bool,
 ) -> None:
     """Browse the content that URI lists in the collection of the Volumio host.
@@ -1870,49 +3429,439 @@ def collection_browse(
     themselves, printed unless --no-print-uri is given, and from the -u/--print-uri
     option of "collection search". The -o/--offset skip is applied by the host to
     each list, before the kind options act, and not at the root; the WebSocket API
-    clients apply it themselves, the root included."""
-    machine_readable = ctx.obj["machine_readable"]
+    clients apply it themselves, the root included.
+
+    With -a/--current-track-artist or -b/--current-track-album, the artist or the
+    album of the current track is browsed to instead, as the host resolves them; with --last,
+    the listing the host pushed last to any of its clients is printed; with --root,
+    the browse sources are, as the root lists them. These four take neither URI nor
+    -o/--offset, and need a WebSocket API client."""
     if best_result_only and limit is not None:
         raise click.UsageError(SEARCH_LIMIT_ERROR)
-    asked = [
-        kinds
-        for kinds, wanted in (
-            (result_kinds or set(), result_kinds is not None),
-            ({SearchResultItemKind.ALBUM}, albums_only),
-            ({SearchResultItemKind.ARTIST}, artists_only),
-            ({SearchResultItemKind.PLAYLIST}, playlists_only),
-            ({SearchResultItemKind.TRACK}, tracks_only),
+    alone = [current_track_album, current_track_artist, last, root]
+    if sum(alone) > 1 or (any(alone) and (uri is not None or offset is not None)):
+        raise click.UsageError(BROWSE_ALONE_OPTIONS_ERROR)
+    kinds = browse_kinds(result_kinds, albums_only, artists_only, playlists_only, tracks_only)
+
+    if root:
+        sources = fetch_or_exit(ctx, lambda c: c.browse_sources)
+        if ctx.obj["machine_readable"] or output_format == "raw":
+            echo_data(ctx, json.dumps(sources.raw))
+            return
+        # The sources are the items the root lists: print them the same way
+        results = BrowseResults.from_envelope(
+            {"navigation": {"lists": [source.raw for source in sources]}}
         )
-        if wanted
-    ]
-    if len(asked) > 1:
-        raise click.UsageError(BROWSE_KINDS_ERROR)
+    elif last:
+        results = fetch_or_exit(ctx, lambda c: c.last_browse)
+    elif current_track_artist or current_track_album:
+        kind = "artist" if current_track_artist else "album"
+        state = fetch_state_or_exit(ctx)
+        value = state.artist if current_track_artist else state.album
+        if not value:
+            error(BROWSE_CURRENT_TRACK_ERROR.format(kind=kind))
+            sys.exit(1)
+        target = value
+        results = fetch_or_exit(ctx, lambda c: c.goto(kind, target))
+    else:
+        results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
 
-    results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
-
-    if asked:
-        results = results.filtered(kinds=asked[0])
+    if kinds is not None:
+        results = results.filtered(kinds=kinds)
 
     kept = 1 if best_result_only else limit
     if kept is not None:
         results = results.limited(kept)
 
-    if machine_readable or output_format == "raw":
-        # The raw format is the payload of the host, as it answered it
-        output = json.dumps(results.raw)
-    else:
-        info = results.info.model_dump(by_alias=True) if results.info else None
-        lists = [result_list.model_dump(by_alias=True) for result_list in results.lists]
-        if output_format == "table":
-            output = format_browse_results_as_table(lists, info, print_uri)
-        else:
-            navigation = {"info": info, "lists": lists, "prev": results.prev}
-            if output_format == "json":
-                output = json.dumps(navigation, indent=2)
-            else:  # pretty
-                output = json.dumps(navigation, indent=4, sort_keys=True, ensure_ascii=False)
+    render_browse_results(ctx, results, output_format, print_uri)
 
-    echo_data(ctx, output)
+
+@collection.group("directory")
+@click.pass_context
+def directory(ctx: click.Context) -> None:
+    """Manage the directories of the local library of the collection."""
+    pass
+
+
+@directory.command("delete")
+@click.pass_context
+@click.argument("uri", type=str)
+@option_update_library
+@option_yes
+def directory_delete(ctx: click.Context, uri: str, update_library: bool, yes: bool) -> None:
+    """Delete the directory at URI from the local library of the Volumio host.
+
+    A URI comes from "collection browse" (e.g., music-library/INTERNAL/music/old);
+    the root of the library and the sources right under it cannot be deleted. Once
+    the directory is deleted, the library is updated at the directory above it,
+    unless --no-update-library: the host lists a deleted directory until then.
+
+    IMPORTANT: the files of the directory are deleted from the host and cannot be
+    recovered; the directory is deleted only when -y/--yes is given.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to delete the directory without -y/--yes: "{uri}"')
+        sys.exit(1)
+    execute_command(ctx, f'delete directory "{uri}"', lambda c: c.delete_folder(uri))
+    if update_library:
+        parent = uri.rsplit("/", 1)[0]
+        execute_command(ctx, f'update library "{parent}"', lambda c: c.update_library(parent))
+
+
+@collection.command("update")
+@click.pass_context
+@click.argument("uri", required=False, default=None, type=str)
+@option_rescan
+@option_thumbnails
+def collection_update(ctx: click.Context, uri: str | None, rescan: bool, thumbnails: bool) -> None:
+    """Update the collection of the Volumio host, looking for changes.
+
+    With URI, only its content is updated. The options select another refresh
+    instead, and take no URI: --rescan rescans the collection from scratch (slow on
+    a large collection), and --thumbnails rebuilds the thumbnails of the album art.
+    They are mutually exclusive.
+
+    Needs a WebSocket API client.
+    """
+    if rescan and thumbnails:
+        raise click.UsageError(COLLECTION_UPDATE_MODES_ERROR)
+    if uri is not None and (rescan or thumbnails):
+        raise click.UsageError(COLLECTION_UPDATE_URI_ERROR)
+    if rescan:
+        execute_command(ctx, "rescan library", lambda c: c.rescan_library())
+    elif thumbnails:
+        execute_command(ctx, "regenerate thumbnails", lambda c: c.regenerate_thumbnails())
+    else:
+        execute_command(ctx, "update library", lambda c: c.update_library(uri))
+
+
+@collection.group("favourite")
+@click.pass_context
+def favourite(ctx: click.Context) -> None:
+    """Manage the favourites, and the radio favourites (--radio)."""
+    pass
+
+
+@favourite.command("add")
+@click.pass_context
+@click.argument("uri", type=str)
+@option_item_albumart
+@option_radio
+@option_service_of_uri
+@option_item_title
+def favourite_add(
+    ctx: click.Context,
+    uri: str,
+    albumart: str | None,
+    radio: bool,
+    service: str | None,
+    title: str | None,
+) -> None:
+    """Add the item at URI to the favourites, or a Web radio to the radio favourites.
+
+    A URI comes from "collection browse" or "collection search". With --radio, URI is
+    the name or the URL of a Web radio of the host ("collection radio list"), whose
+    URL, name, and logo are used, or the URL any other Web radio streams from, which
+    needs --title, the name to list it under, and takes --albumart; --service is not
+    accepted. The radio favourites are read again once the host answers: a radio it
+    does not list is reported as an error.
+
+    The Volumio host keeps its own favourites for the local library and the sources
+    without favourites of their own; a source with some (Qobuz, Tidal) is given the
+    item to keep among them, browsable from the root of the source, and not among
+    those "collection favourite list" lists.
+
+    Needs a WebSocket API client.
+    """
+    if radio:
+        if service is not None:
+            raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
+        stream, name, logo = _radio_favourite_details(ctx, uri, title, albumart)
+        execute_command(
+            ctx,
+            f'add radio favourite "{stream}"',
+            lambda c: c.add_radio_favourite(stream, name, logo),
+        )
+        listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
+        if not any(item.uri == stream for item in listed.items):
+            error(FAVOURITE_RADIO_ADD_NOT_LISTED_ERROR.format(uri=stream))
+            sys.exit(1)
+    else:
+        execute_command(
+            ctx,
+            f'add favourite "{uri}"',
+            lambda c: c.add_to_favourites(uri, title, service, albumart),
+        )
+
+
+@favourite.command("list")
+@click.pass_context
+@option_format_table
+@option_limit
+@option_offset
+@option_print_uri_toggle
+@option_radio
+def favourite_list(
+    ctx: click.Context,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_uri: bool,
+    radio: bool,
+) -> None:
+    """List the favourites, or the radio favourites with --radio.
+
+    A convenience over "collection browse" of the URI the favourites are listed at,
+    printed the same way; works with any API client. The favourites of a source that
+    keeps its own (Qobuz, Tidal) are browsed from the root of the source instead.
+    """
+    uri = URI_RADIO_FAVOURITES if radio else URI_FAVOURITES
+    results = fetch_or_exit(ctx, lambda c: c.browse(uri, offset))
+    if limit is not None:
+        results = results.limited(limit)
+    render_browse_results(ctx, results, output_format, print_uri)
+
+
+@favourite.command("play")
+@click.pass_context
+@click.argument("name", required=False, default=None, type=str)
+@option_print_resulting_status
+@option_radio
+def favourite_play(
+    ctx: click.Context, name: str | None, print_resulting_status: bool, radio: bool
+) -> None:
+    """Play the favourites from the one named NAME, or the radio favourites with --radio.
+
+    NAME is required without --radio. With --radio, the radio favourites play from the
+    one named, or streaming from, NAME ("collection favourite list --radio"), or from
+    the first without NAME.
+
+    Needs a WebSocket API client.
+    """
+    if radio:
+        if name is None:
+            execute_command(ctx, "play radio favourites", lambda c: c.play_radio_favourites())
+        else:
+            index, _ = _radio_favourite_or_exit(ctx, name)
+            execute_command(
+                ctx,
+                f'play radio favourite "{name}"',
+                lambda c: c.replace_queue_and_play(URI_RADIO_FAVOURITES, index),
+            )
+    else:
+        if name is None:
+            raise click.UsageError(FAVOURITE_PLAY_NAME_ERROR)
+        execute_command(ctx, "play favourites", lambda c: c.play_favourites(name))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@favourite.command("remove")
+@click.pass_context
+@click.argument("uri", type=str)
+@option_radio
+@option_service_of_uri
+def favourite_remove(ctx: click.Context, uri: str, radio: bool, service: str | None) -> None:
+    """Remove the item at URI from the favourites, or a Web radio from the radio favourites.
+
+    A URI comes from "collection favourite list", or from a browse for a file of the
+    local library. With --radio, URI is the name the Web radio is a favourite under
+    or the URL it streams from ("collection favourite list --radio"), and --service
+    is not accepted. The favourites are read again once the host answers: an item it
+    still lists is reported as an error.
+
+    Needs a WebSocket API client.
+    """
+    if radio:
+        if service is not None:
+            raise click.UsageError(FAVOURITE_RADIO_OPTIONS_ERROR)
+        _, stream = _radio_favourite_or_exit(ctx, uri)
+        execute_command(
+            ctx,
+            f'remove radio favourite "{stream}"',
+            lambda c: c.remove_radio_favourite(stream),
+        )
+        listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
+        if any(item.uri == stream for item in listed.items):
+            error(FAVOURITE_REMOVE_STILL_LISTED_ERROR.format(uri=stream))
+            sys.exit(1)
+    else:
+        execute_command(
+            ctx, f'remove favourite "{uri}"', lambda c: c.remove_from_favourites(uri, service)
+        )
+        listed = fetch_or_exit(ctx, lambda c: c.browse(URI_FAVOURITES, None))
+        if any(item.uri == stored_local_uri(uri) for item in listed.items):
+            error(FAVOURITE_REMOVE_STILL_LISTED_ERROR.format(uri=uri))
+            sys.exit(1)
+
+
+def _radio_favourite_details(
+    ctx: click.Context, radio: str, title: str | None, albumart: str | None
+) -> tuple[str, str | None, str | None]:
+    """Resolve the Web radio to make a favourite, or exit.
+
+    A radio the host lists among the Web radios of the user, by name or by URL, is
+    taken from there: its URL, and the name and the logo not given. Any other is the
+    URL given, which needs a title: the host lists a radio saved without one under
+    no name.
+
+    Args:
+        ctx: The click context
+        radio: The name or the URL of a Web radio of the host, or a URL
+        title: The name to list the radio under, when given
+        albumart: The URL of the logo to show for it, when given
+
+    Returns:
+        The URL the radio streams from, the name to list it under, and its logo
+    """
+    listed = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, None))
+    for item in listed.items:
+        if item.uri and radio in (item.title, item.uri):
+            return (
+                item.uri,
+                title if title is not None else item.title,
+                albumart if albumart is not None else item.albumart,
+            )
+    if title is None:
+        raise click.UsageError(FAVOURITE_RADIO_TITLE_ERROR)
+    return radio, title, albumart
+
+
+def _radio_favourite_or_exit(ctx: click.Context, radio: str) -> tuple[int, str]:
+    """Find the radio favourite named, or streaming from, RADIO, or exit.
+
+    Args:
+        ctx: The click context
+        radio: The name the radio is a favourite under, or the URL it streams from
+
+    Returns:
+        The position of the radio among the radio favourites (0-based), and the URL
+        it streams from, as the host lists it
+    """
+    listed = fetch_or_exit(ctx, lambda c: c.browse(URI_RADIO_FAVOURITES, None))
+    for index, item in enumerate(listed.items):
+        if item.uri and radio in (item.title, item.uri):
+            return index, item.uri
+    error(FAVOURITE_RADIO_UNKNOWN_ERROR.format(radio=radio))
+    sys.exit(1)
+
+
+@collection.group("radio")
+@click.pass_context
+def radio(ctx: click.Context) -> None:
+    """Manage the Web radios saved by the user (Web radio plugin)."""
+    pass
+
+
+@radio.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("uri", type=str)
+@option_format_table
+@option_limit
+@option_offset
+@option_print_resulting_list
+@option_print_uri_toggle
+def radio_add(
+    ctx: click.Context,
+    name: str,
+    uri: str,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_resulting_list: bool,
+    print_uri: bool,
+) -> None:
+    """Save the Web radio streaming from URI under NAME.
+
+    Once the radio is saved, the Web radios are listed as "collection radio list"
+    lists them, unless --no-print-resulting-list.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'add web radio "{name}"', lambda c: c.add_web_radio(name, uri))
+    if print_resulting_list:
+        _render_web_radios(ctx, output_format, limit, offset, print_uri)
+
+
+@radio.command("list")
+@click.pass_context
+@option_format_table
+@option_limit
+@option_offset
+@option_print_uri_toggle
+def radio_list(
+    ctx: click.Context,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_uri: bool,
+) -> None:
+    """List the Web radios saved by the user.
+
+    A convenience over "collection browse" of the URI the Web radios are listed at,
+    printed the same way; works with any API client.
+    """
+    _render_web_radios(ctx, output_format, limit, offset, print_uri)
+
+
+@radio.command("remove")
+@click.pass_context
+@click.argument("name", type=str)
+@option_format_table
+@option_limit
+@option_offset
+@option_print_resulting_list
+@option_print_uri_toggle
+def radio_remove(
+    ctx: click.Context,
+    name: str,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_resulting_list: bool,
+    print_uri: bool,
+) -> None:
+    """Delete the Web radio saved under NAME.
+
+    The Web radios are read again once the host answers: a radio it still lists is
+    reported as an error, which happens on a MyVolumio cloud device asked to remove
+    its last Web radio, since it does not save an empty list. Otherwise, the Web
+    radios are listed as "collection radio list" lists them, unless
+    --no-print-resulting-list.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(ctx, f'remove web radio "{name}"', lambda c: c.remove_web_radio(name))
+    listed = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, None))
+    if any(item.title == name for item in listed.items):
+        error(RADIO_REMOVE_STILL_LISTED_ERROR.format(name=name))
+        sys.exit(1)
+    if print_resulting_list:
+        _render_web_radios(ctx, output_format, limit, offset, print_uri)
+
+
+def _render_web_radios(
+    ctx: click.Context,
+    output_format: str,
+    limit: int | None,
+    offset: int | None,
+    print_uri: bool,
+) -> None:
+    """Read the Web radios of the user and print them as a browse prints its results.
+
+    Args:
+        ctx: Click context object holding the shared options
+        output_format: The -F/--format option value
+        limit: The -l/--limit option value, None for every radio
+        offset: The -o/--offset option value, None for the first radio on
+        print_uri: Whether to print the URL of each radio under its line
+    """
+    results = fetch_or_exit(ctx, lambda c: c.browse(URI_WEB_RADIOS, offset))
+    if limit is not None:
+        results = results.limited(limit)
+    render_browse_results(ctx, results, output_format, print_uri)
 
 
 @collection.command("search")
@@ -1931,6 +3880,7 @@ def collection_browse(
 @option_print_uri
 @option_result_kinds
 @option_service
+@option_super
 @option_track
 @option_tracks_only
 def collection_search(
@@ -1949,6 +3899,7 @@ def collection_search(
     print_uri: bool,
     result_kinds: set[SearchResultItemKind] | None,
     service: str | None,
+    super_search: bool,
     track: str | None,
     tracks_only: bool,
 ) -> None:
@@ -1958,7 +3909,9 @@ def collection_search(
     is searched for; --album, --artist, and --track also keep the matching results
     only. With --result-kinds, or one of --albums-only, --artists-only, --playlist,
     --playlists-only, and --tracks-only, the results of the kinds asked for are all
-    kept, and the other options only say what to search for."""
+    kept, and the other options only say what to search for. With --super, every
+    source is searched at once through the metavolumio plugin (Volumio Premium), which
+    needs a WebSocket API client."""
     machine_readable = ctx.obj["machine_readable"]
     terms = [term for term in (artist, album, track, playlist) if term]
     searched = query or " ".join(terms)
@@ -1980,7 +3933,9 @@ def collection_search(
     if len(asked) > 1:
         raise click.UsageError(SEARCH_KINDS_ERROR)
 
-    results = fetch_or_exit(ctx, lambda c: c.search(searched))
+    results = fetch_or_exit(
+        ctx, lambda c: c.super_search(searched) if super_search else c.search(searched)
+    )
 
     if asked:
         # The kinds are asked for, so the other options only feed the query, and the
@@ -2012,6 +3967,60 @@ def collection_search(
     echo_data(ctx, output)
 
 
+@collection.group("source")
+@click.pass_context
+def source(ctx: click.Context) -> None:
+    """Manage the music sources (plugins) of the Volumio host."""
+    pass
+
+
+@source.command("disable")
+@click.pass_context
+@click.argument("name", type=str)
+def source_disable(ctx: click.Context, name: str) -> None:
+    """Disable the music source NAME, as "collection source list" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'disable source "{name}"', lambda c: c.set_music_source_enabled(name, False)
+    )
+
+
+@source.command("enable")
+@click.pass_context
+@click.argument("name", type=str)
+def source_enable(ctx: click.Context, name: str) -> None:
+    """Enable the music source NAME, as "collection source list" names it.
+
+    Needs a WebSocket API client.
+    """
+    execute_command(
+        ctx, f'enable source "{name}"', lambda c: c.set_music_source_enabled(name, True)
+    )
+
+
+@source.command("list")
+@click.pass_context
+@option_fields
+@option_format
+def source_list(ctx: click.Context, fields: str, output_format: str) -> None:
+    """Print the music sources of the Volumio host, with their enabled and active flags.
+
+    Needs a WebSocket API client.
+    """
+    data = fetch_or_exit(ctx, lambda c: c.music_sources.raw)
+    render_items(
+        ctx,
+        data,
+        data.get("plugins", []),
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_COLLECTION_SOURCE_LIST,
+        "Volumio Music Sources",
+    )
+
+
 @collection.command("statistics")
 @click.pass_context
 @option_format
@@ -2028,11 +4037,50 @@ def multiroom(ctx: click.Context) -> None:
     pass
 
 
-@multiroom.command("zones")
+def _multiroom_settings(text: str) -> dict[str, Any]:
+    """Parse the multiroom settings given to a command.
+
+    Args:
+        text: A JSON object, or the path of a file holding one
+
+    Returns:
+        The settings
+
+    Raises:
+        click.UsageError: If the text is neither a JSON object nor the path of a readable
+            file holding one
+    """
+    try:
+        if os.path.isfile(text):
+            with open(text, encoding="utf-8") as settings_file:
+                settings = json.load(settings_file)
+        else:
+            settings = json.loads(text)
+    except (OSError, ValueError) as e:
+        raise click.UsageError(f"{MULTIROOM_SETTINGS_ERROR} ({e})") from e
+    if not isinstance(settings, dict):
+        raise click.UsageError(MULTIROOM_SETTINGS_ERROR)
+    return settings
+
+
+@multiroom.command("client")
+@click.pass_context
+@click.argument("server", type=str)
+def multiroom_client(ctx: click.Context, server: str) -> None:
+    """Make the Volumio host a multiroom client of the host SERVER.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    execute_command(
+        ctx, f'multiroom client of "{server}"', lambda c: c.set_as_multiroom_client(server)
+    )
+
+
+@multiroom.command("info")
 @click.pass_context
 @option_fields
 @option_format
-def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None:
+def multiroom_info(ctx: click.Context, fields: str, output_format: str) -> None:
     """Print the multiroom zones seen by the Volumio instance."""
     data = fetch_or_exit(ctx, lambda c: c.zones.raw)
 
@@ -2051,11 +4099,298 @@ def multiroom_zones(ctx: click.Context, fields: str, output_format: str) -> None
     echo_data(ctx, output)
 
 
+@multiroom.command("server")
+@click.pass_context
+def multiroom_server(ctx: click.Context) -> None:
+    """Make the Volumio host a multiroom server.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    execute_command(ctx, "multiroom server", lambda c: c.set_as_multiroom_server())
+
+
+@multiroom.command("set")
+@click.pass_context
+@click.argument("settings", type=str)
+@option_format
+def multiroom_set(ctx: click.Context, settings: str, output_format: str) -> None:
+    """Change the multiroom configuration, printing the one the host then reports.
+
+    SETTINGS is a JSON object, or the path of a file holding one, of the shape
+    "multiroom status -F raw" prints.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    parsed = _multiroom_settings(settings)
+    resulting = fetch_or_exit(ctx, lambda c: c.set_multiroom(parsed))
+    render_payload(ctx, resulting.raw, output_format, heading="Volumio Multiroom Status")
+
+
+@multiroom.command("single")
+@click.pass_context
+def multiroom_single(ctx: click.Context) -> None:
+    """Take the Volumio host out of multiroom.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    execute_command(ctx, "multiroom single", lambda c: c.set_as_multiroom_single())
+
+
+@multiroom.command("status")
+@click.pass_context
+@option_format
+def multiroom_status(ctx: click.Context, output_format: str) -> None:
+    """Print the multiroom configuration of the Volumio host: whether it is on, and its role.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    status = fetch_or_exit(ctx, lambda c: c.multiroom)
+    render_payload(ctx, status.raw, output_format, heading="Volumio Multiroom Status")
+
+
+@multiroom.command("write")
+@click.pass_context
+@click.argument("settings", type=str)
+def multiroom_write(ctx: click.Context, settings: str) -> None:
+    """Write the multiroom configuration, without waiting for the host to report it.
+
+    SETTINGS is a JSON object, or the path of a file holding one, of the shape
+    "multiroom status -F raw" prints; "multiroom set" is the same write, answered.
+
+    Needs a WebSocket API client, and the multiroom plugin on the host.
+    """
+    parsed = _multiroom_settings(settings)
+    execute_command(ctx, "multiroom write", lambda c: c.write_multiroom(parsed))
+
+
 @main.group()
 @click.pass_context
 def playlist(ctx: click.Context) -> None:
-    """Query, play, and download the saved playlists."""
+    """Query, play, edit, and download the saved playlists."""
     pass
+
+
+@playlist.command("add")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("uri", type=str)
+@option_check_playlist_name
+@option_expand_tracks
+@option_fields
+@option_format
+@option_print_resulting_content
+@option_service_of_uri
+def playlist_add(
+    ctx: click.Context,
+    name: str,
+    uri: str,
+    check_playlist_name: bool,
+    expand_tracks: bool,
+    fields: str,
+    output_format: str,
+    print_resulting_content: bool,
+    service: str | None,
+) -> None:
+    """Add the item at URI, or the tracks it lists, to the playlist NAME.
+
+    A URI comes from "collection browse" or "collection search". With
+    --expand-tracks, a URI of a source other than the local library that does not
+    name a track (an album or a playlist of Qobuz, for instance) is browsed first,
+    and the tracks it lists are added one by one; the Volumio host would store such a
+    URI as one item otherwise, while it expands the containers of its local library
+    by itself. The host creates the playlist when it does not exist, which
+    --no-check-playlist-name allows. Once the items are added, the content of the
+    playlist is printed as "playlist content" prints it, unless
+    --no-print-resulting-content.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    if expand_tracks:
+        items = playlist_tracks_of_uri_or_exit(ctx, uri, service)
+    else:
+        items = [(uri, service)]
+
+    def add_items(client: APIClient) -> None:
+        for item_uri, item_service in items:
+            client.add_to_playlist(name, item_uri, item_service)
+
+    execute_command(ctx, f'add to playlist "{name}"', add_items)
+    if print_resulting_content:
+        _render_playlist_content(ctx, name, fields, output_format)
+
+
+@playlist.command("content")
+@click.pass_context
+@click.argument("name", type=str)
+@option_check_playlist_name
+@option_fields
+@option_format
+def playlist_content(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+) -> None:
+    """Print the tracks of the playlist NAME.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    _render_playlist_content(ctx, name, fields, output_format)
+
+
+@playlist.command("copy")
+@click.pass_context
+@click.argument("source", type=str)
+@click.argument("target", type=str)
+@option_check_playlist_name
+@option_fields
+@option_format
+@option_overwrite_existing_playlist
+@option_playlist_copy_position
+@option_print_resulting_content
+def playlist_copy(
+    ctx: click.Context,
+    source: str,
+    target: str,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    overwrite_existing_playlist: bool,
+    position: set[int] | None,
+    print_resulting_content: bool,
+) -> None:
+    """Copy the playlist SOURCE to the new playlist TARGET, with the same content.
+
+    A playlist named TARGET is refused, unless --overwrite-existing-playlist is
+    given: it is then deleted first, as "playlist delete" deletes it. TARGET is
+    created empty, and the items of SOURCE are added to it one by one, by the URI
+    and the service each holds, as "playlist add" adds them without expanding: all
+    of them, or those at the positions -p/--position selects, such as "1-3,6-8,12"
+    (indexed according to --position-starting-at-one/--position-starting-at-zero).
+    Once done, the content of TARGET is printed as "playlist content" prints it,
+    unless --no-print-resulting-content.
+
+    Needs a WebSocket API client.
+    """
+    if source == target:
+        raise click.UsageError(PLAYLIST_SAME_NAME_ERROR)
+    items = _playlist_items_to_copy(ctx, source, target, check_playlist_name, position)
+    _delete_existing_playlist_or_exit(ctx, target, overwrite_existing_playlist)
+
+    def copy_items(client: APIClient) -> None:
+        _fill_new_playlist(client, target, items)
+
+    execute_command(ctx, f'copy playlist "{source}" to "{target}"', copy_items)
+    if print_resulting_content:
+        _render_playlist_content(ctx, target, fields, output_format)
+
+
+@playlist.command("create")
+@click.pass_context
+@click.argument("name", type=str)
+@option_fields
+@option_format
+@option_import_from_file
+@option_print_resulting_content
+@option_print_resulting_playlists
+def playlist_create(
+    ctx: click.Context,
+    name: str,
+    fields: str,
+    output_format: str,
+    import_from_file: str | None,
+    print_resulting_content: bool,
+    print_resulting_list: bool,
+) -> None:
+    """Create the empty playlist NAME, filled from FILE with -f/--import-from-file.
+
+    FILE holds the items as "playlist content NAME -L ALL" prints them, in any of
+    its formats (a JSON list, or the envelope of the host in the raw one): each item
+    is added by the "uri" and the "service" it holds, as "playlist add" adds them
+    without expanding, its other keys being ignored. The Volumio host refuses a name
+    already in use. Once filled from a file, the content of the playlist is printed
+    as "playlist content" prints it, unless --no-print-resulting-content; once done,
+    the playlists are listed as "playlist list" lists them, unless
+    --no-print-resulting-list.
+
+    Needs a WebSocket API client.
+    """
+    items: list[tuple[str, str | None]] = []
+    if import_from_file is not None:
+        items = _playlist_items_from_file(import_from_file)
+        info(f'Importing {len(items)} items of "{import_from_file}" into "{name}"')
+
+    def create_items(client: APIClient) -> None:
+        _fill_new_playlist(client, name, items)
+
+    execute_command(ctx, f'create playlist "{name}"', create_items)
+    if import_from_file is not None and print_resulting_content:
+        _render_playlist_content(ctx, name, fields, output_format)
+    if print_resulting_list:
+        _render_playlists(ctx, output_format)
+
+
+@playlist.command("delete")
+@click.pass_context
+@click.argument("name", type=str)
+@option_check_playlist_name
+@option_format
+@option_print_resulting_playlists
+@option_yes
+def playlist_delete(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    output_format: str,
+    print_resulting_list: bool,
+    yes: bool,
+) -> None:
+    """Delete the playlist NAME.
+
+    IMPORTANT: the playlist cannot be recovered; it is deleted only when -y/--yes is
+    given. The Volumio host answers a deletion with nothing and deletes in the
+    background: the playlists are read again, after the configured sleep, until the
+    playlist is gone, which is reported as an error when it still is after a few
+    reads. Once deleted, the playlists are listed as "playlist list" lists them,
+    unless --no-print-resulting-list.
+
+    Needs a WebSocket API client.
+    """
+    if not yes:
+        error(f'Refusing to delete the playlist without -y/--yes: "{name}"')
+        sys.exit(1)
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    execute_command(ctx, f'delete playlist "{name}"', lambda c: c.delete_playlist(name))
+    names = _playlist_names_after_deletion_or_exit(ctx, name)
+    if print_resulting_list:
+        render_names(ctx, names, output_format, "Volumio Playlists")
+
+
+@playlist.command("enqueue")
+@click.pass_context
+@click.argument("name", type=str)
+@option_check_playlist_name
+@option_print_resulting_status
+def playlist_enqueue(
+    ctx: click.Context,
+    name: str,
+    check_playlist_name: bool,
+    print_resulting_status: bool,
+) -> None:
+    """Append the playlist NAME to the queue, leaving the playback alone.
+
+    Needs a WebSocket API client.
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    execute_command(ctx, f'enqueue playlist "{name}"', lambda c: c.enqueue_playlist(name))
+    execute_conditionally(ctx, print_resulting_status, playback_status)
 
 
 @playlist.command("list")
@@ -2063,18 +4398,7 @@ def playlist(ctx: click.Context) -> None:
 @option_format
 def playlist_list(ctx: click.Context, output_format: str) -> None:
     """List the Volumio playlists saved by the current user."""
-    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-
-    if output_format == "raw":
-        output = json.dumps(names)
-    elif output_format == "json":
-        output = json.dumps(names, indent=2)
-    elif output_format == "table":
-        output = format_names_as_table(names, "Volumio Playlists")
-    else:  # pretty
-        output = json.dumps(names, indent=4, ensure_ascii=False)
-
-    echo_data(ctx, output)
+    _render_playlists(ctx, output_format)
 
 
 @playlist.command("play")
@@ -2090,18 +4414,304 @@ def playlist_play(
 ) -> None:
     """Start playback of the playlist specified by NAME."""
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-        if name not in names:
-            error(f'Playlist not found: "{name}"')
-            error("Available playlists:")
-            for available in names:
-                error(f'  "{available}"')
-            if not names:
-                error("  (none)")
-            sys.exit(1)
+        check_playlist_name_or_exit(ctx, name)
 
     execute_command(ctx, f'playplaylist "{name}"', lambda c: c.play_playlist(name))
     execute_conditionally(ctx, print_resulting_status, playback_status)
+
+
+@playlist.command("remove")
+@click.pass_context
+@click.argument("name", type=str)
+@click.argument("uri", type=str, required=False, default=None)
+@option_all_occurrences
+@option_check_playlist_name
+@option_fields
+@option_format
+@option_playlist_position
+@option_print_resulting_content
+@option_service_of_uri
+def playlist_remove(
+    ctx: click.Context,
+    name: str,
+    uri: str | None,
+    all_occurrences: bool,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    position: set[int] | None,
+    print_resulting_content: bool,
+    service: str | None,
+) -> None:
+    """Remove the item at URI, or the items at -p/--position, from the playlist NAME.
+
+    A URI comes from "playlist content", and so do the positions of a selection such
+    as "1-3,6-8,12" (indexed according to
+    --position-starting-at-one/--position-starting-at-zero), each standing for the
+    URI and the service of the item listed there. The Volumio host removes the first
+    item at each URI, of the service --service names or the URI tells; with
+    --all-occurrences, every item the playlist lists at URI is removed, one removal
+    each. Once the items are removed, the content of the playlist is printed as
+    "playlist content" prints it, unless --no-print-resulting-content.
+
+    A removal that would leave the playlist empty is warned about, since the host may
+    refuse it: delete the playlist instead, and create it again for an empty one.
+
+    Needs a WebSocket API client.
+    """
+    if uri is not None and position is not None:
+        raise click.UsageError(PLAYLIST_REMOVE_ARGUMENTS_ERROR)
+    if service is not None and uri is None:
+        raise click.UsageError(PLAYLIST_REMOVE_SERVICE_ERROR)
+    if all_occurrences and uri is None:
+        raise click.UsageError(PLAYLIST_REMOVE_ALL_OCCURRENCES_ERROR)
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, name)
+    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name)).tracks
+    if position is not None:
+        indices = {api_position(ctx, shown) for shown in sorted(position)}
+        items = playlist_items_at_or_exit(ctx, name, tracks, indices)
+        empties = len(items) == len(tracks)
+    elif uri is not None and all_occurrences:
+        occurrences = sum(1 for track in tracks if track.uri == uri)
+        if occurrences == 0:
+            error(PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR.format(uri=uri, name=name))
+            sys.exit(1)
+        items = [(uri, service)] * occurrences
+        empties = occurrences == len(tracks)
+    elif uri is not None:
+        items = [(uri, service)]
+        empties = len(tracks) == 1 and tracks[0].uri == uri
+    else:
+        raise click.UsageError(PLAYLIST_REMOVE_ARGUMENTS_ERROR)
+    if empties:
+        warning(PLAYLIST_REMOVE_EMPTY_WARNING.format(name=name))
+
+    def remove_items(client: APIClient) -> None:
+        for item_uri, item_service in items:
+            client.remove_from_playlist(name, item_uri, item_service)
+
+    execute_command(ctx, f'remove from playlist "{name}"', remove_items)
+    if print_resulting_content:
+        _render_playlist_content(ctx, name, fields, output_format)
+
+
+@playlist.command("rename")
+@click.pass_context
+@click.argument("source", type=str)
+@click.argument("target", type=str)
+@option_check_playlist_name
+@option_fields
+@option_format
+@option_overwrite_existing_playlist
+@option_print_resulting_content
+def playlist_rename(
+    ctx: click.Context,
+    source: str,
+    target: str,
+    check_playlist_name: bool,
+    fields: str,
+    output_format: str,
+    overwrite_existing_playlist: bool,
+    print_resulting_content: bool,
+) -> None:
+    """Rename the playlist SOURCE to TARGET, copying it and deleting the original.
+
+    A playlist named TARGET is refused, unless --overwrite-existing-playlist is
+    given: it is then deleted first, as "playlist delete" deletes it. TARGET is
+    created and filled as "playlist copy" does; SOURCE is then deleted, without the
+    confirmation "playlist delete" asks for, since its content lives on in TARGET.
+    Once done, the content of TARGET is printed as "playlist content" prints it,
+    unless --no-print-resulting-content.
+
+    Needs a WebSocket API client.
+    """
+    if source == target:
+        raise click.UsageError(PLAYLIST_SAME_NAME_ERROR)
+    items = _playlist_items_to_copy(ctx, source, target, check_playlist_name)
+    _delete_existing_playlist_or_exit(ctx, target, overwrite_existing_playlist)
+
+    def rename_items(client: APIClient) -> None:
+        _fill_new_playlist(client, target, items)
+        client.delete_playlist(source)
+
+    execute_command(ctx, f'rename playlist "{source}" to "{target}"', rename_items)
+    if print_resulting_content:
+        _render_playlist_content(ctx, target, fields, output_format)
+
+
+def _delete_existing_playlist_or_exit(ctx: click.Context, name: str, overwrite: bool) -> None:
+    """Delete a playlist about to be created anew, when it exists and may be, or exit (1).
+
+    A playlist the host does not list is left alone. One it lists is deleted as
+    "playlist delete" deletes it, waiting until the host no longer lists it, when
+    overwriting is allowed; otherwise it is reported as an error, naming the option
+    that allows it.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist to create anew
+        overwrite: Whether an existing playlist of that name may be deleted
+    """
+    if name not in fetch_or_exit(ctx, lambda c: c.playlists.names):
+        return
+    if not overwrite:
+        error(PLAYLIST_EXISTS_ERROR.format(name=name))
+        sys.exit(1)
+    execute_command(ctx, f'delete playlist "{name}"', lambda c: c.delete_playlist(name))
+    _playlist_names_after_deletion_or_exit(ctx, name)
+
+
+def _fill_new_playlist(client: APIClient, target: str, items: list[tuple[str, str | None]]) -> None:
+    """Create a playlist and add some items to it, one by one.
+
+    Args:
+        client: The API client to send the events through
+        target: The name of the playlist to create
+        items: The URI of each item to add, and the service it belongs to
+    """
+    client.create_playlist(target)
+    for uri, service in items:
+        client.add_to_playlist(target, uri, service)
+
+
+def _playlist_items_from_file(file: str) -> list[tuple[str, str | None]]:
+    """Read the items of a playlist out of a JSON file, or exit.
+
+    The file holds a list of items as "playlist content NAME -L ALL" prints them, or
+    the envelope of the host its raw format prints, whose lists hold the items: the
+    "uri" of each is required, its "service" is kept when given, and the other keys
+    are ignored. A file that cannot be read exits with 1, one of another shape is a
+    usage error.
+
+    Args:
+        file: The path of the file
+
+    Returns:
+        The URI of each item, and the service it belongs to (None when the file
+        gives none)
+    """
+    try:
+        with open(file, encoding="utf-8") as playlist_file:
+            entries = json.load(playlist_file)
+    except (OSError, ValueError) as e:
+        error(f'Cannot read playlist file "{file}": {e}')
+        sys.exit(1)
+    if isinstance(entries, dict) and isinstance(entries.get("lists"), list):
+        # The raw format is the envelope of the host: its lists hold the items
+        entries = [
+            item
+            for entry in entries["lists"]
+            for item in (entry if isinstance(entry, list) else [entry])
+        ]
+    items: list[tuple[str, str | None]] = []
+    if not isinstance(entries, list):
+        raise click.UsageError(PLAYLIST_FILE_ERROR)
+    for entry in entries:
+        uri = entry.get("uri") if isinstance(entry, dict) else None
+        service = entry.get("service") if isinstance(entry, dict) else None
+        if not isinstance(uri, str) or not uri or not isinstance(service, str | None):
+            raise click.UsageError(PLAYLIST_FILE_ERROR)
+        items.append((uri, service))
+    return items
+
+
+def _playlist_items_to_copy(
+    ctx: click.Context,
+    source: str,
+    target: str,
+    check_playlist_name: bool,
+    position: set[int] | None = None,
+) -> list[tuple[str, str | None]]:
+    """Read the items of a playlist to copy them to another, or exit (1).
+
+    Without positions, every item is copied, but one the host lists without a URI,
+    which cannot be added elsewhere and is skipped with a warning; with positions,
+    the items listed there, an item without a URI being an invalid value.
+
+    Args:
+        ctx: Click context object holding the shared options
+        source: The name of the playlist to copy
+        target: The name of the playlist to copy to, for the messages
+        check_playlist_name: Whether to check that the source exists first
+        position: The positions of the items to copy, as the user counts them, or
+            None for all of them
+
+    Returns:
+        The URI of each item to copy, and the service it belongs to
+    """
+    if check_playlist_name:
+        check_playlist_name_or_exit(ctx, source)
+    tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(source)).tracks
+    items: list[tuple[str, str | None]] = []
+    if position is not None:
+        indices = {api_position(ctx, shown) for shown in sorted(position)}
+        items = playlist_items_at_or_exit(ctx, source, tracks, indices)
+    else:
+        for index, track in enumerate(tracks, 1):
+            if track.uri is None:
+                warning(f'Skipping the item at position {index} of "{source}", which has no URI')
+                continue
+            items.append((track.uri, track.service))
+    info(f'Copying {len(items)} items of "{source}" to "{target}"')
+    return items
+
+
+def _playlist_names_after_deletion_or_exit(ctx: click.Context, name: str) -> list[str]:
+    """Read the playlists until the host no longer lists a deleted one, or exit (1).
+
+    The host answers a deletion with nothing, and deletes in the background (through
+    the cloud on a MyVolumio device): the playlists are read after the configured
+    sleep, up to PLAYLIST_DELETE_ATTEMPTS times.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the deleted playlist
+
+    Returns:
+        The names of the playlists, without the deleted one
+    """
+    for _ in range(PLAYLIST_DELETE_ATTEMPTS):
+        sleep_between_api_calls(ctx)
+        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+        if name not in names:
+            return names
+    error(PLAYLIST_DELETE_STILL_LISTED_ERROR.format(name=name))
+    sys.exit(1)
+
+
+def _render_playlist_content(
+    ctx: click.Context, name: str, fields: str, output_format: str
+) -> None:
+    """Read the content of a playlist and print it per the fields/format options.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist
+        fields: The -L/--fields option value
+        output_format: The -F/--format option value
+    """
+    content = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name))
+    render_tracks(
+        ctx,
+        content.raw,
+        [track.raw for track in content.tracks],
+        fields,
+        output_format,
+        SHORT_FORMAT_FIELDS_PLAYLIST_CONTENT,
+        f'Volumio Playlist "{name}"',
+    )
+
+
+def _render_playlists(ctx: click.Context, output_format: str) -> None:
+    """Read the names of the playlists and print them as "playlist list" prints them.
+
+    Args:
+        ctx: Click context object holding the shared options
+        output_format: The -F/--format option value
+    """
+    names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+    render_names(ctx, names, output_format, "Volumio Playlists")
 
 
 @playlist.command("download")
@@ -2146,15 +4756,7 @@ def playlist_download(
     """Download every track of the playlist specified by NAME."""
 
     if check_playlist_name:
-        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
-        if name not in names:
-            error(f'Playlist not found: "{name}"')
-            error("Available playlists:")
-            for available in names:
-                error(f'  "{available}"')
-            if not names:
-                error("  (none)")
-            sys.exit(1)
+        check_playlist_name_or_exit(ctx, name)
 
     try:
         client = get_client(ctx)
@@ -2456,6 +5058,123 @@ def _listen_and_print(
         sys.exit(1)
 
 
+def _echo_event(ctx: click.Context, event: str, payload: object, output_format: str) -> None:
+    """Print an event the Volumio host pushed, per the format option.
+
+    Args:
+        ctx: Click context object containing shared options
+        event: The name of the event
+        payload: What the event carried
+        output_format: The output format ("json", "pretty", "raw", or "table")
+    """
+    received = {"event": event, "data": payload}
+    if ctx.obj["machine_readable"] or output_format == "raw":
+        output = json.dumps(received)
+    elif output_format == "json":
+        output = json.dumps(received, indent=2)
+    elif output_format == "table":
+        # The microseconds of the format are trimmed to milliseconds
+        when = f"{datetime.now(UTC).strftime(NOTIFICATION_TIMESTAMP_FORMAT)[:-3]}Z"
+        output = format_notification_as_line(event, payload, when)
+    else:  # pretty
+        output = json.dumps(received, indent=4, sort_keys=True, ensure_ascii=False)
+
+    click.echo(output)
+
+
+def _event_payload(text: str | None) -> object:
+    """Parse the payload given to an event subcommand.
+
+    Args:
+        text: The payload as JSON, or None when the event carries nothing
+
+    Returns:
+        The payload
+
+    Raises:
+        click.UsageError: If the text is not JSON
+    """
+    if text is None:
+        return None
+    try:
+        return json.loads(text)
+    except ValueError as e:
+        raise click.UsageError(f"{EVENT_PAYLOAD_ERROR} ({e})") from e
+
+
+def _listen_to_events(
+    ctx: click.Context,
+    events: list[str],
+    count: int | None,
+    timeout: float | None,
+    idle_timeout: float | None,
+    output_format: str,
+) -> None:
+    """Print the events the host pushes until a limit or an interruption.
+
+    The handlers registered with the client queue what arrives, and the loop below
+    prints it from the queue, ending as the listener of the push notifications does.
+
+    Args:
+        ctx: Click context object containing shared options
+        events: The names of the events to print
+        count: Number of events to print before returning, or None
+        timeout: Seconds to listen for in total, or None
+        idle_timeout: Seconds to wait for each event, or None
+        output_format: The output format ("json", "pretty", "raw", or "table")
+    """
+    received: Queue[tuple[str, object]] = Queue()
+
+    def handler_of(event: str) -> Callable[[object], None]:
+        def handle(payload: object) -> None:
+            received.put((event, payload))
+
+        return handle
+
+    handlers = {event: handler_of(event) for event in events}
+    fetch_or_exit(ctx, lambda c: [c.on(event, handler) for event, handler in handlers.items()])
+
+    info(f"Listening for the events: {', '.join(events)}")
+    info(format_termination_conditions(count, timeout, idle_timeout))
+
+    printed = 0
+    idle_timed_out = False
+    deadline = None if timeout is None else time.monotonic() + timeout
+    try:
+        while count is None or printed < count:
+            wait = idle_timeout
+            waiting_for_the_deadline = False
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                if wait is None or remaining < wait:
+                    waiting_for_the_deadline = True
+                    wait = remaining
+            try:
+                event, payload = received.get(timeout=wait)
+            except Empty:
+                idle_timed_out = not waiting_for_the_deadline
+                break
+            _echo_event(ctx, event, payload, output_format)
+            printed += 1
+    except KeyboardInterrupt:
+        return
+    finally:
+        fetch_or_exit(ctx, lambda c: [c.off(event, handler) for event, handler in handlers.items()])
+
+    if count is not None and printed >= count:
+        return
+
+    # The loop only ends on its own by a timeout: the idle one, or the deadline
+    if idle_timed_out:
+        info(f"Timed out after {idle_timeout:g} seconds without events")
+    else:
+        info(f"Timed out after {timeout:g} seconds")
+    if count is not None:
+        sys.exit(1)
+
+
 def _compose_notification_url(ctx: click.Context, port: int, endpoint: str) -> str:
     """Return the URL of the local listener, as reachable by the Volumio host.
 
@@ -2479,8 +5198,108 @@ def _compose_notification_url(ctx: click.Context, port: int, endpoint: str) -> s
 @main.group()
 @click.pass_context
 def notification(ctx: click.Context) -> None:
-    """Manage the URLs receiving the push notifications."""
+    """Manage the URLs receiving the push notifications, and the WebSocket events."""
     pass
+
+
+@notification.group("event")
+@click.pass_context
+def notification_event(ctx: click.Context) -> None:
+    """Send and receive the events of the WebSocket API of the Volumio host.
+
+    The events are the push channel of the WebSocket API, as the notification URLs
+    are the one of the REST API; every event the host listens for can be sent, and
+    every one it pushes can be received, including the ones no other command covers.
+    This is a first implementation: the subgroup may move, or merge with
+    "notification listen", in a later release.
+
+    Needs a WebSocket API client.
+    """
+    pass
+
+
+@notification_event.command("emit")
+@click.pass_context
+@click.argument("event", type=str)
+@click.argument("payload", required=False, default=None, type=str)
+@option_yes
+def notification_event_emit(ctx: click.Context, event: str, payload: str | None, yes: bool) -> None:
+    """Send EVENT to the Volumio host, carrying the JSON PAYLOAD when given.
+
+    Nothing is waited for: whatever the host pushes back is visible with
+    "notification event listen". IMPORTANT: any event can be sent, including the
+    ones the library refuses on purpose; the event is sent only when -y/--yes is
+    given.
+
+    Needs a WebSocket API client.
+    """
+    parsed = _event_payload(payload)
+    if not yes:
+        error(f'Refusing to emit the event without -y/--yes: "{event}"')
+        sys.exit(1)
+    execute_command(ctx, f'emit "{event}"', lambda c: c.emit(event, parsed))
+
+
+@notification_event.command("listen")
+@click.pass_context
+@click.argument("events", nargs=-1, type=str, metavar="[EVENT]...")
+@option_count
+@option_format
+@option_idle_timeout
+@option_timeout
+def notification_event_listen(
+    ctx: click.Context,
+    events: tuple[str, ...],
+    count: int | None,
+    output_format: str,
+    idle_timeout: float | None,
+    timeout: float | None,
+) -> None:
+    """Print the events the Volumio host pushes, EVENT by name (pushState when none).
+
+    The command keeps listening until it is interrupted with Ctrl-C, or until one
+    of -n/--count, --idle-timeout, and --timeout is reached. The table format prints
+    one line per event; the others print the event and what it carried.
+
+    Needs a WebSocket API client.
+    """
+    _listen_to_events(
+        ctx, list(events) or [EVENT_PUSH_STATE], count, timeout, idle_timeout, output_format
+    )
+
+
+@notification_event.command("request")
+@click.pass_context
+@click.argument("event", type=str)
+@click.argument("payload", required=False, default=None, type=str)
+@option_format
+@option_response_event
+@option_request_timeout
+def notification_event_request(
+    ctx: click.Context,
+    event: str,
+    payload: str | None,
+    output_format: str,
+    response_event: str | None,
+    timeout: float | None,
+) -> None:
+    """Send EVENT, carrying the JSON PAYLOAD when given, and print the answer.
+
+    The answer is the event the host pushes back: the WebSocket API clients know it
+    for the events they read through, and --response-event names it for the others.
+
+    Needs a WebSocket API client.
+    """
+    parsed = _event_payload(payload)
+    answer = fetch_or_exit(ctx, lambda c: c.request(event, response_event, parsed, timeout))
+    if isinstance(answer, dict):
+        render_payload(ctx, answer, output_format, heading=f'Volumio Event "{event}"')
+    elif ctx.obj["machine_readable"] or output_format in ("raw", "table"):
+        echo_data(ctx, json.dumps(answer))
+    elif output_format == "json":
+        echo_data(ctx, json.dumps(answer, indent=2))
+    else:  # pretty
+        echo_data(ctx, json.dumps(answer, indent=4, sort_keys=True, ensure_ascii=False))
 
 
 @notification.command("list")
@@ -2489,17 +5308,7 @@ def notification(ctx: click.Context) -> None:
 def notification_list(ctx: click.Context, output_format: str) -> None:
     """List the URLs registered to receive the push notifications."""
     urls = fetch_or_exit(ctx, lambda c: c.notifications.urls)
-
-    if output_format == "raw":
-        output = json.dumps(urls)
-    elif output_format == "json":
-        output = json.dumps(urls, indent=2)
-    elif output_format == "table":
-        output = format_names_as_table(urls, "Volumio Notification URLs")
-    else:  # pretty
-        output = json.dumps(urls, indent=4, ensure_ascii=False)
-
-    echo_data(ctx, output)
+    render_names(ctx, urls, output_format, "Volumio Notification URLs")
 
 
 @notification.command("listen")
@@ -2549,9 +5358,7 @@ def notification_listen(
         info(f"Registered notification URL: {url}")
 
     try:
-        _listen_and_print(
-            ctx, port, endpoint, url, count, timeout, idle_timeout, output_format
-        )
+        _listen_and_print(ctx, port, endpoint, url, count, timeout, idle_timeout, output_format)
     finally:
         if not registered and unregister_url_on_exit:
             response = fetch_or_exit(ctx, lambda c: c.unregister_notification(url))
@@ -2693,6 +5500,8 @@ def scp_put(
 
 # "info" is a top-level synonym for "system info"
 main.add_command(system_info, name="info")
+# "track" is a top-level synonym for "queue track"
+main.add_command(track, name="track")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -4,10 +4,12 @@
 :license: GNU General Public License v3.0 (see the LICENSE file for details)
 """
 
+import asyncio
 import logging
 import sys
 from dataclasses import dataclass, field
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock
 
@@ -67,9 +69,7 @@ NAVIGATION_PAYLOAD = {
         "lists": [
             {
                 "title": "Playlists",
-                "items": [
-                    {"service": "mpd", "type": "song", "title": "jazz", "uri": "mpd://a"}
-                ],
+                "items": [{"service": "mpd", "type": "song", "title": "jazz", "uri": "mpd://a"}],
             }
         ]
     }
@@ -161,9 +161,7 @@ async def _state_client(
     mocker: MockerFixture, logger: logging.Logger | None = None, **kwargs
 ) -> tuple[VolumioAsyncWebSocketClient, _FakeAsyncSocketIOClient]:
     """Build a connected client whose host answers getState with a playback state."""
-    fake = _FakeAsyncSocketIOClient(
-        answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, STATE_PAYLOAD)}
-    )
+    fake = _FakeAsyncSocketIOClient(answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, STATE_PAYLOAD)})
     return await _client(mocker, fake, logger=logger, **kwargs)
 
 
@@ -267,6 +265,38 @@ class TestVolumioAsyncWebSocketClientLifecycle:
         assert fake.connected is False
         assert client._connected is False
         assert client._client is None
+
+    async def test_disconnect_waits_for_the_pending_packets(self, mocker: MockerFixture):
+        """The packets still to be written are sent before the connection closes."""
+        client, fake = await _client(mocker)
+        pending: asyncio.Queue[str] = asyncio.Queue()
+        pending.put_nowait("an event")
+        fake.eio = SimpleNamespace(queue=pending)
+
+        async def write() -> None:
+            await asyncio.sleep(0.05)
+            pending.task_done()
+
+        writer = asyncio.get_running_loop().create_task(write())
+
+        await client.disconnect()
+
+        await writer
+        await asyncio.wait_for(pending.join(), 0.1)
+        assert fake.connected is False
+
+    async def test_disconnect_gives_up_on_stuck_packets(self, mocker: MockerFixture):
+        """A packet that is never written is given up after the timeout, with a warning."""
+        logger = Mock()
+        client, fake = await _client(mocker, logger=logger, timeout=0.05)
+        pending: asyncio.Queue[str] = asyncio.Queue()
+        pending.put_nowait("stuck")
+        fake.eio = SimpleNamespace(queue=pending)
+
+        await client.disconnect()
+
+        assert fake.connected is False
+        assert "packets still to be written" in logger.warning.call_args.args[0]
 
     async def test_disconnect_when_not_connected(self, mocker: MockerFixture):
         """Disconnecting a client that never connected is a no-op."""
@@ -814,7 +844,7 @@ class TestVolumioAsyncWebSocketClientCommands:
 
 
 class TestVolumioAsyncWebSocketClientQueueing:
-    """Adding to the queue and replacing it, which browse a container first."""
+    """Adding to the queue and replacing it, which browse only to play at an index."""
 
     async def test_add_a_local_uri_as_itself(self, mocker: MockerFixture):
         """A URI of the local library is queued as itself, without a browse."""
@@ -826,28 +856,14 @@ class TestVolumioAsyncWebSocketClientQueueing:
             _Call("addToQueue", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
         ]
 
-    async def test_add_a_container_of_another_source(self, mocker: MockerFixture):
-        """A container of another source is browsed and queued as its items."""
-        client, fake = await _browse_client(mocker)
+    @pytest.mark.parametrize("uri", ["qobuz://album/1", "qobuz://track/1"])
+    async def test_add_a_uri_of_another_source_as_itself(self, mocker: MockerFixture, uri):
+        """A URI of another source is queued as itself, a container included."""
+        client, fake = await _client(mocker)
 
-        await client.add_to_queue("qobuz://album/1")
+        await client.add_to_queue(uri)
 
-        assert fake.calls[-1] == _Call(
-            "addToQueue", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
-        )
-
-    async def test_add_a_container_listing_nothing(self, mocker: MockerFixture):
-        """A URI of another source that lists nothing is queued as itself."""
-        fake = _FakeAsyncSocketIOClient(
-            answers={EVENT_BROWSE_LIBRARY: (EVENT_PUSH_BROWSE_LIBRARY, EMPTY_NAVIGATION)}
-        )
-        client, _ = await _client(mocker, fake)
-
-        await client.add_to_queue("qobuz://track/1")
-
-        assert fake.calls[-1] == _Call(
-            "addToQueue", {"service": "qobuz", "uri": "qobuz://track/1"}
-        )
+        assert fake.calls == [_Call("addToQueue", {"service": "qobuz", "uri": uri})]
 
     async def test_replace_with_a_local_uri(self, mocker: MockerFixture):
         """A URI of the local library replaces the queue as a single item."""
@@ -859,15 +875,15 @@ class TestVolumioAsyncWebSocketClientQueueing:
             _Call("replaceAndPlay", {"item": {"service": "mpd", "uri": "mpd://NAS/album"}})
         ]
 
-    async def test_replace_with_a_browsed_container(self, mocker: MockerFixture):
-        """A container of another source is browsed and sent as its items."""
-        client, fake = await _browse_client(mocker)
+    async def test_replace_with_a_container_of_another_source(self, mocker: MockerFixture):
+        """A container of another source replaces the queue as a single item too."""
+        client, fake = await _client(mocker)
 
         await client.replace_queue_and_play("qobuz://album/1")
 
-        assert fake.calls[-1].event == "replaceAndPlay"
-        assert fake.calls[-1].payload["index"] == 0
-        assert len(fake.calls[-1].payload["list"]) == 1
+        assert fake.calls == [
+            _Call("replaceAndPlay", {"item": {"service": "qobuz", "uri": "qobuz://album/1"}})
+        ]
 
     async def test_replace_at_an_index(self, mocker: MockerFixture):
         """An index browses the URI and sends the listing along with it."""
@@ -924,9 +940,7 @@ class TestVolumioAsyncWebSocketClientPing:
 
     async def test_ping_that_is_not_echoed_back(self, mocker: MockerFixture):
         """A host answering with something else refuses the answer."""
-        fake = _FakeAsyncSocketIOClient(
-            answers={EVENT_PINGER: (EVENT_PONGER, {"nonce": "other"})}
-        )
+        fake = _FakeAsyncSocketIOClient(answers={EVENT_PINGER: (EVENT_PONGER, {"nonce": "other"})})
         client, _ = await _client(mocker, fake)
 
         with pytest.raises(VolumioConnectionError):
@@ -999,19 +1013,15 @@ class TestVolumioAsyncWebSocketClientQueueEditing:
 
         await client.add_and_play("mpd://NAS/track.flac")
 
-        assert fake.calls == [
-            _Call("addPlay", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
-        ]
+        assert fake.calls == [_Call("addPlay", {"service": "mpd", "uri": "mpd://NAS/track.flac"})]
 
     async def test_add_and_play_a_container(self, mocker: MockerFixture):
-        """A container of another source is browsed and played as its items."""
-        client, fake = await _browse_client(mocker)
+        """A container of another source is queued as itself and played."""
+        client, fake = await _client(mocker)
 
         await client.add_and_play("qobuz://album/1")
 
-        assert fake.calls[-1] == _Call(
-            "addPlay", [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}]
-        )
+        assert fake.calls == [_Call("addPlay", {"service": "qobuz", "uri": "qobuz://album/1"})]
 
     async def test_save_queue_as_playlist(self, mocker: MockerFixture):
         """The queue is saved under a name, given as a string or as a playlist."""
@@ -1123,8 +1133,11 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
     """Creating, editing and reading the saved playlists."""
 
     async def test_create_and_delete(self, mocker: MockerFixture):
-        """A playlist is created and deleted by name."""
-        client, fake = await _client(mocker)
+        """A playlist is created and deleted by name, the host answering the creation."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"createPlaylist": ("pushCreatePlaylist", {"success": True})}
+        )
+        client, fake = await _client(mocker, fake)
 
         await client.create_playlist("jazz")
         await client.delete_playlist(Playlist.from_name("rock"))
@@ -1134,12 +1147,49 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
             _Call("deletePlaylist", {"name": "rock"}),
         ]
 
+    @pytest.mark.parametrize(
+        ("answer", "detail"),
+        [
+            ({"success": False, "reason": "Playlist already exists"}, ": Playlist already exists"),
+            ({"success": False}, ""),
+            (None, ""),
+        ],
+    )
+    async def test_create_a_playlist_the_host_refuses(self, mocker: MockerFixture, answer, detail):
+        """A creation the host did not carry out is an API error, with its reason."""
+        logger = Mock()
+        fake = _FakeAsyncSocketIOClient(answers={"createPlaylist": ("pushCreatePlaylist", answer)})
+        client, _ = await _client(mocker, fake, logger=logger)
+
+        with pytest.raises(VolumioAPIError) as excinfo:
+            await client.create_playlist("jazz")
+
+        assert str(excinfo.value) == f'The host did not create the playlist "jazz"{detail}'
+        logger.warning.assert_called_once()
+
+    async def test_create_playlist_waits_for_the_answer(self, mocker: MockerFixture):
+        """The answer the host gives a creation is waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.create_playlist("jazz")
+
+        assert 'did not answer "createPlaylist" with "pushCreatePlaylist"' in str(excinfo.value)
+
     async def test_add_and_remove_an_item(self, mocker: MockerFixture):
         """An item carries the playlist, the URI, and the service it belongs to."""
-        client, fake = await _client(mocker)
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "addToPlaylist": ("pushAddToPlaylist", {}),
+                "removeFromPlaylist": ("pushBrowseLibrary", NAVIGATION_PAYLOAD),
+            }
+        )
+        client, fake = await _client(mocker, fake)
 
         await client.add_to_playlist("jazz", "qobuz://track/1")
         await client.remove_from_playlist("jazz", "mpd://NAS/a.flac")
+        # A file of the local library is named as the host stores it
+        await client.remove_from_playlist("jazz", "music-library/INTERNAL/a.flac")
 
         assert fake.calls == [
             _Call(
@@ -1150,11 +1200,28 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
                 "removeFromPlaylist",
                 {"name": "jazz", "service": "mpd", "uri": "mpd://NAS/a.flac"},
             ),
+            _Call(
+                "removeFromPlaylist",
+                {"name": "jazz", "service": "mpd", "uri": "mnt/INTERNAL/a.flac"},
+            ),
         ]
+
+    async def test_editing_a_playlist_waits_for_the_answer(self, mocker: MockerFixture):
+        """The pushes the host answers an add and a removal with are waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.add_to_playlist("jazz", "qobuz://track/1")
+        assert 'did not answer "addToPlaylist" with "pushAddToPlaylist"' in str(excinfo.value)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.remove_from_playlist("jazz", "qobuz://track/1")
+        assert 'did not answer "removeFromPlaylist" with "pushBrowseLibrary"' in str(excinfo.value)
 
     async def test_an_explicit_service_wins(self, mocker: MockerFixture):
         """A service given by the caller is not derived from the URI."""
-        client, fake = await _client(mocker)
+        fake = _FakeAsyncSocketIOClient(answers={"addToPlaylist": ("pushAddToPlaylist", {})})
+        client, fake = await _client(mocker, fake)
 
         await client.add_to_playlist("jazz", "mpd://a", service="upnp")
 
@@ -1177,14 +1244,6 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
 
         assert fake.calls == [_Call("enqueue", {"name": "jazz"})]
 
-    async def test_import_service_playlists(self, mocker: MockerFixture):
-        """The import carries nothing."""
-        client, fake = await _client(mocker)
-
-        await client.import_service_playlists()
-
-        assert fake.calls == [_Call("importServicePlaylists", None)]
-
     async def test_get_playlist_content(self, mocker: MockerFixture):
         """The tracks are read out of the one list per source the host groups them in."""
         fake = _FakeAsyncSocketIOClient(
@@ -1204,7 +1263,7 @@ class TestVolumioAsyncWebSocketClientPlaylistEditing:
 
 
 class TestVolumioAsyncWebSocketClientFavourites:
-    """The favourites and the web radios of the user."""
+    """The favourites and the Web radios of the user."""
 
     async def test_add_to_favourites(self, mocker: MockerFixture):
         """A favourite carries its service, and only the fields that are known."""
@@ -1226,15 +1285,33 @@ class TestVolumioAsyncWebSocketClientFavourites:
             _Call("addToFavourites", {"service": "mpd", "uri": "mpd://NAS/a.flac"}),
         ]
 
-    async def test_remove_from_favourites(self, mocker: MockerFixture):
-        """Removing a favourite carries the URI and its service."""
-        client, fake = await _client(mocker)
+    @pytest.mark.parametrize(
+        ("uri", "sent", "service"),
+        [
+            ("qobuz://track/1", "qobuz://track/1", "qobuz"),
+            ("music-library/INTERNAL/a.flac", "mnt/INTERNAL/a.flac", "mpd"),
+            ("mnt/INTERNAL/a.flac", "mnt/INTERNAL/a.flac", "mpd"),
+        ],
+    )
+    async def test_remove_from_favourites(self, mocker: MockerFixture, uri, sent, service):
+        """Removing a favourite carries the URI as the host stores it, and its service."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"removeFromFavourites": ("urifavourites", {"favourite": False})}
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.remove_from_favourites("qobuz://track/1")
+        await client.remove_from_favourites(uri)
 
-        assert fake.calls == [
-            _Call("removeFromFavourites", {"service": "qobuz", "uri": "qobuz://track/1"})
-        ]
+        assert fake.calls == [_Call("removeFromFavourites", {"service": service, "uri": sent})]
+
+    async def test_remove_from_favourites_waits_for_the_answer(self, mocker: MockerFixture):
+        """The favourite status the host broadcasts after a removal is waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.remove_from_favourites("qobuz://track/1")
+
+        assert 'did not answer "removeFromFavourites" with "urifavourites"' in str(excinfo.value)
 
     async def test_an_explicit_service_wins(self, mocker: MockerFixture):
         """A service given by the caller is not derived from the URI."""
@@ -1257,27 +1334,61 @@ class TestVolumioAsyncWebSocketClientFavourites:
         ]
 
     async def test_the_radio_favourites(self, mocker: MockerFixture):
-        """A web radio is made a favourite, played, and removed."""
-        client, fake = await _client(mocker)
+        """A Web radio is made a favourite as a webradio item, played, and removed."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "addToFavourites": ("urifavourites", {"favourite": False}),
+                "removeFromFavourites": ("pushBrowseLibrary", NAVIGATION_PAYLOAD),
+            }
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.add_radio_favourite("http://stream/1")
+        await client.add_radio_favourite("http://stream/1", "Jazz FM")
+        await client.add_radio_favourite("http://stream/2", "Rock FM", "http://logo/2")
         await client.play_radio_favourites()
         await client.remove_radio_favourite("http://stream/1")
-        await client.remove_radio_favourite("http://stream/2", name="Jazz FM")
 
         assert fake.calls == [
-            _Call("addToRadioFavourites", {"uri": "http://stream/1"}),
-            _Call("playRadioFavourites", None),
-            _Call("removeFromRadioFavourites", {"uri": "http://stream/1"}),
             _Call(
-                "removeFromRadioFavourites",
-                {"name": "Jazz FM", "uri": "http://stream/2"},
+                "addToFavourites",
+                {"service": "webradio", "title": "Jazz FM", "uri": "http://stream/1"},
             ),
+            _Call(
+                "addToFavourites",
+                {
+                    "albumart": "http://logo/2",
+                    "service": "webradio",
+                    "title": "Rock FM",
+                    "uri": "http://stream/2",
+                },
+            ),
+            _Call("playRadioFavourites", None),
+            _Call("removeFromFavourites", {"service": "webradio", "uri": "http://stream/1"}),
         ]
 
+    async def test_the_radio_favourites_wait_for_the_answer(self, mocker: MockerFixture):
+        """The answers of the host to a radio favourite add and removal are waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.add_radio_favourite("http://stream/1", "Jazz FM")
+        assert 'did not answer "addToFavourites" with "urifavourites"' in str(excinfo.value)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.remove_radio_favourite("http://stream/1")
+        assert 'did not answer "removeFromFavourites" with "pushBrowseLibrary"' in str(
+            excinfo.value
+        )
+
     async def test_the_web_radios_of_the_user(self, mocker: MockerFixture):
-        """A web radio is saved with its URL and deleted by name alone."""
-        client, fake = await _client(mocker)
+        """A Web radio is saved with its URL and deleted by name alone, the host answering."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "addWebRadio": ("pushAddWebRadio", {"success": True}),
+                "removeWebRadio": ("pushBrowseLibrary", NAVIGATION_PAYLOAD),
+            }
+        )
+        client, fake = await _client(mocker, fake)
 
         await client.add_web_radio("Jazz FM", "http://stream/1")
         await client.remove_web_radio("Jazz FM")
@@ -1286,6 +1397,18 @@ class TestVolumioAsyncWebSocketClientFavourites:
             _Call("addWebRadio", {"name": "Jazz FM", "uri": "http://stream/1"}),
             _Call("removeWebRadio", {"name": "Jazz FM"}),
         ]
+
+    async def test_editing_the_web_radios_waits_for_the_answer(self, mocker: MockerFixture):
+        """The pushes the host answers a save and a removal with are waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.add_web_radio("Jazz FM", "http://stream/1")
+        assert 'did not answer "addWebRadio" with "pushAddWebRadio"' in str(excinfo.value)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.remove_web_radio("Jazz FM")
+        assert 'did not answer "removeWebRadio" with "pushBrowseLibrary"' in str(excinfo.value)
 
 
 class TestVolumioAsyncWebSocketClientBrowseSources:
@@ -1308,7 +1431,7 @@ class TestVolumioAsyncWebSocketClientBrowseSources:
         )
         client, _ = await _client(mocker, fake)
 
-        sources = (await client.get_browse_sources())
+        sources = await client.get_browse_sources()
 
         assert [source.name for source in sources] == ["Playlists"]
         assert sources[0].plugin_type == "music_service"
@@ -1325,9 +1448,7 @@ class TestVolumioAsyncWebSocketClientBrowseSources:
     async def test_last_browse(self, mocker: MockerFixture):
         """The listing pushed last is read as a browse result."""
         fake = _FakeAsyncSocketIOClient(
-            answers={
-                "getLastPushedBrowseLibrary": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)
-            }
+            answers={"getLastPushedBrowseLibrary": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)}
         )
         client, _ = await _client(mocker, fake)
 
@@ -1369,7 +1490,7 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
         )
         client, _ = await _client(mocker, fake)
 
-        timer = (await client.get_sleep_timer())
+        timer = await client.get_sleep_timer()
 
         assert timer.enabled is True
         assert timer.delay == timedelta(minutes=30)
@@ -1386,11 +1507,21 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
     )
     async def test_set_sleep_timer(self, mocker: MockerFixture, delay, expected):
         """A duration is rendered to the "H:MM" a Volumio host reads as a delay."""
-        client, fake = await _client(mocker)
+        fake = _FakeAsyncSocketIOClient(answers={"setSleep": ("pushSleep", {})})
+        client, fake = await _client(mocker, fake)
 
         await client.set_sleep_timer(delay)
 
         assert fake.calls == [_Call("setSleep", expected)]
+
+    async def test_set_sleep_timer_waits_for_the_answer(self, mocker: MockerFixture):
+        """The empty push the host answers with is waited for, so a read after it is clean."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.set_sleep_timer(timedelta(minutes=30))
+
+        assert 'did not answer "setSleep" with "pushSleep"' in str(excinfo.value)
 
     async def test_set_sleep_timer_refuses_a_negative_delay(self, mocker: MockerFixture):
         """A negative delay is refused before anything is sent."""
@@ -1409,14 +1540,21 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
             answers={
                 "getAlarms": (
                     "pushAlarm",
-                    [{"id": 1, "name": "Weekday", "enabled": True, "time": "07:30",
-                      "playlist": "jazz"}],
+                    [
+                        {
+                            "id": 1,
+                            "name": "Weekday",
+                            "enabled": True,
+                            "time": "07:30",
+                            "playlist": "jazz",
+                        }
+                    ],
                 )
             }
         )
         client, _ = await _client(mocker, fake)
 
-        alarms = (await client.get_alarms())
+        alarms = await client.get_alarms()
 
         assert len(alarms) == 1
         assert alarms[0].playlist == "jazz"
@@ -1427,6 +1565,103 @@ class TestVolumioAsyncWebSocketClientSleepAndAlarms:
         client, _ = await _client(mocker, fake)
 
         assert len(await client.get_alarms()) == 0
+
+    _ALARMS = [
+        {"id": 0, "name": "Weekday", "enabled": True, "time": "07:30", "playlist": "jazz"},
+        {"id": 1, "name": "Weekend", "enabled": False, "time": "09:00", "playlist": "rock"},
+    ]
+    """Two alarms, as a Volumio host answers them."""
+
+    def _fake_with_alarms(self, alarms=None):
+        """A fake host answering the alarms it holds."""
+        return _FakeAsyncSocketIOClient(
+            answers={"getAlarms": ("pushAlarm", self._ALARMS if alarms is None else alarms)}
+        )
+
+    async def test_add_alarm(self, mocker: MockerFixture):
+        """The set is read and sent back with one more alarm, numbered by its position."""
+        client, fake = await _client(mocker, self._fake_with_alarms())
+
+        added = await client.add_alarm("Nap", "14:15", "ambient", enabled=False)
+
+        assert added.id == 2
+        assert added.enabled is False
+        assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
+        assert fake.calls[1].payload == [
+            *self._ALARMS,
+            {
+                "id": 2,
+                "name": "Nap",
+                "enabled": False,
+                "time": "2000-01-01T14:15:00",
+                "playlist": "ambient",
+            },
+        ]
+
+    async def test_add_alarm_to_an_empty_set(self, mocker: MockerFixture):
+        """The first alarm of a host gets the identifier 0."""
+        client, fake = await _client(mocker, self._fake_with_alarms([]))
+
+        added = await client.add_alarm("Weekday", "07:30", "jazz")
+
+        assert added.id == 0
+        assert fake.calls[1].payload == [
+            {
+                "id": 0,
+                "name": "Weekday",
+                "enabled": True,
+                "time": "2000-01-01T07:30:00",
+                "playlist": "jazz",
+            }
+        ]
+
+    async def test_add_alarm_refuses_a_bad_time(self, mocker: MockerFixture):
+        """A time that is not a time of day is refused before anything is read or sent."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_alarms(), logger=logger)
+
+        with pytest.raises(ValueError, match='must be a time of day as "HH:MM"'):
+            await client.add_alarm("Nap", "7:30am", "ambient")
+
+        assert fake.calls == []
+        logger.warning.assert_called_once()
+
+    async def test_remove_alarm(self, mocker: MockerFixture):
+        """The set is read and sent back without the alarm."""
+        client, fake = await _client(mocker, self._fake_with_alarms())
+
+        await client.remove_alarm(0)
+
+        assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
+        assert fake.calls[1].payload == [self._ALARMS[1]]
+
+    @pytest.mark.parametrize(
+        ("enabled", "method"), [(True, "enable_alarm"), (False, "disable_alarm")]
+    )
+    async def test_enable_and_disable_alarm(self, mocker: MockerFixture, enabled, method):
+        """The set is read and sent back with the alarm armed or disarmed."""
+        client, fake = await _client(mocker, self._fake_with_alarms())
+
+        # Arming the disarmed alarm, or disarming the armed one, leaves both alike
+        await getattr(client, method)(1 if enabled else 0)
+
+        assert [call.event for call in fake.calls] == ["getAlarms", "saveAlarm"]
+        assert fake.calls[1].payload == [
+            {**self._ALARMS[0], "enabled": enabled},
+            {**self._ALARMS[1], "enabled": enabled},
+        ]
+
+    @pytest.mark.parametrize("method", ["remove_alarm", "enable_alarm", "disable_alarm"])
+    async def test_an_unknown_alarm_is_refused(self, mocker: MockerFixture, method):
+        """An identifier no alarm has is refused after the read, before anything is sent."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_alarms(), logger=logger)
+
+        with pytest.raises(ValueError, match="No alarm has the identifier 9"):
+            await getattr(client, method)(9)
+
+        assert [call.event for call in fake.calls] == ["getAlarms"]
+        logger.warning.assert_called_once()
 
     async def test_set_alarms_replaces_the_whole_set(self, mocker: MockerFixture):
         """The alarms are sent as the list the Volumio API replaces its set with."""
@@ -1475,7 +1710,7 @@ class TestVolumioAsyncWebSocketClientAudioOutputs:
         )
         client, _ = await _client(mocker, fake)
 
-        devices = (await client.get_output_devices())
+        devices = await client.get_output_devices()
 
         assert devices.active is not None
         assert devices.active.name == "HDMI Out"
@@ -1502,7 +1737,7 @@ class TestVolumioAsyncWebSocketClientAudioOutputs:
         )
         client, _ = await _client(mocker, fake)
 
-        outputs = (await client.get_audio_outputs())
+        outputs = await client.get_audio_outputs()
 
         assert [output.name for output in outputs] == ["Living room"]
         assert outputs[0].volume == 40
@@ -1514,42 +1749,128 @@ class TestVolumioAsyncWebSocketClientAudioOutputs:
 
         assert (await client.get_input_sources()).raw == {}
 
+    def _fake_with_output_devices(self):
+        """A fake host listing two sound cards and one I2S DAC."""
+        devices = {
+            "devices": {
+                "active": {"id": "0", "name": "HDMI Out"},
+                "available": [{"id": "0", "name": "HDMI Out"}, {"id": "1", "name": "Headphones"}],
+            },
+            "i2s": {
+                "enabled": False,
+                "available": [{"id": "allo-boss-dac", "name": "Allo BOSS"}],
+            },
+        }
+        return _FakeAsyncSocketIOClient(
+            answers={"getOutputDevices": ("pushOutputDevices", devices)}
+        )
+
     async def test_set_output_device(self, mocker: MockerFixture):
-        """The device is chosen by identifier, with the mixer only when given."""
-        client, fake = await _client(mocker)
+        """The card is read from the list, and sent as the setup wizard of the host sends it."""
+        client, fake = await _client(mocker, self._fake_with_output_devices())
 
         await client.set_output_device("1")
-        await client.set_output_device("1", mixer="Digital")
 
-        assert fake.calls == [
-            _Call("setOutputDevices", {"device": "1"}),
-            _Call("setOutputDevices", {"device": "1", "mixer": "Digital"}),
-        ]
+        assert [call.event for call in fake.calls] == ["getOutputDevices", "setOutputDevices"]
+        assert fake.calls[1].payload == {
+            "i2s": False,
+            "output_device": {"value": "1", "label": "Headphones"},
+        }
+
+    async def test_set_output_device_to_an_i2s_dac(self, mocker: MockerFixture):
+        """A DAC goes under its own key, with the card number the wizard sends."""
+        client, fake = await _client(mocker, self._fake_with_output_devices())
+
+        await client.set_output_device("allo-boss-dac")
+
+        assert fake.calls[1].payload == {
+            "i2s": True,
+            "i2sid": {"value": "allo-boss-dac", "label": "Allo BOSS"},
+            "output_device": {"value": 1, "label": "Allo BOSS"},
+        }
+
+    async def test_set_output_device_refuses_an_unknown_identifier(self, mocker: MockerFixture):
+        """An identifier the host does not list is refused after the read, with a warning."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_output_devices(), logger=logger)
+
+        with pytest.raises(ValueError, match='No output device has the identifier "9"'):
+            await client.set_output_device("9")
+
+        assert [call.event for call in fake.calls] == ["getOutputDevices"]
+        logger.warning.assert_called_once()
+
+    def _fake_with_audio_outputs(self):
+        """A fake host listing one audio output, a device of its own."""
+        output = {
+            "id": "0",
+            "name": "Living room",
+            "type": "device",
+            "host": "http://volumio.local",
+            "isSelf": True,
+            "plugin": "audio_interface/outputs",
+        }
+        return _FakeAsyncSocketIOClient(
+            answers={"getAudioOutputs": ("pushAudioOutputs", {"availableOutputs": [output]})}
+        )
 
     @pytest.mark.parametrize(
         ("method", "event"),
         [
-            ("audio_output_pause", "audioOutputPause"),
-            ("audio_output_play", "audioOutputPlay"),
             ("disable_audio_output", "disableAudioOutput"),
             ("enable_audio_output", "enableAudioOutput"),
         ],
     )
-    async def test_the_audio_output_commands(self, mocker: MockerFixture, method, event):
-        """Each command names the output it acts on."""
+    async def test_the_audio_output_switches(self, mocker: MockerFixture, method, event):
+        """Enabling and disabling name the output alone, as the user interface does."""
         client, fake = await _client(mocker)
 
         await getattr(client, method)("0")
 
         assert fake.calls == [_Call(event, {"id": "0"})]
 
+    @pytest.mark.parametrize(
+        ("method", "event"),
+        [
+            ("audio_output_pause", "audioOutputPause"),
+            ("audio_output_play", "audioOutputPlay"),
+        ],
+    )
+    async def test_the_audio_output_transport_commands(self, mocker: MockerFixture, method, event):
+        """Playing and pausing send the entry the host listed, read first."""
+        client, fake = await _client(mocker, self._fake_with_audio_outputs())
+
+        await getattr(client, method)("0")
+
+        listed = fake.answers["getAudioOutputs"][1]["availableOutputs"][0]
+        assert fake.calls == [_Call("getAudioOutputs", None), _Call(event, listed)]
+
+    async def test_an_unknown_audio_output(self, mocker: MockerFixture):
+        """An identifier the host does not list is refused after the read, with a warning."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_audio_outputs(), logger=logger)
+
+        with pytest.raises(ValueError, match='No audio output has the identifier "9"'):
+            await client.audio_output_play("9")
+
+        assert [call.event for call in fake.calls] == ["getAudioOutputs"]
+        logger.warning.assert_called_once()
+
     async def test_set_audio_output_volume(self, mocker: MockerFixture):
-        """The volume of one output carries the identifier and the level."""
-        client, fake = await _client(mocker)
+        """The volume carries the output as the user interface sends it, unmuted, and the level."""
+        client, fake = await _client(mocker, self._fake_with_audio_outputs())
 
         await client.set_audio_output_volume("0", 42)
 
-        assert fake.calls == [_Call("setAudioOutputVolume", {"id": "0", "volume": 42})]
+        assert [call.event for call in fake.calls] == ["getAudioOutputs", "setAudioOutputVolume"]
+        assert fake.calls[1].payload == {
+            "host": "http://volumio.local",
+            "id": "0",
+            "isSelf": True,
+            "type": "device",
+            "mute": False,
+            "volume": 42,
+        }
 
     @pytest.mark.parametrize("level", [-1, 101])
     async def test_an_out_of_range_output_volume(self, mocker: MockerFixture, level):
@@ -1577,37 +1898,59 @@ class TestVolumioAsyncWebSocketClientLibrary:
         )
         client, _ = await _client(mocker, fake)
 
-        sources = (await client.get_music_sources())
+        sources = await client.get_music_sources()
 
         assert [source.name for source in sources] == ["upnp"]
         assert sources[0].pretty_name == "UPNP Renderer"
 
+    def _fake_with_music_sources(self):
+        """A fake host listing one music source, disabled."""
+        source = {
+            "name": "upnp",
+            "prettyName": "UPNP Renderer",
+            "category": "audio_interface",
+            "enabled": False,
+            "active": False,
+        }
+        return _FakeAsyncSocketIOClient(
+            answers={"getMyMusicPlugins": ("pushMyMusicPlugins", [source])}
+        )
+
     async def test_set_music_source_enabled(self, mocker: MockerFixture):
-        """A source is enabled or disabled by name."""
-        client, fake = await _client(mocker)
+        """The source is read from the list, and sent back whole with the flag replaced."""
+        client, fake = await _client(mocker, self._fake_with_music_sources())
 
         await client.set_music_source_enabled("upnp", True)
 
+        listed = fake.answers["getMyMusicPlugins"][1][0]
         assert fake.calls == [
-            _Call("enableDisableMyMusicPlugin", {"name": "upnp", "enabled": True})
+            _Call("getMyMusicPlugins", None),
+            _Call("enableDisableMyMusicPlugin", {**listed, "enabled": True}),
         ]
+
+    async def test_set_music_source_enabled_refuses_an_unknown_name(self, mocker: MockerFixture):
+        """A name the host does not list is refused after the read, with a warning."""
+        logger = Mock()
+        client, fake = await _client(mocker, self._fake_with_music_sources(), logger=logger)
+
+        with pytest.raises(ValueError, match='No music source is named "spotify"'):
+            await client.set_music_source_enabled("spotify", True)
+
+        assert [call.event for call in fake.calls] == ["getMyMusicPlugins"]
+        logger.warning.assert_called_once()
 
     async def test_the_scan_commands(self, mocker: MockerFixture):
         """The scans carry nothing, or the URI or service they are scoped to."""
         client, fake = await _client(mocker)
 
         await client.rescan_library()
-        await client.update_all_metadata()
         await client.update_library()
         await client.update_library("mpd://NAS/Music")
-        await client.update_service_tracklist("qobuz")
 
         assert fake.calls == [
             _Call("rescanDb", None),
-            _Call("updateAllMetadata", None),
             _Call("updateDb", None),
             _Call("updateDb", "mpd://NAS/Music"),
-            _Call("serviceUpdateTracklist", "qobuz"),
         ]
 
 
@@ -1621,7 +1964,7 @@ class TestVolumioAsyncWebSocketClientPower:
         )
         client, _ = await _client(mocker, fake)
 
-        info = (await client.get_device_info())
+        info = await client.get_device_info()
 
         assert info.name == "kitchen"
         assert info.uuid == "5dc4"
@@ -1671,11 +2014,10 @@ class TestVolumioAsyncWebSocketClientPower:
         )
         client, _ = await _client(mocker, fake)
 
-        modes = (await client.get_power_modes())
+        modes = await client.get_power_modes()
 
         assert modes.has_power_off_mode is True
         assert modes.has_standby_mode is False
-
 
     async def test_a_hardware_identifier_that_is_not_a_string(self, mocker: MockerFixture):
         """The identifier comes back bare; an object instead of it is refused."""
@@ -1702,6 +2044,56 @@ class TestVolumioAsyncWebSocketClientPower:
 class TestVolumioAsyncWebSocketClientPlugins:
     """The plugins installed on the host, and their configuration pages."""
 
+    async def test_available_plugins(self, mocker: MockerFixture):
+        """The store is answered by category, each plugin with the URL of its package."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getAvailablePlugins": (
+                    "pushAvailablePlugins",
+                    {
+                        "categories": [
+                            {
+                                "name": "music_service",
+                                "prettyName": "Music Services",
+                                "plugins": [
+                                    {"name": "spop", "prettyName": "Spotify", "url": "http://p/s"}
+                                ],
+                            }
+                        ]
+                    },
+                )
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        plugins = await client.get_available_plugins()
+
+        assert [plugin.url for plugin in plugins] == ["http://p/s"]
+        assert plugins.find("spop").pretty_name == "Spotify"
+        assert fake.calls[-1] == _Call("getAvailablePlugins", None)
+
+    async def test_available_plugins_want_a_login(self, mocker: MockerFixture):
+        """A host not logged in to MyVolumio answers with a dialog, which is an error."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "getAvailablePlugins": (
+                    "openModal",
+                    {
+                        "title": "Please login",
+                        "message": "To access the plugins store you need to "
+                        '<a href="/myvolumio/signup">login to MyVolumio</a>',
+                    },
+                )
+            }
+        )
+        client, _ = await _client(mocker, fake)
+
+        with pytest.raises(VolumioAPIError, match="Please login") as raised:
+            await client.get_available_plugins()
+
+        assert "you need to login to MyVolumio" in str(raised.value)
+        assert "<a" not in str(raised.value)
+
     async def test_installed_plugins(self, mocker: MockerFixture):
         """The plugins are answered as a bare array, which the model wraps."""
         fake = _FakeAsyncSocketIOClient(
@@ -1714,7 +2106,7 @@ class TestVolumioAsyncWebSocketClientPlugins:
         )
         client, _ = await _client(mocker, fake)
 
-        plugins = (await client.get_installed_plugins())
+        plugins = await client.get_installed_plugins()
 
         assert [plugin.name for plugin in plugins] == ["spop"]
         assert plugins[0].pretty_name == "Spotify"
@@ -1771,33 +2163,55 @@ class TestVolumioAsyncWebSocketClientPlugins:
             )
         ]
 
+    async def test_uninstall_plugin(self, mocker: MockerFixture):
+        """Uninstalling names the plugin by category and name."""
+        client, fake = await _client(mocker)
+
+        await client.uninstall_plugin("music_service", "spop")
+
+        assert fake.calls == [
+            _Call("unInstallPlugin", {"category": "music_service", "name": "spop"})
+        ]
+
     @pytest.mark.parametrize(
         ("method", "event"),
         [
             ("disable_plugin", "disablePlugin"),
             ("enable_plugin", "enablePlugin"),
-            ("uninstall_plugin", "unInstallPlugin"),
-            ("update_plugin", "updatePlugin"),
         ],
     )
-    async def test_the_plugin_commands(self, mocker: MockerFixture, method, event):
-        """Each command names the plugin by category and name."""
+    async def test_the_plugin_switches(self, mocker: MockerFixture, method, event):
+        """Enabling and disabling name the plugin under the key the host reads."""
         client, fake = await _client(mocker)
 
         await getattr(client, method)("music_service", "spop")
 
-        assert fake.calls == [_Call(event, {"category": "music_service", "name": "spop"})]
+        assert fake.calls == [_Call(event, {"category": "music_service", "plugin": "spop"})]
 
-    async def test_modify_plugin_status(self, mocker: MockerFixture):
-        """Enabling in one call carries the flag beside the plugin."""
+    @pytest.mark.parametrize(("started", "status"), [(True, "START"), (False, "STOP")])
+    async def test_modify_plugin_status(self, mocker: MockerFixture, started, status):
+        """Starting or stopping carries the status the host reads, under the same key."""
         client, fake = await _client(mocker)
 
-        await client.modify_plugin_status("music_service", "spop", True)
+        await client.modify_plugin_status("music_service", "spop", started)
 
         assert fake.calls == [
             _Call(
                 "modifyPluginStatus",
-                {"category": "music_service", "name": "spop", "enabled": True},
+                {"category": "music_service", "plugin": "spop", "status": status},
+            )
+        ]
+
+    async def test_update_plugin(self, mocker: MockerFixture):
+        """Updating names the plugin and the package to update it from."""
+        client, fake = await _client(mocker)
+
+        await client.update_plugin("music_service", "spop", "http://plugins/spop.zip")
+
+        assert fake.calls == [
+            _Call(
+                "updatePlugin",
+                {"category": "music_service", "name": "spop", "url": "http://plugins/spop.zip"},
             )
         ]
 
@@ -1819,10 +2233,13 @@ class TestVolumioAsyncWebSocketClientPlugins:
         await client.call_plugin_method("miscellanea/alarm", "setSleep", {"time": "0:30"})
 
         assert fake.calls == [
-            _Call("callMethod", {"endpoint": "music_service/mpd", "method": "rescanDb",
-                                 "data": {}}),
-            _Call("callMethod", {"endpoint": "miscellanea/alarm", "method": "setSleep",
-                                 "data": {"time": "0:30"}}),
+            _Call(
+                "callMethod", {"endpoint": "music_service/mpd", "method": "rescanDb", "data": {}}
+            ),
+            _Call(
+                "callMethod",
+                {"endpoint": "miscellanea/alarm", "method": "setSleep", "data": {"time": "0:30"}},
+            ),
         ]
 
 
@@ -1841,7 +2258,7 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         )
         client, _ = await _client(mocker, fake)
 
-        info = (await client.get_network_info())
+        info = await client.get_network_info()
 
         assert len(info) == 1
         assert info[0].ip == "192.168.1.122"
@@ -1858,8 +2275,9 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
     async def test_get_share(self, mocker: MockerFixture):
         """One share is read by identifier."""
         fake = _FakeAsyncSocketIOClient(
-            answers={"getInfoShare": ("pushInfoShare", {"id": "a", "name": "NAS",
-                                                        "fstype": "cifs"})}
+            answers={
+                "getInfoShare": ("pushInfoShare", {"id": "a", "name": "NAS", "fstype": "cifs"})
+            }
         )
         client, fake = await _client(mocker, fake)
 
@@ -1879,8 +2297,7 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         assert fake.calls == [
             _Call(
                 "addShare",
-                {"name": "NAS", "path": "192.168.1.2/Music", "fstype": "cifs",
-                 "username": "guest"},
+                {"name": "NAS", "path": "192.168.1.2/Music", "fstype": "cifs", "username": "guest"},
             ),
             _Call("editShare", {"id": "a", "name": "NAS2"}),
             _Call("deleteShare", {"id": "a"}),
@@ -1901,25 +2318,71 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         assert await client.discover_network_shares() == {"nas": [{"name": "NAS"}]}
 
     async def test_usb_drives_and_safe_removal(self, mocker: MockerFixture):
-        """The drives are read, and one is unmounted by name."""
-        fake = _FakeAsyncSocketIOClient(
-            answers={"listUsbDrives": ("pushListUsbDrives", [{"name": "USB"}])}
-        )
+        """The drives are the folders of the USB source; one is unmounted by its bare name."""
+        drive = {"type": "remdisk", "title": "USB", "uri": "music-library/USB/USB"}
+        listing = {"navigation": {"lists": [{"title": "USB", "items": [drive]}]}}
+        fake = _FakeAsyncSocketIOClient(answers={"browseLibrary": ("pushBrowseLibrary", listing)})
         client, fake = await _client(mocker, fake)
 
-        drives = (await client.get_usb_drives())
+        drives = await client.get_usb_drives()
         await client.safe_remove_drive("USB")
 
         assert [drive.name for drive in drives] == ["USB"]
-        assert fake.calls[-1] == _Call("safeRemoveDrive", {"name": "USB"})
+        assert drives[0].uri == "music-library/USB/USB"
+        assert fake.calls[-2:] == [
+            _Call("browseLibrary", {"uri": "music-library/USB"}),
+            _Call("safeRemoveDrive", "USB"),
+        ]
 
     async def test_delete_folder(self, mocker: MockerFixture):
-        """A folder is deleted by the path the host nests under "item"."""
-        client, fake = await _client(mocker)
+        """A folder is deleted by its URI, the host answering with the folder above."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"deleteFolder": ("pushBrowseLibrary", NAVIGATION_PAYLOAD)}
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.delete_folder("mpd://NAS/Old")
+        await client.delete_folder("music-library/INTERNAL/music/old")
 
-        assert fake.calls == [_Call("deleteFolder", {"item": {"path": "mpd://NAS/Old"}})]
+        assert fake.calls == [
+            _Call(
+                "deleteFolder",
+                {
+                    "item": {"uri": "music-library/INTERNAL/music/old"},
+                    "curUri": "music-library/INTERNAL/music",
+                },
+            )
+        ]
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "music-library",
+            "music-library/",
+            "music-library/INTERNAL",
+            "INTERNAL/old",
+            "music-library/INTERNAL/../old",
+            "music-library/INTERNAL//old",
+        ],
+    )
+    async def test_delete_folder_refuses_a_uri_above_a_source(self, mocker: MockerFixture, uri):
+        """The root of the library, a source, and a URI outside them are refused."""
+        logger = Mock()
+        client, fake = await _client(mocker, logger=logger)
+
+        with pytest.raises(ValueError, match="below a source"):
+            await client.delete_folder(uri)
+
+        assert fake.calls == []
+        logger.warning.assert_called_once()
+
+    async def test_delete_folder_waits_for_the_answer(self, mocker: MockerFixture):
+        """The listing the host answers a deletion with is waited for."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.delete_folder("music-library/INTERNAL/music/old")
+
+        assert 'did not answer "deleteFolder" with "pushBrowseLibrary"' in str(excinfo.value)
 
     async def test_the_wireless_networks(self, mocker: MockerFixture):
         """Both the scan and the cache answer with the networks the host can see."""
@@ -1936,16 +2399,35 @@ class TestVolumioAsyncWebSocketClientNetworkAndShares:
         assert [n.ssid for n in await client.get_wireless_networks_cache()] == ["home"]
 
     async def test_save_wireless_settings(self, mocker: MockerFixture):
-        """Joining a network carries the name and the password, empty when open."""
-        client, fake = await _client(mocker)
+        """Joining sends the security the host sees for the network, and no password when open."""
+        seen = {"available": [{"ssid": "home", "security": "wpa2", "signal": 70}]}
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getWirelessNetworks": ("pushWirelessNetworks", seen)}
+        )
+        client, fake = await _client(mocker, fake)
 
-        await client.save_wireless_settings("home", "hunter2")
+        await client.save_wireless_settings("home", "hunter22")
+        await client.save_wireless_settings("hidden", "0123456789")
         await client.save_wireless_settings("open")
 
-        assert fake.calls == [
-            _Call("saveWirelessNetworkSettings", {"ssid": "home", "password": "hunter2"}),
-            _Call("saveWirelessNetworkSettings", {"ssid": "open", "password": ""}),
+        assert [call for call in fake.calls if call.event != "getWirelessNetworks"] == [
+            _Call(
+                "saveWirelessNetworkSettings",
+                {"ssid": "home", "password": "hunter22", "security": "wpa2"},
+            ),
+            _Call("saveWirelessNetworkSettings", {"ssid": "hidden", "password": "0123456789"}),
+            _Call("saveWirelessNetworkSettings", {"ssid": "open"}),
         ]
+        assert [call.event for call in fake.calls].count("getWirelessNetworks") == 2
+
+    async def test_save_wireless_settings_refuses_a_bad_password(self, mocker: MockerFixture):
+        """A password that is neither a WPA passphrase nor a WEP key is refused."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="WPA passphrase"):
+            await client.save_wireless_settings("home", "abc")
+
+        assert fake.calls == []
 
 
 class TestVolumioAsyncWebSocketClientUiPreferences:
@@ -1955,13 +2437,15 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
         """The look of the interface is parsed."""
         fake = _FakeAsyncSocketIOClient(
             answers={
-                "getUiSettings": ("pushUiSettings", {"color": "#000", "language": "en",
-                                                     "theme": "default"})
+                "getUiSettings": (
+                    "pushUiSettings",
+                    {"color": "#000", "language": "en", "theme": "default"},
+                )
             }
         )
         client, _ = await _client(mocker, fake)
 
-        settings = (await client.get_ui_settings())
+        settings = await client.get_ui_settings()
 
         assert settings.color == "#000"
         assert settings.theme == "default"
@@ -1981,7 +2465,7 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
         )
         client, fake = await _client(mocker, fake)
 
-        languages = (await client.get_languages())
+        languages = await client.get_languages()
         await client.set_language("it", "Italiano")
         await client.set_language("fr")
 
@@ -2008,7 +2492,7 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
 
         await client.set_timezone("UTC")
 
-        assert fake.calls[-1] == _Call("setTimezone", {"timeZone": "UTC"})
+        assert fake.calls[-1] == _Call("setTimezone", "UTC")
 
     async def test_backgrounds(self, mocker: MockerFixture):
         """The background in use is read beside the available ones."""
@@ -2025,25 +2509,46 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
         )
         client, fake = await _client(mocker, fake)
 
-        backgrounds = (await client.get_backgrounds())
-        await client.set_background("Aurora", "aurora.jpg")
-        await client.set_background("Darkness")
+        backgrounds = await client.get_backgrounds()
+        await client.set_background("Aurora")
+        await client.set_background("#1a2b3c")
         await client.delete_background("Aurora")
 
         assert backgrounds.current is not None
         assert backgrounds.current.name == "Darkness"
         assert [b.name for b in backgrounds] == ["Aurora"]
-        assert fake.calls[-3:] == [
+        assert fake.calls[-4:] == [
+            _Call("getBackgrounds", None),
             _Call("setBackgrounds", {"name": "Aurora", "path": "aurora.jpg"}),
-            _Call("setBackgrounds", {"name": "Darkness"}),
+            _Call("setBackgrounds", {"color": "#1a2b3c"}),
             _Call("deleteBackground", {"name": "Aurora"}),
         ]
+
+    async def test_set_background_refuses_a_bad_colour(self, mocker: MockerFixture):
+        """A colour that is not hexadecimal is refused before sending."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="must be hexadecimal"):
+            await client.set_background("#12345")
+
+        assert not any(call.event == "setBackgrounds" for call in fake.calls)
+
+    async def test_set_background_refuses_an_unknown_name(self, mocker: MockerFixture):
+        """A background the host does not list is refused before sending."""
+        fake = _FakeAsyncSocketIOClient(
+            answers={"getBackgrounds": ("pushBackgrounds", {"available": [], "current": None})}
+        )
+        client, fake = await _client(mocker, fake)
+
+        with pytest.raises(ValueError, match='No background is named "Nope"'):
+            await client.set_background("Nope")
+
+        assert not any(call.event == "setBackgrounds" for call in fake.calls)
 
     async def test_privacy_settings(self, mocker: MockerFixture):
         """The statistics flag is read from its alias."""
         fake = _FakeAsyncSocketIOClient(
-            answers={"getPrivacySettings": ("pushPrivacySettings",
-                                            {"allowUIStatistics": False})}
+            answers={"getPrivacySettings": ("pushPrivacySettings", {"allowUIStatistics": False})}
         )
         client, _ = await _client(mocker, fake)
 
@@ -2052,17 +2557,36 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
     async def test_infinity_playback(self, mocker: MockerFixture):
         """The setting is read, and turned on."""
         fake = _FakeAsyncSocketIOClient(
-            answers={"getInfinityPlayback": ("pushInfinityPlayback",
-                                             {"available": True, "enabled": False})}
+            answers={
+                "getInfinityPlayback": (
+                    "pushInfinityPlayback",
+                    {"available": True, "enabled": False},
+                ),
+                "setInfinityPlayback": (
+                    "pushInfinityPlayback",
+                    {"available": True, "enabled": True},
+                ),
+            }
         )
         client, fake = await _client(mocker, fake)
 
-        playback = (await client.get_infinity_playback())
+        playback = await client.get_infinity_playback()
         await client.set_infinity_playback(True)
 
         assert playback.available is True
         assert playback.enabled is False
         assert fake.calls[-1] == _Call("setInfinityPlayback", {"enabled": True})
+
+    async def test_set_infinity_playback_waits_for_the_answer(self, mocker: MockerFixture):
+        """The setting the host pushes back is waited for, so a read after it is clean."""
+        client, _ = await _client(mocker, timeout=0.01)
+
+        with pytest.raises(VolumioConnectionError) as excinfo:
+            await client.set_infinity_playback(True)
+
+        assert 'did not answer "setInfinityPlayback" with "pushInfinityPlayback"' in str(
+            excinfo.value
+        )
 
     async def test_experience_settings(self, mocker: MockerFixture):
         """The setting is read, and the full set of options chosen."""
@@ -2079,7 +2603,7 @@ class TestVolumioAsyncWebSocketClientUiPreferences:
         )
         client, fake = await _client(mocker, fake)
 
-        settings = (await client.get_experience_settings())
+        settings = await client.get_experience_settings()
         await client.set_experience_settings(True)
 
         assert settings.advanced is False
@@ -2125,17 +2649,98 @@ class TestVolumioAsyncWebSocketClientSystemAdministration:
 
         assert channel.current_channel == "stable"
         assert channel.available_channels == ["stable", "test"]
-        assert fake.calls[-1] == _Call("setUpdaterChannel", {"channel": "test"})
+        assert fake.calls[-1] == _Call("setUpdaterChannel", "test")
 
-    async def test_the_update_commands(self, mocker: MockerFixture):
-        """Checking and installing carry the flags the host expects."""
+    async def test_automatic_updates_switched(self, mocker: MockerFixture):
+        """Switching the automatic updates saves the settings with the window of the host."""
+        content = [
+            {"id": "automatic_updates", "value": True},
+            {"id": "automatic_updates_start_time", "value": {"value": 0, "label": 0}},
+            {"id": "automatic_updates_stop_time", "value": {"value": 5, "label": 5}},
+            "not an entry",
+        ]
+        page = {"page": {"label": "System"}, "sections": [{"id": "updates", "content": content}]}
+        fake = _FakeAsyncSocketIOClient(answers={"getUiConfig": ("pushUiConfig", page)})
+        client, fake = await _client(mocker, fake)
+
+        await client.set_automatic_updates(False)
+        await client.set_automatic_updates(True, end_time=6)
+
+        assert [call.event for call in fake.calls] == [
+            "getUiConfig",
+            "callMethod",
+            "getUiConfig",
+            "callMethod",
+        ]
+        assert fake.calls[0].payload == {"page": "system_controller/system"}
+        assert fake.calls[1].payload == {
+            "endpoint": "system_controller/system",
+            "method": "saveUpdateSettings",
+            "data": {
+                "automatic_updates": False,
+                "automatic_updates_start_time": {"value": 0, "label": 0},
+                "automatic_updates_stop_time": {"value": 5, "label": 5},
+            },
+        }
+        assert fake.calls[3].payload["data"] == {
+            "automatic_updates": True,
+            "automatic_updates_start_time": {"value": 0, "label": 0},
+            "automatic_updates_stop_time": {"value": 6, "label": 6},
+        }
+
+    async def test_automatic_updates_with_a_whole_window(self, mocker: MockerFixture):
+        """With both hours given, the page of the host is not read."""
         client, fake = await _client(mocker)
 
-        await client.check_for_update()
-        await client.check_update_cache()
+        await client.set_automatic_updates(True, 3, 6)
+
+        assert [call.event for call in fake.calls] == ["callMethod"]
+        assert fake.calls[0].payload["data"] == {
+            "automatic_updates": True,
+            "automatic_updates_start_time": {"value": 3, "label": 3},
+            "automatic_updates_stop_time": {"value": 6, "label": 6},
+        }
+
+    async def test_automatic_updates_refused_a_bad_hour(self, mocker: MockerFixture):
+        """An hour outside the day is refused before anything is sent."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="must be between 0 and 23, got 24"):
+            await client.set_automatic_updates(True, 24, 6)
+
+        assert fake.calls == []
+
+    async def test_automatic_updates_refused_without_the_window(self, mocker: MockerFixture):
+        """A page not reporting the update window is refused before saving."""
+        page = {"sections": [{"id": "updates", "content": [{"id": "automatic_updates"}]}]}
+        fake = _FakeAsyncSocketIOClient(answers={"getUiConfig": ("pushUiConfig", page)})
+        client, fake = await _client(mocker, fake)
+
+        with pytest.raises(ValueError, match="does not report the automatic update window"):
+            await client.set_automatic_updates(True)
+
+        assert not any(call.event == "callMethod" for call in fake.calls)
+
+    async def test_the_update_commands(self, mocker: MockerFixture):
+        """Checking waits for the answer of the updater; installing carries its flag."""
+        found = {"updateavailable": True, "title": "3.800", "description": "<p>Fixes</p>"}
+        cached = {"updateavailable": False, "title": "No update available"}
+        fake = _FakeAsyncSocketIOClient(
+            answers={
+                "updateCheck": ("updateReadyForDaemon", found),
+                "updateCheckCache": ("updateReadyCache", cached),
+            }
+        )
+        client, fake = await _client(mocker, fake)
+
+        check = await client.check_for_update()
+        check_cached = await client.check_update_cache()
         await client.update()
         await client.update(ignore_integrity_check=True)
 
+        assert check.update_available is True
+        assert check.title == "3.800"
+        assert check_cached.update_available is False
         assert fake.calls == [
             _Call("updateCheck", {"hideModal": True}),
             _Call("updateCheckCache", None),
@@ -2143,20 +2748,34 @@ class TestVolumioAsyncWebSocketClientSystemAdministration:
             _Call("update", {"ignoreIntegrityCheck": True}),
         ]
 
-    async def test_backup_and_restore(self, mocker: MockerFixture):
-        """A backup is read and handed back to be restored."""
-        fake = _FakeAsyncSocketIOClient(answers={"getBackup": ("pushBackup", {"playlist": []})})
+    async def test_backup_of_one_kind(self, mocker: MockerFixture):
+        """A backup names its kind, and comes back as the host reports it."""
+        answer = {"id": {"name": "volumio"}, "backup": [{"name": "jazz", "content": []}]}
+        fake = _FakeAsyncSocketIOClient(answers={"getBackup": ("pushBackup", answer)})
         client, fake = await _client(mocker, fake)
 
-        backup = await client.backup()
-        await client.restore_backup(backup)
-        await client.restore_config()
+        backup = await client.backup("playlist")
 
-        assert backup == {"playlist": []}
-        assert fake.calls[-2:] == [
-            _Call("manageBackup", {"playlist": []}),
-            _Call("restoreConfig", None),
-        ]
+        assert backup == answer
+        assert fake.calls[-1] == _Call("getBackup", {"type": "playlist"})
+
+    async def test_backup_refuses_an_unknown_kind(self, mocker: MockerFixture):
+        """A kind the host does not read is refused before sending."""
+        client, fake = await _client(mocker)
+
+        with pytest.raises(ValueError, match="The backup kind must be one of"):
+            await client.backup("settings")
+
+        assert not any(call.event == "getBackup" for call in fake.calls)
+
+    async def test_backup_saved_and_restored_by_flag(self, mocker: MockerFixture):
+        """The host writes its local backup on 0, and restores it on 1."""
+        client, fake = await _client(mocker)
+
+        await client.save_backup()
+        await client.restore_backup()
+
+        assert fake.calls[-2:] == [_Call("manageBackup", 0), _Call("manageBackup", 1)]
 
     async def test_install_to_disk_refuses_to_run(self, mocker: MockerFixture):
         """Writing to the internal storage is deliberately not implemented."""
