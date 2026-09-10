@@ -225,6 +225,11 @@ PLAYLIST_EXISTS_ERROR = (
 PLAYLIST_FILE_ERROR = 'Expected FILE to hold a JSON list of playlist items, each with a "uri".'
 """Error message when "playlist create" is given a file of another shape to import."""
 
+PLAYLIST_REMOVE_ALL_OCCURRENCES_ERROR = (
+    "Expected the --all-occurrences option only together with a URI argument."
+)
+"""Error message when "playlist remove" is asked for every occurrence of a position."""
+
 PLAYLIST_REMOVE_ARGUMENTS_ERROR = (
     "Expected either a URI argument or the -p/--position option, and not both."
 )
@@ -241,6 +246,9 @@ PLAYLIST_REMOVE_SERVICE_ERROR = (
     "Expected the --service option only together with a URI argument."
 )
 """Error message when "playlist remove" is given a service with a position instead of a URI."""
+
+PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR = 'No item at URI "{uri}" in the playlist "{name}".'
+"""Error message when "playlist remove" finds no occurrence of the URI to remove."""
 
 PLAYLIST_RENAME_SAME_NAME_ERROR = "Expected SOURCE and TARGET to be different playlist names."
 """Error message when "playlist rename" is given the same name twice."""

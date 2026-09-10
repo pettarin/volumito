@@ -1619,6 +1619,16 @@ def option_all_notifications(func: Callable[..., None]) -> Callable[..., None]:
     )(func)
 
 
+def option_all_occurrences(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--all-occurrences`` option to the playlist remove subcommand."""
+    return click.option(
+        "--all-occurrences/--first-occurrence-only",
+        default=False,
+        show_default=True,
+        help="Remove every item at URI, instead of the first one only.",
+    )(func)
+
+
 def option_allow_local_file_rename(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--allow-local-file-rename`` option to an audio download subcommand."""
     return click.option(

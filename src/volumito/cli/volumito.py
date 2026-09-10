@@ -54,6 +54,7 @@ from volumito.cli.click_helpers import (
     option_albumart_file_name_template,
     option_albums_only,
     option_all_notifications,
+    option_all_occurrences,
     option_allow_local_file_rename,
     option_artist,
     option_artists_only,
@@ -211,9 +212,11 @@ from volumito.cli.constants import (
     PLAYLIST_DELETE_STILL_LISTED_ERROR,
     PLAYLIST_EXISTS_ERROR,
     PLAYLIST_FILE_ERROR,
+    PLAYLIST_REMOVE_ALL_OCCURRENCES_ERROR,
     PLAYLIST_REMOVE_ARGUMENTS_ERROR,
     PLAYLIST_REMOVE_EMPTY_WARNING,
     PLAYLIST_REMOVE_SERVICE_ERROR,
+    PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR,
     PLAYLIST_RENAME_SAME_NAME_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
@@ -4448,6 +4451,7 @@ def playlist_play(
 @click.pass_context
 @click.argument("name", type=str)
 @click.argument("uri", type=str, required=False, default=None)
+@option_all_occurrences
 @option_check_playlist_name
 @option_fields
 @option_format
@@ -4458,6 +4462,7 @@ def playlist_remove(
     ctx: click.Context,
     name: str,
     uri: str | None,
+    all_occurrences: bool,
     check_playlist_name: bool,
     fields: str,
     output_format: str,
@@ -4471,9 +4476,10 @@ def playlist_remove(
     as "1-3,6-8,12" (indexed according to
     --position-starting-at-one/--position-starting-at-zero), each standing for the
     URI and the service of the item listed there. The Volumio host removes the first
-    item at each URI, of the service --service names or the URI tells. Once the items
-    are removed, the content of the playlist is printed as "playlist content" prints
-    it, unless --no-print-resulting-content.
+    item at each URI, of the service --service names or the URI tells; with
+    --all-occurrences, every item the playlist lists at URI is removed, one removal
+    each. Once the items are removed, the content of the playlist is printed as
+    "playlist content" prints it, unless --no-print-resulting-content.
 
     A removal that would leave the playlist empty is warned about, since the host may
     refuse it: delete the playlist instead, and create it again for an empty one.
@@ -4484,6 +4490,8 @@ def playlist_remove(
         raise click.UsageError(PLAYLIST_REMOVE_ARGUMENTS_ERROR)
     if service is not None and uri is None:
         raise click.UsageError(PLAYLIST_REMOVE_SERVICE_ERROR)
+    if all_occurrences and uri is None:
+        raise click.UsageError(PLAYLIST_REMOVE_ALL_OCCURRENCES_ERROR)
     if check_playlist_name:
         check_playlist_name_or_exit(ctx, name)
     tracks = fetch_or_exit(ctx, lambda c: c.get_playlist_content(name)).tracks
@@ -4491,6 +4499,13 @@ def playlist_remove(
         indices = {api_position(ctx, shown) for shown in sorted(position)}
         items = playlist_items_at_or_exit(ctx, name, tracks, indices)
         empties = len(items) == len(tracks)
+    elif uri is not None and all_occurrences:
+        occurrences = sum(1 for track in tracks if track.uri == uri)
+        if occurrences == 0:
+            error(PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR.format(uri=uri, name=name))
+            sys.exit(1)
+        items = [(uri, service)] * occurrences
+        empties = occurrences == len(tracks)
     elif uri is not None:
         items = [(uri, service)]
         empties = len(tracks) == 1 and tracks[0].uri == uri

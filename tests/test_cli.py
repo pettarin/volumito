@@ -12160,6 +12160,101 @@ class TestPlaylistCommands:
         # One content read resolves the position, one prints the resulting content
         assert mock_client.get_playlist_content.call_count == 2
 
+    def test_remove_all_occurrences(self, runner: CliRunner, mocker: MockerFixture):
+        """--all-occurrences sends one removal per item listed at the URI."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {
+                "name": "Rock",
+                "lists": [
+                    [
+                        {"title": "A", "service": "mpd", "uri": "mpd://a"},
+                        {"title": "B", "service": "mpd", "uri": "mpd://b"},
+                        {"title": "A", "service": "mpd", "uri": "mpd://a"},
+                    ]
+                ],
+            }
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "remove", "Rock", "mpd://a", "--all-occurrences"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'remove from playlist \"Rock\"' executed successfully" in result.output
+        assert "leave the playlist" not in result.output
+        assert mock_client.remove_from_playlist.call_args_list == [
+            mocker.call("Rock", "mpd://a", None),
+            mocker.call("Rock", "mpd://a", None),
+        ]
+
+    def test_remove_first_occurrence_only_by_default(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Without --all-occurrences, one removal is sent, whatever the playlist lists."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {
+                "name": "Rock",
+                "lists": [
+                    [
+                        {"title": "A", "service": "mpd", "uri": "mpd://a"},
+                        {"title": "A", "service": "mpd", "uri": "mpd://a"},
+                    ]
+                ],
+            }
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "remove", "Rock", "mpd://a", "--first-occurrence-only"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.remove_from_playlist.assert_called_once_with("Rock", "mpd://a", None)
+
+    def test_remove_all_occurrences_of_every_item_warns(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """Occurrences covering the whole playlist warn that the host may refuse it."""
+        mock_client = self._mock_websocket_client(mocker)
+        mock_client.get_playlist_content.return_value = PlaylistContent.from_envelope(
+            {
+                "name": "Rock",
+                "lists": [
+                    [
+                        {"title": "A", "service": "mpd", "uri": "mpd://a"},
+                        {"title": "A", "service": "mpd", "uri": "mpd://a"},
+                    ]
+                ],
+            }
+        )
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "remove", "Rock", "mpd://a", "--all-occurrences"],
+        )
+
+        assert result.exit_code == 0
+        assert 'The removal would leave the playlist "Rock" empty' in result.output
+        assert mock_client.remove_from_playlist.call_count == 2
+
+    def test_remove_all_occurrences_of_a_uri_not_listed(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A URI the playlist does not list exits 1 with --all-occurrences, sending nothing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "playlist", "remove", "Rock", "mpd://nope", "--all-occurrences"],
+        )
+
+        assert result.exit_code == 1
+        assert 'No item at URI "mpd://nope" in the playlist "Rock".' in result.output
+        mock_client.remove_from_playlist.assert_not_called()
+
     def test_remove_the_last_item_warns(self, runner: CliRunner, mocker: MockerFixture):
         """Removing the only item of a playlist warns that the host may refuse it."""
         mock_client = self._mock_websocket_client(mocker)
@@ -12323,10 +12418,11 @@ class TestPlaylistCommands:
             ["Rock"],
             ["Rock", _URI, "-p", "1"],
             ["Rock", "-p", "1", "--service", "qobuz"],
+            ["Rock", "-p", "1", "--all-occurrences"],
         ],
     )
     def test_remove_usage_errors(self, runner: CliRunner, mocker: MockerFixture, arguments):
-        """A URI or a position is expected, not both, and --service goes with the URI."""
+        """A URI or a position is expected, not both; the URI-only options need the URI."""
         mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "remove", *arguments])
