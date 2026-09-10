@@ -401,7 +401,7 @@ class TestSyncAdapters:
         SyncWebSocketAPIClient(client).close()
 
         client.logger.warning.assert_called_once_with(
-            "Closing the synchronous WebSocket API client failed (boom)"
+            "Closing the Synchronous WebSocket API client failed (boom)"
         )
 
     def test_websocket_browse_without_offset(self):
@@ -561,7 +561,7 @@ class TestAsyncAdapters:
 
         client.close.assert_awaited_once_with()
         assert _loop_threads() == []
-        with pytest.raises(RuntimeError, match="asynchronous REST API client is not open"):
+        with pytest.raises(RuntimeError, match="Asynchronous REST API client is not open"):
             adapter.ping()
 
     def test_websocket_lifecycle(self):
@@ -580,7 +580,7 @@ class TestAsyncAdapters:
         client = _async_client()
         client.ping = AsyncMock(return_value="pong")
 
-        with pytest.raises(RuntimeError, match="asynchronous REST API client is not open"):
+        with pytest.raises(RuntimeError, match="Asynchronous REST API client is not open"):
             AsyncRESTAPIClient(client).ping()
 
         client.ping.assert_not_awaited()
@@ -622,7 +622,7 @@ class TestAsyncAdapters:
         adapter.close()
 
         client.logger.warning.assert_called_once_with(
-            "Closing the asynchronous REST API client failed (boom)"
+            "Closing the Asynchronous REST API client failed (boom)"
         )
         assert _loop_threads() == []
 
@@ -915,10 +915,10 @@ class TestCommonMembers:
     @pytest.mark.parametrize(
         ("adapter_class", "description", "base_url"),
         [
-            (SyncRESTAPIClient, "synchronous REST API client", "http://volumio:3001"),
-            (AsyncRESTAPIClient, "asynchronous REST API client", "http://volumio:3001"),
-            (SyncWebSocketAPIClient, "synchronous WebSocket API client", "http://volumio:3002"),
-            (AsyncWebSocketAPIClient, "asynchronous WebSocket API client", "http://volumio:3002"),
+            (SyncRESTAPIClient, "Synchronous REST API client", "http://volumio:3001"),
+            (AsyncRESTAPIClient, "Asynchronous REST API client", "http://volumio:3001"),
+            (SyncWebSocketAPIClient, "Synchronous WebSocket API client", "http://volumio:3002"),
+            (AsyncWebSocketAPIClient, "Asynchronous WebSocket API client", "http://volumio:3002"),
         ],
     )
     def test_description_and_base_url(self, adapter_class, description, base_url):

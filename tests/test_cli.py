@@ -1965,7 +1965,7 @@ class TestAPIClientOption:
 
         assert result.exit_code == 0
         assert "pong" in result.output
-        assert "Using the synchronous WebSocket API client" in result.output
+        assert "Using the Synchronous WebSocket API client" in result.output
         assert "Connecting to http://volumio.local:3000... done" in result.output
         mock_class.assert_called_once()
 
@@ -1988,7 +1988,7 @@ class TestAPIClientOption:
         host_configuration, timeout, _ = mock_class.call_args[0]
         assert host_configuration.websocket_port == 4000
         assert timeout == 7.0
-        assert "Using the synchronous WebSocket API client" in result.output
+        assert "Using the Synchronous WebSocket API client" in result.output
         assert "Connecting to http://volumio.local:4000... done" in result.output
 
     def test_the_client_is_shared_by_the_calls_of_an_invocation(self, runner, mocker):
@@ -2035,7 +2035,7 @@ class TestAPIClientOption:
         result = runner.invoke(main, ["-c", config, "-v", "system", "ping"])
 
         assert result.exit_code == 0
-        assert "Using the asynchronous REST API client" in result.output
+        assert "Using the Asynchronous REST API client" in result.output
         mock_class.assert_called_once()
 
     def test_an_invalid_api_client_in_the_configuration_file(self, runner, tmp_path):
@@ -2153,7 +2153,7 @@ class TestAPIClientOption:
 
         assert result.exit_code == 1
         assert (
-            "API client error: The synchronous WebSocket API client does not offer "
+            "API client error: The Synchronous WebSocket API client does not offer "
             f"{operation}: use --api-client synchronous_rest or asynchronous_rest, "
             "or --allow-fallback-to-rest-api"
         ) in result.output
@@ -6243,7 +6243,7 @@ class TestSystemAlarm:
     """The alarms, as a Volumio host answers them."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the sleep timer "
+        "API client error: The Synchronous REST API client does not offer the sleep timer "
         "and the alarms: use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )
@@ -6526,7 +6526,7 @@ class TestSystemAudio:
     """The input sources, as a Volumio host answers them."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the audio "
+        "API client error: The Synchronous REST API client does not offer the audio "
         "outputs and devices: use --api-client synchronous_websocket or "
         "asynchronous_websocket, or --allow-fallback-to-websocket-api"
     )
@@ -6810,7 +6810,7 @@ class TestSystemSettings:
     def _refusal(operation: str) -> str:
         """The error of a REST API client asked for an operation, without the fallback."""
         return (
-            f"API client error: The synchronous REST API client does not offer {operation}: "
+            f"API client error: The Synchronous REST API client does not offer {operation}: "
             "use --api-client synchronous_websocket or asynchronous_websocket, "
             "or --allow-fallback-to-websocket-api"
         )
@@ -7387,7 +7387,7 @@ class TestSystemNetworkShareUsb:
     def _refusal(operation: str) -> str:
         """The error of a REST API client asked for an operation, without the fallback."""
         return (
-            f"API client error: The synchronous REST API client does not offer {operation}: "
+            f"API client error: The Synchronous REST API client does not offer {operation}: "
             "use --api-client synchronous_websocket or asynchronous_websocket, "
             "or --allow-fallback-to-websocket-api"
         )
@@ -7812,7 +7812,7 @@ class TestSystemPluginAndUi:
     def _refusal(operation: str) -> str:
         """The error of a REST API client asked for an operation, without the fallback."""
         return (
-            f"API client error: The synchronous REST API client does not offer {operation}: "
+            f"API client error: The Synchronous REST API client does not offer {operation}: "
             "use --api-client synchronous_websocket or asynchronous_websocket, "
             "or --allow-fallback-to-websocket-api"
         )
@@ -8857,7 +8857,7 @@ class TestCollectionBrowseLastAndRoot:
     """The browse sources, as a Volumio host answers them."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the collection "
+        "API client error: The Synchronous REST API client does not offer the collection "
         "extras: use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )
@@ -9092,7 +9092,7 @@ class TestCollectionExtras:
     """The music sources, as a Volumio host answers them."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the collection "
+        "API client error: The Synchronous REST API client does not offer the collection "
         "extras: use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )
@@ -9492,7 +9492,7 @@ class TestCollectionFavouriteAndRadio:
     """A payload of the shape a browse of the Web radios is answered with."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the favourites "
+        "API client error: The Synchronous REST API client does not offer the favourites "
         "and the web radios: use --api-client synchronous_websocket or "
         "asynchronous_websocket, or --allow-fallback-to-websocket-api"
     )
@@ -10795,7 +10795,7 @@ class TestMultiroomSettings:
     """The multiroom configuration, as a Volumio host answers it."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the multiroom "
+        "API client error: The Synchronous REST API client does not offer the multiroom "
         "settings: use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )
@@ -11042,7 +11042,7 @@ class TestPlaylistCommands:
     """What a Volumio host lists at an album of another source: its songs, and more."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the playlist edits: "
+        "API client error: The Synchronous REST API client does not offer the playlist edits: "
         "use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )
@@ -12877,7 +12877,7 @@ class TestNotificationEvents:
     """A playback state, as a pushState event carries it."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the events: "
+        "API client error: The Synchronous REST API client does not offer the events: "
         "use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )
@@ -17312,7 +17312,7 @@ class TestPlaybackExtras:
 
         assert result.exit_code == 1
         assert (
-            f"API client error: The synchronous REST API client does not offer {operation}: "
+            f"API client error: The Synchronous REST API client does not offer {operation}: "
             "use --api-client synchronous_websocket or asynchronous_websocket, "
             "or --allow-fallback-to-websocket-api"
         ) in result.output
@@ -17531,7 +17531,7 @@ class TestQueueReplace:
 
         assert result.exit_code == 1
         assert (
-            "API client error: The synchronous REST API client does not offer the queue edits: "
+            "API client error: The Synchronous REST API client does not offer the queue edits: "
             "use --api-client synchronous_websocket or asynchronous_websocket, "
             "or --allow-fallback-to-websocket-api"
         ) in result.output
@@ -17622,7 +17622,7 @@ class TestQueueEditing:
     """The option skipping the resulting status print."""
 
     _REFUSAL = (
-        "API client error: The synchronous REST API client does not offer the queue edits: "
+        "API client error: The Synchronous REST API client does not offer the queue edits: "
         "use --api-client synchronous_websocket or asynchronous_websocket, "
         "or --allow-fallback-to-websocket-api"
     )

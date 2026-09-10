@@ -2357,7 +2357,7 @@ class SyncRESTAPIClient(RESTAPIClient, SyncAPIClient[VolumioRESTAPIClient]):
     of the fallback, when allowed.
     """
 
-    DESCRIPTION = "synchronous REST API client"
+    DESCRIPTION = "Synchronous REST API client"
 
     def __init__(
         self,
@@ -2420,7 +2420,7 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     client of the fallback, when allowed.
     """
 
-    DESCRIPTION = "synchronous WebSocket API client"
+    DESCRIPTION = "Synchronous WebSocket API client"
 
     def __init__(
         self,
@@ -3120,7 +3120,7 @@ class AsyncRESTAPIClient(RESTAPIClient, AsyncAPIClient[VolumioAsyncRESTAPIClient
     when allowed.
     """
 
-    DESCRIPTION = "asynchronous REST API client"
+    DESCRIPTION = "Asynchronous REST API client"
 
     def __init__(
         self,
@@ -3183,7 +3183,7 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     client of the fallback, when allowed.
     """
 
-    DESCRIPTION = "asynchronous WebSocket API client"
+    DESCRIPTION = "Asynchronous WebSocket API client"
 
     def __init__(
         self,
