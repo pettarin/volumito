@@ -11546,7 +11546,8 @@ class TestPlaylistCommands:
         assert result.exit_code == 0
         assert 'Copying 2 items of "Rock" to "New"' in result.output
         assert "Command 'copy playlist \"Rock\" to \"New\"' executed successfully" in result.output
-        mock_client.playlists_property.assert_called_once()
+        # One read checks the source exists, one that the target does not
+        assert mock_client.playlists_property.call_count == 2
         mock_client.create_playlist.assert_called_once_with("New")
         assert mock_client.add_to_playlist.call_args_list == [
             mocker.call("New", "music-library/a.flac", "mpd"),
@@ -11831,6 +11832,136 @@ class TestPlaylistCommands:
         assert 'Playlist not found: "Nope"' in result.output
         mock_client.create_playlist.assert_not_called()
         mock_client.delete_playlist.assert_not_called()
+
+    def test_copy_refuses_an_existing_target(self, runner: CliRunner, mocker: MockerFixture):
+        """A target already listed exits 1, naming the overriding option, touching nothing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main, [*self._WEBSOCKET, "playlist", "copy", "Rock", "Jazz Classics"]
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'Playlist already exists: "Jazz Classics" '
+            "(use --overwrite-existing-playlist to overwrite)"
+        ) in result.output
+        mock_client.create_playlist.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
+    def test_copy_overwrites_an_existing_target_when_asked(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With --overwrite-existing-playlist, the target is deleted, recreated, and filled."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client,
+            "playlists",
+            side_effect=[self.PLAYLISTS, self.PLAYLISTS, ["Rock", "Ambient"]],
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "copy",
+                "Rock",
+                "Jazz Classics",
+                "--overwrite-existing-playlist",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'delete playlist \"Jazz Classics\"' executed successfully" in (
+            result.output
+        )
+        assert "Command 'copy playlist \"Rock\" to \"Jazz Classics\"' executed successfully" in (
+            result.output
+        )
+        mock_client.delete_playlist.assert_called_once_with("Jazz Classics")
+        mock_client.create_playlist.assert_called_once_with("Jazz Classics")
+        assert mock_client.add_to_playlist.call_args_list == [
+            mocker.call("Jazz Classics", "music-library/a.flac", "mpd"),
+            mocker.call("Jazz Classics", "qobuz://track/2", "qobuz"),
+        ]
+        # The target is deleted only once the source items are read, and created after
+        calls = mock_client.mock_calls
+        assert calls.index(mocker.call.delete_playlist("Jazz Classics")) > calls.index(
+            mocker.call.get_playlist_content("Rock")
+        )
+        assert calls.index(mocker.call.create_playlist("Jazz Classics")) > calls.index(
+            mocker.call.delete_playlist("Jazz Classics")
+        )
+
+    def test_copy_overwrite_stops_when_the_target_stays_listed(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A target the host keeps listing after the deletion exits 1, creating nothing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "copy",
+                "Rock",
+                "Jazz Classics",
+                "--overwrite-existing-playlist",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'The Volumio host still lists the playlist "Jazz Classics" after the deletion.'
+            in result.output
+        )
+        mock_client.delete_playlist.assert_called_once_with("Jazz Classics")
+        mock_client.create_playlist.assert_not_called()
+
+    def test_copy_to_the_same_name(self, runner: CliRunner, mocker: MockerFixture):
+        """The same name twice is a usage error, before any read."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "copy",
+                "Rock",
+                "Rock",
+                "--overwrite-existing-playlist",
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "Expected SOURCE and TARGET to be different playlist names." in result.output
+        mock_client.playlists_property.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
+    def test_copy_overwrite_from_the_configuration_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The miscellaneous.overwrite-existing-playlist key turns the option on."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client,
+            "playlists",
+            side_effect=[self.PLAYLISTS, self.PLAYLISTS, ["Rock", "Ambient"]],
+        )
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  overwrite-existing-playlist: true\n")
+
+        result = runner.invoke(
+            main,
+            ["-c", str(config), *self._WEBSOCKET, "playlist", "copy", "Rock", "Jazz Classics"],
+        )
+
+        assert result.exit_code == 0
+        mock_client.delete_playlist.assert_called_once_with("Jazz Classics")
+        mock_client.create_playlist.assert_called_once_with("Jazz Classics")
 
     def test_copy_of_a_missing_source(self, runner: CliRunner, mocker: MockerFixture):
         """A source the host does not list is refused before anything is created."""

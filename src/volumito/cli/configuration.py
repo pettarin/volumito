@@ -546,6 +546,7 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
         ["playback", "seek"],
     ],
     "overwrite-existing-playlist": [
+        ["playlist", "copy"],
         ["playlist", "rename"],
         ["queue", "save"],
     ],

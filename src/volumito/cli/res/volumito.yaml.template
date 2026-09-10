@@ -185,7 +185,7 @@ miscellaneous:
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
 
-  # When saving the queue as a playlist, or renaming a playlist,
+  # When saving the queue as a playlist, or copying or renaming a playlist,
   # overwrite an existing playlist of the destination name
   overwrite-existing-playlist: false
 

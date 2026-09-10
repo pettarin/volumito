@@ -2119,7 +2119,7 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
 
 
 def option_overwrite_existing_playlist(func: Callable[..., None]) -> Callable[..., None]:
-    """Add the ``--overwrite-existing-playlist`` option to a save or rename subcommand."""
+    """Add the ``--overwrite-existing-playlist`` option to a copy, rename, or save subcommand."""
     return click.option(
         "--overwrite-existing-playlist/--no-overwrite-existing-playlist",
         default=False,

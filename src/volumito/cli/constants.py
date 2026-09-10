@@ -250,8 +250,8 @@ PLAYLIST_REMOVE_SERVICE_ERROR = (
 PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR = 'No item at URI "{uri}" in the playlist "{name}".'
 """Error message when "playlist remove" finds no occurrence of the URI to remove."""
 
-PLAYLIST_RENAME_SAME_NAME_ERROR = "Expected SOURCE and TARGET to be different playlist names."
-"""Error message when "playlist rename" is given the same name twice."""
+PLAYLIST_SAME_NAME_ERROR = "Expected SOURCE and TARGET to be different playlist names."
+"""Error message when "playlist copy" or "playlist rename" is given the same name twice."""
 
 PLUGIN_INSTALL_WAIT_INTERVAL = 5.0
 """Seconds between two looks at the installed plugins while waiting for an install."""

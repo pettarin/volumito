@@ -1000,6 +1000,7 @@ class TestBuildClickDefaultMap:
                 "download": {"check_playlist_name": False},
                 "enqueue": {"check_playlist_name": False},
                 "play": {"check_playlist_name": False},
+                "copy": {"overwrite_existing_playlist": True},
                 "remove": {"check_playlist_name": False},
                 "rename": {"overwrite_existing_playlist": True},
             },

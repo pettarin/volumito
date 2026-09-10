@@ -217,7 +217,7 @@ from volumito.cli.constants import (
     PLAYLIST_REMOVE_EMPTY_WARNING,
     PLAYLIST_REMOVE_SERVICE_ERROR,
     PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR,
-    PLAYLIST_RENAME_SAME_NAME_ERROR,
+    PLAYLIST_SAME_NAME_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
     QUEUE_ADD_MODES_ERROR,
@@ -4283,6 +4283,7 @@ def playlist_content(
 @option_check_playlist_name
 @option_fields
 @option_format
+@option_overwrite_existing_playlist
 @option_playlist_copy_position
 @option_print_resulting_content
 def playlist_copy(
@@ -4292,22 +4293,27 @@ def playlist_copy(
     check_playlist_name: bool,
     fields: str,
     output_format: str,
+    overwrite_existing_playlist: bool,
     position: set[int] | None,
     print_resulting_content: bool,
 ) -> None:
     """Copy the playlist SOURCE to the new playlist TARGET, with the same content.
 
-    TARGET is created empty, which the Volumio host refuses when a playlist of that
-    name exists, and the items of SOURCE are added to it one by one, by the URI and
-    the service each holds, as "playlist add" adds them without expanding: all of
-    them, or those at the positions -p/--position selects, such as "1-3,6-8,12"
+    A playlist named TARGET is refused, unless --overwrite-existing-playlist is
+    given: it is then deleted first, as "playlist delete" deletes it. TARGET is
+    created empty, and the items of SOURCE are added to it one by one, by the URI
+    and the service each holds, as "playlist add" adds them without expanding: all
+    of them, or those at the positions -p/--position selects, such as "1-3,6-8,12"
     (indexed according to --position-starting-at-one/--position-starting-at-zero).
     Once done, the content of TARGET is printed as "playlist content" prints it,
     unless --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
+    if source == target:
+        raise click.UsageError(PLAYLIST_SAME_NAME_ERROR)
     items = _playlist_items_to_copy(ctx, source, target, check_playlist_name, position)
+    _delete_existing_playlist_or_exit(ctx, target, overwrite_existing_playlist)
 
     def copy_items(client: APIClient) -> None:
         _fill_new_playlist(client, target, items)
@@ -4554,14 +4560,9 @@ def playlist_rename(
     Needs a WebSocket API client.
     """
     if source == target:
-        raise click.UsageError(PLAYLIST_RENAME_SAME_NAME_ERROR)
+        raise click.UsageError(PLAYLIST_SAME_NAME_ERROR)
     items = _playlist_items_to_copy(ctx, source, target, check_playlist_name)
-    if target in fetch_or_exit(ctx, lambda c: c.playlists.names):
-        if not overwrite_existing_playlist:
-            error(PLAYLIST_EXISTS_ERROR.format(name=target))
-            sys.exit(1)
-        execute_command(ctx, f'delete playlist "{target}"', lambda c: c.delete_playlist(target))
-        _playlist_names_after_deletion_or_exit(ctx, target)
+    _delete_existing_playlist_or_exit(ctx, target, overwrite_existing_playlist)
 
     def rename_items(client: APIClient) -> None:
         _fill_new_playlist(client, target, items)
@@ -4570,6 +4571,28 @@ def playlist_rename(
     execute_command(ctx, f'rename playlist "{source}" to "{target}"', rename_items)
     if print_resulting_content:
         _render_playlist_content(ctx, target, fields, output_format)
+
+
+def _delete_existing_playlist_or_exit(ctx: click.Context, name: str, overwrite: bool) -> None:
+    """Delete a playlist about to be created anew, when it exists and may be, or exit (1).
+
+    A playlist the host does not list is left alone. One it lists is deleted as
+    "playlist delete" deletes it, waiting until the host no longer lists it, when
+    overwriting is allowed; otherwise it is reported as an error, naming the option
+    that allows it.
+
+    Args:
+        ctx: Click context object holding the shared options
+        name: The name of the playlist to create anew
+        overwrite: Whether an existing playlist of that name may be deleted
+    """
+    if name not in fetch_or_exit(ctx, lambda c: c.playlists.names):
+        return
+    if not overwrite:
+        error(PLAYLIST_EXISTS_ERROR.format(name=name))
+        sys.exit(1)
+    execute_command(ctx, f'delete playlist "{name}"', lambda c: c.delete_playlist(name))
+    _playlist_names_after_deletion_or_exit(ctx, name)
 
 
 def _fill_new_playlist(
