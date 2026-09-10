@@ -298,9 +298,7 @@ def filter_items_fields(
     return [{key: item[key] for key in selected if key in item} for item in items]
 
 
-def filter_zones_fields(
-    zones_data: dict[str, Any], fields: str
-) -> list[dict[str, Any]]:
+def filter_zones_fields(zones_data: dict[str, Any], fields: str) -> list[dict[str, Any]]:
     """Filter the zones based on the fields option.
 
     Args:
@@ -713,9 +711,7 @@ def format_termination_conditions(
     return f"Terminate as soon as: {', '.join(conditions)}"
 
 
-def format_items_as_table(
-    items: list[dict[str, Any]], heading: str, name_key: str = "name"
-) -> str:
+def format_items_as_table(items: list[dict[str, Any]], heading: str, name_key: str = "name") -> str:
     """Format a list of named items (e.g., the zones, the music sources) as a table.
 
     Each item is printed as a numbered block headed by its name, whose key/value lines
@@ -809,9 +805,7 @@ def is_mbid(text: str) -> bool:
     Returns:
         True if the text is UUID-shaped, False otherwise
     """
-    return (
-        re.fullmatch(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", text) is not None
-    )
+    return re.fullmatch(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", text) is not None
 
 
 def manifest_matches_queue(

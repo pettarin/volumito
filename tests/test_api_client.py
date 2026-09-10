@@ -674,9 +674,7 @@ class TestWebSocketFallback:
         adapter.open()
         return adapter, client
 
-    @pytest.mark.parametrize(
-        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
-    )
+    @pytest.mark.parametrize("adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), UNSUPPORTED)
     def test_unsupported_without_fallback(self, adapter_class, name, args, kwargs, operation):
         """Without a fallback, the members the WebSocket API lacks raise."""
@@ -693,9 +691,7 @@ class TestWebSocketFallback:
         assert str(excinfo.value) == expected
         adapter.close()
 
-    @pytest.mark.parametrize(
-        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
-    )
+    @pytest.mark.parametrize("adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient])
     def test_unsupported_notifications_without_fallback(self, adapter_class):
         """Without a fallback, reading the notification URLs raises."""
         adapter, _ = self._adapter(adapter_class)
@@ -705,9 +701,7 @@ class TestWebSocketFallback:
 
         adapter.close()
 
-    @pytest.mark.parametrize(
-        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
-    )
+    @pytest.mark.parametrize("adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient])
     @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), UNSUPPORTED)
     def test_delegated_to_the_fallback(self, adapter_class, name, args, kwargs, operation):
         """With a fallback, the members the WebSocket API lacks use the REST API client."""
@@ -726,9 +720,7 @@ class TestWebSocketFallback:
         )
         adapter.close()
 
-    @pytest.mark.parametrize(
-        "adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient]
-    )
+    @pytest.mark.parametrize("adapter_class", [SyncWebSocketAPIClient, AsyncWebSocketAPIClient])
     def test_the_fallback_is_built_once_and_closed_with_the_adapter(self, adapter_class):
         """The REST API client is built on the first operation, kept, and closed at the end."""
         rest = Mock()
@@ -813,9 +805,7 @@ class TestRESTFallback:
 
     @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
     @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_SETTERS)
-    def test_unsupported_setter_without_fallback(
-        self, adapter_class, name, _async_name, operation
-    ):
+    def test_unsupported_setter_without_fallback(self, adapter_class, name, _async_name, operation):
         """Without a fallback, assigning a property the REST API lacks raises."""
         adapter, _ = self._adapter(adapter_class)
 
@@ -827,9 +817,7 @@ class TestRESTFallback:
 
     @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
     @pytest.mark.parametrize(("name", "args", "kwargs", "operation"), WEBSOCKET_METHODS)
-    def test_method_delegated_to_the_fallback(
-        self, adapter_class, name, args, kwargs, operation
-    ):
+    def test_method_delegated_to_the_fallback(self, adapter_class, name, args, kwargs, operation):
         """With a fallback, the methods the REST API lacks use the WebSocket API client."""
         websocket = Mock()
         getattr(websocket, name).return_value = "outcome"
@@ -845,9 +833,7 @@ class TestRESTFallback:
 
     @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
     @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_PROPERTIES)
-    def test_property_delegated_to_the_fallback(
-        self, adapter_class, name, _async_name, operation
-    ):
+    def test_property_delegated_to_the_fallback(self, adapter_class, name, _async_name, operation):
         """With a fallback, the properties the REST API lacks read the WebSocket API client."""
         websocket = Mock()
         prop = _property(websocket, name, "value")
@@ -862,9 +848,7 @@ class TestRESTFallback:
 
     @pytest.mark.parametrize("adapter_class", [SyncRESTAPIClient, AsyncRESTAPIClient])
     @pytest.mark.parametrize(("name", "_async_name", "operation"), WEBSOCKET_SETTERS)
-    def test_setter_delegated_to_the_fallback(
-        self, adapter_class, name, _async_name, operation
-    ):
+    def test_setter_delegated_to_the_fallback(self, adapter_class, name, _async_name, operation):
         """With a fallback, assigning a property the REST API lacks assigns the client one."""
         websocket = Mock()
         factory = Mock(return_value=websocket)

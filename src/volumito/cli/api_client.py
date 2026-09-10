@@ -1289,7 +1289,7 @@ class APIClient(ABC):
         """
 
     @abstractmethod
-    def save_wireless_settings(self, ssid: str, password: str = '') -> None:
+    def save_wireless_settings(self, ssid: str, password: str = "") -> None:
         """Join a wireless network with the Volumio instance.
 
         Args:
@@ -1749,9 +1749,7 @@ class _RESTFallback(_Fallback):
 
     API = "REST"
     OWNER_API = "WebSocket"
-    REMEDIES = (
-        "--api-client synchronous_rest or asynchronous_rest, or --allow-fallback-to-rest-api"
-    )
+    REMEDIES = "--api-client synchronous_rest or asynchronous_rest, or --allow-fallback-to-rest-api"
 
 
 class _WebSocketFallback(_Fallback):
@@ -2086,7 +2084,7 @@ class RESTAPIClient(APIClient):
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         return self._fallback.client(QUEUE_OPERATION).save_queue_as_playlist(name)
 
-    def save_wireless_settings(self, ssid: str, password: str = '') -> None:
+    def save_wireless_settings(self, ssid: str, password: str = "") -> None:
         return self._fallback.client(NETWORK_OPERATION).save_wireless_settings(ssid, password)
 
     def set_alarms(self, alarms: list[Alarm]) -> None:
@@ -2778,7 +2776,7 @@ class SyncWebSocketAPIClient(SyncAPIClient[VolumioWebSocketClient]):
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         return self._client.save_queue_as_playlist(name)
 
-    def save_wireless_settings(self, ssid: str, password: str = '') -> None:
+    def save_wireless_settings(self, ssid: str, password: str = "") -> None:
         return self._client.save_wireless_settings(ssid, password)
 
     def set_alarms(self, alarms: list[Alarm]) -> None:
@@ -3541,7 +3539,7 @@ class AsyncWebSocketAPIClient(AsyncAPIClient[VolumioAsyncWebSocketClient]):
     def save_queue_as_playlist(self, name: str | Playlist) -> None:
         return self._run(self._client.save_queue_as_playlist(name))
 
-    def save_wireless_settings(self, ssid: str, password: str = '') -> None:
+    def save_wireless_settings(self, ssid: str, password: str = "") -> None:
         return self._run(self._client.save_wireless_settings(ssid, password))
 
     def set_alarms(self, alarms: list[Alarm]) -> None:

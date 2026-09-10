@@ -183,9 +183,7 @@ class TestNotificationListener:
         with NotificationListener(port=0, endpoint=ENDPOINT, bind_address="127.0.0.1") as first:
             port = first.port
 
-        with NotificationListener(
-            port=port, endpoint=ENDPOINT, bind_address="127.0.0.1"
-        ) as second:
+        with NotificationListener(port=port, endpoint=ENDPOINT, bind_address="127.0.0.1") as second:
             assert second.port == port
 
     def test_a_busy_port(self, listener: NotificationListener):
@@ -204,9 +202,7 @@ class TestReceiverUrl:
         probe = mocker.patch("volumito.clients.listener.socket.socket")
         probe.return_value.__enter__.return_value.getsockname.return_value = ("192.168.1.50", 4242)
 
-        url = receiver_url(
-            VolumioHostConfiguration(host="volumio.local"), 8080, "/hook"
-        )
+        url = receiver_url(VolumioHostConfiguration(host="volumio.local"), 8080, "/hook")
 
         assert url == "http://192.168.1.50:8080/hook"
         probe.return_value.__enter__.return_value.connect.assert_called_once_with(

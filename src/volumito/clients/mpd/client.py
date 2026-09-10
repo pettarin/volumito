@@ -60,9 +60,7 @@ class VolumioMPDClient(VolumioBaseClient):
             ) from e
         except OSError as e:
             self._log_warning(f"MPD connection error at {host}:{mpd_port}: {e}")
-            raise VolumioConnectionError(
-                f"MPD connection error at {host}:{mpd_port}: {e}"
-            ) from e
+            raise VolumioConnectionError(f"MPD connection error at {host}:{mpd_port}: {e}") from e
         except Exception as e:
             self._log_exception(f"Unexpected error connecting to MPD at {host}:{mpd_port}")
             raise VolumioConnectionError(

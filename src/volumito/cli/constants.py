@@ -242,9 +242,7 @@ PLAYLIST_REMOVE_EMPTY_WARNING = (
 )
 """Warning when "playlist remove" is asked to remove every item of a playlist."""
 
-PLAYLIST_REMOVE_SERVICE_ERROR = (
-    "Expected the --service option only together with a URI argument."
-)
+PLAYLIST_REMOVE_SERVICE_ERROR = "Expected the --service option only together with a URI argument."
 """Error message when "playlist remove" is given a service with a position instead of a URI."""
 
 PLAYLIST_REMOVE_URI_NOT_FOUND_ERROR = 'No item at URI "{uri}" in the playlist "{name}".'
@@ -306,18 +304,18 @@ SEARCH_KINDS_ERROR = (
 )
 """Error message when "collection search" is asked for two different kinds of result."""
 
-SEARCH_LIMIT_ERROR ="Expected the -1/--best-result-only or the -l/--limit option, not both."
+SEARCH_LIMIT_ERROR = "Expected the -1/--best-result-only or the -l/--limit option, not both."
 """Error message when "collection search" is given two limits on the results."""
 
 SEARCH_SERVICES = [
     "highresaudio",  # not verified
     "mpd",
     "qobuz",
-    "soundcloud",    # not verified
-    "spop",          # the Spotify plugin, not verified
-    "tidal",         # not verified
+    "soundcloud",  # not verified
+    "spop",  # the Spotify plugin, not verified
+    "tidal",  # not verified
     "webradio",
-    "youtube2",      # the YouTube2 plugin, not verified
+    "youtube2",  # the YouTube2 plugin, not verified
 ]
 """Accepted values of the --service option of the "collection search" command.
 
@@ -515,9 +513,7 @@ STORY_ARGUMENT_TYPES = [
 ]
 """Accepted values of the -T/--type option of the "story" subcommands."""
 
-STORY_ARTIST_ALBUM_ARGUMENTS_ERROR = (
-    "Expected ARTIST ALBUM arguments, or a single MBID argument."
-)
+STORY_ARTIST_ALBUM_ARGUMENTS_ERROR = "Expected ARTIST ALBUM arguments, or a single MBID argument."
 """Error message when the "story album"/"story credits" arguments cannot be resolved."""
 
 STORY_ARTIST_ARGUMENT_ERROR = "Expected a NAME or MBID argument."

@@ -65,9 +65,7 @@ def _load_scp() -> tuple[Any, Any]:
 
 
 @contextmanager
-def _scp_session(
-    host_configuration: VolumioHostConfiguration, timeout: float
-) -> Iterator[Any]:
+def _scp_session(host_configuration: VolumioHostConfiguration, timeout: float) -> Iterator[Any]:
     """Yield an SCP client connected to the Volumio host.
 
     Args:
@@ -88,9 +86,7 @@ def _scp_session(
 
 
 @contextmanager
-def _ssh_session(
-    host_configuration: VolumioHostConfiguration, timeout: float
-) -> Iterator[Any]:
+def _ssh_session(host_configuration: VolumioHostConfiguration, timeout: float) -> Iterator[Any]:
     """Yield an SSH client connected to the Volumio host.
 
     The connection is made with the user name and the port of the host configuration,
@@ -149,8 +145,7 @@ def copy_from_host(
         raise
     except Exception as e:
         raise VolumioSCPError(
-            f"Failed to copy {remote_path} from the Volumio host at "
-            f"{host_configuration.host}: {e}"
+            f"Failed to copy {remote_path} from the Volumio host at {host_configuration.host}: {e}"
         ) from e
 
 
@@ -180,8 +175,7 @@ def copy_to_host(
         raise
     except Exception as e:
         raise VolumioSCPError(
-            f"Failed to copy {source} to the Volumio host at "
-            f"{host_configuration.host}: {e}"
+            f"Failed to copy {source} to the Volumio host at {host_configuration.host}: {e}"
         ) from e
 
 
@@ -233,13 +227,10 @@ def execute_on_host(
         raise
     except Exception as e:
         raise VolumioSSHError(
-            f"Failed to execute {command!r} on the Volumio host at "
-            f"{host_configuration.host}: {e}"
+            f"Failed to execute {command!r} on the Volumio host at {host_configuration.host}: {e}"
         ) from e
 
-    return RemoteCommandResult(
-        command=command, exit_code=exit_code, stdout=output, stderr=error
-    )
+    return RemoteCommandResult(command=command, exit_code=exit_code, stdout=output, stderr=error)
 
 
 def is_local_file_uri(uri: str) -> bool:

@@ -979,9 +979,7 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
             VolumioAPIError: If the API returns an error response
         """
         payload = {"url": self._notification_url(url)}
-        return SuccessResponse.from_raw(
-            await self._post_json(PATH_PUSH_NOTIFICATION_URLS, payload)
-        )
+        return SuccessResponse.from_raw(await self._post_json(PATH_PUSH_NOTIFICATION_URLS, payload))
 
     async def repeat(self, value: bool | None = None) -> CommandResponse:
         """Set or toggle the repeat mode.
@@ -1000,9 +998,7 @@ class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
         """
         return await self._send_command(self._mode_command("repeat", value))
 
-    async def replace_queue_and_play(
-        self, uri: str, index: int | None = None
-    ) -> CommandResponse:
+    async def replace_queue_and_play(self, uri: str, index: int | None = None) -> CommandResponse:
         """Replace the queue with the content of a URI and start playing it.
 
         Without an index, the URI is sent as itself, along with the service its scheme

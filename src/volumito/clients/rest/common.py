@@ -86,6 +86,7 @@ PATH_REPLACE_AND_PLAY = "/api/v1/replaceAndPlay"
 PATH_SEARCH = "/api/v1/search"
 """The endpoint searching the sources of the instance."""
 
+
 class VolumioRESTAPICommon(VolumioCommon):
     """The transport-independent half of a REST API client for Volumio.
 
@@ -204,9 +205,7 @@ class VolumioRESTAPICommon(VolumioCommon):
             VolumioAPIError: Always
         """
         self._log_warning(f"The Volumio API answered HTTP {status}: {error}")
-        raise VolumioAPIError(
-            f"Volumio API returned HTTP error {status}: {error}"
-        ) from error
+        raise VolumioAPIError(f"Volumio API returned HTTP error {status}: {error}") from error
 
     def _fail_json(self, error: Exception) -> NoReturn:
         """Report that a response body could not be parsed as JSON.
@@ -218,9 +217,7 @@ class VolumioRESTAPICommon(VolumioCommon):
             VolumioAPIError: Always
         """
         self._log_warning(f"The response is not JSON: {error}")
-        raise VolumioAPIError(
-            f"Failed to parse JSON response from Volumio API: {error}"
-        ) from error
+        raise VolumioAPIError(f"Failed to parse JSON response from Volumio API: {error}") from error
 
     def _fail_request(self, error: Exception) -> NoReturn:
         """Report that a request to the Volumio API failed.

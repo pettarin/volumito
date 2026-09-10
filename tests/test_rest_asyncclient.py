@@ -423,9 +423,7 @@ class TestVolumioAsyncRESTAPIClientTransport:
             (aiohttp.ClientError("odd"), "Request to Volumio instance"),
         ],
     )
-    async def test_a_transport_failure_names_the_host(
-        self, mocker: MockerFixture, error, message
-    ):
+    async def test_a_transport_failure_names_the_host(self, mocker: MockerFixture, error, message):
         """The raised error names the instance that could not be reached."""
         client, _ = _client(mocker, error)
 
@@ -452,9 +450,7 @@ class TestVolumioAsyncRESTAPIClientTransport:
 
         assert "timed out after" in str(excinfo.value)
 
-    async def test_a_connector_failure_is_read_as_a_connection_error(
-        self, mocker: MockerFixture
-    ):
+    async def test_a_connector_failure_is_read_as_a_connection_error(self, mocker: MockerFixture):
         """A connector failure that is no timeout stays a connection error."""
         connection = aiohttp.ClientConnectorError(Mock(ssl=None, host="volumio.local"), OSError())
         client, _ = _client(mocker, connection)
@@ -765,10 +761,7 @@ class TestVolumioAsyncRESTAPIClientReads:
 
         await client.browse("artists://Paolo%20Conte", offset=20)
 
-        assert (
-            session.calls[0].url
-            == f"{BASE}/api/v1/browse?uri=artists://Paolo%20Conte&offset=20"
-        )
+        assert session.calls[0].url == f"{BASE}/api/v1/browse?uri=artists://Paolo%20Conte&offset=20"
 
     async def test_browse_refuses_a_negative_offset(self, mocker: MockerFixture):
         """A negative offset is refused before anything is sent."""
@@ -871,9 +864,7 @@ class TestVolumioAsyncRESTAPIClientCommands:
         ("value", "suffix"),
         [(None, ""), (True, "&value=true"), (False, "&value=false")],
     )
-    async def test_the_playback_modes(
-        self, mocker: MockerFixture, member, mode, value, suffix
-    ):
+    async def test_the_playback_modes(self, mocker: MockerFixture, member, mode, value, suffix):
         """Each mode is set to a value, or toggled when none is given."""
         client, session = _client(mocker, _json_response({"response": "success"}))
 
@@ -913,9 +904,7 @@ class TestVolumioAsyncRESTAPIClientCommands:
         """A notification model registers by the URL it holds."""
         client, session = _client(mocker, _json_response({"success": True}))
 
-        await client.register_notification(
-            Notification.from_url("http://192.168.1.100/receiver")
-        )
+        await client.register_notification(Notification.from_url("http://192.168.1.100/receiver"))
 
         assert session.calls[0].kwargs["json"] == {"url": "http://192.168.1.100/receiver"}
 

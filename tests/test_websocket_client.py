@@ -664,6 +664,7 @@ class TestVolumioWebSocketClientPing:
         with pytest.raises(VolumioConnectionError):
             client.ping()
 
+
 class TestVolumioWebSocketClientReads:
     """The reads answered by a pushed event, and the models they build."""
 
@@ -835,9 +836,7 @@ class TestVolumioWebSocketClientReads:
             ("stop", False, False, True),
         ],
     )
-    def test_the_playback_predicates(
-        self, mocker: MockerFixture, status, playing, paused, stopped
-    ):
+    def test_the_playback_predicates(self, mocker: MockerFixture, status, playing, paused, stopped):
         """Each predicate reads the status string of the playback state."""
         fake = _FakeSocketIOClient(
             answers={EVENT_GET_STATE: (EVENT_PUSH_STATE, {**STATE_PAYLOAD, "status": status})}
@@ -1088,9 +1087,7 @@ class TestVolumioWebSocketClientQueueing:
         assert fake.calls[-1] == _Call(
             "replaceAndPlay",
             {
-                "list": [
-                    {"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}
-                ],
+                "list": [{"service": "mpd", "title": "jazz", "type": "song", "uri": "mpd://a"}],
                 "index": 0,
             },
         )
@@ -1140,9 +1137,7 @@ class TestVolumioWebSocketClientQueueEditing:
         assert fake.calls == [_Call("moveQueue", {"from": 3, "to": 0})]
 
     @pytest.mark.parametrize(("source", "target"), [(-1, 0), (0, -1)])
-    def test_move_in_queue_refuses_a_negative_position(
-        self, mocker: MockerFixture, source, target
-    ):
+    def test_move_in_queue_refuses_a_negative_position(self, mocker: MockerFixture, source, target):
         """A negative position is refused before anything is sent."""
         client, fake = _client(mocker)
 
@@ -1186,9 +1181,7 @@ class TestVolumioWebSocketClientQueueEditing:
 
         client.add_and_play("mpd://NAS/track.flac")
 
-        assert fake.calls == [
-            _Call("addPlay", {"service": "mpd", "uri": "mpd://NAS/track.flac"})
-        ]
+        assert fake.calls == [_Call("addPlay", {"service": "mpd", "uri": "mpd://NAS/track.flac"})]
 
     def test_add_and_play_a_container(self, mocker: MockerFixture):
         """A container of another source is queued as itself and played."""
@@ -1330,9 +1323,7 @@ class TestVolumioWebSocketClientPlaylistEditing:
             (None, ""),
         ],
     )
-    def test_create_a_playlist_the_host_refuses(
-        self, mocker: MockerFixture, answer, detail
-    ):
+    def test_create_a_playlist_the_host_refuses(self, mocker: MockerFixture, answer, detail):
         """A creation the host did not carry out is an API error, with its reason."""
         logger = Mock()
         fake = _FakeSocketIOClient(answers={"createPlaylist": ("pushCreatePlaylist", answer)})
@@ -1393,9 +1384,7 @@ class TestVolumioWebSocketClientPlaylistEditing:
 
         with pytest.raises(VolumioConnectionError) as excinfo:
             client.remove_from_playlist("jazz", "qobuz://track/1")
-        assert 'did not answer "removeFromPlaylist" with "pushBrowseLibrary"' in str(
-            excinfo.value
-        )
+        assert 'did not answer "removeFromPlaylist" with "pushBrowseLibrary"' in str(excinfo.value)
 
     def test_an_explicit_service_wins(self, mocker: MockerFixture):
         """A service given by the caller is not derived from the URI."""
@@ -1490,9 +1479,7 @@ class TestVolumioWebSocketClientFavourites:
         with pytest.raises(VolumioConnectionError) as excinfo:
             client.remove_from_favourites("qobuz://track/1")
 
-        assert 'did not answer "removeFromFavourites" with "urifavourites"' in str(
-            excinfo.value
-        )
+        assert 'did not answer "removeFromFavourites" with "urifavourites"' in str(excinfo.value)
 
     def test_an_explicit_service_wins(self, mocker: MockerFixture):
         """A service given by the caller is not derived from the URI."""
@@ -1629,9 +1616,7 @@ class TestVolumioWebSocketClientBrowseSources:
     def test_last_browse(self, mocker: MockerFixture):
         """The listing pushed last is read as a browse result."""
         fake = _FakeSocketIOClient(
-            answers={
-                "getLastPushedBrowseLibrary": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)
-            }
+            answers={"getLastPushedBrowseLibrary": (EVENT_PUSH_BROWSE_LIBRARY, NAVIGATION_PAYLOAD)}
         )
         client, _ = _client(mocker, fake)
 
@@ -1723,8 +1708,15 @@ class TestVolumioWebSocketClientSleepAndAlarms:
             answers={
                 "getAlarms": (
                     "pushAlarm",
-                    [{"id": 1, "name": "Weekday", "enabled": True, "time": "07:30",
-                      "playlist": "jazz"}],
+                    [
+                        {
+                            "id": 1,
+                            "name": "Weekday",
+                            "enabled": True,
+                            "time": "07:30",
+                            "playlist": "jazz",
+                        }
+                    ],
                 )
             }
         )
@@ -1949,7 +1941,6 @@ class TestVolumioWebSocketClientAudioOutputs:
 
         assert client.input_sources.raw == {}
 
-
     def _fake_with_output_devices(self):
         """A fake host listing two sound cards and one I2S DAC."""
         devices = {
@@ -2054,6 +2045,7 @@ class TestVolumioWebSocketClientAudioOutputs:
 
         assert [call.event for call in fake.calls] == ["getAudioOutputs"]
         logger.warning.assert_called_once()
+
     def test_set_audio_output_volume(self, mocker: MockerFixture):
         """The volume carries the output as the user interface sends it, unmuted, and the level."""
         client, fake = _client(mocker, self._fake_with_audio_outputs())
@@ -2069,6 +2061,7 @@ class TestVolumioWebSocketClientAudioOutputs:
             "mute": False,
             "volume": 42,
         }
+
     @pytest.mark.parametrize("level", [-1, 101])
     def test_an_out_of_range_output_volume(self, mocker: MockerFixture, level):
         """A level outside 0..100 is refused before anything is sent."""
@@ -2100,7 +2093,6 @@ class TestVolumioWebSocketClientLibrary:
         assert [source.name for source in sources] == ["upnp"]
         assert sources[0].pretty_name == "UPNP Renderer"
 
-
     def _fake_with_music_sources(self):
         """A fake host listing one music source, disabled."""
         source = {
@@ -2110,9 +2102,7 @@ class TestVolumioWebSocketClientLibrary:
             "enabled": False,
             "active": False,
         }
-        return _FakeSocketIOClient(
-            answers={"getMyMusicPlugins": ("pushMyMusicPlugins", [source])}
-        )
+        return _FakeSocketIOClient(answers={"getMyMusicPlugins": ("pushMyMusicPlugins", [source])})
 
     def test_set_music_source_enabled(self, mocker: MockerFixture):
         """The source is read from the list, and sent back whole with the flag replaced."""
@@ -2136,6 +2126,7 @@ class TestVolumioWebSocketClientLibrary:
 
         assert [call.event for call in fake.calls] == ["getMyMusicPlugins"]
         logger.warning.assert_called_once()
+
     def test_the_scan_commands(self, mocker: MockerFixture):
         """The scans carry nothing, or the URI or service they are scoped to."""
         client, fake = _client(mocker)
@@ -2181,9 +2172,7 @@ class TestVolumioWebSocketClientPower:
 
     def test_device_uuid(self, mocker: MockerFixture):
         """The hardware identifier is read on its own."""
-        fake = _FakeSocketIOClient(
-            answers={"getDeviceHWUUID": ("pushDeviceHWUUID", "5dc4ca49")}
-        )
+        fake = _FakeSocketIOClient(answers={"getDeviceHWUUID": ("pushDeviceHWUUID", "5dc4ca49")})
         client, _ = _client(mocker, fake)
 
         assert client.device_uuid == "5dc4ca49"
@@ -2215,7 +2204,6 @@ class TestVolumioWebSocketClientPower:
 
         assert modes.has_power_off_mode is True
         assert modes.has_standby_mode is False
-
 
     def test_a_hardware_identifier_that_is_not_a_string(self, mocker: MockerFixture):
         """The identifier comes back bare; an object instead of it is refused."""
@@ -2311,9 +2299,7 @@ class TestVolumioWebSocketClientPlugins:
 
     def test_a_host_with_no_plugin(self, mocker: MockerFixture):
         """A host reporting no plugin is an empty collection."""
-        fake = _FakeSocketIOClient(
-            answers={"getInstalledPlugins": ("pushInstalledPlugins", [])}
-        )
+        fake = _FakeSocketIOClient(answers={"getInstalledPlugins": ("pushInstalledPlugins", [])})
         client, _ = _client(mocker, fake)
 
         assert len(client.installed_plugins) == 0
@@ -2361,7 +2347,6 @@ class TestVolumioWebSocketClientPlugins:
             )
         ]
 
-
     def test_uninstall_plugin(self, mocker: MockerFixture):
         """Uninstalling names the plugin by category and name."""
         client, fake = _client(mocker)
@@ -2386,6 +2371,7 @@ class TestVolumioWebSocketClientPlugins:
         getattr(client, method)("music_service", "spop")
 
         assert fake.calls == [_Call(event, {"category": "music_service", "plugin": "spop"})]
+
     @pytest.mark.parametrize(("started", "status"), [(True, "START"), (False, "STOP")])
     def test_modify_plugin_status(self, mocker: MockerFixture, started, status):
         """Starting or stopping carries the status the host reads, under the same key."""
@@ -2412,6 +2398,7 @@ class TestVolumioWebSocketClientPlugins:
                 {"category": "music_service", "name": "spop", "url": "http://plugins/spop.zip"},
             )
         ]
+
     def test_install_plugin(self, mocker: MockerFixture):
         """Installing carries the URL and the confirmation the host expects."""
         client, fake = _client(mocker)
@@ -2430,10 +2417,13 @@ class TestVolumioWebSocketClientPlugins:
         client.call_plugin_method("miscellanea/alarm", "setSleep", {"time": "0:30"})
 
         assert fake.calls == [
-            _Call("callMethod", {"endpoint": "music_service/mpd", "method": "rescanDb",
-                                 "data": {}}),
-            _Call("callMethod", {"endpoint": "miscellanea/alarm", "method": "setSleep",
-                                 "data": {"time": "0:30"}}),
+            _Call(
+                "callMethod", {"endpoint": "music_service/mpd", "method": "rescanDb", "data": {}}
+            ),
+            _Call(
+                "callMethod",
+                {"endpoint": "miscellanea/alarm", "method": "setSleep", "data": {"time": "0:30"}},
+            ),
         ]
 
 
@@ -2469,8 +2459,9 @@ class TestVolumioWebSocketClientNetworkAndShares:
     def test_get_share(self, mocker: MockerFixture):
         """One share is read by identifier."""
         fake = _FakeSocketIOClient(
-            answers={"getInfoShare": ("pushInfoShare", {"id": "a", "name": "NAS",
-                                                        "fstype": "cifs"})}
+            answers={
+                "getInfoShare": ("pushInfoShare", {"id": "a", "name": "NAS", "fstype": "cifs"})
+            }
         )
         client, fake = _client(mocker, fake)
 
@@ -2490,8 +2481,7 @@ class TestVolumioWebSocketClientNetworkAndShares:
         assert fake.calls == [
             _Call(
                 "addShare",
-                {"name": "NAS", "path": "192.168.1.2/Music", "fstype": "cifs",
-                 "username": "guest"},
+                {"name": "NAS", "path": "192.168.1.2/Music", "fstype": "cifs", "username": "guest"},
             ),
             _Call("editShare", {"id": "a", "name": "NAS2"}),
             _Call("deleteShare", {"id": "a"}),
@@ -2558,9 +2548,7 @@ class TestVolumioWebSocketClientNetworkAndShares:
             "music-library/INTERNAL//old",
         ],
     )
-    def test_delete_folder_refuses_a_uri_above_a_source(
-        self, mocker: MockerFixture, uri
-    ):
+    def test_delete_folder_refuses_a_uri_above_a_source(self, mocker: MockerFixture, uri):
         """The root of the library, a source, and a URI outside them are refused."""
         logger = Mock()
         client, fake = _client(mocker, logger=logger)
@@ -2597,9 +2585,7 @@ class TestVolumioWebSocketClientNetworkAndShares:
     def test_save_wireless_settings(self, mocker: MockerFixture):
         """Joining sends the security the host sees for the network, and no password when open."""
         seen = {"available": [{"ssid": "home", "security": "wpa2", "signal": 70}]}
-        fake = _FakeSocketIOClient(
-            answers={"getWirelessNetworks": ("pushWirelessNetworks", seen)}
-        )
+        fake = _FakeSocketIOClient(answers={"getWirelessNetworks": ("pushWirelessNetworks", seen)})
         client, fake = _client(mocker, fake)
 
         client.save_wireless_settings("home", "hunter22")
@@ -2633,8 +2619,10 @@ class TestVolumioWebSocketClientUiPreferences:
         """The look of the interface is parsed."""
         fake = _FakeSocketIOClient(
             answers={
-                "getUiSettings": ("pushUiSettings", {"color": "#000", "language": "en",
-                                                     "theme": "default"})
+                "getUiSettings": (
+                    "pushUiSettings",
+                    {"color": "#000", "language": "en", "theme": "default"},
+                )
             }
         )
         client, _ = _client(mocker, fake)
@@ -2742,8 +2730,7 @@ class TestVolumioWebSocketClientUiPreferences:
     def test_privacy_settings(self, mocker: MockerFixture):
         """The statistics flag is read from its alias."""
         fake = _FakeSocketIOClient(
-            answers={"getPrivacySettings": ("pushPrivacySettings",
-                                            {"allowUIStatistics": False})}
+            answers={"getPrivacySettings": ("pushPrivacySettings", {"allowUIStatistics": False})}
         )
         client, _ = _client(mocker, fake)
 
@@ -2862,7 +2849,10 @@ class TestVolumioWebSocketClientSystemAdministration:
         client.set_automatic_updates(True, end_time=6)
 
         assert [call.event for call in fake.calls] == [
-            "getUiConfig", "callMethod", "getUiConfig", "callMethod"
+            "getUiConfig",
+            "callMethod",
+            "getUiConfig",
+            "callMethod",
         ]
         assert fake.calls[0].payload == {"page": "system_controller/system"}
         assert fake.calls[1].payload == {

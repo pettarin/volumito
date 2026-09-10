@@ -774,9 +774,7 @@ class TestSearchResults:
 
     def test_filtered_by_kind_and_service(self):
         """The kinds filter combines with the other filters."""
-        filtered = self._results().filtered(
-            service="qobuz", kinds={SearchResultItemKind.ARTIST}
-        )
+        filtered = self._results().filtered(service="qobuz", kinds={SearchResultItemKind.ARTIST})
 
         assert [result_list.title for result_list in filtered] == ["QOBUZ Artists"]
         assert filtered.raw == self._ENVELOPE
@@ -1576,8 +1574,12 @@ class TestTierCModels:
         info = NetworkInfo.from_raw(
             {
                 "interfaces": [
-                    {"type": "Wired", "ip": "192.168.1.122", "status": "connected",
-                     "speed": "1Gb/s"}
+                    {
+                        "type": "Wired",
+                        "ip": "192.168.1.122",
+                        "status": "connected",
+                        "speed": "1Gb/s",
+                    }
                 ]
             }
         )
@@ -1591,9 +1593,7 @@ class TestTierCModels:
         backgrounds = Backgrounds.from_raw(
             {
                 "current": {"name": "Darkness", "path": "darkness.jpg"},
-                "available": [
-                    {"name": "Aurora", "path": "aurora.jpg", "thumbnail": "thumb.jpg"}
-                ],
+                "available": [{"name": "Aurora", "path": "aurora.jpg", "thumbnail": "thumb.jpg"}],
             }
         )
 
@@ -1629,8 +1629,12 @@ class TestTierCModels:
     def test_update_check(self):
         """The answer of the updater is parsed, aliases included."""
         check = UpdateCheck.from_raw(
-            {"updateavailable": True, "title": "3.800", "description": "Fixes",
-             "changeLogLink": "http://x/changelog"}
+            {
+                "updateavailable": True,
+                "title": "3.800",
+                "description": "Fixes",
+                "changeLogLink": "http://x/changelog",
+            }
         )
 
         assert check.update_available is True
@@ -1696,8 +1700,14 @@ class TestTierCModels:
                         "name": "music_service",
                         "prettyName": "Music Services",
                         "plugins": [
-                            {"name": "spop", "prettyName": "Spotify", "version": "1.0",
-                             "installed": True, "updateAvailable": True, "url": "http://p/s"}
+                            {
+                                "name": "spop",
+                                "prettyName": "Spotify",
+                                "version": "1.0",
+                                "installed": True,
+                                "updateAvailable": True,
+                                "url": "http://p/s",
+                            }
                         ],
                     },
                     {
@@ -1722,8 +1732,14 @@ class TestTierCModels:
         plugins = Plugins.from_raw(
             {
                 "plugins": [
-                    {"name": "spop", "prettyName": "Spotify", "category": "music_service",
-                     "version": "1.0", "enabled": True, "active": True}
+                    {
+                        "name": "spop",
+                        "prettyName": "Spotify",
+                        "category": "music_service",
+                        "version": "1.0",
+                        "enabled": True,
+                        "active": True,
+                    }
                 ]
             }
         )
@@ -1737,8 +1753,15 @@ class TestTierCModels:
         shares = Shares.from_raw(
             {
                 "shares": [
-                    {"id": "uuid", "name": "NAS", "path": "Music", "fstype": "cifs",
-                     "username": "guest", "options": "ro", "size": ""}
+                    {
+                        "id": "uuid",
+                        "name": "NAS",
+                        "path": "Music",
+                        "fstype": "cifs",
+                        "username": "guest",
+                        "options": "ro",
+                        "size": "",
+                    }
                 ]
             }
         )

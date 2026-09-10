@@ -222,8 +222,7 @@ class VolumioCommon(VolumioBaseClient):
         """
         self._log_warning(f"The URI lists {count} items, not enough for index {index}")
         raise VolumioAPIError(
-            f"The URI lists {count} items, not enough to play the one "
-            f"at index {index}"
+            f"The URI lists {count} items, not enough to play the one at index {index}"
         )
 
     def _fail_timeout(self, error: Exception, waited: float) -> NoReturn:

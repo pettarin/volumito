@@ -848,7 +848,6 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         return [alarm.model_dump(by_alias=True, exclude_none=True) for alarm in alarms]
 
-
     def _audio_output_listed(self, outputs: dict[str, Any], output_id: str) -> dict[str, Any]:
         """Pick one audio output out of those the host lists.
 
@@ -1034,8 +1033,7 @@ class VolumioWebSocketCommon(VolumioCommon):
         if len(segments) < 2 or any(segment in ("", ".", "..") for segment in segments):
             self._log_warning(f'Refusing to delete the folder "{uri}"')
             raise ValueError(
-                'The folder must be a "music-library/<source>/..." URI below a source, '
-                f'got "{uri}"'
+                f'The folder must be a "music-library/<source>/..." URI below a source, got "{uri}"'
             )
         return {"item": {"uri": uri}, "curUri": uri.rsplit("/", 1)[0]}
 
@@ -1102,8 +1100,7 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._log_warning(f'Cannot emit "{event}" to the Volumio API: {error}')
         raise VolumioConnectionError(
-            f'Failed to emit "{event}" to Volumio instance at '
-            f"{self._endpoint_description}: {error}"
+            f'Failed to emit "{event}" to Volumio instance at {self._endpoint_description}: {error}'
         ) from error
 
     def _fail_no_alarm(self, alarm_id: int) -> NoReturn:
@@ -1117,7 +1114,6 @@ class VolumioWebSocketCommon(VolumioCommon):
         """
         self._log_warning(f"No alarm has the identifier {alarm_id}")
         raise ValueError(f"No alarm has the identifier {alarm_id}")
-
 
     def _fail_no_audio_output(self, output_id: str) -> NoReturn:
         """Refuse to act on an audio output the host does not list.
@@ -1293,10 +1289,7 @@ class VolumioWebSocketCommon(VolumioCommon):
         self._check_play_index(target)
         return {"from": source, "to": target}
 
-
-    def _music_source_toggled(
-        self, sources: list[Any], name: str, enabled: bool
-    ) -> dict[str, Any]:
+    def _music_source_toggled(self, sources: list[Any], name: str, enabled: bool) -> dict[str, Any]:
         """Build the payload enabling or disabling one music source.
 
         The host reads the category and the kind of the source beside its name: the
@@ -1436,7 +1429,6 @@ class VolumioWebSocketCommon(VolumioCommon):
             The payload the plugin events carry
         """
         return {"category": category, "name": name}
-
 
     def _plugin_status_payload(
         self, category: str, name: str, started: bool | None = None

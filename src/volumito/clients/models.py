@@ -246,9 +246,7 @@ class AudioOutputs(VolumioModel):
     measured with ``len()``.
     """
 
-    available_outputs: list[AudioOutput] = Field(
-        default_factory=list, alias="availableOutputs"
-    )
+    available_outputs: list[AudioOutput] = Field(default_factory=list, alias="availableOutputs")
     """The available outputs, in the order reported by the Volumio instance."""
 
     def __getitem__(self, index: int) -> AudioOutput:
@@ -760,9 +758,7 @@ class Notifications(VolumioModel):
     def urls(self) -> list[str]:
         """The registered URLs, in the order reported."""
         return [
-            notification.url
-            for notification in self.notifications
-            if notification.url is not None
+            notification.url for notification in self.notifications if notification.url is not None
         ]
 
     def __contains__(self, item: object) -> bool:
@@ -828,8 +824,7 @@ class OutputDevices(VolumioModel):
         devices = payload.get("devices")
         if not isinstance(devices, dict):
             raise VolumioAPIError(
-                f"Expected a devices object from the Volumio API, "
-                f"got {type(devices).__name__}"
+                f"Expected a devices object from the Volumio API, got {type(devices).__name__}"
             )
         return cls.model_validate({**devices, "i2s": payload.get("i2s"), "raw": payload})
 
@@ -1231,9 +1226,7 @@ class PlaylistContent(VolumioModel):
                     tracks.extend(track for track in entry if isinstance(track, dict))
                 elif isinstance(entry, dict):
                     tracks.append(entry)
-        return cls.model_validate(
-            {"name": payload.get("name"), "tracks": tracks, "raw": payload}
-        )
+        return cls.model_validate({"name": payload.get("name"), "tracks": tracks, "raw": payload})
 
     def __getitem__(self, index: int) -> QueueTrack:
         """Return the track at the given position of the playlist."""

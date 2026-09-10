@@ -374,8 +374,7 @@ from volumito.clients.websocket.common import EVENT_PUSH_STATE
     is_flag=True,
     default=False,
     help=(
-        "Produce machine-readable output only, "
-        "superseding the --verbose option if also specified."
+        "Produce machine-readable output only, superseding the --verbose option if also specified."
     ),
 )
 @click.option(
@@ -454,8 +453,7 @@ from volumito.clients.websocket.common import EVENT_PUSH_STATE
     default=2.0,
     show_default=True,
     help=(
-        "When making multiple API calls, "
-        "sleep these many seconds between two consecutive calls."
+        "When making multiple API calls, sleep these many seconds between two consecutive calls."
     ),
 )
 @click.option(
@@ -649,10 +647,7 @@ def configuration_create(
         destination = os.path.join(os.getcwd(), CONFIGURATION_FILENAMES[0])
 
     if not overwrite_existing_files and os.path.exists(destination):
-        error(
-            f'File already exists: "{destination}" '
-            "(use --overwrite-existing-files to overwrite)"
-        )
+        error(f'File already exists: "{destination}" (use --overwrite-existing-files to overwrite)')
         sys.exit(1)
 
     mpd_port = MPD_PORT_VOLUMIO_3 if volumio_version < 4 else MPD_PORT_VOLUMIO_4
@@ -1271,9 +1266,7 @@ def audio(
                     embed_tags,
                     allow_local_file_rename,
                     replace_characters_in_file_names=replace_characters_in_file_names,
-                    replace_characters_in_file_names_with=(
-                        replace_characters_in_file_names_with
-                    ),
+                    replace_characters_in_file_names_with=(replace_characters_in_file_names_with),
                 )
 
                 # Embed track metadata and cover art into the downloaded file
@@ -1376,9 +1369,7 @@ def albumart(
                 "albumart",
                 ctx.obj["position_starting_at_one"],
                 replace_characters_in_file_names=replace_characters_in_file_names,
-                replace_characters_in_file_names_with=(
-                    replace_characters_in_file_names_with
-                ),
+                replace_characters_in_file_names_with=(replace_characters_in_file_names_with),
             )
 
     except click.UsageError:
@@ -1545,9 +1536,7 @@ def queue_download(
                 error(f'Cannot read the manifest file "{log_path}"')
                 sys.exit(1)
             if not manifest_matches_queue(existing["tracks"], tracks):
-                error(
-                    f'The manifest file "{log_path}" does not match the current queue'
-                )
+                error(f'The manifest file "{log_path}" does not match the current queue')
                 sys.exit(1)
             info(f'Reading manifest file "{log_path}"')
             entries: list[dict[str, Any]] = existing["tracks"]
@@ -1611,9 +1600,7 @@ def queue_download(
             os.makedirs(log_parent, exist_ok=True)
         write_queue_log(log_path, log)
 
-        if all(
-            entries[index].get("status") in ("downloaded", "skipped") for index in selected
-        ):
+        if all(entries[index].get("status") in ("downloaded", "skipped") for index in selected):
             if machine_readable:
                 click.echo(json.dumps(log_path))
             else:
@@ -1621,12 +1608,9 @@ def queue_download(
                     entry = entries[index]
                     info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                        f"\"{entry.get('output_file_path')}\" (kept)"
+                        f'"{entry.get("output_file_path")}" (kept)'
                     )
-                info(
-                    f"{_download_summary(entries, selected, 0)}; "
-                    f'manifest written to "{log_path}"'
-                )
+                info(f'{_download_summary(entries, selected, 0)}; manifest written to "{log_path}"')
             return
 
         errors = 0
@@ -1642,7 +1626,7 @@ def queue_download(
                 if entry.get("status") in ("downloaded", "skipped"):
                     info(
                         f"[{index + 1}/{len(entries)}] {entry['status']}: "
-                        f"\"{entry.get('output_file_path')}\" (kept)"
+                        f'"{entry.get("output_file_path")}" (kept)'
                     )
                     continue
                 destination: str | None = None
@@ -1786,8 +1770,7 @@ def queue_download(
             click.echo(json.dumps(log_path))
         else:
             info(
-                f"{_download_summary(entries, selected, errors)}; "
-                f'manifest written to "{log_path}"'
+                f'{_download_summary(entries, selected, errors)}; manifest written to "{log_path}"'
             )
         if errors:
             sys.exit(1)
@@ -1854,9 +1837,7 @@ def randomize(ctx: click.Context, value: bool | None, output_format: str) -> Non
     """
     if value is not None:
         mode = value
-        execute_command(
-            ctx, f"randomize {'on' if mode else 'off'}", lambda c: c.randomize(mode)
-        )
+        execute_command(ctx, f"randomize {'on' if mode else 'off'}", lambda c: c.randomize(mode))
     _render_playback_mode(ctx, output_format, "Volumio Random Mode", "random")
 
 
@@ -2340,9 +2321,7 @@ def audio_enable(ctx: click.Context, output_id: str) -> None:
 
     Needs a WebSocket API client.
     """
-    execute_command(
-        ctx, f'enable output "{output_id}"', lambda c: c.enable_audio_output(output_id)
-    )
+    execute_command(ctx, f'enable output "{output_id}"', lambda c: c.enable_audio_output(output_id))
 
 
 @system_audio.command("inputs")
@@ -2387,9 +2366,7 @@ def audio_pause(ctx: click.Context, output_id: str) -> None:
 
     Needs a WebSocket API client.
     """
-    execute_command(
-        ctx, f'pause output "{output_id}"', lambda c: c.audio_output_pause(output_id)
-    )
+    execute_command(ctx, f'pause output "{output_id}"', lambda c: c.audio_output_pause(output_id))
 
 
 @system_audio.command("play")
@@ -2449,9 +2426,7 @@ def system_backup_create(
         render_payload(ctx, backup, output_format, heading="Volumio Backup")
         return
     if not overwrite_existing_files and os.path.exists(output_file):
-        error(
-            f'File already exists: "{output_file}" (use --overwrite-existing-files to overwrite)'
-        )
+        error(f'File already exists: "{output_file}" (use --overwrite-existing-files to overwrite)')
         sys.exit(1)
     try:
         with open(output_file, "w", encoding="utf-8") as backup_file:
@@ -2941,9 +2916,7 @@ def system_ui_experience(ctx: click.Context, value: str | None, output_format: s
         render_payload(ctx, settings.raw, output_format, heading="Volumio Experience Settings")
         return
     advanced = value == "advanced"
-    execute_command(
-        ctx, f"experience {value}", lambda c: c.set_experience_settings(advanced)
-    )
+    execute_command(ctx, f"experience {value}", lambda c: c.set_experience_settings(advanced))
 
 
 @system_ui.group("language", invoke_without_command=True)
@@ -3198,9 +3171,7 @@ def system_network_join(ctx: click.Context, ssid: str, password: str | None, yes
         error(f'Refusing to join the wireless network without -y/--yes: "{ssid}"')
         sys.exit(1)
     secret = password or ""
-    execute_command(
-        ctx, f'join "{ssid}"', lambda c: c.save_wireless_settings(ssid, secret)
-    )
+    execute_command(ctx, f'join "{ssid}"', lambda c: c.save_wireless_settings(ssid, secret))
 
 
 @system_network.command("wireless")
@@ -3263,9 +3234,7 @@ def system_share_add(
         for key, value in (("username", username), ("password", password), ("options", options))
         if value is not None
     }
-    execute_command(
-        ctx, f'add share "{name}"', lambda c: c.add_share(name, path, fstype, **given)
-    )
+    execute_command(ctx, f'add share "{name}"', lambda c: c.add_share(name, path, fstype, **given))
 
 
 @system_share.command("discover")
@@ -3546,9 +3515,7 @@ def directory_delete(ctx: click.Context, uri: str, update_library: bool, yes: bo
 @click.argument("uri", required=False, default=None, type=str)
 @option_rescan
 @option_thumbnails
-def collection_update(
-    ctx: click.Context, uri: str | None, rescan: bool, thumbnails: bool
-) -> None:
+def collection_update(ctx: click.Context, uri: str | None, rescan: bool, thumbnails: bool) -> None:
     """Update the collection of the Volumio host, looking for changes.
 
     With URI, only its content is updated. The options select another refresh
@@ -4595,9 +4562,7 @@ def _delete_existing_playlist_or_exit(ctx: click.Context, name: str, overwrite: 
     _playlist_names_after_deletion_or_exit(ctx, name)
 
 
-def _fill_new_playlist(
-    client: APIClient, target: str, items: list[tuple[str, str | None]]
-) -> None:
+def _fill_new_playlist(client: APIClient, target: str, items: list[tuple[str, str | None]]) -> None:
     """Create a playlist and add some items to it, one by one.
 
     Args:
@@ -4685,9 +4650,7 @@ def _playlist_items_to_copy(
     else:
         for index, track in enumerate(tracks, 1):
             if track.uri is None:
-                warning(
-                    f'Skipping the item at position {index} of "{source}", which has no URI'
-                )
+                warning(f'Skipping the item at position {index} of "{source}", which has no URI')
                 continue
             items.append((track.uri, track.service))
     info(f'Copying {len(items)} items of "{source}" to "{target}"')
@@ -5198,9 +5161,7 @@ def _listen_to_events(
     except KeyboardInterrupt:
         return
     finally:
-        fetch_or_exit(
-            ctx, lambda c: [c.off(event, handler) for event, handler in handlers.items()]
-        )
+        fetch_or_exit(ctx, lambda c: [c.off(event, handler) for event, handler in handlers.items()])
 
     if count is not None and printed >= count:
         return
@@ -5262,9 +5223,7 @@ def notification_event(ctx: click.Context) -> None:
 @click.argument("event", type=str)
 @click.argument("payload", required=False, default=None, type=str)
 @option_yes
-def notification_event_emit(
-    ctx: click.Context, event: str, payload: str | None, yes: bool
-) -> None:
+def notification_event_emit(ctx: click.Context, event: str, payload: str | None, yes: bool) -> None:
     """Send EVENT to the Volumio host, carrying the JSON PAYLOAD when given.
 
     Nothing is waited for: whatever the host pushes back is visible with
@@ -5399,9 +5358,7 @@ def notification_listen(
         info(f"Registered notification URL: {url}")
 
     try:
-        _listen_and_print(
-            ctx, port, endpoint, url, count, timeout, idle_timeout, output_format
-        )
+        _listen_and_print(ctx, port, endpoint, url, count, timeout, idle_timeout, output_format)
     finally:
         if not registered and unregister_url_on_exit:
             response = fetch_or_exit(ctx, lambda c: c.unregister_notification(url))

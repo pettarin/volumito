@@ -26,9 +26,7 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_3
 _ALBUMART_FILE_NAME_TEMPLATE = "000___{album}___{artist}.{extension}"
 _AUDIO_FILE_NAME_TEMPLATE = "{position:03d}___{title}___{album}___{artist}.{extension}"
 _QUEUE_ALBUMART_FILE_NAME_TEMPLATE = "{artist}/{album_volume}/000___{album}.{extension}"
-_QUEUE_AUDIO_FILE_NAME_TEMPLATE = (
-    "{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}"
-)
+_QUEUE_AUDIO_FILE_NAME_TEMPLATE = "{artist}/{album_volume}/{tracknumber:03d}___{title}.{extension}"
 
 
 class TestConfigurationPaths:
@@ -96,9 +94,7 @@ class TestConfigurationPaths:
         assert paths.count(os.path.join("/home/user", ".volumito", "volumito.yaml")) == 1
         assert len(paths) == 10
 
-    def test_a_symlinked_working_directory_is_probed_once(
-        self, mocker: MockerFixture, tmp_path
-    ):
+    def test_a_symlinked_working_directory_is_probed_once(self, mocker: MockerFixture, tmp_path):
         """A working directory reaching a probed directory by symlink is probed once."""
         home = tmp_path / "home"
         home.mkdir()
@@ -284,8 +280,7 @@ class TestLoadDefaultMap:
         config.write_text("output:\n  playback-status:\n    verbose: true\n")
 
         assert (
-            "unknown key 'verbose' in section 'output.playback-status'"
-            in self._errors(config)[0]
+            "unknown key 'verbose' in section 'output.playback-status'" in self._errors(config)[0]
         )
 
     def test_output_subsection_non_mapping_reported(self, tmp_path):
@@ -346,9 +341,7 @@ class TestLoadDefaultMap:
         config = tmp_path / "volumito.yaml"
         config.write_text("downloads:\n  track-audio:\n    bogus: 1\n")
 
-        assert (
-            "unknown key 'bogus' in section 'downloads.track-audio'" in self._errors(config)[0]
-        )
+        assert "unknown key 'bogus' in section 'downloads.track-audio'" in self._errors(config)[0]
 
     def test_downloads_null_subsection_skipped(self, tmp_path):
         """A downloads subsection present but empty (null) contributes nothing."""
@@ -371,18 +364,14 @@ class TestLoadDefaultMap:
         config = tmp_path / "volumito.yaml"
         config.write_text("notification:\n  listen:\n    bogus: 1\n")
 
-        assert (
-            "unknown key 'bogus' in section 'notification.listen'" in self._errors(config)[0]
-        )
+        assert "unknown key 'bogus' in section 'notification.listen'" in self._errors(config)[0]
 
     def test_notification_listen_key_at_the_section_level_reported(self, tmp_path):
         """A key of the listen subsection is not accepted at the section level."""
         config = tmp_path / "volumito.yaml"
         config.write_text("notification:\n  register-url: true\n")
 
-        assert (
-            "unknown key 'register-url' in section 'notification'" in self._errors(config)[0]
-        )
+        assert "unknown key 'register-url' in section 'notification'" in self._errors(config)[0]
 
     def test_empty_file(self, tmp_path):
         """An empty file yields an empty mapping."""
@@ -786,9 +775,7 @@ class TestBuildClickDefaultMap:
 
     def test_display_keys_replicated_under_each_command(self):
         """fields/format are nested under every command accepting them, and only those."""
-        result = build_click_default_map(
-            {"output": {"fields": "all", "format": "table"}}
-        )
+        result = build_click_default_map({"output": {"fields": "all", "format": "table"}})
 
         formatting = {"fields": "all", "output_format": "table"}
         # The commands accepting only --format do not receive the shared fields value.
@@ -954,9 +941,7 @@ class TestBuildClickDefaultMap:
 
     def test_shared_manifest_file_reaches_only_queue_and_playlist_download(self):
         """A shared downloads.manifest-file flows to the queue/playlist downloads only."""
-        result = build_click_default_map(
-            {"downloads": {"manifest-file": "/reports/run.json"}}
-        )
+        result = build_click_default_map({"downloads": {"manifest-file": "/reports/run.json"}})
 
         assert result["queue"]["download"]["manifest_file"] == "/reports/run.json"
         assert result["playlist"]["download"]["manifest_file"] == "/reports/run.json"

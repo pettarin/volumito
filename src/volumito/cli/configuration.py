@@ -16,8 +16,8 @@ from volumito.cli.constants import MPD_PORT_VOLUMIO_4
 ACTION_COMMAND_PATHS: list[list[str]] = (
     [
         ["collection", "favourite", "play"],
-    ] +
-    [
+    ]
+    + [
         ["playback", name]
         for name in (
             "mute",
@@ -31,13 +31,13 @@ ACTION_COMMAND_PATHS: list[list[str]] = (
             "unmute",
             "volume",
         )
-    ] +
-    [
+    ]
+    + [
         ["playlist", "download"],
         ["playlist", "enqueue"],
         ["playlist", "play"],
-    ] +
-    [
+    ]
+    + [
         ["queue", name]
         for name in (
             "add",
@@ -648,7 +648,7 @@ def _validate_aliases(values: dict[str, Any], path: str, errors: list[str]) -> d
     result: dict[str, str] = {}
     for key, value in values.items():
         if not isinstance(key, str):
-            errors.append(f"alias name {key!r} in configuration file \"{path}\" must be a string")
+            errors.append(f'alias name {key!r} in configuration file "{path}" must be a string')
             continue
         if not isinstance(value, str) or not value.strip():
             errors.append(
@@ -666,7 +666,7 @@ def _validate_flat_keys(
     for key in values:
         if key not in allowed:
             errors.append(
-                f"unknown key {key!r} in section {section!r} of configuration file \"{path}\""
+                f'unknown key {key!r} in section {section!r} of configuration file "{path}"'
             )
 
 
@@ -697,9 +697,7 @@ def _validate_hierarchical(
         elif key in scalar_keys:
             result[key] = value
         else:
-            errors.append(
-                f"unknown key {key!r} in section {name!r} of configuration file \"{path}\""
-            )
+            errors.append(f'unknown key {key!r} in section {name!r} of configuration file "{path}"')
     return result
 
 
@@ -892,9 +890,7 @@ def flatten_configuration(config: dict[str, Any]) -> list[tuple[str, Any]]:
     for subsection, keys in NOTIFICATION_SUBSECTION_KEYS.items():
         subvalues = notification.get(subsection, {})
         pairs.extend(
-            (f"notification.{subsection}.{key}", subvalues[key])
-            for key in keys
-            if key in subvalues
+            (f"notification.{subsection}.{key}", subvalues[key]) for key in keys if key in subvalues
         )
     aliases = config.get("aliases", {})
     pairs.extend((f"aliases.{key}", value) for key, value in aliases.items())
@@ -915,7 +911,7 @@ def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]
         with open(path, encoding="utf-8") as config_file:
             data = yaml.safe_load(config_file)
     except UnicodeDecodeError:
-        return {}, [f"configuration file \"{path}\" is not a valid YAML file"]
+        return {}, [f'configuration file "{path}" is not a valid YAML file']
     except (OSError, yaml.YAMLError) as error:
         # The YAML errors span several lines: flatten them, so the problem message
         # stays a single (timestamped) line
@@ -925,18 +921,18 @@ def load_configuration_with_errors(path: str) -> tuple[dict[str, Any], list[str]
     if data is None:
         return {}, []
     if not isinstance(data, dict):
-        return {}, [f"configuration file \"{path}\" must contain a mapping at the top level"]
+        return {}, [f'configuration file "{path}" must contain a mapping at the top level']
 
     config: dict[str, Any] = {}
     errors: list[str] = []
     for section, values in data.items():
         if section not in RECOGNIZED_SECTIONS:
-            errors.append(f"unknown section {section!r} in configuration file \"{path}\"")
+            errors.append(f'unknown section {section!r} in configuration file "{path}"')
             continue
         if values is None:
             continue
         if not isinstance(values, dict):
-            errors.append(f"section {section!r} in configuration file \"{path}\" must be a mapping")
+            errors.append(f'section {section!r} in configuration file "{path}" must be a mapping')
             continue
         if section == "aliases":
             config[section] = _validate_aliases(values, path, errors)

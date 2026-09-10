@@ -28,7 +28,7 @@ def _unstamped(line: str) -> str:
     """Return a console line without its timestamp, asserting it carried one."""
     match = _STAMP.match(line)
     assert match is not None, line
-    return (match.group("prefix") or "") + line[match.end():]
+    return (match.group("prefix") or "") + line[match.end() :]
 
 
 @pytest.fixture(autouse=True)

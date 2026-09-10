@@ -212,9 +212,7 @@ class OnOffParamType(click.ParamType):
         for canonical, spellings in self.ALIASES.items():
             if text in spellings:
                 return canonical
-        accepted = ", ".join(
-            sorted(s for spellings in self.ALIASES.values() for s in spellings)
-        )
+        accepted = ", ".join(sorted(s for spellings in self.ALIASES.values() for s in spellings))
         self.fail(f"{text!r} must be one of {accepted}", param, ctx)
 
 
@@ -573,15 +571,14 @@ def alias_problems(
             problems.append(
                 (
                     name,
-                    f'alias {name!r} in configuration file "{path}" '
-                    f"shadows the command {name!r}",
+                    f'alias {name!r} in configuration file "{path}" shadows the command {name!r}',
                 )
             )
         elif resolve_command_path(root, ctx, target) is None:
             problems.append(
                 (
                     name,
-                    f"alias {name!r} in configuration file \"{path}\" "
+                    f'alias {name!r} in configuration file "{path}" '
                     f"targets the unknown command {target!r}",
                 )
             )
@@ -774,9 +771,7 @@ def command_nodes(
     return nodes
 
 
-def command_nodes_flattened(
-    nodes: list[dict[str, Any]], prefix: str = ""
-) -> list[dict[str, Any]]:
+def command_nodes_flattened(nodes: list[dict[str, Any]], prefix: str = "") -> list[dict[str, Any]]:
     """Flatten nested command nodes into one node per command, holding its full path.
 
     The groups are kept (typed as such), before the commands they hold, so the
@@ -923,9 +918,7 @@ def create_client(
         )
 
     if api_client == API_CLIENT_SYNCHRONOUS_REST:
-        return synchronous_rest(
-            synchronous_websocket if allow_fallback_to_websocket_api else None
-        )
+        return synchronous_rest(synchronous_websocket if allow_fallback_to_websocket_api else None)
     if api_client == API_CLIENT_ASYNCHRONOUS_REST:
         return asynchronous_rest(
             asynchronous_websocket if allow_fallback_to_websocket_api else None
@@ -1094,8 +1087,14 @@ def download_queue_track(
             destination = correct_audio_extension(destination, overwrite)
         if create_manifest:
             write_download_manifest(
-                destination, uri, state, host_configuration, "track", "audio",
-                add_cover_and_metadata, extra_state,
+                destination,
+                uri,
+                state,
+                host_configuration,
+                "track",
+                "audio",
+                add_cover_and_metadata,
+                extra_state,
             )
     except (requests.exceptions.RequestException, VolumioSSHError, OSError) as e:
         return "error", str(e), destination
@@ -1181,10 +1180,7 @@ def download_uri_to(
         destination = os.path.join(output_directory, filename)  # type: ignore[arg-type]
 
     if not overwrite and os.path.exists(destination):
-        error(
-            f'File already exists: "{destination}" '
-            "(use --overwrite-existing-files to overwrite)"
-        )
+        error(f'File already exists: "{destination}" (use --overwrite-existing-files to overwrite)')
         sys.exit(1)
 
     info(f'Downloading {label} to "{destination}"...')
@@ -1502,9 +1498,7 @@ def fetch_uri_to_file(
         OSError: If the destination file cannot be written
     """
     if is_local_file_uri(uri):
-        copy_from_host(
-            host_configuration, remote_music_path(uri), destination, timeout=timeout
-        )
+        copy_from_host(host_configuration, remote_music_path(uri), destination, timeout=timeout)
         return
 
     response = requests.get(uri, timeout=timeout, stream=True)
@@ -1787,10 +1781,7 @@ def option_current_track(func: Callable[..., None]) -> Callable[..., None]:
         "--current-track",
         is_flag=True,
         default=False,
-        help=(
-            "Use the metadata of the current track "
-            "instead of the positional argument(s)."
-        ),
+        help=("Use the metadata of the current track instead of the positional argument(s)."),
     )(func)
 
 
@@ -2101,10 +2092,7 @@ def option_output_file(func: Callable[..., None]) -> Callable[..., None]:
         "--output-file",
         type=str,
         default=None,
-        help=(
-            "Download to this exact file path. "
-            "Mutually exclusive with -d."
-        ),
+        help=("Download to this exact file path. Mutually exclusive with -d."),
     )(func)
 
 
@@ -2362,8 +2350,7 @@ def option_replace_characters_in_file_names_with(
         default=DEFAULT_REPLACE_CHARACTERS_IN_FILE_NAMES_WITH,
         show_default=True,
         help=(
-            "Replacement string for the characters selected by "
-            "--replace-characters-in-file-names."
+            "Replacement string for the characters selected by --replace-characters-in-file-names."
         ),
     )(func)
 
@@ -2547,8 +2534,7 @@ def option_story_type(func: Callable[..., None]) -> Callable[..., None]:
         default=DEFAULT_STORY_ARGUMENT_TYPE,
         show_default=True,
         help=(
-            "How to interpret the positional argument(s): "
-            "autodetect, mbid, or name (free string)."
+            "How to interpret the positional argument(s): autodetect, mbid, or name (free string)."
         ),
     )(func)
 
@@ -2746,7 +2732,7 @@ def playlist_items_at_or_exit(
         listed = ", ".join(str(shown) for shown in without_uri)
         error(
             f"Invalid value: the {'item' if one else 'items'} at "
-            f"{'position' if one else 'positions'} {listed} of the playlist \"{name}\" "
+            f'{"position" if one else "positions"} {listed} of the playlist "{name}" '
             f"{'has' if one else 'have'} no URI"
         )
         sys.exit(1)
@@ -3401,9 +3387,7 @@ def render_tracks(
     echo_data(ctx, output)
 
 
-def resolve_command_path(
-    root: click.Group, ctx: click.Context, path: str
-) -> click.Command | None:
+def resolve_command_path(root: click.Group, ctx: click.Context, path: str) -> click.Command | None:
     """Resolve a space-separated command path against the command tree.
 
     Only built-in names are followed, so an alias cannot target another alias.
@@ -3461,9 +3445,7 @@ def wait_for_installed_plugin_or_exit(ctx: click.Context, name: str) -> PluginRe
         if plugin is not None and plugin.category is not None and plugin.enabled is not None:
             info(f'Waiting for the plugin "{name}" to be installed... done')
             return PluginReference(name, plugin.category)
-        debug(
-            f'The host does not list the plugin "{name}" as installed yet ({attempt}/{retries})'
-        )
+        debug(f'The host does not list the plugin "{name}" as installed yet ({attempt}/{retries})')
         if attempt < retries:
             time.sleep(PLUGIN_INSTALL_WAIT_INTERVAL)
     seconds = retries * PLUGIN_INSTALL_WAIT_INTERVAL

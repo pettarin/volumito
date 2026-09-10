@@ -88,9 +88,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
         self._session = session
         self._session_owned = False
 
-    def _delete_json(
-        self, path: str, payload: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    def _delete_json(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """DELETE ``path`` and parse the response as a JSON object.
 
         The Volumio API answers some DELETE requests with an empty body, which is
@@ -913,9 +911,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
         self._log_debug("Sending the URI as a single item, playing its first element")
         item = self._queue_uri_item(uri)
         response = CommandResponse.from_raw(
-            self._post_json(
-                PATH_REPLACE_AND_PLAY, {"item": item}, self.timeout_slow_endpoints
-            )
+            self._post_json(PATH_REPLACE_AND_PLAY, {"item": item}, self.timeout_slow_endpoints)
         )
         self._log_debug(f'Replacing the queue with "{uri}"... done')
         return response
@@ -1089,9 +1085,7 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
             VolumioAPIError: If the API returns an error response
         """
         payload = {"url": self._notification_url(url)}
-        return SuccessResponse.from_raw(
-            self._delete_json(PATH_PUSH_NOTIFICATION_URLS, payload)
-        )
+        return SuccessResponse.from_raw(self._delete_json(PATH_PUSH_NOTIFICATION_URLS, payload))
 
     @property
     def volume(self) -> int:

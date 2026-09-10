@@ -96,9 +96,7 @@ class TestEmbedMp3:
         tpe2.assert_called_once_with(encoding=3, text="AA")
         trck.assert_called_once_with(encoding=3, text="5")
         tags.delall.assert_called_once_with("APIC")
-        apic.assert_called_once_with(
-            encoding=3, mime="image/png", type=3, desc="Cover", data=_PNG
-        )
+        apic.assert_called_once_with(encoding=3, mime="image/png", type=3, desc="Cover", data=_PNG)
         tags.save.assert_called_once_with("song.mp3")
 
     def test_creates_tags_when_no_header(self, mocker: MockerFixture):

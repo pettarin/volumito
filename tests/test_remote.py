@@ -123,9 +123,7 @@ class TestCopyFromHost:
         paramiko, scp_client_class = self._mock_scp(mocker)
         host_configuration = VolumioHostConfiguration(host="volumio.local", ssh_port=2222)
 
-        copy_from_host(
-            host_configuration, "/mnt/INTERNAL/a.flac", "/tmp/a.flac", timeout=7.0
-        )
+        copy_from_host(host_configuration, "/mnt/INTERNAL/a.flac", "/tmp/a.flac", timeout=7.0)
 
         ssh_client = paramiko.SSHClient.return_value.__enter__.return_value
         ssh_client.load_system_host_keys.assert_called_once_with()
@@ -168,9 +166,7 @@ class TestCopyFromHost:
         """A directory is copied with its content."""
         _, scp_client_class = self._mock_scp(mocker)
 
-        copy_from_host(
-            VolumioHostConfiguration(), "/mnt/INTERNAL/music", "./music", recursive=True
-        )
+        copy_from_host(VolumioHostConfiguration(), "/mnt/INTERNAL/music", "./music", recursive=True)
 
         scp_client_class.return_value.__enter__.return_value.get.assert_called_once_with(
             "/mnt/INTERNAL/music", "./music", recursive=True

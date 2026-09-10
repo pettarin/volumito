@@ -22,9 +22,7 @@ class VolumioBaseClient:
             logger: The logger the client writes to; without one, the client logs
                 under the name of its own module in the ``volumito`` hierarchy
         """
-        self.logger = (
-            logger if logger is not None else logging.getLogger(type(self).__module__)
-        )
+        self.logger = logger if logger is not None else logging.getLogger(type(self).__module__)
 
     def _log_critical(self, message: str) -> None:
         """Log a critical message.
