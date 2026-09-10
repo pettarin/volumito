@@ -10,7 +10,7 @@ volumito playlist play "volumito test qobuz multiple albums"
 
 Instead of constantly polling the Volumio REST API,
 you can register a URL which Volumio can call to notify
-about state changes in the playback or queue state or multiroom zones.
+about changes in the playback, queue, or multiroom state.
 Details can be found in the
 [Notifications](https://developers.volumio.com/api/rest-api#notifications)
 section of the Volumio REST API documentation.
