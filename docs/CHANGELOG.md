@@ -18,99 +18,29 @@ All notable changes to this project will be documented in this file.
   offers on top of the REST API
 - Global option `--allow-fallback-to-websocket-api`,
   with the corresponding configuration key
-- Commands `queue add`, `queue consume`, `queue move`, `queue remove`,
-  and `queue save`, and option `--cue-track` of `queue replace`
-  (all needing a WebSocket API client, except the plain `queue add URI`)
 - Option `--overwrite-existing-playlist` of `playlist copy`, `playlist rename`,
   and `queue save`, with the corresponding configuration key
-- Option `--all-occurrences` of `playlist remove`
-- Commands `playlist add`, `playlist content`, `playlist copy`, `playlist create`,
-  `playlist delete`, `playlist enqueue`, `playlist remove`, and `playlist rename`
-  (all needing a WebSocket API client)
-- Option `-f/--import-from-file` of `playlist create`, filling the new playlist
-  with the items a file lists, as `playlist content NAME -L ALL` prints them
-- Option `-p/--position` of `playlist remove`, removing the items at
-  the selected positions of the playlist (e.g., `1-3,6-8,12`)
-  instead of the one at a URI
-- Option `-p/--position` of `playlist copy`, copying only the items at the
-  selected positions of the source playlist
-- `playlist create` and `playlist delete` list the playlists once done, as
-  `playlist list` does, unless `--no-print-resulting-list`; `playlist delete`
-  waits for the host to drop the playlist, and reports one still listed
-- `playlist remove` warns when the removal would leave the playlist empty,
-  which the Volumio host may refuse
-- Option `--expand-tracks/--no-expand-tracks` of `playlist add`, adding the tracks
-  a URI of a source other than the local library lists (an album, a playlist)
-  instead of the URI as one item
-- Option `--update-library/--no-update-library` of `collection directory delete`,
-  updating the library at the directory above the deleted one
-- Commands `playback infinity` and `playback sleep`,
-  and option `--volatile` of `playback play`
-  (all needing a WebSocket API client)
-- Command groups `collection favourite` (`add`, `list`, `play`, `remove`,
-  with `--radio` for the radio favourites) and `collection radio`
-  (`add`, `list`, `remove`); all but the `list` commands
-  need a WebSocket API client
-- Command `collection update`, command groups `collection directory` (`delete`)
-  and `collection source` (`disable`, `enable`, `list`), and options
-  `-b/--current-track-album`, `-a/--current-track-artist`, `--last`, and `--root`
-  of `collection browse` and `--super` of `collection search`
-  (all needing a WebSocket API client)
-- Command group `system audio` (`disable`, `dsp`, `enable`, `inputs`,
-  `outputs`, `pause`, `play`, `volume`, and the `device` subgroup
-  with `list` and `set`), needing a WebSocket API client
-- Command `system name`, and command groups `system backup` (`create`,
-  `restore`, `save`), `system power` (`modes`, `reboot`, `shutdown`, `standby`),
-  `system timezone` (`list`, `set`), and `system update` (`automatic` with
-  `enable` and `disable`, `channel` with `list` and `set`, `check`, `install`),
-  all needing a WebSocket API client
-- Command groups `system network` (`info`, `join`, `wireless`),
-  `system share` (`add`, `discover`, `edit`, `info`, `list`, `remove`),
-  and `system usb` (`eject`, `list`), all needing a WebSocket API client
-- Command groups `system plugin` (`available`, `configuration`, `disable`,
-  `enable`, `install`, `list`, `uninstall`, `update`) and `system ui`
-  (`experience`, `privacy`, `settings`, and the `background`
-  and `language` subgroups), all needing a WebSocket API client
 - Property `available_plugins` on the WebSocket API clients, with the models
   `AvailablePlugin`, `AvailablePluginCategory`, and `AvailablePlugins`
 - Model `UiBackground`, the background image `UiSettings` reports
 - Methods `check_for_update` and `check_update_cache` on the WebSocket API
   clients wait for the answer of the updater, an `UpdateCheck`, which
   `system update check` prints
-- Option `--wait-and-enable` of `system plugin install`
-- Command group `system alarm` (`add`, `clear`, `disable`, `enable`,
-  `list`, `remove`, `set`), needing a WebSocket API client
 - Methods `add_alarm`, `disable_alarm`, `enable_alarm`, and `remove_alarm`
   on the WebSocket API clients
-- Commands `multiroom client`, `multiroom server`, `multiroom set`,
-  `multiroom single`, `multiroom status`, and `multiroom write`
-  (all needing a WebSocket API client)
-- Command group `notification event` (`emit`, `listen`, `request`),
-  needing a WebSocket API client, with the corresponding configuration keys
 
 ### Changed
 
-- Command group `track` is now `queue track` (`track` is kept as a synonym),
-  and commands `queue has_next` and `queue has_previous` are now
-  `queue track has_next` and `queue track has_previous` (no synonyms)
-- Renamed the command `multiroom zones` to `multiroom info`
-  (and the corresponding configuration key); no synonym is kept
+- Renamed command group `track` to `queue track`
+  (`track` is kept as a synonym),
+  and commands `queue has_next` and `queue has_previous` to
+  `queue track has_next` and `queue track has_previous` (without synonyms)
+- Renamed command `multiroom zones` to `multiroom info`
+  and the corresponding configuration key (without synonym)
 - `set_output_device` of the WebSocket clients no longer takes a mixer
 - `modify_plugin_status` of the WebSocket clients starts or stops the plugin,
   and `update_plugin` takes the URL of the package
 - The table of `playback status` lists the audio-quality fields of its short set
-- The short field set of `playlist content` includes the URI of each track
-- `playlist add` and `playlist remove` print the content of the playlist once
-  done, as `playlist content` does, with its `-L/--fields` and `-F/--format`
-  options and a `-r/--print-resulting-content` switch,
-  with the corresponding configuration keys
-- `collection radio add` and `collection radio remove` list the Web radios once
-  done, as `collection radio list` does, with its options
-  and a `-r/--print-resulting-list` switch, with the corresponding configuration keys
-- `queue consume`, `queue randomize`, and `queue repeat` without a value print
-  the mode instead of toggling it, and print it once set instead of the playback
-  status (no `--print-resulting-status` option any more), with a `-F/--format`
-  option and the corresponding configuration keys
 
 ### Fixed
 
@@ -146,8 +76,6 @@ All notable changes to this project will be documented in this file.
   `remove_radio_favourite` no longer takes a name; `collection favourite
   add/remove --radio` take a Web radio by name or by URL, and report a radio
   the host does not list afterwards
-- `collection favourite play` requires NAME without `--radio`, and with it
-  plays the radio favourites from the one named, or streaming from, NAME
 
 
 ## [0.4.0] - 2026-09-04
