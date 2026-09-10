@@ -45,7 +45,7 @@ build-only:
 	@for f in $(BUILD_ONLY_FILES); do $(LUCIO) $$f || exit 1; done
 
 clean:
-	rm inc/[0-9A-Z]*.md [0-9A-Z]*.md
+	rm -f $(TARGETS)
 
 rebuild: \
 	rebuild-all
@@ -60,7 +60,7 @@ rebuild-index-only:
 	make build-only INDEX.tmd
 
 touch-all-tmd-files:
-	touch inc/[0-9A-Z]*.md [0-9A-Z]*.md
+	touch $(SOURCES)
 
 %.md: %.tmd
 	$(LUCIO) $<
