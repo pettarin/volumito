@@ -91,7 +91,7 @@ def _load_aiohttp() -> ModuleType:
 class VolumioAsyncRESTAPIClient(VolumioRESTAPICommon):
     """Async client for interacting with Volumio API."""
 
-    _CLIENT_DESCRIPTION: str = "async REST API client"
+    _CLIENT_DESCRIPTION: str = "Asynchronous REST API client"
 
     def __init__(
         self,

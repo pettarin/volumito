@@ -61,6 +61,8 @@ class VolumioRESTAPIClient(VolumioRESTAPICommon):
     block); a session given to the constructor is used instead, and left to its owner.
     """
 
+    _CLIENT_DESCRIPTION: str = "Synchronous REST API client"
+
     def __init__(
         self,
         host_configuration: VolumioHostConfiguration,

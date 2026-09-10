@@ -253,8 +253,7 @@ class VolumioAsyncWebSocketClient(VolumioWebSocketCommon):
     a coroutine it returns is awaited.
     """
 
-    _CLIENT_DESCRIPTION: str = "async WebSocket API client"
-    """The name a client logs itself under while initializing."""
+    _CLIENT_DESCRIPTION: str = "Asynchronous WebSocket API client"
 
     def __init__(
         self,

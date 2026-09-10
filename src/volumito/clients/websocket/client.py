@@ -258,6 +258,8 @@ class VolumioWebSocketClient(VolumioWebSocketCommon):
     manager, so the connection is closed when the block is left.
     """
 
+    _CLIENT_DESCRIPTION: str = "Synchronous WebSocket API client"
+
     def __init__(
         self,
         host_configuration: VolumioHostConfiguration,
