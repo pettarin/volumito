@@ -317,6 +317,16 @@ class TestLoadDefaultMap:
             [],
         )
 
+    def test_miscellaneous_section_overwrite_existing_playlist(self, tmp_path):
+        """The miscellaneous section accepts overwrite-existing-playlist."""
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  overwrite-existing-playlist: true\n")
+
+        assert load_configuration_with_errors(str(config)) == (
+            {"miscellaneous": {"overwrite-existing-playlist": True}},
+            [],
+        )
+
     def test_miscellaneous_unknown_key_reported(self, tmp_path):
         """An unrecognized key under miscellaneous is reported."""
         config = tmp_path / "volumito.yaml"
@@ -496,6 +506,7 @@ class TestDefaultConfigurationTemplate:
                 "check-next-track": True,
                 "check-playlist-name": True,
                 "check-seek-position": True,
+                "overwrite-existing-playlist": False,
                 "propagate-remote-exit-code": True,
             },
             "notification": {
@@ -976,6 +987,7 @@ class TestBuildClickDefaultMap:
                 "miscellaneous": {
                     "check-playlist-name": False,
                     "check-seek-position": False,
+                    "overwrite-existing-playlist": True,
                 }
             }
         )
@@ -989,8 +1001,10 @@ class TestBuildClickDefaultMap:
                 "enqueue": {"check_playlist_name": False},
                 "play": {"check_playlist_name": False},
                 "remove": {"check_playlist_name": False},
+                "rename": {"overwrite_existing_playlist": True},
             },
             "playback": {"seek": {"check_seek_position": False}},
+            "queue": {"save": {"overwrite_existing_playlist": True}},
         }
 
     def test_print_resulting_status_replicated_under_action_commands(self):

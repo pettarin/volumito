@@ -185,6 +185,10 @@ miscellaneous:
   # Check that the seek position is within the duration of the current track
   check-seek-position: true
 
+  # When saving the queue as a playlist, or renaming a playlist,
+  # overwrite an existing playlist of the destination name
+  overwrite-existing-playlist: false
+
   # After running the "system execute" command,
   # return the same exit code generated on the Volumio host
   propagate-remote-exit-code: true

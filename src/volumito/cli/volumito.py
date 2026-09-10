@@ -97,6 +97,7 @@ from volumito.cli.click_helpers import (
     option_output_directory,
     option_output_file,
     option_overwrite_existing_files,
+    option_overwrite_existing_playlist,
     option_play,
     option_play_added,
     option_playlist,
@@ -208,10 +209,12 @@ from volumito.cli.constants import (
     PLAY_VOLATILE_ERROR,
     PLAYLIST_DELETE_ATTEMPTS,
     PLAYLIST_DELETE_STILL_LISTED_ERROR,
+    PLAYLIST_EXISTS_ERROR,
     PLAYLIST_FILE_ERROR,
     PLAYLIST_REMOVE_ARGUMENTS_ERROR,
     PLAYLIST_REMOVE_EMPTY_WARNING,
     PLAYLIST_REMOVE_SERVICE_ERROR,
+    PLAYLIST_RENAME_SAME_NAME_ERROR,
     PROGRAM_NAME,
     QUEUE_ADD_ARGUMENTS_ERROR,
     QUEUE_ADD_MODES_ERROR,
@@ -2032,11 +2035,20 @@ def replace(
 @queue.command()
 @click.pass_context
 @click.argument("name", type=str)
-def save(ctx: click.Context, name: str) -> None:
-    """Save the current queue as the playlist NAME, replacing it if it exists.
+@option_overwrite_existing_playlist
+def save(ctx: click.Context, name: str, overwrite_existing_playlist: bool) -> None:
+    """Save the current queue as the new playlist NAME.
+
+    A playlist of that name is refused, unless --overwrite-existing-playlist is
+    given: the Volumio host then replaces its content with the queue.
 
     Needs a WebSocket API client.
     """
+    if not overwrite_existing_playlist:
+        names = fetch_or_exit(ctx, lambda c: c.playlists.names)
+        if name in names:
+            error(PLAYLIST_EXISTS_ERROR.format(name=name))
+            sys.exit(1)
     execute_command(ctx, "save", lambda c: c.save_queue_as_playlist(name))
 
 
@@ -4503,6 +4515,7 @@ def playlist_remove(
 @option_check_playlist_name
 @option_fields
 @option_format
+@option_overwrite_existing_playlist
 @option_print_resulting_content
 def playlist_rename(
     ctx: click.Context,
@@ -4511,19 +4524,29 @@ def playlist_rename(
     check_playlist_name: bool,
     fields: str,
     output_format: str,
+    overwrite_existing_playlist: bool,
     print_resulting_content: bool,
 ) -> None:
     """Rename the playlist SOURCE to TARGET, copying it and deleting the original.
 
-    TARGET is created and filled as "playlist copy" does, which the Volumio host
-    refuses when a playlist of that name exists; SOURCE is then deleted, without the
+    A playlist named TARGET is refused, unless --overwrite-existing-playlist is
+    given: it is then deleted first, as "playlist delete" deletes it. TARGET is
+    created and filled as "playlist copy" does; SOURCE is then deleted, without the
     confirmation "playlist delete" asks for, since its content lives on in TARGET.
     Once done, the content of TARGET is printed as "playlist content" prints it,
     unless --no-print-resulting-content.
 
     Needs a WebSocket API client.
     """
+    if source == target:
+        raise click.UsageError(PLAYLIST_RENAME_SAME_NAME_ERROR)
     items = _playlist_items_to_copy(ctx, source, target, check_playlist_name)
+    if target in fetch_or_exit(ctx, lambda c: c.playlists.names):
+        if not overwrite_existing_playlist:
+            error(PLAYLIST_EXISTS_ERROR.format(name=target))
+            sys.exit(1)
+        execute_command(ctx, f'delete playlist "{target}"', lambda c: c.delete_playlist(target))
+        _playlist_names_after_deletion_or_exit(ctx, target)
 
     def rename_items(client: APIClient) -> None:
         _fill_new_playlist(client, target, items)

@@ -2108,6 +2108,16 @@ def option_overwrite_existing_files(func: Callable[..., None]) -> Callable[..., 
     )(func)
 
 
+def option_overwrite_existing_playlist(func: Callable[..., None]) -> Callable[..., None]:
+    """Add the ``--overwrite-existing-playlist`` option to a save or rename subcommand."""
+    return click.option(
+        "--overwrite-existing-playlist/--no-overwrite-existing-playlist",
+        default=False,
+        show_default=True,
+        help="Overwrite the destination playlist if it already exists.",
+    )(func)
+
+
 def option_play(func: Callable[..., None]) -> Callable[..., None]:
     """Add the ``--play/--no-play`` option to the queue replace subcommand."""
     return click.option(

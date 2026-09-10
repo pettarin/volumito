@@ -217,6 +217,11 @@ PLAYLIST_DELETE_STILL_LISTED_ERROR = (
 )
 """Error message when "playlist delete" finds the playlist still listed."""
 
+PLAYLIST_EXISTS_ERROR = (
+    'Playlist already exists: "{name}" (use --overwrite-existing-playlist to overwrite)'
+)
+"""Error message when "playlist rename" or "queue save" would overwrite a playlist."""
+
 PLAYLIST_FILE_ERROR = 'Expected FILE to hold a JSON list of playlist items, each with a "uri".'
 """Error message when "playlist create" is given a file of another shape to import."""
 
@@ -236,6 +241,9 @@ PLAYLIST_REMOVE_SERVICE_ERROR = (
     "Expected the --service option only together with a URI argument."
 )
 """Error message when "playlist remove" is given a service with a position instead of a URI."""
+
+PLAYLIST_RENAME_SAME_NAME_ERROR = "Expected SOURCE and TARGET to be different playlist names."
+"""Error message when "playlist rename" is given the same name twice."""
 
 PLUGIN_INSTALL_WAIT_INTERVAL = 5.0
 """Seconds between two looks at the installed plugins while waiting for an install."""

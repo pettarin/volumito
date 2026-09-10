@@ -21,6 +21,8 @@ All notable changes to this project will be documented in this file.
 - Commands `queue add`, `queue consume`, `queue move`, `queue remove`,
   and `queue save`, and option `--cue-track` of `queue replace`
   (all needing a WebSocket API client, except the plain `queue add URI`)
+- Option `--overwrite-existing-playlist` of `playlist rename` and `queue save`,
+  with the corresponding configuration key
 - Commands `playlist add`, `playlist content`, `playlist copy`, `playlist create`,
   `playlist delete`, `playlist enqueue`, `playlist remove`, and `playlist rename`
   (all needing a WebSocket API client)

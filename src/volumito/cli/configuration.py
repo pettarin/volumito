@@ -545,6 +545,10 @@ MISCELLANEOUS_KEY_PATHS: dict[str, list[list[str]]] = {
     "check-seek-position": [
         ["playback", "seek"],
     ],
+    "overwrite-existing-playlist": [
+        ["playlist", "rename"],
+        ["queue", "save"],
+    ],
     "propagate-remote-exit-code": [
         ["system", "execute"],
     ],

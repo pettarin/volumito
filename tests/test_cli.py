@@ -11680,17 +11680,146 @@ class TestPlaylistCommands:
         """A target the host does not create leaves the source in place."""
         mock_client = self._mock_websocket_client(mocker)
         mock_client.create_playlist.side_effect = VolumioAPIError(
-            'The host did not create the playlist "Jazz Classics": Playlist already exists'
+            'The host did not create the playlist "New": Playlist name not allowed'
         )
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "playlist", "rename", "Rock", "New"])
+
+        assert result.exit_code == 1
+        assert "API error: The host did not create the playlist" in result.output
+        mock_client.add_to_playlist.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
+    def test_rename_refuses_an_existing_target(self, runner: CliRunner, mocker: MockerFixture):
+        """A target already listed exits 1, naming the overriding option, touching nothing."""
+        mock_client = self._mock_websocket_client(mocker)
 
         result = runner.invoke(
             main, [*self._WEBSOCKET, "playlist", "rename", "Rock", "Jazz Classics"]
         )
 
         assert result.exit_code == 1
-        assert "API error: The host did not create the playlist" in result.output
-        mock_client.add_to_playlist.assert_not_called()
+        assert (
+            'Playlist already exists: "Jazz Classics" '
+            "(use --overwrite-existing-playlist to overwrite)"
+        ) in result.output
+        mock_client.create_playlist.assert_not_called()
         mock_client.delete_playlist.assert_not_called()
+
+    def test_rename_overwrites_an_existing_target_when_asked(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With --overwrite-existing-playlist, the target is deleted first, then filled."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client,
+            "playlists",
+            side_effect=[self.PLAYLISTS, self.PLAYLISTS, ["Rock", "Ambient"]],
+        )
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "rename",
+                "Rock",
+                "Jazz Classics",
+                "--overwrite-existing-playlist",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'delete playlist \"Jazz Classics\"' executed successfully" in (
+            result.output
+        )
+        assert "Command 'rename playlist \"Rock\" to \"Jazz Classics\"' executed successfully" in (
+            result.output
+        )
+        assert mock_client.delete_playlist.call_args_list == [
+            mocker.call("Jazz Classics"),
+            mocker.call("Rock"),
+        ]
+        mock_client.create_playlist.assert_called_once_with("Jazz Classics")
+        # The target is deleted only once the source items are read, and created after
+        calls = mock_client.mock_calls
+        assert calls.index(mocker.call.delete_playlist("Jazz Classics")) > calls.index(
+            mocker.call.get_playlist_content("Rock")
+        )
+        assert calls.index(mocker.call.create_playlist("Jazz Classics")) > calls.index(
+            mocker.call.delete_playlist("Jazz Classics")
+        )
+
+    def test_rename_overwrite_stops_when_the_target_stays_listed(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """A target the host keeps listing after the deletion exits 1, creating nothing."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "rename",
+                "Rock",
+                "Jazz Classics",
+                "--overwrite-existing-playlist",
+            ],
+        )
+
+        assert result.exit_code == 1
+        assert (
+            'The Volumio host still lists the playlist "Jazz Classics" after the deletion.'
+            in result.output
+        )
+        mock_client.delete_playlist.assert_called_once_with("Jazz Classics")
+        mock_client.create_playlist.assert_not_called()
+
+    def test_rename_to_the_same_name(self, runner: CliRunner, mocker: MockerFixture):
+        """The same name twice is a usage error, before any read."""
+        mock_client = self._mock_websocket_client(mocker)
+
+        result = runner.invoke(
+            main,
+            [
+                *self._WEBSOCKET,
+                "playlist",
+                "rename",
+                "Rock",
+                "Rock",
+                "--overwrite-existing-playlist",
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "Expected SOURCE and TARGET to be different playlist names." in result.output
+        mock_client.playlists_property.assert_not_called()
+        mock_client.delete_playlist.assert_not_called()
+
+    def test_rename_overwrite_from_the_configuration_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The miscellaneous.overwrite-existing-playlist key turns the option on."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(
+            mock_client,
+            "playlists",
+            side_effect=[self.PLAYLISTS, self.PLAYLISTS, ["Rock", "Ambient"]],
+        )
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  overwrite-existing-playlist: true\n")
+
+        result = runner.invoke(
+            main,
+            ["-c", str(config), *self._WEBSOCKET, "playlist", "rename", "Rock", "Jazz Classics"],
+        )
+
+        assert result.exit_code == 0
+        assert mock_client.delete_playlist.call_args_list == [
+            mocker.call("Jazz Classics"),
+            mocker.call("Rock"),
+        ]
 
     def test_rename_of_a_missing_source(self, runner: CliRunner, mocker: MockerFixture):
         """A source the host does not list is refused before anything is created."""
@@ -17287,6 +17416,7 @@ class TestQueueEditing:
         _attach_property(
             mock_client, "state", return_value={"title": "Test Song", "consume": False}
         )
+        _attach_property(mock_client, "playlists", return_value=["Rock"])
         mocker.patch(
             "volumito.cli.click_helpers.VolumioRESTAPIClient",
             return_value=mock_client,
@@ -17548,14 +17678,77 @@ class TestQueueEditing:
         mock_client.remove_from_queue.assert_not_called()
 
     def test_save(self, runner: CliRunner, mocker: MockerFixture):
-        """queue save stores the queue under the given name."""
+        """queue save stores the queue under a name not in use, after checking it."""
         mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", return_value=["Rock", "Jazz"])
 
         result = runner.invoke(main, [*self._WEBSOCKET, "queue", "save", "My Queue"])
 
         assert result.exit_code == 0
         assert "Command 'save' executed successfully" in result.output
+        mock_client.playlists_property.assert_called_once()
         mock_client.save_queue_as_playlist.assert_called_once_with("My Queue")
+
+    def test_save_refuses_an_existing_playlist(self, runner: CliRunner, mocker: MockerFixture):
+        """A name already in use exits 1, naming the overriding option, without saving."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", return_value=["Rock", "My Queue"])
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "save", "My Queue"])
+
+        assert result.exit_code == 1
+        assert (
+            'Playlist already exists: "My Queue" '
+            "(use --overwrite-existing-playlist to overwrite)"
+        ) in result.output
+        mock_client.save_queue_as_playlist.assert_not_called()
+
+    def test_save_overwrites_an_existing_playlist_when_asked(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """With --overwrite-existing-playlist, the name is not checked and the queue is saved."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", return_value=["Rock", "My Queue"])
+
+        result = runner.invoke(
+            main,
+            [*self._WEBSOCKET, "queue", "save", "My Queue", "--overwrite-existing-playlist"],
+        )
+
+        assert result.exit_code == 0
+        assert "Command 'save' executed successfully" in result.output
+        mock_client.playlists_property.assert_not_called()
+        mock_client.save_queue_as_playlist.assert_called_once_with("My Queue")
+
+    def test_save_overwrite_from_the_configuration_file(
+        self, runner: CliRunner, mocker: MockerFixture, tmp_path
+    ):
+        """The miscellaneous.overwrite-existing-playlist key turns the option on."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", return_value=["My Queue"])
+        config = tmp_path / "volumito.yaml"
+        config.write_text("miscellaneous:\n  overwrite-existing-playlist: true\n")
+
+        result = runner.invoke(
+            main, ["-c", str(config), *self._WEBSOCKET, "queue", "save", "My Queue"]
+        )
+
+        assert result.exit_code == 0
+        mock_client.playlists_property.assert_not_called()
+        mock_client.save_queue_as_playlist.assert_called_once_with("My Queue")
+
+    def test_save_fails_when_the_playlists_cannot_be_read(
+        self, runner: CliRunner, mocker: MockerFixture
+    ):
+        """An API error while checking the name exits 1, without saving."""
+        mock_client = self._mock_websocket_client(mocker)
+        _attach_property(mock_client, "playlists", side_effect=VolumioAPIError("Bad payload"))
+
+        result = runner.invoke(main, [*self._WEBSOCKET, "queue", "save", "My Queue"])
+
+        assert result.exit_code == 1
+        assert "API error" in result.output
+        mock_client.save_queue_as_playlist.assert_not_called()
 
     def test_the_plain_add_works_with_a_rest_client(
         self, runner: CliRunner, mocker: MockerFixture
@@ -17602,6 +17795,7 @@ class TestQueueEditing:
 
         assert result.exit_code == 0
         assert "Falling back to the WebSocket API client for the queue edits" in result.output
+        rest.playlists_property.assert_called_once()
         websocket.save_queue_as_playlist.assert_called_once_with("My Queue")
         websocket.connect.assert_called_once_with()
         websocket.disconnect.assert_called_once_with()
@@ -19435,6 +19629,7 @@ class TestConfigurationCommands:
                     "check-next-track": True,
                     "check-playlist-name": True,
                     "check-seek-position": True,
+                    "overwrite-existing-playlist": False,
                     "propagate-remote-exit-code": True,
                 },
                 "notification": {
