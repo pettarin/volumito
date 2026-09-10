@@ -221,14 +221,15 @@ for instance `qti` for `queue track info`, so that
 ```bash
 volumito queue track info
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:04:08",
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "title": "Intro",
-    "trackType": "qobuz"
+    "samplerate": "44.1 kHz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac"
 }
 ```
 
@@ -237,14 +238,15 @@ and
 ```bash
 volumito qti
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:04:08",
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "title": "Intro",
-    "trackType": "qobuz"
+    "samplerate": "44.1 kHz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac"
 }
 ```
 

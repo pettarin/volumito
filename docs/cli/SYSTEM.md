@@ -26,7 +26,7 @@ volumito system info
         "mute": false,
         "status": "play",
         "track": "Fuoco sui giocattoli",
-        "volume": 19
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
@@ -45,8 +45,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-09T16:16:04.946Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-09T16:16:04.946Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-10T12:46:09.384Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-10T12:46:09.384Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -114,7 +114,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-09T16:16:08.464Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-10T12:46:13.118Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!CAUTION]
@@ -128,7 +128,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-bluealsa.service-wTPHYh\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-haveged.service-r8T6mA\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-ntpsec.service-yRrZsK\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-systemd-logind.service-7NqP5M\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-bluealsa.service-Ah71xs\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-haveged.service-jiwUE3\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-ntpsec.service-3a11ah\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-systemd-logind.service-M14bys\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -152,10 +152,10 @@ shairport-sync-metadata
 shairport-sync.conf
 snapfifo
 sshtunnel.sh
-systemd-private-3f4c632fd31e4e12910edef49b8de115-bluealsa.service-wTPHYh
-systemd-private-3f4c632fd31e4e12910edef49b8de115-haveged.service-r8T6mA
-systemd-private-3f4c632fd31e4e12910edef49b8de115-ntpsec.service-yRrZsK
-systemd-private-3f4c632fd31e4e12910edef49b8de115-systemd-logind.service-7NqP5M
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-bluealsa.service-Ah71xs
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-haveged.service-jiwUE3
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-ntpsec.service-3a11ah
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-systemd-logind.service-M14bys
 tisoc-controller
 updater
 upmpdcli.conf

@@ -56,7 +56,6 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
-  - [Collection Help](#collection-help)
 - [Stories](#stories)
   - [Album Story](#album-story)
   - [Album Credits](#album-credits)
@@ -82,6 +81,7 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Download Queue](#download-queue)
   - [Download Playlist](#download-playlist)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Collection Help](#collection-help)
   - [Collection Radio](#collection-radio)
     - [Collection Radio List](#collection-radio-list)
     - [Collection Radio Add](#collection-radio-add)
@@ -161,7 +161,7 @@ volumito --host volumio.local info
         "mute": false,
         "status": "play",
         "track": "Va tutto bene",
-        "volume": 21
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
@@ -234,7 +234,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-09-08T12:57:00.316Z] [INFO] Created configuration file "/home/user/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-09-10T12:43:29.557Z] [INFO] Created configuration file "/home/user/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -243,7 +243,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-09-08T12:57:00.863Z] [INFO] Created configuration file "/home/user/volumito.yaml"
+[2026-09-10T12:43:30.203Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,
@@ -437,25 +437,25 @@ volumito -v info
         "mute": false,
         "status": "play",
         "track": "Va tutto bene",
-        "volume": 19
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-09T16:08:27.502Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
-[2026-09-09T16:08:27.502Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-09T16:08:27.503Z] [DEBU] Initializing the REST API client...
-[2026-09-09T16:08:27.503Z] [DEBU] Initializing the REST API client... done
-[2026-09-09T16:08:27.503Z] [DEBU] Using the synchronous REST API client
-[2026-09-09T16:08:27.503Z] [DEBU] Opening the HTTP session...
-[2026-09-09T16:08:27.503Z] [DEBU] Opening the HTTP session... done
-[2026-09-09T16:08:27.503Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
-[2026-09-09T16:08:27.530Z] [DEBU] Response status: 200
-[2026-09-09T16:08:27.530Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
-[2026-09-09T16:08:27.532Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-09T16:08:27.532Z] [DEBU] Closing the HTTP session...
-[2026-09-09T16:08:27.532Z] [DEBU] Closing the HTTP session... done
+[2026-09-10T12:38:56.412Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-10T12:38:56.412Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:38:56.412Z] [DEBU] Initializing the Synchronous REST API client...
+[2026-09-10T12:38:56.412Z] [DEBU] Initializing the Synchronous REST API client... done
+[2026-09-10T12:38:56.412Z] [DEBU] Using the Synchronous REST API client
+[2026-09-10T12:38:56.412Z] [DEBU] Opening the HTTP session...
+[2026-09-10T12:38:56.413Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T12:38:56.413Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo...
+[2026-09-10T12:38:56.440Z] [DEBU] Response status: 200
+[2026-09-10T12:38:56.441Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getSystemInfo... done
+[2026-09-10T12:38:56.444Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:38:56.444Z] [DEBU] Closing the HTTP session...
+[2026-09-10T12:38:56.444Z] [DEBU] Closing the HTTP session... done
 ```
 
 The `-C / --api-client` option allows you to select
@@ -498,31 +498,31 @@ volumito -v -C asynchronous_websocket info
         "mute": false,
         "status": "play",
         "track": "Va tutto bene",
-        "volume": 19
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-09T16:08:28.108Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
-[2026-09-09T16:08:28.108Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-09T16:08:28.108Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-09T16:08:28.108Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-09T16:08:28.108Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-09T16:08:28.108Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-09T16:08:28.109Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-09T16:08:28.227Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-09T16:08:28.267Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-09T16:08:28.268Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-09T16:08:28.268Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-09T16:08:28.268Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-09T16:08:28.281Z] [DEBU] Received "pushSystemInfo"
-[2026-09-09T16:08:28.282Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-09T16:08:28.284Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-09T16:08:28.284Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-09T16:08:28.290Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-09T16:08:28.291Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-09T16:08:28.291Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-10T12:38:57.001Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-10T12:38:57.001Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:38:57.001Z] [DEBU] Initializing the Asynchronous WebSocket API client...
+[2026-09-10T12:38:57.001Z] [DEBU] Initializing the Asynchronous WebSocket API client... done
+[2026-09-10T12:38:57.001Z] [DEBU] Using the Asynchronous WebSocket API client
+[2026-09-10T12:38:57.001Z] [DEBU] Starting the event loop of the Asynchronous WebSocket API client...
+[2026-09-10T12:38:57.002Z] [DEBU] Starting the event loop of the Asynchronous WebSocket API client... done
+[2026-09-10T12:38:57.115Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-10T12:38:57.152Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-10T12:38:57.152Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-10T12:38:57.152Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-10T12:38:57.153Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-10T12:38:57.166Z] [DEBU] Received "pushSystemInfo"
+[2026-09-10T12:38:57.167Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-10T12:38:57.170Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:38:57.171Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-10T12:38:57.179Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-10T12:38:57.179Z] [DEBU] Stopping the event loop of the Asynchronous WebSocket API client...
+[2026-09-10T12:38:57.180Z] [DEBU] Stopping the event loop of the Asynchronous WebSocket API client... done
 ```
 
 or its short form `-C aw`:
@@ -546,31 +546,31 @@ volumito -v -C aw info
         "mute": false,
         "status": "play",
         "track": "Va tutto bene",
-        "volume": 19
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
     "variant": "volumio"
 }
-[2026-09-09T16:08:28.903Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
-[2026-09-09T16:08:28.904Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-09T16:08:28.904Z] [DEBU] Initializing the async WebSocket API client...
-[2026-09-09T16:08:28.904Z] [DEBU] Initializing the async WebSocket API client... done
-[2026-09-09T16:08:28.904Z] [DEBU] Using the asynchronous WebSocket API client
-[2026-09-09T16:08:28.904Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client...
-[2026-09-09T16:08:28.905Z] [DEBU] Starting the event loop of the asynchronous WebSocket API client... done
-[2026-09-09T16:08:29.033Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
-[2026-09-09T16:08:29.067Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
-[2026-09-09T16:08:29.068Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
-[2026-09-09T16:08:29.068Z] [DEBU] Emitting "getSystemInfo"...
-[2026-09-09T16:08:29.068Z] [DEBU] Emitting "getSystemInfo"... done
-[2026-09-09T16:08:29.082Z] [DEBU] Received "pushSystemInfo"
-[2026-09-09T16:08:29.082Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
-[2026-09-09T16:08:29.084Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-09T16:08:29.085Z] [DEBU] Disconnecting from the Volumio WebSocket API...
-[2026-09-09T16:08:29.090Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
-[2026-09-09T16:08:29.090Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client...
-[2026-09-09T16:08:29.091Z] [DEBU] Stopping the event loop of the asynchronous WebSocket API client... done
+[2026-09-10T12:38:57.787Z] [DEBU] Using configuration file: "/home/user/.volumito.yaml"
+[2026-09-10T12:38:57.788Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:38:57.788Z] [DEBU] Initializing the Asynchronous WebSocket API client...
+[2026-09-10T12:38:57.788Z] [DEBU] Initializing the Asynchronous WebSocket API client... done
+[2026-09-10T12:38:57.788Z] [DEBU] Using the Asynchronous WebSocket API client
+[2026-09-10T12:38:57.788Z] [DEBU] Starting the event loop of the Asynchronous WebSocket API client...
+[2026-09-10T12:38:57.789Z] [DEBU] Starting the event loop of the Asynchronous WebSocket API client... done
+[2026-09-10T12:38:57.902Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"...
+[2026-09-10T12:38:57.937Z] [DEBU] Connecting to the Volumio WebSocket API at "http://volumio.local:3000"... done
+[2026-09-10T12:38:57.938Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"...
+[2026-09-10T12:38:57.938Z] [DEBU] Emitting "getSystemInfo"...
+[2026-09-10T12:38:57.938Z] [DEBU] Emitting "getSystemInfo"... done
+[2026-09-10T12:38:57.948Z] [DEBU] Received "pushSystemInfo"
+[2026-09-10T12:38:57.948Z] [DEBU] Requesting "getSystemInfo", waiting for "pushSystemInfo"... done
+[2026-09-10T12:38:57.951Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:38:57.951Z] [DEBU] Disconnecting from the Volumio WebSocket API...
+[2026-09-10T12:38:57.958Z] [DEBU] Disconnecting from the Volumio WebSocket API... done
+[2026-09-10T12:38:57.958Z] [DEBU] Stopping the event loop of the Asynchronous WebSocket API client...
+[2026-09-10T12:38:57.959Z] [DEBU] Stopping the event loop of the Asynchronous WebSocket API client... done
 ```
 
 Most of the commands that `volumito` provides are available
@@ -586,7 +586,7 @@ return an error similar to the following:
 
 ```bash
 volumito collection radio add "Radio Volumito Docs" "https://some.url"
-[2026-09-09T16:08:29.735Z] [ERRO] API client error: The synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
+[2026-09-10T12:38:58.561Z] [ERRO] API client error: The Synchronous REST API client does not offer the favourites and the web radios: use --api-client synchronous_websocket or asynchronous_websocket, or --allow-fallback-to-websocket-api
 ```
 
 It is possible to fall back to the appropriate client
@@ -605,8 +605,8 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-09T16:08:30.502Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
-[2026-09-09T16:08:30.663Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T12:38:59.274Z] [WARN] Falling back to the WebSocket API client for the favourites and the web radios (the REST API does not offer them)
+[2026-09-10T12:38:59.446Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 
@@ -628,11 +628,11 @@ volumito playback status
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.000",
+    "seek": "00:00:01.000",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
 ```
 
@@ -648,8 +648,8 @@ Title               : Va tutto bene
 Artist              : Enrico Ruggeri
 Album               : Polvere
 Duration            : 00:03:16
-Seek                : 00:00:00.750
-Volume              : 19
+Seek                : 00:00:01.959
+Volume              : 20
 Mute                : False
 Tracktype           : qobuz
 Samplerate          : 44.1 kHz
@@ -666,7 +666,7 @@ volumito playback status --fields ALL
     "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "bitrate": "1 Kbps",
+    "bitrate": "155 Kbps",
     "channels": 2,
     "consume": true,
     "dbVolume": null,
@@ -678,7 +678,7 @@ volumito playback status --fields ALL
     "repeat": null,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.423",
+    "seek": "00:00:02.710",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -687,7 +687,7 @@ volumito playback status --fields ALL
     "updatedb": false,
     "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 19
+    "volume": 20
 }
 ```
 
@@ -706,7 +706,7 @@ volumito playback status --fields ALL
 
 ```bash
 volumito -m playback status -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 2000, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "1 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 3515, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "155 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Pause And Stop
@@ -724,13 +724,13 @@ volumito playback pause
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.409",
+    "seek": "00:00:05.745",
     "status": "pause",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:53.737Z] [INFO] Command 'pause' executed successfully
+[2026-09-10T12:43:37.432Z] [INFO] Command 'pause' executed successfully
 ```
 
 By default, the resulting status of the playback is printed.
@@ -750,13 +750,13 @@ volumito playback toggle
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:05.412",
+    "seek": "00:00:07.748",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:56.404Z] [INFO] Command 'toggle' executed successfully
+[2026-09-10T12:43:40.858Z] [INFO] Command 'toggle' executed successfully
 ```
 
 To stop the playback, use `playback stop`:
@@ -772,13 +772,13 @@ volumito playback stop
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.250",
+    "seek": "00:00:00.265",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:13:59.167Z] [INFO] Command 'stop' executed successfully
+[2026-09-10T12:43:43.826Z] [INFO] Command 'stop' executed successfully
 ```
 
 ### Play Track At A Given Position
@@ -796,13 +796,13 @@ volumito playback play
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.273",
+    "seek": "00:00:00.553",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:01.819Z] [INFO] Command 'play' executed successfully
+[2026-09-10T12:43:47.090Z] [INFO] Command 'play' executed successfully
 ```
 
 It accepts an optional positional argument
@@ -813,21 +813,21 @@ For example, to play the third track:
 ```bash
 volumito playback play 3
 {
-    "album": "Polvere",
+    "album": "La Vie En Rouge",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
+    "duration": "00:04:08",
     "mute": false,
     "position": 3,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.024",
+    "seek": "00:00:01.623",
     "status": "play",
-    "title": "Va tutto bene",
+    "title": "La Vie En Rouge",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:04.754Z] [INFO] Command 'play' executed successfully
+[2026-09-10T12:43:50.205Z] [INFO] Command 'play' executed successfully
 ```
 
 ### Play Previous Or Next Track
@@ -850,9 +850,9 @@ volumito playback next
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:07.523Z] [INFO] Command 'next' executed successfully
+[2026-09-10T12:43:53.128Z] [INFO] Command 'next' executed successfully
 ```
 
 ```bash
@@ -866,13 +866,13 @@ volumito playback previous
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.002",
+    "seek": "00:00:02.003",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:10.212Z] [INFO] Command 'previous' executed successfully
+[2026-09-10T12:43:56.123Z] [INFO] Command 'previous' executed successfully
 ```
 
 ### Seek Within The Current Track
@@ -882,7 +882,7 @@ can be queried with `playback seek`:
 
 ```bash
 volumito playback seek
-00:00:02.502
+00:00:02.754
 ```
 
 and it can be set by providing a new value,
@@ -899,13 +899,13 @@ volumito playback seek 42
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:44.002",
+    "seek": "00:00:44.003",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:13.580Z] [INFO] Command 'seek 42' executed successfully
+[2026-09-10T12:43:59.848Z] [INFO] Command 'seek 42' executed successfully
 ```
 
 or in `MM:SS` or `HH:MM:SS` format:
@@ -921,13 +921,13 @@ volumito playback seek 00:01:42
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:44.001",
+    "seek": "00:01:44.020",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:16.350Z] [INFO] Command 'seek 102' executed successfully
+[2026-09-10T12:44:02.855Z] [INFO] Command 'seek 102' executed successfully
 ```
 
 or `plus/increase/up/forward` and `minus/decrease/down/backward`:
@@ -943,13 +943,13 @@ volumito playback seek forward
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:56.607",
+    "seek": "00:01:56.773",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:19.016Z] [INFO] Command 'seek plus' executed successfully
+[2026-09-10T12:44:05.684Z] [INFO] Command 'seek plus' executed successfully
 ```
 
 ```bash
@@ -963,13 +963,13 @@ volumito playback seek minus
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:49.314",
+    "seek": "00:01:49.772",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:21.705Z] [INFO] Command 'seek minus' executed successfully
+[2026-09-10T12:44:08.764Z] [INFO] Command 'seek minus' executed successfully
 ```
 
 ### Volume Control
@@ -980,7 +980,7 @@ can be queried with `playback volume`:
 
 ```bash
 volumito playback volume
-19
+20
 ```
 
 and it can be set by providing a new value, either numerical:
@@ -996,13 +996,13 @@ volumito playback volume 20
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:52.613",
+    "seek": "00:01:53.376",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-09T16:14:25.052Z] [INFO] Command 'volume 20' executed successfully
+[2026-09-10T12:44:12.338Z] [INFO] Command 'volume 20' executed successfully
 ```
 
 or `plus/increase/up` and `minus/decrease/down`:
@@ -1018,13 +1018,13 @@ volumito playback volume plus
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:55.316",
+    "seek": "00:01:55.939",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-09T16:14:27.733Z] [INFO] Command 'volume plus' executed successfully
+[2026-09-10T12:44:15.002Z] [INFO] Command 'volume plus' executed successfully
 ```
 
 ```bash
@@ -1038,13 +1038,13 @@ volumito playback volume down
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:01:58.151",
+    "seek": "00:01:58.723",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:30.518Z] [INFO] Command 'volume minus' executed successfully
+[2026-09-10T12:44:17.685Z] [INFO] Command 'volume minus' executed successfully
 ```
 
 The playback volume can be muted and unmuted with
@@ -1061,13 +1061,13 @@ volumito playback mute
     "mute": true,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:00.826",
+    "seek": "00:02:01.353",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:33.201Z] [INFO] Command 'volume mute' executed successfully
+[2026-09-10T12:44:20.325Z] [INFO] Command 'volume mute' executed successfully
 ```
 
 ```bash
@@ -1081,13 +1081,13 @@ volumito playback unmute
     "mute": false,
     "position": 4,
     "samplerate": "44.1 kHz",
-    "seek": "00:02:03.525",
+    "seek": "00:02:04.144",
     "status": "play",
     "title": "Rien Ne Va Plus",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:35.890Z] [INFO] Command 'volume unmute' executed successfully
+[2026-09-10T12:44:23.156Z] [INFO] Command 'volume unmute' executed successfully
 ```
 
 ### Playback Sleep
@@ -1119,7 +1119,7 @@ volumito -C aw playback sleep 42
     "minutes": 41,
     "time": "0:41"
 }
-[2026-09-09T16:14:40.578Z] [INFO] Command 'sleep 42' executed successfully
+[2026-09-10T12:44:28.200Z] [INFO] Command 'sleep 42' executed successfully
 ```
 
 ```bash
@@ -1129,7 +1129,7 @@ volumito -C aw playback sleep 2:00
     "minutes": 119,
     "time": "1:59"
 }
-[2026-09-09T16:14:41.334Z] [INFO] Command 'sleep 120' executed successfully
+[2026-09-10T12:44:29.086Z] [INFO] Command 'sleep 120' executed successfully
 ```
 
 > [!NOTE]
@@ -1147,7 +1147,7 @@ volumito -C aw playback sleep off
     "minutes": 0,
     "time": "0:0"
 }
-[2026-09-09T16:14:42.142Z] [INFO] Command 'sleep off' executed successfully
+[2026-09-10T12:44:29.940Z] [INFO] Command 'sleep off' executed successfully
 ```
 
 ### Infinity Playback
@@ -1178,7 +1178,7 @@ volumito -C aw playback infinity on
     "available": true,
     "enabled": true
 }
-[2026-09-09T16:14:44.507Z] [INFO] Command 'infinity on' executed successfully
+[2026-09-10T12:44:32.539Z] [INFO] Command 'infinity on' executed successfully
 ```
 
 ```bash
@@ -1187,7 +1187,7 @@ volumito -C aw playback infinity off
     "available": true,
     "enabled": false
 }
-[2026-09-09T16:14:45.312Z] [INFO] Command 'infinity off' executed successfully
+[2026-09-10T12:44:33.572Z] [INFO] Command 'infinity off' executed successfully
 ```
 
 ### Playback Help
@@ -1283,7 +1283,7 @@ volumito queue track info --fields ALL
     "repeat": null,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.468",
+    "seek": "00:00:04.302",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -1292,13 +1292,13 @@ volumito queue track info --fields ALL
     "updatedb": false,
     "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 19
+    "volume": 20
 }
 ```
 
 ```bash
 volumito -m queue track info -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 4115, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "155 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 5104, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "155 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Track Has Previous, Has Next
@@ -1529,7 +1529,7 @@ volumito queue status --fields ALL
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": "00:00:02.754",
+        "seek": "00:00:02.729",
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -1567,7 +1567,7 @@ Commands:
   remove     Remove the track at POSITION from the queue.
   repeat     Print or set the repeat mode.
   replace    Replace the queue with the content of URI, playing it unless...
-  save       Save the current queue as the playlist NAME, replacing it if...
+  save       Save the current queue as the new playlist NAME.
   status     Print the current track with the position, length, and...
   track      Query the current track of the queue (information, audio,...
 ```
@@ -1607,8 +1607,8 @@ volumito queue clear
     "title": "",
     "volume": 20
 }
-[2026-09-09T13:28:39.718Z] [INFO] Command 'clear' executed successfully
-[2026-09-09T13:28:41.735Z] [INFO] Command 'stop' executed successfully
+[2026-09-10T12:44:49.231Z] [INFO] Command 'clear' executed successfully
+[2026-09-10T12:44:51.251Z] [INFO] Command 'stop' executed successfully
 ```
 
 
@@ -1758,13 +1758,13 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.005",
+    "seek": "00:00:02.008",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:58.447Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-10T12:44:58.859Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Enqueue A Playlist
@@ -1788,13 +1788,13 @@ volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.371",
+    "seek": "00:00:04.211",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:15:01.216Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-10T12:45:01.862Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Playlist Help
@@ -1878,10 +1878,10 @@ QOBUZ Albums
    qobuz://album/g0tont0oqabmc
 3. The Beatles - The Beatles
    qobuz://album/0060254767017
-4. The Beatles 1962 – 1966 - The Beatles
+4. Revolver - The Beatles
+   qobuz://album/h37m83cfcns7b
+5. The Beatles 1962 – 1966 - The Beatles
    qobuz://album/sixjslxc22vhb
-5. The Beatles 1967 – 1970 - The Beatles
-   qobuz://album/rlrv742tr79jb
 ```
 
 ### List Tracks Of An Artist
@@ -2029,13 +2029,13 @@ volumito queue replace "qobuz://album/sixjslxc22vhb"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.500",
+    "seek": "00:00:00.251",
     "status": "play",
     "title": "Love Me Do",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-08T09:30:24.560Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:39.644Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2437,13 +2437,13 @@ volumito queue replace "qobuz://song/64868961"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:02.002",
+    "seek": "00:00:02.003",
     "status": "play",
     "title": "Love Me Do",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-08T09:30:28.139Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:43.389Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2475,13 +2475,13 @@ volumito queue replace "albums://Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.002",
+    "seek": "00:00:01.837",
     "status": "play",
     "title": "Nella mia città",
     "trackType": "flac",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-08T09:30:31.458Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:46.732Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -2499,9 +2499,9 @@ volumito queue replace "artists://Enrico%20Ruggeri"
     "status": "play",
     "title": "La Vie En Rouge",
     "trackType": "flac",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-08T09:30:34.385Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:49.692Z] [INFO] Command 'replace' executed successfully
 ```
 
 
@@ -2759,13 +2759,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.003",
+    "seek": "00:00:01.298",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:11:20.636Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:12.828Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -2781,13 +2781,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.008",
+    "seek": "00:00:02.001",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:11:23.673Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:15.566Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -2803,62 +2803,13 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.878",
+    "seek": "00:00:03.118",
     "status": "play",
     "title": "Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:11:26.561Z] [INFO] Command 'replace' executed successfully
-```
-
-### Collection Help
-
-These are all the subcommands of the `collection` group:
-
-```bash
-volumito collection --help
-Usage: volumito collection [OPTIONS] COMMAND [ARGS]...
-
-  Query the music collection managed by Volumio.
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  browse      Browse the content that URI lists in the collection of the...
-  directory   Manage the directories of the local library of the collection.
-  favourite   Manage the favourites, and the radio favourites (--radio).
-  radio       Manage the Web radios saved by the user (Web radio plugin).
-  search      Search QUERY in the Volumio sources currently enabled.
-  source      Manage the music sources (plugins) of the Volumio host.
-  statistics  Print the statistics of the music collection.
-  update      Update the collection of the Volumio host, looking for...
-```
-
-All commands, with the exception of `collection browse`,
-`collection search` and `collection statistics`,
-require a WebSocket API client, as their help message tells:
-
-```bash
-volumito collection update --help
-Usage: volumito collection update [OPTIONS] [URI]
-
-  Update the collection of the Volumio host, looking for changes.
-
-  With URI, only its content is updated. The options select another refresh
-  instead, and take no URI: --rescan rescans the collection from scratch (slow
-  on a large collection), and --thumbnails rebuilds the thumbnails of the
-  album art. They are mutually exclusive.
-
-  Needs a WebSocket API client.
-
-Options:
-  --rescan      Rescan the whole collection from scratch, instead of looking
-                for changes (slow on a large collection).
-  --thumbnails  Rebuild the thumbnails of the album art, instead of looking
-                for changes.
-  --help        Show this message and exit.
+[2026-09-10T12:39:18.463Z] [INFO] Command 'replace' executed successfully
 ```
 
 
@@ -3553,13 +3504,13 @@ volumito -C aw queue add qobuz://song/63333861
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.509",
+    "seek": "00:00:03.252",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T11:25:21.287Z] [INFO] Command 'add' executed successfully
+[2026-09-10T12:42:56.281Z] [INFO] Command 'add' executed successfully
 ```
 
 The above command appends the track
@@ -3621,13 +3572,13 @@ volumito -C aw queue add qobuz://song/63333861 --next
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:06.264",
+    "seek": "00:00:07.503",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T11:25:25.206Z] [INFO] Command 'add' executed successfully
+[2026-09-10T12:43:00.417Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -3691,7 +3642,7 @@ volumito -C aw queue add qobuz://song/63333861 --play
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T11:25:28.763Z] [INFO] Command 'add' executed successfully
+[2026-09-10T12:43:04.484Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -3759,13 +3710,13 @@ volumito -C aw queue remove 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:04.013",
+    "seek": "00:00:04.913",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T11:25:32.381Z] [INFO] Command 'remove' executed successfully
+[2026-09-10T12:43:09.027Z] [INFO] Command 'remove' executed successfully
 ```
 
 ```bash
@@ -3826,13 +3777,13 @@ volumito -C aw queue move 1 3
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:07.767",
+    "seek": "00:00:09.203",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T11:25:36.206Z] [INFO] Command 'move' executed successfully
+[2026-09-10T12:43:13.333Z] [INFO] Command 'move' executed successfully
 ```
 
 ```bash
@@ -3884,7 +3835,7 @@ providing a name for the playlist to be created:
 
 ```bash
 volumito -C aw queue save "volumito docs queue save"
-[2026-09-10T11:25:40.955Z] [ERRO] Playlist already exists: "volumito docs queue save" (use --overwrite-existing-playlist to overwrite)
+[2026-09-10T12:43:18.283Z] [ERRO] Playlist already exists: "volumito docs queue save" (use --overwrite-existing-playlist to overwrite)
 ```
 
 > [!CAUTION]
@@ -3894,7 +3845,7 @@ volumito -C aw queue save "volumito docs queue save"
 
 ```bash
 volumito -C aw queue save "volumito docs queue save" --overwrite-existing-playlist
-[2026-09-10T11:25:41.768Z] [INFO] Command 'save' executed successfully
+[2026-09-10T12:43:19.170Z] [INFO] Command 'save' executed successfully
 ```
 
 
@@ -3924,7 +3875,6 @@ Command `playlist create` allows you to create a new playlist:
 ```bash
 volumito -C aw playlist create "volumito docs playlist"
 [
-    "abc",
     "volumito docs playlist",
     "volumito test alarm",
     "volumito test local album",
@@ -3934,7 +3884,7 @@ volumito -C aw playlist create "volumito docs playlist"
     "volumito test qobuz single album",
     "volumito test qobuz single album 3 tracks"
 ]
-[2026-09-10T11:52:28.156Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
+[2026-09-10T12:41:41.750Z] [INFO] Command 'create playlist "volumito docs playlist"' executed successfully
 ```
 
 The playlist is initially empty:
@@ -3967,7 +3917,7 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://song/63333861
         "uri": "qobuz://song/63333861"
     }
 ]
-[2026-09-10T11:52:30.820Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-10T12:41:43.926Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 As you can see, the above command appends the track
@@ -4071,8 +4021,8 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
         "uri": "qobuz://song/2833729"
     }
 ]
-[2026-09-10T11:52:32.066Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
-[2026-09-10T11:52:38.661Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-10T12:41:45.164Z] [INFO] Adding the 12 tracks listed at "qobuz://album/0090317058467"
+[2026-09-10T12:41:51.544Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 When adding an item that is not a track or a local URI (e.g., a Qobuz album),
@@ -4101,7 +4051,7 @@ volumito -C aw playlist add "volumito docs playlist" qobuz://album/0090317058467
         "uri": "qobuz://album/0090317058467"
     }
 ]
-[2026-09-10T11:52:43.473Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
+[2026-09-10T12:41:56.257Z] [INFO] Command 'add to playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!NOTE]
@@ -4236,7 +4186,7 @@ volumito -C aw playlist remove "volumito docs playlist" qobuz://song/63333861
         "uri": "qobuz://song/2833723"
     }
 ]
-[2026-09-10T11:53:06.208Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+[2026-09-10T12:42:19.334Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!TIP]
@@ -4288,7 +4238,7 @@ volumito -C aw playlist remove "volumito docs playlist" -p 2
         "uri": "qobuz://song/2833723"
     }
 ]
-[2026-09-10T11:53:07.293Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
+[2026-09-10T12:42:20.720Z] [INFO] Command 'remove from playlist "volumito docs playlist"' executed successfully
 ```
 
 > [!TIP]
@@ -4298,14 +4248,14 @@ volumito -C aw playlist remove "volumito docs playlist" -p 2
 ### Copy A Playlist
 
 It is possible to copy a playlist, with all or part of its contents,
-as a new playlist, using `playlist copy` command.
+as a new playlist, using the `playlist copy` command.
 
-Without arguments, the playlist is copied with all its contents:
+Without options, the playlist is copied with all its contents:
 
 ```bash
 volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2"
-[2026-09-10T11:53:09.184Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
-[2026-09-10T11:53:09.191Z] [ERRO] Playlist already exists: "volumito docs playlist2" (use --overwrite-existing-playlist to overwrite)
+[2026-09-10T12:42:24.232Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
+[2026-09-10T12:42:24.239Z] [ERRO] Playlist already exists: "volumito docs playlist2" (use --overwrite-existing-playlist to overwrite)
 ```
 
 > [!CAUTION]
@@ -4352,9 +4302,9 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist2" 
         "uri": "qobuz://song/2833723"
     }
 ]
-[2026-09-10T11:53:10.111Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
-[2026-09-10T11:53:10.119Z] [INFO] Command 'delete playlist "volumito docs playlist2"' executed successfully
-[2026-09-10T11:53:14.610Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
+[2026-09-10T12:42:26.106Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist2"
+[2026-09-10T12:42:26.112Z] [INFO] Command 'delete playlist "volumito docs playlist2"' executed successfully
+[2026-09-10T12:42:30.738Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist2"' executed successfully
 ```
 
 With the `-p / --position` option, only the specified tracks will be copied:
@@ -4384,8 +4334,8 @@ volumito -C aw playlist copy "volumito docs playlist" "volumito docs playlist3" 
         "uri": "qobuz://song/2833722"
     }
 ]
-[2026-09-10T11:53:15.607Z] [INFO] Copying 3 items of "volumito docs playlist" to "volumito docs playlist3"
-[2026-09-10T11:53:17.001Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
+[2026-09-10T12:42:32.191Z] [INFO] Copying 3 items of "volumito docs playlist" to "volumito docs playlist3"
+[2026-09-10T12:42:33.401Z] [INFO] Command 'copy playlist "volumito docs playlist" to "volumito docs playlist3"' executed successfully
 ```
 
 ### Rename A Playlist
@@ -4394,8 +4344,8 @@ The `playlist rename` command gives a playlist a new name:
 
 ```bash
 volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4"
-[2026-09-10T11:53:18.905Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
-[2026-09-10T11:53:18.911Z] [ERRO] Playlist already exists: "volumito docs playlist4" (use --overwrite-existing-playlist to overwrite)
+[2026-09-10T12:42:35.445Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
+[2026-09-10T12:42:35.451Z] [ERRO] Playlist already exists: "volumito docs playlist4" (use --overwrite-existing-playlist to overwrite)
 ```
 
 > [!CAUTION]
@@ -4442,9 +4392,9 @@ volumito -C aw playlist rename "volumito docs playlist" "volumito docs playlist4
         "uri": "qobuz://song/2833723"
     }
 ]
-[2026-09-10T11:53:19.793Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
-[2026-09-10T11:53:19.798Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
-[2026-09-10T11:53:24.159Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
+[2026-09-10T12:42:36.582Z] [INFO] Copying 5 items of "volumito docs playlist" to "volumito docs playlist4"
+[2026-09-10T12:42:36.587Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
+[2026-09-10T12:42:41.123Z] [INFO] Command 'rename playlist "volumito docs playlist" to "volumito docs playlist4"' executed successfully
 ```
 
 > [!NOTE]
@@ -4459,7 +4409,7 @@ The `playlist delete` command deletes a playlist:
 
 ```bash
 volumito -C aw playlist delete "volumito docs playlist4"
-[2026-09-10T11:53:24.989Z] [ERRO] Refusing to delete the playlist without -y/--yes: "volumito docs playlist4"
+[2026-09-10T12:42:41.895Z] [ERRO] Refusing to delete the playlist without -y/--yes: "volumito docs playlist4"
 ```
 
 > [!CAUTION]
@@ -4480,7 +4430,7 @@ volumito -C aw playlist delete "volumito docs playlist4" --yes
     "volumito test qobuz single album",
     "volumito test qobuz single album 3 tracks"
 ]
-[2026-09-10T11:53:25.854Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
+[2026-09-10T12:42:42.810Z] [INFO] Command 'delete playlist "volumito docs playlist4"' executed successfully
 ```
 
 
@@ -4493,25 +4443,26 @@ volumito -C aw playlist delete "volumito docs playlist4" --yes
 > the destination directory `/tmp/o/` is used
 > as it is defined in the configuration file used to generate them.
 >
-> See Sections [Configuration File](#configuration-file) and
-> [Setup Configuration File](#setup-configuration-file) for details.
+> See Sections
+> [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
+> and [The Configuration File](#the-configuration-file) for details.
 
 #### Download Track Albumart (Cover)
 
 ```bash
 volumito queue track albumart
 <REDACTED URL>
-[2026-09-10T11:58:08.894Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
-[2026-09-10T11:58:08.960Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
-[2026-09-10T11:58:08.960Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
+[2026-09-10T12:40:32.766Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"...
+[2026-09-10T12:40:32.830Z] [INFO] Downloading album art to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"... done
+[2026-09-10T12:40:32.831Z] [INFO] Album art successfully downloaded to "/tmp/o/000___Polvere___Enrico_Ruggeri.jpg"
 ```
 
 ```bash
 volumito queue track albumart -o /tmp/cover.jpg
 <REDACTED URL>
-[2026-09-10T11:58:09.544Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
-[2026-09-10T11:58:09.602Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
-[2026-09-10T11:58:09.602Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
+[2026-09-10T12:40:33.461Z] [INFO] Downloading album art to "/tmp/cover.jpg"...
+[2026-09-10T12:40:33.539Z] [INFO] Downloading album art to "/tmp/cover.jpg"... done
+[2026-09-10T12:40:33.540Z] [INFO] Album art successfully downloaded to "/tmp/cover.jpg"
 ```
 
 #### Download Track Audio
@@ -4519,30 +4470,29 @@ volumito queue track albumart -o /tmp/cover.jpg
 ```bash
 volumito queue track audio
 <REDACTED URL>
-[2026-09-10T11:58:10.211Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"...
-[2026-09-10T11:58:10.998Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"... done
-[2026-09-10T11:58:10.999Z] [INFO] Track successfully downloaded to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
+[2026-09-10T12:40:34.170Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"...
+[2026-09-10T12:40:35.062Z] [INFO] Downloading track to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"... done
+[2026-09-10T12:40:35.062Z] [INFO] Track successfully downloaded to "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
 ```
 
 ```bash
-# override the configuration file, use an explicit output path
 volumito queue track audio -o /tmp/audio.flac
 <REDACTED URL>
-[2026-09-10T11:58:11.716Z] [INFO] Downloading track to "/tmp/audio.flac"...
-[2026-09-10T11:58:12.512Z] [INFO] Downloading track to "/tmp/audio.flac"... done
-[2026-09-10T11:58:12.513Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
+[2026-09-10T12:40:35.792Z] [INFO] Downloading track to "/tmp/audio.flac"...
+[2026-09-10T12:40:36.441Z] [INFO] Downloading track to "/tmp/audio.flac"... done
+[2026-09-10T12:40:36.442Z] [INFO] Track successfully downloaded to "/tmp/audio.flac"
 ```
 
 ### Download Queue
 
 ```bash
 volumito queue download
-[2026-09-10T11:58:13.222Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
-[2026-09-10T11:58:18.416Z] [INFO] [1/4] downloaded: "/tmp/o/Enrico_Ruggeri/Polvere/001___Va_tutto_bene.flac"
-[2026-09-10T11:58:23.981Z] [INFO] [2/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac"
-[2026-09-10T11:58:29.491Z] [INFO] [3/4] downloaded: "/tmp/o/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac"
-[2026-09-10T11:58:34.885Z] [INFO] [4/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/2/011___Il_Mare_D'Inverno.flac"
-[2026-09-10T11:58:37.378Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+[2026-09-10T12:40:37.161Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
+[2026-09-10T12:40:42.506Z] [INFO] [1/4] downloaded: "/tmp/o/Enrico_Ruggeri/Polvere/001___Va_tutto_bene.flac"
+[2026-09-10T12:40:53.156Z] [INFO] [2/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/1/001___La_Vie_En_Rouge.flac"
+[2026-09-10T12:40:58.621Z] [INFO] [3/4] downloaded: "/tmp/o/Mango/Sirtaki/002___I_giochi_del_vento_sul_lago_salato.flac"
+[2026-09-10T12:41:04.274Z] [INFO] [4/4] downloaded: "/tmp/o/Enrico_Ruggeri/La_Vie_En_Rouge/2/011___Il_Mare_D'Inverno.flac"
+[2026-09-10T12:41:06.553Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
 ```
 
 ### Download Playlist
@@ -4553,27 +4503,74 @@ volumito playlist download "volumito test qobuz multiple albums 4 tracks"
     "album": "Polvere",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "channels": 2,
-    "duration": "00:03:16",
+    "duration": "00:03:15",
     "mute": false,
     "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:00.258",
-    "status": "play",
+    "samplerate": "44 KHz",
+    "seek": "00:00:04.008",
+    "status": "stop",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T11:58:42.141Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
-[2026-09-10T11:58:47.270Z] [INFO] [1/4] downloaded: "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
-[2026-09-10T11:58:52.756Z] [INFO] [2/4] downloaded: "/tmp/o/002___La_Vie_En_Rouge___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
-[2026-09-10T11:58:58.274Z] [INFO] [3/4] downloaded: "/tmp/o/003___I_giochi_del_vento_sul_lago_salato___Sirtaki___Mango.flac"
-[2026-09-10T11:59:03.884Z] [INFO] [4/4] downloaded: "/tmp/o/004___Il_Mare_D'Inverno___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
-[2026-09-10T11:59:06.358Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
+[2026-09-10T12:41:11.346Z] [INFO] Creating manifest file "/tmp/o/manifest.json"
+[2026-09-10T12:41:16.708Z] [INFO] [1/4] downloaded: "/tmp/o/001___Va_tutto_bene___Polvere___Enrico_Ruggeri.flac"
+[2026-09-10T12:41:22.191Z] [INFO] [2/4] downloaded: "/tmp/o/002___La_Vie_En_Rouge___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
+[2026-09-10T12:41:27.848Z] [INFO] [3/4] downloaded: "/tmp/o/003___I_giochi_del_vento_sul_lago_salato___Sirtaki___Mango.flac"
+[2026-09-10T12:41:33.446Z] [INFO] [4/4] downloaded: "/tmp/o/004___Il_Mare_D'Inverno___La_Vie_En_Rouge___Enrico_Ruggeri.flac"
+[2026-09-10T12:41:35.720Z] [INFO] Downloaded 4, skipped 0, errors 0; manifest written to "/tmp/o/manifest.json"
 ```
 
 
 ## Miscellaneous Commands
+
+### Collection Help
+
+These are all the subcommands of the `collection` group:
+
+```bash
+volumito collection --help
+Usage: volumito collection [OPTIONS] COMMAND [ARGS]...
+
+  Query the music collection managed by Volumio.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  browse      Browse the content that URI lists in the collection of the...
+  directory   Manage the directories of the local library of the collection.
+  favourite   Manage the favourites, and the radio favourites (--radio).
+  radio       Manage the Web radios saved by the user (Web radio plugin).
+  search      Search QUERY in the Volumio sources currently enabled.
+  source      Manage the music sources (plugins) of the Volumio host.
+  statistics  Print the statistics of the music collection.
+  update      Update the collection of the Volumio host, looking for...
+```
+
+Most subcommands require a WebSocket API client,
+as their help message tells:
+
+```bash
+volumito collection update --help
+Usage: volumito collection update [OPTIONS] [URI]
+
+  Update the collection of the Volumio host, looking for changes.
+
+  With URI, only its content is updated. The options select another refresh
+  instead, and take no URI: --rescan rescans the collection from scratch (slow
+  on a large collection), and --thumbnails rebuilds the thumbnails of the
+  album art. They are mutually exclusive.
+
+  Needs a WebSocket API client.
+
+Options:
+  --rescan      Rescan the whole collection from scratch, instead of looking
+                for changes (slow on a large collection).
+  --thumbnails  Rebuild the thumbnails of the album art, instead of looking
+                for changes.
+  --help        Show this message and exit.
+```
 
 ### Collection Radio
 
@@ -4614,7 +4611,7 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-09T16:08:33.743Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T12:39:23.450Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 #### Collection Radio Remove
@@ -4634,7 +4631,7 @@ Volumio Browse Results
    https://streamingv2.shoutcast.com/rtl-1025
 2. Radio B&M
    https://ice02.fluidstream.net/bella.mp3
-[2026-09-09T16:08:34.764Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T12:39:24.477Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
 ```
 
 ### Collection Source
@@ -4737,7 +4734,7 @@ To disable a source:
 
 ```bash
 volumito -C aw collection source disable "bluetooth"
-[2026-09-09T16:08:36.603Z] [INFO] Command 'disable source "bluetooth"' executed successfully
+[2026-09-10T12:39:53.467Z] [INFO] Command 'disable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -4827,7 +4824,7 @@ To enable a source:
 
 ```bash
 volumito -C aw collection source enable "bluetooth"
-[2026-09-09T16:08:48.347Z] [INFO] Command 'enable source "bluetooth"' executed successfully
+[2026-09-10T12:40:05.037Z] [INFO] Command 'enable source "bluetooth"' executed successfully
 ```
 
 ```bash
@@ -4937,21 +4934,21 @@ updates the music collection:
 
 ```bash
 volumito -C aw collection update
-[2026-09-09T16:09:00.215Z] [INFO] Command 'update library' executed successfully
+[2026-09-10T12:40:17.579Z] [INFO] Command 'update library' executed successfully
 ```
 
 Pass the `--thumbnails` option to regenerate only the thumbnails:
 
 ```bash
 volumito -C aw collection update --thumbnails
-[2026-09-09T16:09:00.977Z] [INFO] Command 'regenerate thumbnails' executed successfully
+[2026-09-10T12:40:18.481Z] [INFO] Command 'regenerate thumbnails' executed successfully
 ```
 
 Pass the `--rescan` option to force a full refresh of the music collection:
 
 ```bash
 volumito -C aw collection update --rescan
-[2026-09-09T16:09:01.775Z] [INFO] Command 'rescan library' executed successfully
+[2026-09-10T12:40:19.324Z] [INFO] Command 'rescan library' executed successfully
 ```
 
 ### Command Discovery
@@ -5175,14 +5172,15 @@ for instance `qti` for `queue track info`, so that
 ```bash
 volumito queue track info
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:04:08",
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "title": "Intro",
-    "trackType": "qobuz"
+    "samplerate": "44.1 kHz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac"
 }
 ```
 
@@ -5191,14 +5189,15 @@ and
 ```bash
 volumito qti
 {
-    "album": "Absolution XX Anniversary",
-    "artist": "Muse",
+    "album": "La Vie En Rouge",
+    "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
-    "duration": "00:00:22",
+    "channels": 2,
+    "duration": "00:04:08",
     "position": 1,
-    "samplerate": "44.1 KHz",
-    "title": "Intro",
-    "trackType": "qobuz"
+    "samplerate": "44.1 kHz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac"
 }
 ```
 
@@ -6030,7 +6029,7 @@ The `configuration create` command saves a good default template to file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-10T12:08:15.164Z] [INFO] Created configuration file "/home/user/volumito.yaml"
+[2026-09-10T12:40:25.258Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 Without the `-o / --output-file` option, a `volumito.yaml` file
@@ -6040,7 +6039,7 @@ Note that the command refuses to overwrite an existing file:
 
 ```bash
 volumito configuration create -o ~/volumito.yaml
-[2026-09-10T12:08:15.719Z] [ERRO] File already exists: "/home/user/volumito.yaml" (use --overwrite-existing-files to overwrite)
+[2026-09-10T12:40:25.810Z] [ERRO] File already exists: "/home/user/volumito.yaml" (use --overwrite-existing-files to overwrite)
 ```
 
 > [!TIP]
@@ -6060,7 +6059,7 @@ in the configuration file are created accordingly:
 
 ```bash
 volumito configuration create -o ~/volumito3.yaml --volumio-version 3
-[2026-09-10T12:08:16.279Z] [INFO] Created configuration file "/home/user/volumito3.yaml"
+[2026-09-10T12:40:26.362Z] [INFO] Created configuration file "/home/user/volumito3.yaml"
 ```
 
 #### Check A Configuration File
@@ -6141,7 +6140,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-10T12:08:16.856Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
+[2026-09-10T12:40:26.927Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
 ```
 
 Any fatal issues will be reported as errors,
@@ -6225,7 +6224,7 @@ volumio.ssh-password = None
 volumio.ssh-port = 22
 volumio.ssh-username = volumio
 volumio.websocket-port = 3000
-[2026-09-10T12:08:17.456Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
+[2026-09-10T12:40:27.500Z] [INFO] Configuration file "/home/user/volumito.yaml" is valid.
 ```
 
 #### Ignore All Configuration Files
@@ -6239,18 +6238,18 @@ To achieve that, the `-i / --ignore-configuration-file` global option is availab
 ```bash
 volumito -i playback status
 {
-    "album": "Polvere",
+    "album": "La Vie En Rouge",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
+    "duration": "00:04:08",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.258",
+    "seek": "00:00:39.478",
     "status": "play",
-    "title": "Va tutto bene",
-    "trackType": "qobuz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac",
     "volume": 20
 }
 ```
@@ -6260,67 +6259,67 @@ The effect is clear with the `-v / --verbose` option specified:
 ```bash
 volumito -v playback status
 {
-    "album": "Polvere",
+    "album": "La Vie En Rouge",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
+    "duration": "00:04:08",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.258",
+    "seek": "00:00:40.234",
     "status": "play",
-    "title": "Va tutto bene",
-    "trackType": "qobuz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:08:18.619Z] [DEBU] Using configuration file: "/home/user/volumito.yaml"
-[2026-09-10T12:08:18.620Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-10T12:08:18.620Z] [DEBU] Initializing the REST API client...
-[2026-09-10T12:08:18.620Z] [DEBU] Initializing the REST API client... done
-[2026-09-10T12:08:18.620Z] [DEBU] Using the synchronous REST API client
-[2026-09-10T12:08:18.621Z] [DEBU] Opening the HTTP session...
-[2026-09-10T12:08:18.621Z] [DEBU] Opening the HTTP session... done
-[2026-09-10T12:08:18.621Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-10T12:08:18.642Z] [DEBU] Response status: 200
-[2026-09-10T12:08:18.642Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-10T12:08:18.644Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-10T12:08:18.644Z] [DEBU] Successfully retrieved state
-[2026-09-10T12:08:18.645Z] [DEBU] Closing the HTTP session...
-[2026-09-10T12:08:18.645Z] [DEBU] Closing the HTTP session... done
+[2026-09-10T12:40:28.636Z] [DEBU] Using configuration file: "/home/user/volumito.yaml"
+[2026-09-10T12:40:28.637Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:40:28.637Z] [DEBU] Initializing the Synchronous REST API client...
+[2026-09-10T12:40:28.637Z] [DEBU] Initializing the Synchronous REST API client... done
+[2026-09-10T12:40:28.637Z] [DEBU] Using the Synchronous REST API client
+[2026-09-10T12:40:28.637Z] [DEBU] Opening the HTTP session...
+[2026-09-10T12:40:28.637Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T12:40:28.637Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-10T12:40:28.658Z] [DEBU] Response status: 200
+[2026-09-10T12:40:28.658Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-10T12:40:28.660Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:40:28.660Z] [DEBU] Successfully retrieved state
+[2026-09-10T12:40:28.661Z] [DEBU] Closing the HTTP session...
+[2026-09-10T12:40:28.661Z] [DEBU] Closing the HTTP session... done
 ```
 
 ```bash
 volumito -v -i playback status
 {
-    "album": "Polvere",
+    "album": "La Vie En Rouge",
     "artist": "Enrico Ruggeri",
     "bitdepth": "16 bit",
     "channels": 2,
-    "duration": "00:03:16",
+    "duration": "00:04:08",
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:00.258",
+    "seek": "00:00:40.734",
     "status": "play",
-    "title": "Va tutto bene",
-    "trackType": "qobuz",
+    "title": "La Vie En Rouge",
+    "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:08:19.182Z] [DEBU] Ignoring configuration files
-[2026-09-10T12:08:19.183Z] [DEBU] Connecting to http://volumio.local:3000...
-[2026-09-10T12:08:19.183Z] [DEBU] Initializing the REST API client...
-[2026-09-10T12:08:19.183Z] [DEBU] Initializing the REST API client... done
-[2026-09-10T12:08:19.183Z] [DEBU] Using the synchronous REST API client
-[2026-09-10T12:08:19.183Z] [DEBU] Opening the HTTP session...
-[2026-09-10T12:08:19.183Z] [DEBU] Opening the HTTP session... done
-[2026-09-10T12:08:19.183Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
-[2026-09-10T12:08:19.205Z] [DEBU] Response status: 200
-[2026-09-10T12:08:19.205Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
-[2026-09-10T12:08:19.207Z] [DEBU] Connecting to http://volumio.local:3000... done
-[2026-09-10T12:08:19.207Z] [DEBU] Successfully retrieved state
-[2026-09-10T12:08:19.207Z] [DEBU] Closing the HTTP session...
-[2026-09-10T12:08:19.208Z] [DEBU] Closing the HTTP session... done
+[2026-09-10T12:40:29.206Z] [DEBU] Ignoring configuration files
+[2026-09-10T12:40:29.207Z] [DEBU] Connecting to http://volumio.local:3000...
+[2026-09-10T12:40:29.207Z] [DEBU] Initializing the Synchronous REST API client...
+[2026-09-10T12:40:29.207Z] [DEBU] Initializing the Synchronous REST API client... done
+[2026-09-10T12:40:29.207Z] [DEBU] Using the Synchronous REST API client
+[2026-09-10T12:40:29.207Z] [DEBU] Opening the HTTP session...
+[2026-09-10T12:40:29.207Z] [DEBU] Opening the HTTP session... done
+[2026-09-10T12:40:29.207Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState...
+[2026-09-10T12:40:29.228Z] [DEBU] Response status: 200
+[2026-09-10T12:40:29.228Z] [DEBU] Requesting GET http://volumio.local:3000/api/v1/getState... done
+[2026-09-10T12:40:29.230Z] [DEBU] Connecting to http://volumio.local:3000... done
+[2026-09-10T12:40:29.230Z] [DEBU] Successfully retrieved state
+[2026-09-10T12:40:29.230Z] [DEBU] Closing the HTTP session...
+[2026-09-10T12:40:29.231Z] [DEBU] Closing the HTTP session... done
 ```
 
 #### Priority
@@ -6461,9 +6460,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
 volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
 volumito -C sr notification register http://192.168.1.2:5678/yetanother
-[2026-09-10T12:08:25.307Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-10T12:08:25.891Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-10T12:08:26.487Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-10T12:45:16.361Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-10T12:45:16.987Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-10T12:45:17.630Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -6471,7 +6470,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito -C sr notification register --autocompose-url
-[2026-09-10T12:08:27.086Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T12:45:18.251Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -6494,16 +6493,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-10T12:08:28.271Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-10T12:45:19.570Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito -C sr notification unregister --all
-[2026-09-10T12:08:28.912Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-10T12:08:28.912Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-10T12:08:28.912Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T12:45:20.190Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-10T12:45:20.190Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-10T12:45:20.190Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -6540,8 +6539,8 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "duration": 236,
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
         "seek": 501,
@@ -6570,8 +6569,8 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "duration": 236,
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
         "seek": 45,
@@ -6600,8 +6599,8 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "duration": 236,
         "mute": false,
         "position": 1,
-        "random": false,
-        "repeat": false,
+        "random": null,
+        "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
         "seek": 45,
@@ -6617,11 +6616,11 @@ volumito -C sr notification listen --register-url --timeout 10.0
     },
     "item": "state"
 }
-[2026-09-10T12:08:34.864Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-10T12:08:34.865Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-10T12:08:34.865Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-10T12:08:44.873Z] [INFO] Timed out after 10 seconds
-[2026-09-10T12:08:44.896Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T12:45:26.553Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T12:45:26.553Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-10T12:45:26.554Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-10T12:45:36.593Z] [INFO] Timed out after 10 seconds
+[2026-09-10T12:45:36.614Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 ### Notifications (WebSocket API)
@@ -6688,7 +6687,7 @@ volumito -C aw notification event listen --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 19
+        "volume": 20
     },
     "event": "pushState"
 }
@@ -6718,7 +6717,7 @@ volumito -C aw notification event listen --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 19
+        "volume": 20
     },
     "event": "pushState"
 }
@@ -6748,13 +6747,13 @@ volumito -C aw notification event listen --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 19
+        "volume": 20
     },
     "event": "pushState"
 }
-[2026-09-09T16:15:43.458Z] [INFO] Listening for the events: pushState
-[2026-09-09T16:15:43.458Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-09T16:15:53.459Z] [INFO] Timed out after 10 seconds
+[2026-09-10T12:45:46.731Z] [INFO] Listening for the events: pushState
+[2026-09-10T12:45:46.731Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-10T12:45:56.731Z] [INFO] Timed out after 10 seconds
 ```
 
 ### Copying Files With SCP
@@ -6829,7 +6828,7 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-09-09T16:15:57.973Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-09-10T12:46:01.485Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
 > [!CAUTION]
@@ -6839,7 +6838,7 @@ volumito scp put -r /tmp/mydir /tmp/
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-09-09T16:15:59.923Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-09-10T12:46:03.563Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -6850,7 +6849,7 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-09-09T16:16:01.621Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-09-10T12:46:05.718Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
 > [!TIP]
@@ -6890,7 +6889,7 @@ volumito system info
         "mute": false,
         "status": "play",
         "track": "Fuoco sui giocattoli",
-        "volume": 19
+        "volume": 20
     },
     "systemversion": "4.119",
     "type": "device",
@@ -6909,8 +6908,8 @@ An error is returned if the connection parameters are incorrect
 
 ```bash
 volumito -H bad.host.name.local system ping
-[2026-09-09T16:16:04.946Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
-[2026-09-09T16:16:04.946Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-10T12:46:09.384Z] [WARN] Cannot connect to the Volumio API: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
+[2026-09-10T12:46:09.384Z] [ERRO] Connection error: Failed to connect to Volumio instance at http://bad.host.name.local:3000: HTTPConnectionPool(host='bad.host.name.local', port=3000): Max retries exceeded with url: /api/v1/ping (Caused by NameResolutionError("HTTPConnection(host='bad.host.name.local', port=3000): Failed to resolve 'bad.host.name.local' ([Errno -2] Name or service not known)"))
 ```
 
 while a `pong` reply is printed if the Volumio host is reachable:
@@ -6978,7 +6977,7 @@ To run the `ls /tmp/` command on the Volumio host issue:
 
 ```bash
 volumito system execute "ls /tmp/"
-[2026-09-09T16:16:08.464Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
+[2026-09-10T12:46:13.118Z] [ERRO] Refusing to execute the command without -y/--yes: "ls /tmp/"
 ```
 
 > [!CAUTION]
@@ -6992,7 +6991,7 @@ volumito system execute "ls /tmp/" --yes
     "command": "ls /tmp/",
     "exit_code": 0,
     "stderr": "",
-    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-bluealsa.service-wTPHYh\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-haveged.service-r8T6mA\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-ntpsec.service-yRrZsK\nsystemd-private-3f4c632fd31e4e12910edef49b8de115-systemd-logind.service-7NqP5M\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
+    "stdout": "bluetooth-cache\ngetvolume\nhls\nmultiroom\nmyvolumio-remote.json\nnetworkstatus\npresentation.html\nqbz-connect.cfg\nqbz-connect.socket\nsetvolume\nshairport-sync-metadata\nshairport-sync.conf\nsnapfifo\nsshtunnel.sh\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-bluealsa.service-Ah71xs\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-haveged.service-jiwUE3\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-ntpsec.service-3a11ah\nsystemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-systemd-logind.service-M14bys\ntisoc-controller\nupdater\nupmpdcli.conf\nupmpdclicache\nvolume\nwireless.log"
 }
 ```
 
@@ -7016,10 +7015,10 @@ shairport-sync-metadata
 shairport-sync.conf
 snapfifo
 sshtunnel.sh
-systemd-private-3f4c632fd31e4e12910edef49b8de115-bluealsa.service-wTPHYh
-systemd-private-3f4c632fd31e4e12910edef49b8de115-haveged.service-r8T6mA
-systemd-private-3f4c632fd31e4e12910edef49b8de115-ntpsec.service-yRrZsK
-systemd-private-3f4c632fd31e4e12910edef49b8de115-systemd-logind.service-7NqP5M
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-bluealsa.service-Ah71xs
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-haveged.service-jiwUE3
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-ntpsec.service-3a11ah
+systemd-private-11fc533b3d2f4ce7a39b5711ddbebf4f-systemd-logind.service-M14bys
 tisoc-controller
 updater
 upmpdcli.conf

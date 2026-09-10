@@ -39,7 +39,7 @@ Volumio Browse Results
    https://ice02.fluidstream.net/bella.mp3
 3. Radio Volumito Docs
    https://some.url
-[2026-09-09T16:08:33.743Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T12:39:23.450Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 #### Collection Radio Remove
@@ -59,5 +59,5 @@ Volumio Browse Results
    https://streamingv2.shoutcast.com/rtl-1025
 2. Radio B&M
    https://ice02.fluidstream.net/bella.mp3
-[2026-09-09T16:08:34.764Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T12:39:24.477Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
 ```

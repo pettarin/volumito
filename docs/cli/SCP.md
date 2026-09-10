@@ -72,7 +72,7 @@ tree /tmp/mydir
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/
-[2026-09-09T16:15:57.973Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
+[2026-09-10T12:46:01.485Z] [ERRO] Refusing to copy to the Volumio host without -y/--yes: "/tmp/"
 ```
 
 > [!CAUTION]
@@ -82,7 +82,7 @@ volumito scp put -r /tmp/mydir /tmp/
 
 ```bash
 volumito scp put -r /tmp/mydir /tmp/ --yes
-[2026-09-09T16:15:59.923Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
+[2026-09-10T12:46:03.563Z] [INFO] Copied "/tmp/mydir" to "/tmp/" on the Volumio host
 ```
 
 #### SCP Get
@@ -93,7 +93,7 @@ you can use `scp get` with the `-r / --recursive` option:
 
 ```bash
 volumito scp get -r /tmp/mydir /tmp/mydir2
-[2026-09-09T16:16:01.621Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
+[2026-09-10T12:46:05.718Z] [INFO] Copied "/tmp/mydir" from the Volumio host to "/tmp/mydir2"
 ```
 
 > [!TIP]

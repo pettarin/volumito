@@ -54,7 +54,6 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Browse Tracks Of A Qobuz Album By Artist](#browse-tracks-of-a-qobuz-album-by-artist)
   - [Browse Local Resources](#browse-local-resources)
   - [Replace The Current Queue](#replace-the-current-queue-browse)
-  - [Collection Help](#collection-help)
 - [Stories](#stories)
   - [Album Story](#album-story)
   - [Album Credits](#album-credits)
@@ -80,6 +79,7 @@ This document describes the `volumito` command-line (CLI) tool.
   - [Download Queue](#download-queue)
   - [Download Playlist](#download-playlist)
 - [Miscellaneous Commands](#miscellaneous-commands)
+  - [Collection Help](#collection-help)
   - [Collection Radio](#collection-radio)
     - [Collection Radio List](#collection-radio-list)
     - [Collection Radio Add](#collection-radio-add)
@@ -182,6 +182,9 @@ This document describes the `volumito` command-line (CLI) tool.
 
 
 ## Miscellaneous Commands
+
+```markdown lucio command=include path="./COLLECTION_HELP.md" style=literal
+```
 
 ```markdown lucio command=include path="./COLLECTION_RADIO.md" style=literal
 ```

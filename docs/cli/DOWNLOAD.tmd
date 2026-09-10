@@ -19,8 +19,9 @@ volumito playlist play "volumito test qobuz multiple albums 4 tracks"
 > the destination directory `/tmp/o/` is used
 > as it is defined in the configuration file used to generate them.
 >
-> See Sections [Configuration File](#configuration-file) and
-> [Setup Configuration File](#setup-configuration-file) for details.
+> See Sections
+> [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
+> and [The Configuration File](#the-configuration-file) for details.
 
 #### Download Track Albumart (Cover)
 
@@ -39,7 +40,6 @@ volumito queue track audio
 ```
 
 ```bash lucio command=execute
-# override the configuration file, use an explicit output path
 volumito queue track audio -o /tmp/audio.flac
 ```
 

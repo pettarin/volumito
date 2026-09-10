@@ -59,7 +59,7 @@ volumito queue track info --fields ALL
     "repeat": null,
     "repeatSingle": false,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.468",
+    "seek": "00:00:04.302",
     "service": "qobuz",
     "status": "play",
     "stream": false,
@@ -68,13 +68,13 @@ volumito queue track info --fields ALL
     "updatedb": false,
     "uri": "qobuz://song/2833718",
     "volatile": false,
-    "volume": 19
+    "volume": 20
 }
 ```
 
 ```bash
 volumito -m queue track info -F raw -L ALL
-{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 4115, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "155 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 19, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
+{"status": "play", "position": 0, "title": "Va tutto bene", "artist": "Enrico Ruggeri", "album": "Polvere", "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg", "uri": "qobuz://song/2833718", "trackType": "qobuz", "seek": 5104, "duration": 196, "samplerate": "44.1 kHz", "bitdepth": "16 bit", "channels": 2, "bitrate": "155 Kbps", "random": null, "repeat": null, "repeatSingle": false, "consume": true, "volume": 20, "dbVolume": null, "mute": false, "disableVolumeControl": false, "stream": false, "updatedb": false, "volatile": false, "service": "qobuz"}
 ```
 
 ### Track Has Previous, Has Next

@@ -146,13 +146,13 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.005",
+    "seek": "00:00:02.008",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:14:58.447Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-10T12:44:58.859Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Enqueue A Playlist
@@ -176,13 +176,13 @@ volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.371",
+    "seek": "00:00:04.211",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 19
+    "volume": 20
 }
-[2026-09-09T16:15:01.216Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-10T12:45:01.862Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Playlist Help

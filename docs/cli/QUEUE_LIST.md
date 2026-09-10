@@ -175,7 +175,7 @@ volumito queue status --fields ALL
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": "00:00:02.754",
+        "seek": "00:00:02.729",
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -213,7 +213,7 @@ Commands:
   remove     Remove the track at POSITION from the queue.
   repeat     Print or set the repeat mode.
   replace    Replace the queue with the content of URI, playing it unless...
-  save       Save the current queue as the playlist NAME, replacing it if...
+  save       Save the current queue as the new playlist NAME.
   status     Print the current track with the position, length, and...
   track      Query the current track of the queue (information, audio,...
 ```

@@ -99,19 +99,3 @@ Local resources work as well:
 ```bash lucio command=execute
 volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
 ```
-
-### Collection Help
-
-These are all the subcommands of the `collection` group:
-
-```bash lucio command=execute
-volumito collection --help
-```
-
-All commands, with the exception of `collection browse`,
-`collection search` and `collection statistics`,
-require a WebSocket API client, as their help message tells:
-
-```bash lucio command=execute
-volumito collection update --help
-```

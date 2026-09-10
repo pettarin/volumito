@@ -254,13 +254,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.003",
+    "seek": "00:00:01.298",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:11:20.636Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:12.828Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -276,13 +276,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.008",
+    "seek": "00:00:02.001",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:11:23.673Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T12:39:15.566Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -298,60 +298,11 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.878",
+    "seek": "00:00:03.118",
     "status": "play",
     "title": "Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:11:26.561Z] [INFO] Command 'replace' executed successfully
-```
-
-### Collection Help
-
-These are all the subcommands of the `collection` group:
-
-```bash
-volumito collection --help
-Usage: volumito collection [OPTIONS] COMMAND [ARGS]...
-
-  Query the music collection managed by Volumio.
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  browse      Browse the content that URI lists in the collection of the...
-  directory   Manage the directories of the local library of the collection.
-  favourite   Manage the favourites, and the radio favourites (--radio).
-  radio       Manage the Web radios saved by the user (Web radio plugin).
-  search      Search QUERY in the Volumio sources currently enabled.
-  source      Manage the music sources (plugins) of the Volumio host.
-  statistics  Print the statistics of the music collection.
-  update      Update the collection of the Volumio host, looking for...
-```
-
-All commands, with the exception of `collection browse`,
-`collection search` and `collection statistics`,
-require a WebSocket API client, as their help message tells:
-
-```bash
-volumito collection update --help
-Usage: volumito collection update [OPTIONS] [URI]
-
-  Update the collection of the Volumio host, looking for changes.
-
-  With URI, only its content is updated. The options select another refresh
-  instead, and take no URI: --rescan rescans the collection from scratch (slow
-  on a large collection), and --thumbnails rebuilds the thumbnails of the
-  album art. They are mutually exclusive.
-
-  Needs a WebSocket API client.
-
-Options:
-  --rescan      Rescan the whole collection from scratch, instead of looking
-                for changes (slow on a large collection).
-  --thumbnails  Rebuild the thumbnails of the album art, instead of looking
-                for changes.
-  --help        Show this message and exit.
+[2026-09-10T12:39:18.463Z] [INFO] Command 'replace' executed successfully
 ```

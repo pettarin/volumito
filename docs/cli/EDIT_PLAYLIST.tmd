@@ -143,9 +143,9 @@ volumito -C aw playlist remove "volumito docs playlist" -p 2
 ### Copy A Playlist
 
 It is possible to copy a playlist, with all or part of its contents,
-as a new playlist, using `playlist copy` command.
+as a new playlist, using the `playlist copy` command.
 
-Without arguments, the playlist is copied with all its contents:
+Without options, the playlist is copied with all its contents:
 
 ```bash lucio command=execute show_source=false stdout=false stderr=false
 # hidden block to ensure the playlist already exists

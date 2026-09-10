@@ -22,6 +22,6 @@ volumito queue clear
     "title": "",
     "volume": 20
 }
-[2026-09-09T13:28:39.718Z] [INFO] Command 'clear' executed successfully
-[2026-09-09T13:28:41.735Z] [INFO] Command 'stop' executed successfully
+[2026-09-10T12:44:49.231Z] [INFO] Command 'clear' executed successfully
+[2026-09-10T12:44:51.251Z] [INFO] Command 'stop' executed successfully
 ```
