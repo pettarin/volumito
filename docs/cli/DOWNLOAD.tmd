@@ -12,16 +12,16 @@ volumito playlist play "volumito test qobuz multiple albums 4 tracks"
 
 ## Download
 
-### Download Track
-
 > [!NOTE]
 > In the examples below, wherever an explicit `-o` override is not present,
-> the destination directory `/tmp/o/` is used
-> as it is defined in the configuration file used to generate them.
+> the destination directory is `/tmp/o/`
+> since it is defined in the configuration file used to generate this document.
 >
 > See Sections
 > [Check Your Volumito Configuration File](#check-your-volumito-configuration-file)
 > and [The Configuration File](#the-configuration-file) for details.
+
+### Download Track
 
 #### Download Track Albumart (Cover)
 
