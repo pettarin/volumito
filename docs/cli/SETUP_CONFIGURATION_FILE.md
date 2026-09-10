@@ -40,7 +40,7 @@ If you do not have a configuration file, you can create one with
 ```bash
 # create a volumito.yaml file in the current working directory
 volumito configuration create
-[2026-09-10T12:43:29.557Z] [INFO] Created configuration file "/home/user/projects/volumito/volumito/docs/cli/volumito.yaml"
+[2026-09-10T13:43:58.577Z] [INFO] Created configuration file "/home/user/projects/volumito/volumito/docs/cli/volumito.yaml"
 ```
 
 It might be convenient to save it to your user home directory,
@@ -49,7 +49,7 @@ so that it will be read and applied no matter the directory `volumito` is run fr
 ```bash
 # create a volumito.yaml file in the home directory
 volumito configuration create -o ~/volumito.yaml
-[2026-09-10T12:43:30.203Z] [INFO] Created configuration file "/home/user/volumito.yaml"
+[2026-09-10T13:43:59.167Z] [INFO] Created configuration file "/home/user/volumito.yaml"
 ```
 
 You might want to edit the configuration file according to your preferences,

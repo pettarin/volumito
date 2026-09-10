@@ -27,13 +27,13 @@ volumito -C aw queue add qobuz://song/63333861
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:03.252",
+    "seek": "00:00:02.768",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:42:56.281Z] [INFO] Command 'add' executed successfully
+[2026-09-10T13:52:56.089Z] [INFO] Command 'add' executed successfully
 ```
 
 The above command appends the track
@@ -95,13 +95,13 @@ volumito -C aw queue add qobuz://song/63333861 --next
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:07.503",
+    "seek": "00:00:06.521",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:43:00.417Z] [INFO] Command 'add' executed successfully
+[2026-09-10T13:52:59.670Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -159,13 +159,13 @@ volumito -C aw queue add qobuz://song/63333861 --play
     "mute": false,
     "position": 6,
     "samplerate": "192 kHz",
-    "seek": "00:00:00.251",
+    "seek": "00:00:00.083",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:43:04.484Z] [INFO] Command 'add' executed successfully
+[2026-09-10T13:53:03.512Z] [INFO] Command 'add' executed successfully
 ```
 
 ```bash
@@ -233,13 +233,13 @@ volumito -C aw queue remove 2
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:04.913",
+    "seek": "00:00:03.836",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:43:09.027Z] [INFO] Command 'remove' executed successfully
+[2026-09-10T13:53:07.176Z] [INFO] Command 'remove' executed successfully
 ```
 
 ```bash
@@ -300,13 +300,13 @@ volumito -C aw queue move 1 3
     "mute": false,
     "position": 5,
     "samplerate": "192 kHz",
-    "seek": "00:00:09.203",
+    "seek": "00:00:08.841",
     "status": "play",
     "title": "Don't Know Why",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:43:13.333Z] [INFO] Command 'move' executed successfully
+[2026-09-10T13:53:12.187Z] [INFO] Command 'move' executed successfully
 ```
 
 ```bash
@@ -358,7 +358,7 @@ providing a name for the playlist to be created:
 
 ```bash
 volumito -C aw queue save "volumito docs queue save"
-[2026-09-10T12:43:18.283Z] [ERRO] Playlist already exists: "volumito docs queue save" (use --overwrite-existing-playlist to overwrite)
+[2026-09-10T13:53:17.174Z] [ERRO] Playlist already exists: "volumito docs queue save" (use --overwrite-existing-playlist to overwrite)
 ```
 
 > [!CAUTION]
@@ -368,5 +368,5 @@ volumito -C aw queue save "volumito docs queue save"
 
 ```bash
 volumito -C aw queue save "volumito docs queue save" --overwrite-existing-playlist
-[2026-09-10T12:43:19.170Z] [INFO] Command 'save' executed successfully
+[2026-09-10T13:53:18.106Z] [INFO] Command 'save' executed successfully
 ```

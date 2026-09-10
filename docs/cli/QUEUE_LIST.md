@@ -175,7 +175,7 @@ volumito queue status --fields ALL
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44.1 kHz",
-        "seek": "00:00:02.729",
+        "seek": "00:00:02.252",
         "service": "qobuz",
         "status": "play",
         "stream": false,
@@ -184,7 +184,7 @@ volumito queue status --fields ALL
         "updatedb": false,
         "uri": "qobuz://song/2833718",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     }
 }
 ```

@@ -254,13 +254,13 @@ volumito queue replace "qobuz://album/0090317058467"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.298",
+    "seek": "00:00:01.003",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:39:12.828Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:39:53.748Z] [INFO] Command 'replace' executed successfully
 ```
 
 To play just the track "Va tutto bene" from the same album:
@@ -276,13 +276,13 @@ volumito queue replace "qobuz://song/2833718"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.001",
+    "seek": "00:00:00.380",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:39:15.566Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:39:56.464Z] [INFO] Command 'replace' executed successfully
 ```
 
 Local resources work as well:
@@ -292,17 +292,14 @@ volumito queue replace "music-library/INTERNAL/music/Mango/Sirtaki"
 {
     "album": "Sirtaki",
     "artist": "Mango",
-    "bitdepth": "16 bit",
-    "channels": 2,
     "duration": "00:06:59",
     "mute": false,
     "position": 1,
-    "samplerate": "44.1 kHz",
-    "seek": "00:00:03.118",
+    "seek": "00:00:01.998",
     "status": "play",
     "title": "Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:39:18.463Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:39:59.380Z] [INFO] Command 'replace' executed successfully
 ```

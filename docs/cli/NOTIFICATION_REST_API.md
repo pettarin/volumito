@@ -34,9 +34,9 @@ port (`4567`), and endpoint (`/notif/volumio`):
 volumito -C sr notification register http://192.168.1.2:4567/notif/volumio
 volumito -C sr notification register http://192.168.1.2:5678/anothercallbackurl
 volumito -C sr notification register http://192.168.1.2:5678/yetanother
-[2026-09-10T12:45:16.361Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
-[2026-09-10T12:45:16.987Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-10T12:45:17.630Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-10T13:45:40.345Z] [INFO] Registered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-10T13:45:40.922Z] [INFO] Registered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-10T13:45:41.488Z] [INFO] Registered notification URL: http://192.168.1.2:5678/yetanother
 ```
 
 Alternatively, the URL can be composed for you
@@ -44,7 +44,7 @@ by issuing the `-A / --autocompose-url` option:
 
 ```bash
 volumito -C sr notification register --autocompose-url
-[2026-09-10T12:45:18.251Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T13:45:42.083Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 Issuing again the `notification list` command
@@ -67,16 +67,16 @@ simply pass it to the `notification unregister` command:
 
 ```bash
 volumito -C sr notification unregister http://192.168.1.2:4567/notif/volumio
-[2026-09-10T12:45:19.570Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
+[2026-09-10T13:45:43.273Z] [INFO] Unregistered notification URL: http://192.168.1.2:4567/notif/volumio
 ```
 
 You can unregister all notification URLs with the `--all` option:
 
 ```bash
 volumito -C sr notification unregister --all
-[2026-09-10T12:45:20.190Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
-[2026-09-10T12:45:20.190Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
-[2026-09-10T12:45:20.190Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T13:45:43.897Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/anothercallbackurl
+[2026-09-10T13:45:43.897Z] [INFO] Unregistered notification URL: http://192.168.1.2:5678/yetanother
+[2026-09-10T13:45:43.897Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```
 
 #### Notification Listen
@@ -107,6 +107,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "albumart": "https://static.qobuz.com/images/covers/67/84/0090317058467_600.jpg",
         "artist": "Enrico Ruggeri",
         "bitdepth": "16 bit",
+        "channels": 2,
         "consume": false,
         "dbVolume": null,
         "disableVolumeControl": false,
@@ -117,7 +118,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 501,
+        "seek": 45,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -126,7 +127,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "item": "state"
 }
@@ -156,7 +157,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "item": "state"
 }
@@ -177,7 +178,7 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "repeat": null,
         "repeatSingle": false,
         "samplerate": "44 KHz",
-        "seek": 45,
+        "seek": 146,
         "service": "qobuz",
         "status": "play",
         "stream": "qobuz",
@@ -186,13 +187,13 @@ volumito -C sr notification listen --register-url --timeout 10.0
         "updatedb": false,
         "uri": "qobuz://song/2833719",
         "volatile": false,
-        "volume": 20
+        "volume": 21
     },
     "item": "state"
 }
-[2026-09-10T12:45:26.553Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
-[2026-09-10T12:45:26.553Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
-[2026-09-10T12:45:26.554Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
-[2026-09-10T12:45:36.593Z] [INFO] Timed out after 10 seconds
-[2026-09-10T12:45:36.614Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T13:45:49.899Z] [INFO] Registered notification URL: http://192.168.1.101:3003/volumionotifications
+[2026-09-10T13:45:49.900Z] [INFO] Listening on port 3003 for the notifications sent to http://192.168.1.101:3003/volumionotifications
+[2026-09-10T13:45:49.900Z] [INFO] Terminate as soon as: CTRL+C is issued, or a total of 10 seconds elapsed
+[2026-09-10T13:45:59.912Z] [INFO] Timed out after 10 seconds
+[2026-09-10T13:45:59.932Z] [INFO] Unregistered notification URL: http://192.168.1.101:3003/volumionotifications
 ```

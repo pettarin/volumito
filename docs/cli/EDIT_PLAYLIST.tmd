@@ -140,6 +140,30 @@ volumito -C aw playlist remove "volumito docs playlist" -p 2
 > It is also possible to specify ranges, for example `-p 1,4-5,9-12`
 > selects the 1st, 4th, 5th, 9th, 10th, 11th, and 12th tracks.
 
+> [!NOTE]
+> It seems that the underlying WebSocket API refuses to remove
+> the last item of a playlist, which would leave the latter empty.
+> In this case, `volumito` issues the following warning:
+>
+> ```bash
+> volumito -C aw playlist remove "volumito test 1 track" -p 1
+> [2026-09-10T13:35:14.486Z] [WARN] The removal would leave the playlist "volumito test 1 track" empty, which the Volumio host may refuse: to empty a playlist, delete it with "playlist delete" and create it again with "playlist create".
+> [2026-09-10T13:35:14.644Z] [INFO] Command 'remove from playlist "volumito test 1 track"' executed successfully
+> [
+>     {
+>         "album": "Alice Canta Battiato",
+>         "artist": "Alice",
+>         "position": 1,
+>         "title": "Segnali Di Vita",
+>         "uri": "qobuz://song/5477096"
+>     }
+> ]
+> ```
+>
+> If you want to empty the contents of a playlist,
+> just delete it (`playlist delete NAME --yes`) and
+> create a new one with the same name (`playlist create NAME`).
+
 ### Copy A Playlist
 
 It is possible to copy a playlist, with all or part of its contents,

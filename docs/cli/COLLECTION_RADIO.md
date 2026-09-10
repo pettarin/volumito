@@ -14,9 +14,7 @@ volumito collection radio list
 Volumio Browse Results
 ==================================================
 
-1. myRTL
-   https://streamingv2.shoutcast.com/rtl-1025
-2. Radio B&M
+1. Radio Bella&Monella
    https://ice02.fluidstream.net/bella.mp3
 ```
 
@@ -33,13 +31,11 @@ volumito -C aw collection radio add "Radio Volumito Docs" "https://some.url"
 Volumio Browse Results
 ==================================================
 
-1. myRTL
-   https://streamingv2.shoutcast.com/rtl-1025
-2. Radio B&M
+1. Radio Bella&Monella
    https://ice02.fluidstream.net/bella.mp3
-3. Radio Volumito Docs
+2. Radio Volumito Docs
    https://some.url
-[2026-09-10T12:39:23.450Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T13:57:59.827Z] [INFO] Command 'add web radio "Radio Volumito Docs"' executed successfully
 ```
 
 #### Collection Radio Remove
@@ -55,9 +51,22 @@ volumito -C aw collection radio remove "Radio Volumito Docs"
 Volumio Browse Results
 ==================================================
 
-1. myRTL
-   https://streamingv2.shoutcast.com/rtl-1025
-2. Radio B&M
+1. Radio Bella&Monella
    https://ice02.fluidstream.net/bella.mp3
-[2026-09-10T12:39:24.477Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
+[2026-09-10T13:58:00.764Z] [INFO] Command 'remove web radio "Radio Volumito Docs"' executed successfully
 ```
+
+> [!NOTE]
+> It seems that the underlying WebSocket API refuses to remove
+> the last radio from the list, which would leave the latter empty.
+> In this case, `volumito` issues the following warning:
+>
+> ```bash
+> volumito -C aw collection radio remove "Radio Bella&Monella"
+> [2026-09-10T13:49:29.089Z] [INFO] Command 'remove web radio "Radio Bella&Monella"' executed successfully
+> [2026-09-10T13:49:29.117Z] [ERRO] The Volumio host still lists the Web radio "Radio Bella&Monella" after the removal: a MyVolumio cloud device does not save an empty list of Web radios.
+> ```
+>
+> If you really want to remove a Web radio station,
+> create another dummy one (`collection radio add DUMMY_NAME DUMMY_URL`),
+> and remove the intended one (`collection radio remove NAME`).

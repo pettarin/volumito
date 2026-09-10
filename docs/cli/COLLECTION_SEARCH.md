@@ -198,13 +198,13 @@ volumito queue replace "qobuz://album/sixjslxc22vhb"
     "mute": false,
     "position": 1,
     "samplerate": "96 kHz",
-    "seek": "00:00:00.251",
+    "seek": "00:00:00.508",
     "status": "play",
     "title": "Love Me Do",
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:39:39.644Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:40:18.737Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -612,7 +612,7 @@ volumito queue replace "qobuz://song/64868961"
     "trackType": "qobuz",
     "volume": 20
 }
-[2026-09-10T12:39:43.389Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:40:22.726Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -644,13 +644,13 @@ volumito queue replace "albums://Mango/Sirtaki"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:01.837",
+    "seek": "00:00:01.921",
     "status": "play",
     "title": "Nella mia città",
     "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:39:46.732Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:40:26.138Z] [INFO] Command 'replace' executed successfully
 ```
 
 ```bash
@@ -670,5 +670,5 @@ volumito queue replace "artists://Enrico%20Ruggeri"
     "trackType": "flac",
     "volume": 20
 }
-[2026-09-10T12:39:49.692Z] [INFO] Command 'replace' executed successfully
+[2026-09-10T13:40:29.077Z] [INFO] Command 'replace' executed successfully
 ```

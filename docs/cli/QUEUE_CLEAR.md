@@ -20,8 +20,8 @@ volumito queue clear
     "seek": "00:00:00.000",
     "status": "stop",
     "title": "",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:44:49.231Z] [INFO] Command 'clear' executed successfully
-[2026-09-10T12:44:51.251Z] [INFO] Command 'stop' executed successfully
+[2026-09-10T13:45:16.290Z] [INFO] Command 'clear' executed successfully
+[2026-09-10T13:45:18.306Z] [INFO] Command 'stop' executed successfully
 ```

@@ -23,6 +23,7 @@ of all the available playlists:
 ```bash
 volumito playlist list
 [
+    "volumito test 1 track",
     "volumito test alarm",
     "volumito test local album",
     "volumito test qobuz 5 hd tracks",
@@ -146,13 +147,13 @@ volumito playlist play "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:02.008",
+    "seek": "00:00:01.467",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:44:58.859Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-10T13:45:25.407Z] [INFO] Command 'playplaylist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Enqueue A Playlist
@@ -176,13 +177,13 @@ volumito -C aw playlist enqueue "volumito test qobuz multiple albums"
     "mute": false,
     "position": 1,
     "samplerate": "44.1 kHz",
-    "seek": "00:00:04.211",
+    "seek": "00:00:04.220",
     "status": "play",
     "title": "Va tutto bene",
     "trackType": "qobuz",
-    "volume": 20
+    "volume": 21
 }
-[2026-09-10T12:45:01.862Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
+[2026-09-10T13:45:28.262Z] [INFO] Command 'enqueue playlist "volumito test qobuz multiple albums"' executed successfully
 ```
 
 ### Playlist Help
